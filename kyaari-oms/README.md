@@ -1,73 +1,55 @@
-# React + TypeScript + Vite
+# Kyaari OMS
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Monorepo containing frontend (Vite + React + TypeScript + Tailwind) and a Node/Express backend.
 
-Currently, two official plugins are available:
+## Prerequisites
+- Node.js 18+
+- npm 9+
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Quick start
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1) Install dependencies (root and backend share lockfiles)
+```bash
+npm install
+cd backend && npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2) Start the frontend
+From project root:
+```bash
+npm run dev
 ```
+Vite serves at `http://localhost:5173` by default.
+
+### 3) Start the backend API
+From `backend/` directory:
+```bash
+npm run dev
+```
+Runs Express with nodemon at `http://localhost:3000` (see `backend/server.js`).
+
+## Scripts
+Frontend (root package.json):
+- `npm run dev` — start Vite dev server
+- `npm run build` — type-check and build
+- `npm run preview` — preview production build
+
+Backend (`backend/package.json`):
+- `npm run dev` — start nodemon dev server
+- `npm start` — start Node server
+
+## Frontend structure
+- `src/pages/Landing.tsx` — landing page to choose dashboard
+- `src/dashboards/admin/AdminLayout.tsx`
+- `src/dashboards/vendors/VendorsLayout.tsx`
+- `src/dashboards/accounts/AccountsLayout.tsx`
+- `src/dashboards/operations/OperationsLayout.tsx`
+- `src/App.tsx` — routes
+
+## Tech
+- React 19, React Router
+- Tailwind CSS via `@tailwindcss/vite`
+- Vite 7
+
+## Environment
+Backend can read environment variables via `dotenv`. Create `backend/.env` if needed and read in `backend/server.js`.
