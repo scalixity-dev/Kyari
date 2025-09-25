@@ -1,14 +1,25 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
+import type { LucideIcon } from 'lucide-react'
+import { LayoutDashboard, Package, Users, Bell, Wallet, MapPin, BarChart3, FileText } from 'lucide-react'
 
-function SidebarLink({ to, children }: { to: string; children: React.ReactNode }) {
-  return (
-    <Link to={to} className="px-3 py-2 rounded-md hover:bg-white/5" style={{ color: 'white', display: 'block' }}>
-      {children}
-    </Link>
-  )
+type NavItem = {
+  to: string
+  icon: LucideIcon
+  label: string
 }
+
+const navItems: NavItem[] = [
+  { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/admin/orders', icon: Package, label: 'Orders' },
+  { to: '/admin/users', icon: Users, label: 'Users & Roles' },
+  { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
+  { to: '/admin/money-flow', icon: Wallet, label: 'Money Flow' },
+  { to: '/admin/tracking', icon: MapPin, label: 'Tracking' },
+  { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
+  { to: '/admin/audit-logs', icon: FileText, label: 'Audit Logs' }
+]
 
 function AdminLayout() {
   const { logout, user } = useAuth()
@@ -30,7 +41,7 @@ function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen grid grid-cols-[220px_1fr]" style={{ background: 'var(--color-happyplant-bg)', width: '100vw', minHeight: '100vh', boxSizing: 'border-box', overflowX: 'hidden' }}>
+    <div className="min-h-screen grid grid-cols-[230px_1fr]" style={{ background: 'var(--color-happyplant-bg)', width: '100vw', minHeight: '100vh', boxSizing: 'border-box', overflowX: 'hidden' }}>
       {/* Sidebar */}
       <aside className="p-6 flex flex-col justify-between" style={{ background: 'var(--color-secondary)', color: 'white' }}>
         <div>
@@ -39,14 +50,12 @@ function AdminLayout() {
           </div>
 
           <nav className="flex flex-col gap-4">
-            <SidebarLink to="/admin">💼 Dashboard</SidebarLink>
-            <SidebarLink to="/admin/orders">📦 Orders</SidebarLink>
-            <SidebarLink to="/admin/users">👥 Users & Roles</SidebarLink>
-            <SidebarLink to="/admin/notifications">🔔 Notifications</SidebarLink>
-            <SidebarLink to="/admin/money-flow">💸 Money Flow</SidebarLink>
-            <SidebarLink to="/admin/tracking">📍 Tracking</SidebarLink>
-            <SidebarLink to="/admin/analytics">📊 Analytics</SidebarLink>
-            <SidebarLink to="/admin/audit-logs">📝 Audit Logs</SidebarLink>
+            {navItems.map(({ to, icon: Icon, label }) => (
+              <Link key={to} to={to} className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center  gap-2 w-full whitespace-nowrap text-left" style={{ color: 'white' }}>
+                <Icon size={18} />
+                <span>{label}</span>
+              </Link>
+            ))}
           </nav>
         </div>
 
@@ -77,11 +86,12 @@ function AdminLayout() {
                 placeholder="Mega Search"
                 className="rounded-md"
                 style={{
-                  width: '100%',
+                  width: '50%',
                   paddingLeft: 44,
                   paddingRight: 12,
                   height: 36,
-                  border: 'none',
+                  border: '1px solid rgba(255,255,255,0.85)',
+                  borderRadius: 6,
                   outline: 'none',
                   background: 'var(--color-secondary)',
                   color: 'white'
