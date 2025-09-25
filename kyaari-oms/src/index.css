@@ -1,8 +1,8 @@
 /* src/index.css */
 
 /* Import Tailwind base */
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600&family=Fraunces:wght@400;600&display=swap');
+@import "tailwindcss";
 
 /* ===================== */
 /* Kyari Theme Variables */
@@ -34,6 +34,12 @@
 /* ===================== */
 /* Global Styles */
 /* ===================== */
+
+/* Ensure the root element can span full width for dashboard layouts */
+#root {
+  width: 100% !important;
+  max-width: none !important;
+}
 
 /* Google Fonts import */
 

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import Landing from './pages/Landing'
 import AdminSignIn from './pages/AdminSignIn'
 import AccountsSignIn from './pages/AccountsSignIn'
@@ -12,11 +12,21 @@ import { AuthProvider } from './auth/AuthProvider'
 import ProtectedRoute from './auth/ProtectedRoute'
 import { Header } from './components'
 
+function HeaderGuard() {
+  const location = useLocation()
+  // hide Header on dashboard routes (any top-level path that is a dashboard)
+  const hideFor = ['/admin', '/vendors', '/accounts', '/operations']
+  const shouldHide = hideFor.some((p) => location.pathname === p || location.pathname.startsWith(p + '/'))
+  if (shouldHide) return null
+  return <Header />
+}
+
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Header />
+        {/* Show global Header except when viewing dashboards; dashboards will render their own top-bars */}
+        <HeaderGuard />
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>} />
