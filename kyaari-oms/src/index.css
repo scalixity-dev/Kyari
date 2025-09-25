@@ -1,12 +1,52 @@
-@import "tailwindcss";
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+/* src/index.css */
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
+/* Import Tailwind base */
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600&family=Fraunces:wght@400;600&display=swap');
+
+/* ===================== */
+/* Kyari Theme Variables */
+/* ===================== */
+:root {
+  /* Fonts */
+  --font-heading: 'Fraunces', serif;
+  --font-body: 'Quicksand', sans-serif;
+
+  /* Font Weights */
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-bold: 600;
+
+  /* Colors */
+  --color-primary: #424242;           /* Logo / main text */
+  --color-secondary: #1D4D43;         /* Footer / headings */
+  --color-accent: #C3754C;            /* Buttons */
+  --color-header-bg: #F9F9F9;
+  --color-sharktank-bg: #F5F3E7;
+  --color-happyplant-bg: #ECDDC9;
+  --color-footer-bg: #1D4D43;
+  --color-button-text: #F5F3E7;
+  --color-heading: rgb(29, 77, 67);
+  --color-subheading: rgb(29, 77, 67);
+  --color-footer-heading: #FFFFFF;
+}
+
+/* ===================== */
+/* Global Styles */
+/* ===================== */
+
+/* Google Fonts import */
+
+body {
+  font-family: var(--font-body);
+  font-weight: var(--fw-regular);
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
   background-color: #242424;
+  color: rgba(255, 255, 255, 0.87);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -14,8 +54,9 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Links */
 a {
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   color: #646cff;
   text-decoration: inherit;
 }
@@ -23,38 +64,64 @@ a:hover {
   color: #535bf2;
 }
 
-body {
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--color-heading);
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
+/* Example heading sizes */
+h1 { font-size: 3.2em; line-height: 1.1; font-weight: var(--fw-regular); }
+h2 { font-size: 2.4em; line-height: 1.2; font-weight: var(--fw-regular); }
 
+/* Buttons */
 button {
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  color: var(--color-button-text);
+  background-color: var(--color-accent);
   border-radius: 8px;
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
   font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
   transition: border-color 0.25s;
 }
 button:hover {
-  border-color: #646cff;
+  border-color: var(--color-primary);
 }
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+/* Layout */
+header {
+  background-color: var(--color-header-bg);
+  width: 100%;
+}
+footer {
+  background-color: var(--color-footer-bg);
+  color: var(--color-footer-heading);
+  padding: 2rem;
+}
+.banner-sharktank {
+  background-color: var(--color-sharktank-bg);
+  font-family: var(--font-body);
+  padding: 2rem;
+  text-align: center;
+}
+.banner-happyplant {
+  background-color: var(--color-happyplant-bg);
+  font-family: var(--font-body);
+  font-weight: var(--fw-medium);
+  color: var(--color-heading);
+  padding: 2rem;
+  text-align: center;
+}
+
+/* Media Queries for light mode */
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
@@ -65,5 +132,6 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+    color: var(--color-accent);
   }
 }
