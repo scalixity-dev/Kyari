@@ -1,280 +1,46 @@
 import React from 'react';
+import { Package, BarChart3, Wallet, FileText } from 'lucide-react'
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  LabelList
+} from 'recharts'
 
 interface KPICardProps {
   title: string;
   value: number | string;
-  icon: string;
+  icon: React.ReactNode;
   color: string;
   subtitle?: string;
 }
 
-interface TaskItemProps {
-  description: string;
-  urgency: 'high' | 'medium' | 'low';
-  count: number;
+// task items will be rendered in a table below
+
+/* styles migrated to Tailwind classes */
+
+const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, subtitle }) => {
+  const borderTopClass = color === 'blue' ? 'border-t-4 border-blue-600' : color === 'orange' ? 'border-t-4 border-orange-600' : color === 'green' ? 'border-t-4 border-green-600' : color === 'red' ? 'border-t-4 border-red-600' : ''
+  return (
+    <div className={`bg-white p-6 rounded-xl shadow-md flex items-center gap-4 border border-white/20 relative overflow-hidden ${borderTopClass} hover:shadow-lg hover:-translate-y-1 transition-transform`}>
+      <div className="w-16 h-16 flex items-center justify-center rounded-lg text-3xl text-[var(--color-heading)]">{React.isValidElement(icon) ? React.cloneElement(icon as any, { color: 'var(--color-heading)', size: 32 } as any) : icon}</div>
+      <div className="flex-1">
+        <h3 className="text-xs font-semibold text-[var(--color-primary)] uppercase tracking-wide mb-1">{title}</h3>
+        <div className="text-2xl font-bold text-[var(--color-primary)] mb-1">{value}</div>
+        {subtitle && <div className="text-sm text-gray-400">{subtitle}</div>}
+      </div>
+    </div>
+  )
 }
 
-const styles = {
-  dashboard: {
-    padding: '2rem',
-    background: 'var(--color-happyplant-bg)',
-    minHeight: 'calc(100vh - 4rem)',
-    fontFamily: 'var(--font-sans)',
-    width: '100%',
-    maxWidth: '100%',
-    boxSizing: 'border-box' as const,
-    overflowX: 'hidden' as const
-  },
-  header: {
-    background: 'var(--color-header-bg)',
-    padding: '2rem',
-    borderRadius: 16,
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06)',
-    marginBottom: '2rem',
-    border: '1px solid rgba(0, 0, 0, 0.03)',
-    width: '100%',
-    maxWidth: '100%',
-    boxSizing: 'border-box' as const
-  },
-  headerTitle: {
-    fontSize: '2.5rem',
-    fontWeight: 700,
-    color: 'var(--color-heading)',
-    margin: 0,
-    marginBottom: '0.5rem',
-    fontFamily: 'var(--font-heading)'
-  },
-  date: {
-    fontSize: '1.1rem',
-    color: 'var(--color-primary)',
-    margin: 0,
-    fontWeight: 500
-  },
-  sectionTitle: {
-    color: 'var(--color-heading)',
-    fontSize: '1.8rem',
-    fontWeight: 600,
-    marginBottom: '1.5rem',
-    fontFamily: 'var(--font-heading)'
-  },
-  kpiGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '1.5rem',
-    width: '100%',
-    maxWidth: '100%',
-    boxSizing: 'border-box' as const
-  },
-  kpiCard: (color: string) => ({
-    background: 'white',
-    padding: '1.5rem',
-    borderRadius: 16,
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '1rem',
-    transition: 'all 0.3s ease',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    position: 'relative' as const,
-    overflow: 'hidden' as const,
-    // top border color stripe
-    borderTop: '4px solid transparent',
-    ...(color === 'blue' && { borderTop: '4px solid #3182ce' }),
-    ...(color === 'orange' && { borderTop: '4px solid #dd6b20' }),
-    ...(color === 'green' && { borderTop: '4px solid #38a169' }),
-    ...(color === 'red' && { borderTop: '4px solid #e53e3e' })
-  }),
-  kpiIcon: {
-    fontSize: '2.5rem',
-    width: 60,
-    height: 60,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'rgba(29,77,67,0.06)',
-    borderRadius: 12
-  },
-  kpiContent: {
-    flex: 1
-  },
-  kpiTitle: {
-    fontSize: '0.9rem',
-    fontWeight: 600,
-    color: 'var(--color-primary)',
-    margin: 0,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px'
-  },
-  kpiValue: {
-    fontSize: '2rem',
-    fontWeight: 700,
-    color: 'var(--color-primary)',
-    marginBottom: '0.5rem'
-  },
-  kpiSubtitle: {
-    fontSize: '0.8rem',
-    color: '#97a0aa',
-    lineHeight: 1.4
-  },
-  taskList: {
-    background: 'white',
-    borderRadius: 16,
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-    overflow: 'hidden',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    width: '100%',
-    maxWidth: '100%',
-    boxSizing: 'border-box' as const
-  },
-  taskItem: (urgency: string) => ({
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '1.2rem 1.5rem',
-    borderBottom: '1px solid #e2e8f0',
-    transition: 'all 0.3s ease',
-    background: 'white',
-    ...(urgency === 'high' && {}),
-    ...(urgency === 'medium' && {}),
-    ...(urgency === 'low' && {})
-  }),
-  taskCount: (urgency: string) => ({
-    background: '#667eea',
-    color: 'white',
-    padding: '0.3rem 0.8rem',
-    borderRadius: 20,
-    fontWeight: 600,
-    fontSize: '0.9rem',
-    minWidth: 40,
-    textAlign: 'center' as const,
-    ...(urgency === 'high' && { background: 'linear-gradient(135deg, var(--color-danger), var(--color-danger-light))' }),
-    ...(urgency === 'medium' && { background: 'linear-gradient(135deg, var(--color-warning), var(--color-warning-light))' }),
-    ...(urgency === 'low' && { background: 'linear-gradient(135deg, var(--color-success), var(--color-success-light))' })
-  }),
-  taskDescription: {
-    fontSize: '1rem',
-    color: '#4a5568',
-    fontWeight: 500
-  },
-  graphsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-    gap: '2rem',
-    width: '100%',
-    maxWidth: '100%',
-    boxSizing: 'border-box' as const
-  },
-  chartContainer: {
-    background: 'white',
-    padding: '2rem',
-    borderRadius: 16,
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    width: '100%',
-    maxWidth: '100%',
-    boxSizing: 'border-box' as const
-  },
-  barChart: {
-    height: 250,
-    display: 'flex',
-    alignItems: 'end',
-    justifyContent: 'center'
-  },
-  chartBars: {
-    display: 'flex',
-    alignItems: 'end',
-    gap: '0.8rem',
-    height: '100%'
-  },
-  bar: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: 40,
-    background: 'linear-gradient(180deg, #667eea 0%, #764ba2 100%)',
-    borderRadius: '6px 6px 0 0',
-    position: 'relative' as const,
-    transition: 'all 0.3s ease'
-  },
-  barValue: {
-    color: 'white',
-    fontSize: '0.8rem',
-    fontWeight: 600,
-    padding: '0.3rem'
-  },
-  barLabel: {
-    color: '#4a5568',
-    fontSize: '0.8rem',
-    fontWeight: 600,
-    marginTop: '0.5rem',
-    position: 'absolute' as const,
-    bottom: -25
-  },
-  pieChart: {
-    width: 200,
-    height: 200,
-    borderRadius: '50%',
-    background: 'conic-gradient(#38a169 0deg 216deg, #dd6b20 216deg 306deg, #e53e3e 306deg 360deg)',
-    margin: '0 auto 1.5rem',
-    position: 'relative' as const,
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
-  },
-  pieInner: {
-    content: "''",
-    position: 'absolute' as const,
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 80,
-    height: 80,
-    background: 'var(--color-background)',
-    borderRadius: '50%',
-    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
-  },
-  pieLegend: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '0.8rem'
-  },
-  legendItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.8rem',
-    fontSize: '0.9rem',
-    color: '#4a5568',
-    fontWeight: 500
-  },
-  legendColor: (type: string) => ({
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-    ...(type === 'completed' && { background: 'var(--color-success)' }),
-    ...(type === 'pending' && { background: 'var(--color-warning)' }),
-    ...(type === 'overdue' && { background: 'var(--color-danger)' })
-  })
-};
-
-const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, subtitle }) => (
-  <div style={styles.kpiCard(color)}>
-    <div style={styles.kpiIcon}>{icon}</div>
-    <div style={styles.kpiContent}>
-      <h3 style={styles.kpiTitle}>{title}</h3>
-      <div style={styles.kpiValue as React.CSSProperties}>{value}</div>
-      {subtitle && <div style={styles.kpiSubtitle}>{subtitle}</div>}
-    </div>
-  </div>
-);
-
-const TaskItem: React.FC<TaskItemProps> = ({ description, urgency, count }) => (
-  <div style={styles.taskItem(urgency)}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-      <span style={styles.taskCount(urgency)}>{count}</span>
-      <span style={styles.taskDescription}>{description}</span>
-    </div>
-    <div style={{ fontSize: '1.2rem' }}>{urgency === 'high' ? '🔴' : urgency === 'medium' ? '🟡' : '🟢'}</div>
-  </div>
-);
+// TaskItem removed; tasks are now rendered as a table with an Actions column
 
 export default function Dashboard() {
   const today = new Date().toLocaleDateString('en-US', {
@@ -289,28 +55,28 @@ export default function Dashboard() {
     {
       title: 'Orders Today',
       value: '47',
-      icon: '📦',
+      icon: <Package size={32} />,
       color: 'blue',
       subtitle: 'Pending: 12 | Confirmed: 20 | Dispatched: 15'
     },
     {
       title: 'Vendor Confirmations',
       value: '8',
-      icon: '⏳',
+      icon: <BarChart3 size={32} />,
       color: 'orange',
       subtitle: 'Pending Approval'
     },
     {
       title: 'Payments Pending',
       value: '₹2,34,500',
-      icon: '💰',
+      icon: <Wallet size={32} />,
       color: 'green',
       subtitle: '15 invoices'
     },
     {
       title: 'Tickets Open',
       value: '6',
-      icon: '🎫',
+      icon: <FileText size={32} />,
       color: 'red',
       subtitle: '2 high priority'
     }
@@ -325,17 +91,17 @@ export default function Dashboard() {
   ];
 
   return (
-    <div style={styles.dashboard}>
+    <div className="p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header Section */}
-      <div style={styles.header}>
-        <h1 style={styles.headerTitle}>Welcome, Admin 👋</h1>
-        <p style={styles.date as React.CSSProperties}>{today}</p>
+      <div className="bg-[var(--color-header-bg)] p-8 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] mb-8 border border-[rgba(0,0,0,0.03)]">
+        <h1 className="text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Welcome, Admin..!</h1>
+        <p className="text-lg text-[var(--color-primary)] font-medium">{today}</p>
       </div>
 
       {/* KPI Cards */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={styles.sectionTitle}>Today's Overview</h2>
-        <div style={styles.kpiGrid}>
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold text-[var(--color-heading)] mb-6 font-[var(--font-heading)]">Today's Overview</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {kpiData.map((kpi, index) => (
             <KPICard
               key={index}
@@ -350,95 +116,124 @@ export default function Dashboard() {
       </div>
 
       {/* Task Center */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={styles.sectionTitle}>Actions Required Today</h2>
-        <div style={styles.taskList}>
-          {taskData.map((task, index) => (
-            <TaskItem
-              key={index}
-              description={task.description}
-              urgency={task.urgency}
-              count={task.count}
-            />
-          ))}
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold text-[var(--color-heading)] mb-6 font-[var(--font-heading)]">Actions Required Today</h2>
+        <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Urgency</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {taskData.map((task, idx) => (
+                <tr key={idx}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{task.description}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className={task.urgency === 'high' ? 'text-red-600 font-semibold' : task.urgency === 'medium' ? 'text-yellow-600 font-semibold' : 'text-green-600 font-semibold'}>{task.urgency}</span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">{task.count}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <div className="flex gap-2">
+                      <button className="px-3 py-1 bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md">Take action</button>
+                      <button className="px-3 py-1 border rounded-md">View</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Quick Graphs */}
       <div>
-        <h2 style={styles.sectionTitle}>Quick Insights</h2>
-        <div style={styles.graphsGrid}>
+        <h2 className="text-2xl font-semibold text-[var(--color-heading)] mb-6 font-[var(--font-heading)]">Quick Insights</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Order Fulfillment Chart */}
-          <div style={styles.chartContainer}>
-            <h3 style={{ textAlign: 'center', fontSize: '1.3rem', fontWeight: 600, color: '#2d3748', marginBottom: '1.5rem' }}>Order Fulfillment Rate</h3>
-            <div style={styles.barChart}>
-              <div style={styles.chartBars}>
-                <div style={{ ...styles.bar, height: '80%' }}>
-                  <span style={styles.barLabel as React.CSSProperties}>Mon</span>
-                  <span style={styles.barValue}>85%</span>
-                </div>
-                <div style={{ ...styles.bar, height: '92%' }}>
-                  <span style={styles.barLabel as React.CSSProperties}>Tue</span>
-                  <span style={styles.barValue}>92%</span>
-                </div>
-                <div style={{ ...styles.bar, height: '75%' }}>
-                  <span style={styles.barLabel as React.CSSProperties}>Wed</span>
-                  <span style={styles.barValue}>75%</span>
-                </div>
-                <div style={{ ...styles.bar, height: '88%' }}>
-                  <span style={styles.barLabel as React.CSSProperties}>Thu</span>
-                  <span style={styles.barValue}>88%</span>
-                </div>
-                <div style={{ ...styles.bar, height: '95%' }}>
-                  <span style={styles.barLabel as React.CSSProperties}>Fri</span>
-                  <span style={styles.barValue}>95%</span>
-                </div>
-                <div style={{ ...styles.bar, height: '82%' }}>
-                  <span style={styles.barLabel as React.CSSProperties}>Sat</span>
-                  <span style={styles.barValue}>82%</span>
-                </div>
-                <div style={{ ...styles.bar, height: '78%' }}>
-                  <span style={styles.barLabel as React.CSSProperties}>Sun</span>
-                  <span style={styles.barValue}>78%</span>
-                </div>
-              </div>
-            </div>
+          <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
+            <h3 className="text-center text-lg font-semibold text-[#2d3748] mb-4">Order Fulfillment Rate</h3>
+            <ResponsiveContainer width="100%" height={380}>
+              <BarChart data={
+                [
+                  { name: 'Mon', value: 85 },
+                  { name: 'Tue', value: 92 },
+                  { name: 'Wed', value: 75 },
+                  { name: 'Thu', value: 88 },
+                  { name: 'Fri', value: 95 },
+                  { name: 'Sat', value: 82 },
+                  { name: 'Sun', value: 78 }
+                ]
+              }>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#667eea" radius={[6, 6, 0, 0]}>
+                  <LabelList dataKey="value" position="top" formatter={(val: any) => `${val}%`} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
 
           {/* Payment Status Pie Chart */}
-          <div style={styles.chartContainer}>
-            <h3 style={{ textAlign: 'center', fontSize: '1.3rem', fontWeight: 600, color: '#2d3748', marginBottom: '1.5rem' }}>Payment Status</h3>
-            <div style={styles.pieChart}>
-              <div className="pie-slice completed" data-percentage="60">
-                <span style={{ display: 'none' }}>Completed 60%</span>
+          <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
+            <h3 className="text-center text-lg font-semibold text-[#2d3748] mb-4">Payment Status</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie dataKey="value" data={[{ name: 'Completed', value: 60 }, { name: 'Pending', value: 25 }, { name: 'Overdue', value: 15 }]} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={2}>
+                    <Cell key="cell-completed" fill="#38a169" />
+                    <Cell key="cell-pending" fill="#dd6b20" />
+                    <Cell key="cell-overdue" fill="#e53e3e" />
+                  </Pie>
+                  <Legend verticalAlign="bottom" />
+                  <Tooltip formatter={(value: any) => `${value}%`} />
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Enhanced payment figures: mock totals and per-status breakdown */}
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-500 font-medium">Total Payments</div>
+                  <div className="text-2xl font-bold text-[var(--color-primary)]">1,200</div>
+                  <div className="text-sm text-gray-400">Period: Last 30 days</div>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-500 font-medium">Total Amount</div>
+                  <div className="text-2xl font-bold text-[var(--color-primary)]">₹12,45,600</div>
+                  <div className="text-sm text-gray-400">Net received: ₹10,98,400</div>
+                </div>
               </div>
-              <div className="pie-slice pending" data-percentage="25">
-                <span style={{ display: 'none' }}>Pending 25%</span>
+
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="flex items-center gap-3 text-sm text-gray-700 font-medium">
+                  <span className="w-3 h-3 rounded-sm bg-[var(--color-success)] block" />
+                  <div>
+                    <div className="font-semibold">Completed</div>
+                    <div className="text-sm text-gray-400">720 payments • ₹8,50,000</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-gray-700 font-medium">
+                  <span className="w-3 h-3 rounded-sm bg-[var(--color-warning)] block" />
+                  <div>
+                    <div className="font-semibold">Pending</div>
+                    <div className="text-sm text-gray-400">300 payments • ₹2,34,500</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-gray-700 font-medium">
+                  <span className="w-3 h-3 rounded-sm bg-[var(--color-danger)] block" />
+                  <div>
+                    <div className="font-semibold">Overdue</div>
+                    <div className="text-sm text-gray-400">180 payments • ₹1,61,100</div>
+                  </div>
+                </div>
               </div>
-              <div className="pie-slice overdue" data-percentage="15">
-                <span style={{ display: 'none' }}>Overdue 15%</span>
-              </div>
-              <div style={styles.pieInner}></div>
-            </div>
-            <div style={styles.pieLegend}>
-              <div style={styles.legendItem}>
-                <span style={styles.legendColor('completed')}></span>
-                <span>Completed (60%)</span>
-              </div>
-              <div style={styles.legendItem}>
-                <span style={styles.legendColor('pending')}></span>
-                <span>Pending (25%)</span>
-              </div>
-              <div style={styles.legendItem}>
-                <span style={styles.legendColor('overdue')}></span>
-                <span>Overdue (15%)</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 
