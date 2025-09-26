@@ -27,6 +27,7 @@ function AdminLayout() {
   const [search, setSearch] = useState('')
   const [showProfile, setShowProfile] = useState(false)
   const [notifications] = useState(3)
+  const [trackingOpen, setTrackingOpen] = useState(false)
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -50,12 +51,44 @@ function AdminLayout() {
           </div>
 
           <nav className="flex flex-col gap-4">
-            {navItems.map(({ to, icon: Icon, label }) => (
-              <Link key={to} to={to} className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center  gap-2 w-full whitespace-nowrap text-left" style={{ color: 'white' }}>
-                <Icon size={18} />
-                <span>{label}</span>
-              </Link>
-            ))}
+            {navItems.map(({ to, icon: Icon, label }) => {
+              if (label === 'Tracking') {
+                return (
+                  <div key={to} className="flex flex-col">
+                    <button
+                      onClick={() => setTrackingOpen((s) => !s)}
+                      className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center gap-2 w-full whitespace-nowrap text-left"
+                      style={{ color: 'white' }}
+                      aria-expanded={trackingOpen}
+                    >
+                      <Icon size={18} />
+                      <span className="flex-1 text-left">{label}</span>
+                      <span className="text-sm">{trackingOpen ? '▾' : '▸'}</span>
+                    </button>
+
+                    {trackingOpen && (
+                      <div className="mt-2 ml-3 flex flex-col gap-2">
+                        <Link to="/admin/tracking/orders" className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center gap-2 w-full whitespace-nowrap text-left" style={{ color: 'white' }}>
+                          <Package size={16} />
+                          <span>Order Tracking</span>
+                        </Link>
+                        <Link to="/admin/tracking/vendors" className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center gap-2 w-full whitespace-nowrap text-left" style={{ color: 'white' }}>
+                          <Users size={16} />
+                          <span>Vendor Tracking</span>
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+
+              return (
+                <Link key={to} to={to} className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center  gap-2 w-full whitespace-nowrap text-left" style={{ color: 'white' }}>
+                  <Icon size={18} />
+                  <span>{label}</span>
+                </Link>
+              )
+            })}
           </nav>
         </div>
 

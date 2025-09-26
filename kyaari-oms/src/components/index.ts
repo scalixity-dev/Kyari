@@ -1,2 +1,5 @@
 export { default as Header } from './Header/Header'
 export { default as Button } from './Button/Button'
+export { default as NotificationItem } from './Notifications/NotificationItem'
+export { default as NotificationControls } from './Notifications/NotificationControls'
+export { default as NotificationSection } from './Notifications/NotificationSection'

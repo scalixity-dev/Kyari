@@ -11,7 +11,9 @@ import Orders from './dashboards/admin/pages/Orders'
 import UsersRoles from './dashboards/admin/pages/UsersRoles'
 import Notifications from './dashboards/admin/pages/Notifications'
 import MoneyFlow from './dashboards/admin/pages/MoneyFlow'
-import Tracking from './dashboards/admin/pages/Tracking'
+// import Tracking from './dashboards/admin/pages/Tracking'
+import OrderTracking from './dashboards/admin/pages/OrderTracking'
+import VendorTracking from './dashboards/admin/pages/VendorTracking'
 import Analytics from './dashboards/admin/pages/Analytics'
 import AuditLogs from './dashboards/admin/pages/AuditLogs'
 import VendorsLayout from './dashboards/vendors/VendorsLayout'
@@ -44,7 +46,9 @@ function App() {
             <Route path="users" element={<UsersRoles />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="money-flow" element={<MoneyFlow />} />
-            <Route path="tracking" element={<Tracking />} />
+            {/* <Route path="tracking" element={<Tracking />} /> */}
+            <Route path="tracking/orders" element={<OrderTracking />} />
+            <Route path="tracking/vendors" element={<VendorTracking />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="audit-logs" element={<AuditLogs />} />
           </Route>
