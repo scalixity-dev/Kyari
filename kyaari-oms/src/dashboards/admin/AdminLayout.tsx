@@ -2,7 +2,7 @@ import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, Users, Bell, Wallet, MapPin, BarChart3, FileText } from 'lucide-react'
+import { LayoutDashboard, Package, Users, Bell, Wallet, MapPin, BarChart3, FileText, Search } from 'lucide-react'
 
 type NavItem = {
   to: string
@@ -41,9 +41,9 @@ function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen grid grid-cols-[230px_1fr]" style={{ background: 'var(--color-happyplant-bg)', width: '100vw', minHeight: '100vh', boxSizing: 'border-box', overflowX: 'hidden' }}>
-      {/* Sidebar */}
-      <aside className="p-6 flex flex-col justify-between" style={{ background: 'var(--color-secondary)', color: 'white' }}>
+    <div className="min-h-screen" style={{ background: 'var(--color-happyplant-bg)', width: '100%', minHeight: '100vh', boxSizing: 'border-box', overflowX: 'hidden' }}>
+      {/* Sidebar (fixed) */}
+      <aside className="p-6 flex flex-col justify-between" style={{ background: 'var(--color-secondary)', color: 'white', width: '230px', position: 'fixed', left: 0, top: 0, height: '100vh', zIndex: 30 }}>
         <div>
           <div className="mb-8">
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: 28, fontWeight: 600 }}>Kyari</div>
@@ -62,47 +62,27 @@ function AdminLayout() {
         {/* footer intentionally removed per user request */}
       </aside>
 
-      {/* Main area */}
-      <main className="p-6">
-  {/* Top bar (sticky) */}
-  <div
-    className="flex items-center justify-between sticky top-0 z-20"
-    style={{
-      background: 'var(--color-secondary)',
-  padding: '4px 0',
-      marginLeft: '-24px',
-      marginRight: '-24px',
-      marginTop: '-24px',
-      paddingLeft: '24px',
-      paddingRight: '24px'
-    }}
-  >
-          <form onSubmit={handleSearchSubmit} className="flex items-center" style={{ gap: 12, width: '60%' }}>
-            <div style={{ position: 'relative', width: '100%' }}>
-              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.9)' }}>🔍</span>
+  {/* Main area */}
+  <main style={{ marginLeft: '230px', marginTop: 0, paddingTop: 0, overflowX: 'hidden', height: '100vh' }}>
+  {/* Top bar (fixed) */}
+  <div className="flex items-center justify-between bg-[var(--color-secondary)] py-2 pr-6 pl-0 fixed top-0 left-[230px] right-0 h-16 z-40">
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-3 w-[60%]">
+            <div className="relative w-full">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/90">
+                <Search size={18} />
+              </div>
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Mega Search"
-                className="rounded-md"
-                style={{
-                  width: '50%',
-                  paddingLeft: 44,
-                  paddingRight: 12,
-                  height: 36,
-                  border: '1px solid rgba(255,255,255,0.85)',
-                  borderRadius: 6,
-                  outline: 'none',
-                  background: 'var(--color-secondary)',
-                  color: 'white'
-                }}
+                className="w-1/2 pl-11 pr-3 h-9rounded-md bg-[var(--color-secondary)] text-white outline-none"
               />
             </div>
           </form>
 
           <div className="flex items-center gap-4">
-            <button aria-label="Notifications" className="relative p-0 rounded-md" style={{ background: 'transparent' }}>
-              🔔
+            <button aria-label="Notifications" className="relative p-0 rounded-md text-white" style={{ background: 'transparent' }}>
+              <Bell size={18} />
               {notifications > 0 && (
                 <span className="absolute -top-1 -right-1 text-xs rounded-full px-1" style={{ background: 'var(--color-accent)', color: 'var(--color-button-text)' }}>{notifications}</span>
               )}
@@ -128,8 +108,13 @@ function AdminLayout() {
         </div>
 
         {/* Main content area - Outlet renders module content */}
-        <div>
-          <Outlet />
+        <div style={{ marginTop: 64, height: 'calc(100vh - 64px)', overflow: 'auto' }}>
+          {/* Module area - transparent background, modules should use full width */}
+          <div style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box', padding: 0, background: 'transparent' }}>
+            <div style={{ width: '100%', padding: 0 }}>
+              <Outlet />
+            </div>
+          </div>
         </div>
 
         {/* main footer removed per user request */}

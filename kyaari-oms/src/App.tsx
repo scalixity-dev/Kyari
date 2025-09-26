@@ -4,6 +4,7 @@ import AdminSignIn from './pages/AdminSignIn'
 import AccountsSignIn from './pages/AccountsSignIn'
 import OperationsSignIn from './pages/OperationsSignIn'
 import VendorsSignIn from './pages/VendorsSignIn'
+import VendorSignUp from './pages/VendorSignUp'
 import AdminLayout from './dashboards/admin/AdminLayout'
 import Dashboard from './dashboards/admin/pages/Dashboard'
 import Orders from './dashboards/admin/pages/Orders'
@@ -51,6 +52,7 @@ function App() {
           <Route path="/accounts/signin" element={<AccountsSignIn />} />
           <Route path="/operations/signin" element={<OperationsSignIn />} />
           <Route path="/vendors/signin" element={<VendorsSignIn />} />
+          <Route path="/vendors/signup" element={<VendorSignUp />} />
           <Route path="/vendors" element={<ProtectedRoute redirectTo={'/vendors/signin'}><VendorsLayout /></ProtectedRoute>} />
           <Route path="/accounts" element={<ProtectedRoute redirectTo={'/accounts/signin'}><AccountsLayout /></ProtectedRoute>} />
           <Route path="/operations" element={<ProtectedRoute redirectTo={'/operations/signin'}><OperationsLayout /></ProtectedRoute>} />
