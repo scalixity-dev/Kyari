@@ -1,5 +1,4 @@
 import { Link, useNavigate } from 'react-router-dom'
-import styles from './Header.module.css'
 import kyariLogo from '../../assets/kyariLogo.webp'
 import { useAuth } from '../../auth/AuthProvider'
 
@@ -13,17 +12,22 @@ export default function Header() {
   }
 
   return (
-    <header className={styles.header}>
-      <div className={styles.left}>
+    <header className="flex items-center justify-between px-4 py-2 bg-header-bg border-b border-black/4">
+      <div className="flex items-center">
         <Link to="/">
-          <img src={kyariLogo} alt="Kyari" className={styles.logo} />
+          <img src={kyariLogo} alt="Kyari" className="h-10" />
         </Link>
       </div>
-      <div className={styles.right}>
+      <div className="flex gap-3 items-center">
         {user ? (
           <>
-            <span className={styles.welcome}>Hi, {user.email}</span>
-            <button className={styles.logout} onClick={handleLogout}>Logout</button>
+            <span className="text-primary">Hi, {user.email}</span>
+            <button 
+              className="bg-transparent border border-accent text-accent px-3 py-1.5 rounded-lg cursor-pointer" 
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
           </>
         ) : null}
       </div>
