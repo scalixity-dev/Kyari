@@ -91,9 +91,9 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-8 bg-[#ECDDC9] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header Section */}
-      <div className="bg-[var(--color-header-bg)] p-8 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] mb-8 border border-[rgba(0,0,0,0.03)]">
+      <div className="bg-white p-8 rounded-xl shadow-lg mb-8 border border-gray-200">
         <h1 className="text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Welcome, Admin..!</h1>
         <p className="text-lg text-[var(--color-primary)] font-medium">{today}</p>
       </div>
