@@ -52,7 +52,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
     const minutes = Math.floor(diff / (1000 * 60));
     
     if (hours > 24) {
-      return timestamp.toLocaleDateString();
+      return timestamp.toLocaleDateString('en-GB');
     } else if (hours > 0) {
       return `${hours}h ago`;
     } else if (minutes > 0) {

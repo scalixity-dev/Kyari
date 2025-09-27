@@ -155,7 +155,7 @@ export const NotificationControls: React.FC<NotificationControlsProps> = ({
                 <div>
                   <span className="text-sm font-medium text-gray-900">{vendor.name}</span>
                   <span className="text-xs text-gray-500 ml-2">
-                    Muted {new Date(vendor.mutedAt).toLocaleDateString()}
+                    Muted {new Date(vendor.mutedAt).toLocaleDateString('en-GB')}
                   </span>
                 </div>
                 <button

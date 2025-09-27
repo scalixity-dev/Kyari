@@ -13,6 +13,7 @@ import Notifications from './dashboards/admin/pages/Notifications'
 import MoneyFlow from './dashboards/admin/pages/MoneyFlow'
 // import Tracking from './dashboards/admin/pages/Tracking'
 import OrderTracking from './dashboards/admin/pages/OrderTracking'
+import OrderDetails from './dashboards/admin/pages/OrderDetails'
 import VendorTracking from './dashboards/admin/pages/VendorTracking'
 import Analytics from './dashboards/admin/pages/Analytics'
 import AuditLogs from './dashboards/admin/pages/AuditLogs'
@@ -48,6 +49,7 @@ function App() {
             <Route path="money-flow" element={<MoneyFlow />} />
             {/* <Route path="tracking" element={<Tracking />} /> */}
             <Route path="tracking/orders" element={<OrderTracking />} />
+            <Route path="orders/:id" element={<OrderDetails />} />
             <Route path="tracking/vendors" element={<VendorTracking />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="audit-logs" element={<AuditLogs />} />

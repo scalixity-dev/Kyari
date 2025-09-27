@@ -43,7 +43,7 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, subtitle }
 // TaskItem removed; tasks are now rendered as a table with an Actions column
 
 export default function Dashboard() {
-  const today = new Date().toLocaleDateString('en-US', {
+  const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
