@@ -1,4 +1,4 @@
-import { Link, Outlet, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
 import type { LucideIcon } from 'lucide-react'
@@ -24,6 +24,7 @@ const navItems: NavItem[] = [
 function AdminLayout() {
   const { logout, user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [search, setSearch] = useState('')
   const [showProfile, setShowProfile] = useState(false)
   const [notifications] = useState(3)
@@ -52,13 +53,17 @@ function AdminLayout() {
 
           <nav className="flex flex-col gap-4">
             {navItems.map(({ to, icon: Icon, label }) => {
+              const isActive = location.pathname === to
+              
               if (label === 'Tracking') {
                 return (
                   <div key={to} className="flex flex-col">
                     <button
                       onClick={() => setTrackingOpen((s) => !s)}
-                      className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center gap-2 w-full whitespace-nowrap text-left"
-                      style={{ color: 'white' }}
+                      className={`py-2 rounded-md flex items-center gap-2 w-full whitespace-nowrap text-left ${
+                        isActive ? 'bg-white text-gray-800 pl-3 pr-1' : 'hover:bg-white/5 px-3'
+                      }`}
+                      style={{ color: isActive ? 'var(--color-primary)' : 'white' }}
                       aria-expanded={trackingOpen}
                     >
                       <Icon size={18} />
@@ -83,7 +88,14 @@ function AdminLayout() {
               }
 
               return (
-                <Link key={to} to={to} className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center  gap-2 w-full whitespace-nowrap text-left" style={{ color: 'white' }}>
+                <Link 
+                  key={to} 
+                  to={to} 
+                  className={`py-2 rounded-md flex items-center gap-2 w-full whitespace-nowrap text-left ${
+                    isActive ? 'bg-white text-gray-800 pl-3 pr-1' : 'hover:bg-white/5 px-3'
+                  }`} 
+                  style={{ color: isActive ? 'var(--color-primary)' : 'white' }}
+                >
                   <Icon size={18} />
                   <span>{label}</span>
                 </Link>
@@ -98,7 +110,7 @@ function AdminLayout() {
   {/* Main area */}
   <main style={{ marginLeft: '230px', marginTop: 0, paddingTop: 0, overflowX: 'hidden', height: '100vh' }}>
   {/* Top bar (fixed) */}
-  <div className="flex items-center justify-between bg-[var(--color-secondary)] py-2 pr-6 pl-0 fixed top-0 left-[230px] right-0 h-16 z-40">
+  <div className="flex items-center justify-between bg-[var(--color-secondary)] py-2 pr-6 pl-0 fixed top-0 left-[230px] right-0 h-16 z-40 border-l border-white/20">
           <form onSubmit={handleSearchSubmit} className="flex items-center gap-3 w-[60%]">
             <div className="relative w-full">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/90">
@@ -108,7 +120,7 @@ function AdminLayout() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Mega Search"
-                className="w-1/2 pl-11 pr-3 h-9rounded-md bg-[var(--color-secondary)] text-white outline-none"
+                className="w-1/2 pl-11 pr-3 h-9 rounded-md bg-[var(--color-secondary)] text-white outline-none"
               />
             </div>
           </form>

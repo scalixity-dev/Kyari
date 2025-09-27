@@ -1,24 +1,210 @@
-import React from 'react'
-import Board from '@lourenci/react-kanban'
-import '@lourenci/react-kanban/dist/styles.css'
+import { useState } from 'react'
+import {
+  DndContext,
+  type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
-const initialBoard = {
+// Extended type definitions for our specific use case
+interface OrderCard {
+  id: string
+  orderId: string
+  vendor: string
+  qty: number
+}
+
+interface OrderColumn {
+  id: string
+  title: string
+  cards: OrderCard[]
+}
+
+interface OrderBoard {
+  columns: OrderColumn[]
+}
+
+const initialBoard: OrderBoard = {
   columns: [
-    { id: 1, title: 'Received', cards: [ { id: 'INV-2001', orderId: 'INV-2001', vendor: 'GreenLeaf Farms', qty: 12 }, { id: 'INV-2002', orderId: 'INV-2002', vendor: 'HappyPlant Co', qty: 8 } ] },
-    { id: 2, title: 'Assigned', cards: [ { id: 'INV-2003', orderId: 'INV-2003', vendor: 'BloomWorks', qty: 20 } ] },
-    { id: 3, title: 'Confirmed', cards: [] },
-    { id: 4, title: 'Invoiced', cards: [ { id: 'INV-2004', orderId: 'INV-2004', vendor: 'SharkTank Ltd', qty: 5 } ] },
-    { id: 5, title: 'Dispatched', cards: [] },
-    { id: 6, title: 'Verified', cards: [] },
-    { id: 7, title: 'Paid', cards: [] }
+    { 
+      id: 'received', 
+      title: 'Received', 
+      cards: [ 
+        { id: 'card-1', orderId: 'INV-2001', vendor: 'GreenLeaf Farms', qty: 12 }, 
+        { id: 'card-2', orderId: 'INV-2002', vendor: 'HappyPlant Co', qty: 8 } 
+      ] 
+    },
+    { 
+      id: 'assigned', 
+      title: 'Assigned', 
+      cards: [ 
+        { id: 'card-3', orderId: 'INV-2003', vendor: 'BloomWorks', qty: 20 } 
+      ] 
+    },
+    { 
+      id: 'confirmed', 
+      title: 'Confirmed', 
+      cards: [] 
+    },
+    { 
+      id: 'invoiced', 
+      title: 'Invoiced', 
+      cards: [ 
+        { id: 'card-4', orderId: 'INV-2004', vendor: 'SharkTank Ltd', qty: 5 } 
+      ] 
+    },
+    { 
+      id: 'dispatched', 
+      title: 'Dispatched', 
+      cards: [] 
+    },
+    { 
+      id: 'verified', 
+      title: 'Verified', 
+      cards: [] 
+    },
+    { 
+      id: 'paid', 
+      title: 'Paid', 
+      cards: [] 
+    }
   ]
 }
 
-export default function OrderTracking() {
-  const [board, setBoard] = React.useState<any>(initialBoard)
+// Sortable Card Component
+function SortableCard({ card }: { card: OrderCard }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: card.id })
 
-  const handleCardDragEnd = (newBoard: any) => {
-    setBoard(newBoard)
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="kanban-card"
+    >
+      <div className="order-id">{card.orderId}</div>
+      <div className="vendor-name" title={card.vendor}>{card.vendor}</div>
+      <div className="quantity">Qty: {card.qty}</div>
+    </div>
+  )
+}
+
+// Column Component
+function Column({ column }: { column: OrderColumn }) {
+  const cardIds = column.cards.map(card => card.id)
+
+  return (
+    <div className="kanban-column">
+      <div className="kanban-column-header">{column.title}</div>
+      <div className="kanban-column-body">
+        <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
+          {column.cards.map((card) => (
+            <SortableCard key={card.id} card={card} />
+          ))}
+        </SortableContext>
+      </div>
+    </div>
+  )
+}
+
+export default function OrderTracking() {
+  const [board, setBoard] = useState<OrderBoard>(initialBoard)
+  const [activeCard, setActiveCard] = useState<OrderCard | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  )
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event
+    const card = findCardById(active.id as string)
+    setActiveCard(card || null)
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveCard(null)
+
+    if (!over) return
+
+    const activeCard = findCardById(active.id as string)
+    const overId = over.id as string
+
+    // If dropping on another card, find the column of that card
+    const overCard = findCardById(overId)
+    const targetColumnId = overCard ? findColumnByCardId(overId)?.id : overId
+
+    if (!activeCard || !targetColumnId) return
+
+    // Don't do anything if dropping on the same card
+    if (activeCard.id === overId) return
+
+    setBoard((prevBoard) => {
+      const newBoard = { ...prevBoard }
+      const sourceColumn = findColumnByCardId(activeCard.id)
+      
+      if (!sourceColumn) return prevBoard
+
+      const targetColumn = newBoard.columns.find(col => col.id === targetColumnId)
+      if (!targetColumn) return prevBoard
+
+      // Remove card from source column
+      sourceColumn.cards = sourceColumn.cards.filter(card => card.id !== activeCard.id)
+      
+      // Add card to target column
+      if (overCard) {
+        // Insert after the card we're hovering over
+        const overIndex = targetColumn.cards.findIndex(card => card.id === overCard.id)
+        targetColumn.cards.splice(overIndex + 1, 0, activeCard)
+      } else {
+        // Add to the end of the column
+        targetColumn.cards.push(activeCard)
+      }
+
+      return newBoard
+    })
+  }
+
+  const findCardById = (cardId: string): OrderCard | undefined => {
+    for (const column of board.columns) {
+      const card = column.cards.find(card => card.id === cardId)
+      if (card) return card
+    }
+    return undefined
+  }
+
+  const findColumnByCardId = (cardId: string): OrderColumn | undefined => {
+    return board.columns.find(column => 
+      column.cards.some(card => card.id === cardId)
+    )
   }
 
   return (
@@ -143,26 +329,30 @@ export default function OrderTracking() {
           }
         `}} />
         
-        <Board
-          allowRemoveCard
-          onCardDragEnd={handleCardDragEnd}
-          initialBoard={board}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
         >
-          {board.columns.map((col: any) => (
-            <div key={col.id} className="kanban-column">
-              <div className="kanban-column-header">{col.title}</div>
-              <div className="kanban-column-body">
-                {col.cards.map((card: any) => (
-                  <div key={card.id} className="kanban-card">
-                    <div className="order-id">{card.orderId}</div>
-                    <div className="vendor-name" title={card.vendor}>{card.vendor}</div>
-                    <div className="quantity">Qty: {card.qty}</div>
-                  </div>
-                ))}
+          <div className="kanban-board">
+            <SortableContext items={board.columns.map(col => col.id)}>
+              {board.columns.map((column) => (
+                <Column key={column.id} column={column} />
+              ))}
+            </SortableContext>
+          </div>
+          
+          <DragOverlay>
+            {activeCard ? (
+              <div className="kanban-card">
+                <div className="order-id">{activeCard.orderId}</div>
+                <div className="vendor-name" title={activeCard.vendor}>{activeCard.vendor}</div>
+                <div className="quantity">Qty: {activeCard.qty}</div>
               </div>
-            </div>
-          ))}
-        </Board>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </div>
     </div>
   )
