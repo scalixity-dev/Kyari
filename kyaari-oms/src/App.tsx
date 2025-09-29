@@ -19,6 +19,12 @@ import VendorDetails from './dashboards/admin/pages/VendorDetails'
 import Analytics from './dashboards/admin/pages/Analytics'
 import AuditLogs from './dashboards/admin/pages/AuditLogs'
 import VendorsLayout from './dashboards/vendors/VendorsLayout'
+import VendorDashboard from './dashboards/vendors/pages/Dashboard'
+import VendorOrders from './dashboards/vendors/pages/Orders'
+import VendorInvoices from './dashboards/vendors/pages/Invoices'
+import VendorDispatch from './dashboards/vendors/pages/Dispatch'
+import VendorPerformance from './dashboards/vendors/pages/Performance'
+import VendorProfileSettings from './dashboards/vendors/pages/ProfileSettings'
 import AccountsLayout from './dashboards/accounts/AccountsLayout'
 import OperationsLayout from './dashboards/operations/OperationsLayout'
 import { AuthProvider } from './auth/AuthProvider'
@@ -61,7 +67,14 @@ function App() {
           <Route path="/operations/signin" element={<OperationsSignIn />} />
           <Route path="/vendors/signin" element={<VendorsSignIn />} />
           <Route path="/vendors/signup" element={<VendorSignUp />} />
-          <Route path="/vendors" element={<ProtectedRoute redirectTo={'/vendors/signin'}><VendorsLayout /></ProtectedRoute>} />
+          <Route path="/vendors" element={<ProtectedRoute redirectTo={'/vendors/signin'}><VendorsLayout /></ProtectedRoute>}>
+            <Route index element={<VendorDashboard />} />
+            <Route path="orders" element={<VendorOrders />} />
+            <Route path="invoices" element={<VendorInvoices />} />
+            <Route path="dispatch" element={<VendorDispatch />} />
+            <Route path="performance" element={<VendorPerformance />} />
+            <Route path="profile-settings" element={<VendorProfileSettings />} />
+          </Route>
           <Route path="/accounts" element={<ProtectedRoute redirectTo={'/accounts/signin'}><AccountsLayout /></ProtectedRoute>} />
           <Route path="/operations" element={<ProtectedRoute redirectTo={'/operations/signin'}><OperationsLayout /></ProtectedRoute>} />
         </Routes>
