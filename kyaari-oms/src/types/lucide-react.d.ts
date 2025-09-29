@@ -15,7 +15,10 @@ declare module 'lucide-react' {
   export const MapPin: LucideIcon
   export const BarChart3: LucideIcon
   export const FileText: LucideIcon
+  export const Plus: LucideIcon
+  export const PlusCircle: LucideIcon
   export const Search: LucideIcon
+  export const Upload: LucideIcon
   export const AlertTriangle: LucideIcon
   export const Info: LucideIcon
   export const Clock: LucideIcon
@@ -29,6 +32,8 @@ declare module 'lucide-react' {
   export const Eye: LucideIcon
   export const EyeOff: LucideIcon
   export const X: LucideIcon
+  export const Edit: LucideIcon
+  export const Trash2: LucideIcon
 }
 
 
