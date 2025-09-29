@@ -1,359 +1,398 @@
-import { useState } from 'react'
-import {
-  DndContext,
-  type DragEndEvent,
-  DragOverlay,
-  type DragStartEvent,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  closestCenter,
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import type { DropResult } from '@hello-pangea/dnd';
+import { LayoutDashboard, Package, Bell, Users, CheckSquare, FileText, Wallet, MapPin, Eye } from 'lucide-react';
 
-// Extended type definitions for our specific use case
-interface OrderCard {
-  id: string
-  orderId: string
-  vendor: string
-  qty: number
-}
+// TypeScript types
+type Status = "Received" | "Assigned" | "Confirmed" | "Invoiced" | "Dispatched" | "Verified" | "Paid";
+type Order = { id: string; vendor: string; qty: number; status: Status };
 
-interface OrderColumn {
-  id: string
-  title: string
-  cards: OrderCard[]
-}
+type ViewMode = 'list' | 'board';
 
-interface OrderBoard {
-  columns: OrderColumn[]
-}
+// Sample order data with mixed statuses
+const initialOrders: Order[] = [
+  { id: "ORD-001", vendor: "Green Valley Farms", qty: 250, status: "Received" },
+  { id: "ORD-002", vendor: "Organic Harvest Co", qty: 180, status: "Assigned" },
+  { id: "ORD-003", vendor: "Fresh Fields Ltd", qty: 320, status: "Confirmed" },
+  { id: "ORD-004", vendor: "Nature's Best", qty: 95, status: "Invoiced" },
+  { id: "ORD-005", vendor: "Farm Fresh Direct", qty: 210, status: "Dispatched" },
+  { id: "ORD-006", vendor: "Golden Harvest", qty: 165, status: "Verified" },
+  { id: "ORD-007", vendor: "Eco Greens", qty: 275, status: "Paid" },
+  { id: "ORD-008", vendor: "Valley Organics", qty: 140, status: "Received" },
+  { id: "ORD-009", vendor: "Sunrise Farms", qty: 190, status: "Assigned" },
+  { id: "ORD-010", vendor: "Pure Harvest", qty: 300, status: "Confirmed" },
+  { id: "ORD-011", vendor: "Green Earth Co", qty: 85, status: "Invoiced" },
+  { id: "ORD-012", vendor: "Natural Foods Inc", qty: 225, status: "Dispatched" },
+];
 
-const initialBoard: OrderBoard = {
-  columns: [
-    { 
-      id: 'received', 
-      title: 'Received', 
-      cards: [ 
-        { id: 'card-1', orderId: 'INV-2001', vendor: 'GreenLeaf Farms', qty: 12 }, 
-        { id: 'card-2', orderId: 'INV-2002', vendor: 'HappyPlant Co', qty: 8 } 
-      ] 
-    },
-    { 
-      id: 'assigned', 
-      title: 'Assigned', 
-      cards: [ 
-        { id: 'card-3', orderId: 'INV-2003', vendor: 'BloomWorks', qty: 20 } 
-      ] 
-    },
-    { 
-      id: 'confirmed', 
-      title: 'Confirmed', 
-      cards: [] 
-    },
-    { 
-      id: 'invoiced', 
-      title: 'Invoiced', 
-      cards: [ 
-        { id: 'card-4', orderId: 'INV-2004', vendor: 'SharkTank Ltd', qty: 5 } 
-      ] 
-    },
-    { 
-      id: 'dispatched', 
-      title: 'Dispatched', 
-      cards: [] 
-    },
-    { 
-      id: 'verified', 
-      title: 'Verified', 
-      cards: [] 
-    },
-    { 
-      id: 'paid', 
-      title: 'Paid', 
-      cards: [] 
-    }
-  ]
-}
+const statusColumns: Status[] = ["Received", "Assigned", "Confirmed", "Invoiced", "Dispatched", "Verified", "Paid"];
 
-// Sortable Card Component
-function SortableCard({ card }: { card: OrderCard }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: card.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+const getStatusIcon = (status: Status) => {
+  const iconProps = { size: 16, className: "text-[var(--color-heading)]" };
+  
+  switch (status) {
+    case "Received":
+      return <Bell {...iconProps} />;
+    case "Assigned":
+      return <Users {...iconProps} />;
+    case "Confirmed":
+      return <CheckSquare {...iconProps} />;
+    case "Invoiced":
+      return <FileText {...iconProps} />;
+    case "Dispatched":
+      return <MapPin {...iconProps} />;
+    case "Verified":
+      return <Eye {...iconProps} />;
+    case "Paid":
+      return <Wallet {...iconProps} />;
+    default:
+      return <Package {...iconProps} />;
   }
+};
 
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="kanban-card"
-    >
-      <div className="order-id">{card.orderId}</div>
-      <div className="vendor-name" title={card.vendor}>{card.vendor}</div>
-      <div className="quantity">Qty: {card.qty}</div>
-    </div>
-  )
+const getStatusColor = (status: Status): string => {
+  const statusColors: Record<Status, string> = {
+    "Received": "bg-gray-100 text-gray-800 border-gray-200",
+    "Assigned": "bg-blue-100 text-blue-800 border-blue-200",
+    "Confirmed": "bg-yellow-100 text-yellow-800 border-yellow-200",
+    "Invoiced": "bg-purple-100 text-purple-800 border-purple-200",
+    "Dispatched": "bg-orange-100 text-orange-800 border-orange-200",
+    "Verified": "bg-green-100 text-green-800 border-green-200",
+    "Paid": "bg-emerald-100 text-emerald-800 border-emerald-200",
+  };
+  return statusColors[status];
+};
+
+interface OrderCardProps {
+  order: Order;
+  index: number;
+  isDragDisabled?: boolean;
+  onOrderClick?: (orderId: string) => void;
 }
 
-// Column Component
-function Column({ column }: { column: OrderColumn }) {
-  const cardIds = column.cards.map(card => card.id)
+const OrderCard: React.FC<OrderCardProps> = ({ order, index, isDragDisabled = false, onOrderClick }) => (
+  <Draggable draggableId={order.id} index={index} isDragDisabled={isDragDisabled}>
+    {(provided, snapshot) => (
+      <div
+        ref={provided.innerRef}
+        {...provided.draggableProps}
+        {...provided.dragHandleProps}
+        onClick={() => onOrderClick?.(order.id)}
+        className={`
+          bg-white rounded-lg border border-gray-200 p-3 mb-2 shadow-sm
+          hover:shadow-md transition-shadow duration-200
+          ${snapshot.isDragging ? 'shadow-lg rotate-2' : ''}
+          ${isDragDisabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing hover:cursor-pointer'}
+        `}
+      >
+        <div className="font-semibold text-[var(--color-heading)] text-sm mb-1">
+          {order.id}
+        </div>
+        <div className="text-gray-600 text-sm mb-1">
+          {order.vendor}
+        </div>
+        <div className="text-gray-500 text-xs">
+          Qty: {order.qty}
+        </div>
+      </div>
+    )}
+  </Draggable>
+);
 
-  return (
-    <div className="kanban-column">
-      <div className="kanban-column-header">{column.title}</div>
-      <div className="kanban-column-body">
-        <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
-          {column.cards.map((card) => (
-            <SortableCard key={card.id} card={card} />
+interface ListViewProps {
+  orders: Order[];
+  onOrderClick?: (orderId: string) => void;
+}
+
+const ListView: React.FC<ListViewProps> = ({ orders, onOrderClick }) => (
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    {/* Desktop Table View */}
+    <div className="hidden md:block overflow-x-auto">
+      <table className="w-full">
+        <thead className="bg-[var(--color-header-bg)] sticky top-0 z-10">
+          <tr>
+            <th className="text-left py-3 px-4 font-semibold text-[var(--color-heading)] text-sm">
+              Order ID
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-[var(--color-heading)] text-sm">
+              Vendor
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-[var(--color-heading)] text-sm">
+              Quantity
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-[var(--color-heading)] text-sm">
+              Status
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map((order, index) => (
+            <tr
+              key={order.id}
+              onClick={() => onOrderClick?.(order.id)}
+              className={`
+                border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer
+                ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
+              `}
+            >
+              <td className="py-3 px-4 font-medium text-[var(--color-heading)]">
+                {order.id}
+              </td>
+              <td className="py-3 px-4 text-gray-700">
+                {order.vendor}
+              </td>
+              <td className="py-3 px-4 text-gray-600">
+                {order.qty}
+              </td>
+              <td className="py-3 px-4">
+                <span className={`
+                  inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                  ${getStatusColor(order.status)}
+                `}>
+                  {order.status}
+                </span>
+              </td>
+            </tr>
           ))}
-        </SortableContext>
-      </div>
+        </tbody>
+      </table>
     </div>
-  )
+
+    {/* Mobile Card View */}
+    <div className="md:hidden">
+      {orders.map((order, index) => (
+        <div
+          key={order.id}
+          onClick={() => onOrderClick?.(order.id)}
+          className={`
+            p-4 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-100 transition-colors
+            ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
+          `}
+        >
+          <div className="flex items-start justify-between mb-2">
+            <div className="font-medium text-[var(--color-heading)]">
+              {order.id}
+            </div>
+            <span className={`
+              inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+              ${getStatusColor(order.status)}
+            `}>
+              {order.status}
+            </span>
+          </div>
+          <div className="text-gray-700 text-sm mb-1">
+            {order.vendor}
+          </div>
+          <div className="text-gray-600 text-sm">
+            Quantity: {order.qty}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+interface BoardColumnProps {
+  status: Status;
+  orders: Order[];
+  onOrderClick?: (orderId: string) => void;
 }
 
-export default function OrderTracking() {
-  const [board, setBoard] = useState<OrderBoard>(initialBoard)
-  const [activeCard, setActiveCard] = useState<OrderCard | null>(null)
+const BoardColumn: React.FC<BoardColumnProps> = ({ status, orders, onOrderClick }) => (
+  <div className="flex-shrink-0 w-72 bg-gray-100 rounded-lg p-3 mr-4 last:mr-0">
+    <div className="flex items-center justify-between mb-3">
+      <h3 className="font-semibold text-[var(--color-heading)] text-sm">
+        {status}
+      </h3>
+      <span className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full">
+        {orders.length}
+      </span>
+    </div>
+    
+    <Droppable droppableId={status}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.droppableProps}
+          className={`
+            min-h-[200px] max-h-[60vh] overflow-y-auto space-y-2
+            ${snapshot.isDraggingOver ? 'bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg' : ''}
+            transition-colors duration-200
+          `}
+        >
+          {orders.map((order, orderIndex) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              index={orderIndex}
+              onOrderClick={onOrderClick}
+            />
+          ))}
+          {provided.placeholder}
+        </div>
+      )}
+    </Droppable>
+  </div>
+);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  )
+interface BoardViewProps {
+  orders: Order[];
+  onOrderMove: (result: DropResult) => void;
+  onOrderClick?: (orderId: string) => void;
+}
 
-  const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event
-    const card = findCardById(active.id as string)
-    setActiveCard(card || null)
-  }
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    setActiveCard(null)
-
-    if (!over) return
-
-    const activeCard = findCardById(active.id as string)
-    const overId = over.id as string
-
-    // If dropping on another card, find the column of that card
-    const overCard = findCardById(overId)
-    const targetColumnId = overCard ? findColumnByCardId(overId)?.id : overId
-
-    if (!activeCard || !targetColumnId) return
-
-    // Don't do anything if dropping on the same card
-    if (activeCard.id === overId) return
-
-    setBoard((prevBoard) => {
-      const newBoard = { ...prevBoard }
-      const sourceColumn = findColumnByCardId(activeCard.id)
-      
-      if (!sourceColumn) return prevBoard
-
-      const targetColumn = newBoard.columns.find(col => col.id === targetColumnId)
-      if (!targetColumn) return prevBoard
-
-      // Remove card from source column
-      sourceColumn.cards = sourceColumn.cards.filter(card => card.id !== activeCard.id)
-      
-      // Add card to target column
-      if (overCard) {
-        // Insert after the card we're hovering over
-        const overIndex = targetColumn.cards.findIndex(card => card.id === overCard.id)
-        targetColumn.cards.splice(overIndex + 1, 0, activeCard)
-      } else {
-        // Add to the end of the column
-        targetColumn.cards.push(activeCard)
-      }
-
-      return newBoard
-    })
-  }
-
-  const findCardById = (cardId: string): OrderCard | undefined => {
-    for (const column of board.columns) {
-      const card = column.cards.find(card => card.id === cardId)
-      if (card) return card
-    }
-    return undefined
-  }
-
-  const findColumnByCardId = (cardId: string): OrderColumn | undefined => {
-    return board.columns.find(column => 
-      column.cards.some(card => card.id === cardId)
-    )
-  }
+const BoardView: React.FC<BoardViewProps> = ({ orders, onOrderMove, onOrderClick }) => {
+  const ordersByStatus = statusColumns.reduce((acc, status) => {
+    acc[status] = orders.filter(order => order.status === status);
+    return acc;
+  }, {} as Record<Status, Order[]>);
 
   return (
-    <div className="p-4 h-screen overflow-hidden">
-      <h1 className="text-2xl font-semibold mb-4">Order Tracking</h1>
-      
-      <div className="h-[calc(100vh-120px)] overflow-auto">
-        <style dangerouslySetInnerHTML={{__html: `
-          .kanban-board {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 16px;
-            padding: 16px;
-            min-height: 100%;
-          }
-          
-          .kanban-column {
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 16px;
-            min-height: 400px;
-            max-height: 600px;
-            display: flex;
-            flex-direction: column;
-          }
-          
-          .kanban-column-header {
-            font-weight: 600;
-            font-size: 14px;
-            color: #374151;
-            margin-bottom: 12px;
-            padding: 8px 12px;
-            background: white;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          }
-          
-          .kanban-column-body {
-            flex: 1;
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: #cbd5e1 transparent;
-          }
-          
-          .kanban-column-body::-webkit-scrollbar {
-            width: 4px;
-          }
-          
-          .kanban-column-body::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          
-          .kanban-column-body::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 2px;
-          }
-          
-          .kanban-card {
-            background: white;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            border: 1px solid #e5e7eb;
-            cursor: grab;
-            transition: all 0.2s ease;
-          }
-          
-          .kanban-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transform: translateY(-1px);
-          }
-          
-          .kanban-card:active {
-            cursor: grabbing;
-          }
-          
-          .order-id {
-            font-weight: 600;
-            color: #1f2937;
-            font-size: 14px;
-            margin-bottom: 4px;
-          }
-          
-          .vendor-name {
-            color: #6b7280;
-            font-size: 12px;
-            margin-bottom: 4px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-          
-          .quantity {
-            color: #9ca3af;
-            font-size: 11px;
-            font-weight: 500;
-          }
-          
-          @media (max-width: 1024px) {
-            .kanban-board {
-              grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            }
-            .kanban-column {
-              min-height: 300px;
-              max-height: 400px;
-            }
-          }
-          
-          @media (max-width: 768px) {
-            .kanban-board {
-              grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-              gap: 12px;
-              padding: 12px;
-            }
-            .kanban-column {
-              min-height: 250px;
-              max-height: 350px;
-              padding: 12px;
-            }
-          }
-        `}} />
-        
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="kanban-board">
-            <SortableContext items={board.columns.map(col => col.id)}>
-              {board.columns.map((column) => (
-                <Column key={column.id} column={column} />
-              ))}
-            </SortableContext>
+    <DragDropContext onDragEnd={onOrderMove}>
+      <div className="overflow-x-auto pb-4">
+        <div className="flex min-w-max">
+          {statusColumns.map((status) => (
+            <BoardColumn
+              key={status}
+              status={status}
+              orders={ordersByStatus[status]}
+              onOrderClick={onOrderClick}
+            />
+          ))}
+        </div>
+      </div>
+    </DragDropContext>
+  );
+};
+
+const OrderTracking: React.FC = () => {
+  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const navigate = useNavigate();
+
+  const handleOrderClick = (orderId: string) => {
+    navigate(`/admin/orders/${orderId}`);
+  };
+
+  const handleOrderMove = (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+
+    // If no destination, return early
+    if (!destination) return;
+
+    // If dropped in the same position, return early
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    // Find the order being moved
+    const orderToMove = orders.find(order => order.id === draggableId);
+    if (!orderToMove) return;
+
+    // Update the order's status
+    const newStatus = destination.droppableId as Status;
+    const updatedOrders = orders.map(order =>
+      order.id === draggableId
+        ? { ...order, status: newStatus }
+        : order
+    );
+
+    setOrders(updatedOrders);
+  };
+
+  return (
+    <div className="p-6 bg-[var(--color-happyplant-bg)] min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-[var(--color-heading)] mb-2">
+            Order Tracking
+          </h1>
+          <p className="text-gray-600">
+            Monitor and manage order status across the fulfillment pipeline
+          </p>
+        </div>
+
+        {/* View Toggle */}
+        <div className="mb-6">
+          <div className="inline-flex bg-white rounded-lg border border-gray-200 shadow-sm">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`
+                flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-l-lg transition-colors
+                ${viewMode === 'list'
+                  ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-sm'
+                  : 'text-gray-700 hover:text-[var(--color-heading)] hover:bg-gray-50'
+                }
+              `}
+            >
+              <LayoutDashboard size={16} />
+              List View
+            </button>
+            <button
+              onClick={() => setViewMode('board')}
+              className={`
+                flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-r-lg transition-colors
+                ${viewMode === 'board'
+                  ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-sm'
+                  : 'text-gray-700 hover:text-[var(--color-heading)] hover:bg-gray-50'
+                }
+              `}
+            >
+              <Package size={16} />
+              Board View
+            </button>
           </div>
-          
-          <DragOverlay>
-            {activeCard ? (
-              <div className="kanban-card">
-                <div className="order-id">{activeCard.orderId}</div>
-                <div className="vendor-name" title={activeCard.vendor}>{activeCard.vendor}</div>
-                <div className="quantity">Qty: {activeCard.qty}</div>
+        </div>
+
+        {/* Orders Summary */}
+        <div className="mb-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          {statusColumns.map(status => {
+            const count = orders.filter(order => order.status === status).length;
+            return (
+              <div
+                key={status}
+                className="bg-white rounded-lg border border-gray-200 p-3 text-center shadow-sm"
+              >
+                <div className="flex items-center justify-center mb-2">
+                  {getStatusIcon(status)}
+                </div>
+                <div className="text-2xl font-bold text-[var(--color-heading)] mb-1">
+                  {count}
+                </div>
+                <div className="text-xs text-gray-600 uppercase tracking-wide">
+                  {status}
+                </div>
               </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+            );
+          })}
+        </div>
+
+        {/* Main Content */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          {viewMode === 'list' ? (
+            <ListView orders={orders} onOrderClick={handleOrderClick} />
+          ) : (
+            <BoardView orders={orders} onOrderMove={handleOrderMove} onOrderClick={handleOrderClick} />
+          )}
+        </div>
+
+        {/* Empty State (if no orders) */}
+        {orders.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-400 text-lg mb-2">No orders found</div>
+            <div className="text-gray-500 text-sm">
+              Orders will appear here once they are created
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  )
-}
+  );
+};
+
+export default OrderTracking;

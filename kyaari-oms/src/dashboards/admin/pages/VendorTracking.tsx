@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { LineChart, Line, ResponsiveContainer, BarChart, Bar, Tooltip } from 'recharts'
 
 const sparkData = [
@@ -6,6 +7,8 @@ const sparkData = [
 ]
 
 export default function VendorTracking() {
+  const navigate = useNavigate()
+  
   // mock KPIs
   const vendorPerformance = { fillRate: 92, slaCompliance: 88 }
   const accounts = { avgInvoiceDays: 3.8 }
@@ -13,6 +16,10 @@ export default function VendorTracking() {
   const [vendorHover, setVendorHover] = useState<number | null>(null)
   const [accountsHover, setAccountsHover] = useState<number | null>(null)
   const [opsHover, setOpsHover] = useState<number | null>(null)
+  
+  const handleVendorClick = (vendorId: string) => {
+    navigate(`/admin/vendors/${vendorId}`)
+  }
 
   return (
     <div className="p-8">
@@ -111,21 +118,30 @@ export default function VendorTracking() {
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b">
+              <tr 
+                className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
+                onClick={() => handleVendorClick('greenleaf-farms')}
+              >
                 <td className="py-3 font-medium">GreenLeaf Farms</td>
                 <td>94%</td>
                 <td>90%</td>
                 <td>3.5</td>
                 <td>1.2</td>
               </tr>
-              <tr className="border-b">
+              <tr 
+                className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
+                onClick={() => handleVendorClick('happyplant-co')}
+              >
                 <td className="py-3 font-medium">HappyPlant Co</td>
                 <td>91%</td>
                 <td>86%</td>
                 <td>4.2</td>
                 <td>1.6</td>
               </tr>
-              <tr>
+              <tr 
+                className="hover:bg-gray-50 cursor-pointer transition-colors"
+                onClick={() => handleVendorClick('bloomworks')}
+              >
                 <td className="py-3 font-medium">BloomWorks</td>
                 <td>89%</td>
                 <td>84%</td>

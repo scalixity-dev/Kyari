@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom'
 import { Package, BarChart3, Wallet, FileText } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -20,16 +21,23 @@ interface KPICardProps {
   icon: React.ReactNode;
   color: string;
   subtitle?: string;
+  onClick?: () => void;
 }
 
 // task items will be rendered in a table below
 
 /* styles migrated to Tailwind classes */
 
-const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, subtitle }) => {
+const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, subtitle, onClick }) => {
   const borderTopClass = color === 'blue' ? 'border-t-4 border-blue-600' : color === 'orange' ? 'border-t-4 border-orange-600' : color === 'green' ? 'border-t-4 border-green-600' : color === 'red' ? 'border-t-4 border-red-600' : ''
   return (
-    <div className={`bg-white p-6 rounded-xl shadow-md flex items-center gap-4 border border-white/20 relative overflow-hidden ${borderTopClass} hover:shadow-lg hover:-translate-y-1 transition-transform`}>
+    <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : -1}
+      onKeyDown={(e) => { if (onClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() } }}
+      onClick={onClick}
+      className={`bg-white p-6 rounded-xl shadow-md flex items-center gap-4 border border-white/20 relative overflow-hidden ${borderTopClass} ${onClick ? 'cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-transform' : ''}`}
+    >
       <div className="w-16 h-16 flex items-center justify-center rounded-lg text-3xl text-[var(--color-heading)]">{React.isValidElement(icon) ? React.cloneElement(icon as any, { color: 'var(--color-heading)', size: 32 } as any) : icon}</div>
       <div className="flex-1">
         <h3 className="text-xs font-semibold text-[var(--color-primary)] uppercase tracking-wide mb-1">{title}</h3>
@@ -43,7 +51,8 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, subtitle }
 // TaskItem removed; tasks are now rendered as a table with an Actions column
 
 export default function Dashboard() {
-  const today = new Date().toLocaleDateString('en-US', {
+  const navigate = useNavigate()
+  const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -110,6 +119,11 @@ export default function Dashboard() {
               icon={kpi.icon}
               color={kpi.color}
               subtitle={kpi.subtitle}
+              onClick={
+                kpi.title === 'Orders Today' ? () => navigate('/admin/tracking/orders') :
+                kpi.title === 'Vendor Confirmations' ? () => navigate('/admin/tracking/vendors') :
+                kpi.title === 'Payments Pending' ? () => navigate('/admin/money-flow') : undefined
+              }
             />
           ))}
         </div>
@@ -171,7 +185,7 @@ export default function Dashboard() {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="value" fill="#667eea" radius={[6, 6, 0, 0]}>
+                <Bar dataKey="value" fill="#38a169" radius={[6, 6, 0, 0]}>
                   <LabelList dataKey="value" position="top" formatter={(val: any) => `${val}%`} />
                 </Bar>
               </BarChart>

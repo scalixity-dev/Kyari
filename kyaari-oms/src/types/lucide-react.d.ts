@@ -20,6 +20,8 @@ declare module 'lucide-react' {
   export const Info: LucideIcon
   export const Clock: LucideIcon
   export const ChevronUp: LucideIcon
+  export const ChevronDown: LucideIcon
+  export const ChevronRight: LucideIcon
   export const Volume2: LucideIcon
   export const VolumeX: LucideIcon
   export const Filter: LucideIcon

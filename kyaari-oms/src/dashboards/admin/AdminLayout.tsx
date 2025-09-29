@@ -2,7 +2,7 @@ import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, Users, Bell, Wallet, MapPin, BarChart3, FileText, Search } from 'lucide-react'
+import { LayoutDashboard, Package, Users, Bell, Wallet, MapPin, BarChart3, FileText, Search, ChevronRight } from 'lucide-react'
 
 type NavItem = {
   to: string
@@ -68,21 +68,26 @@ function AdminLayout() {
                     >
                       <Icon size={18} />
                       <span className="flex-1 text-left">{label}</span>
-                      <span className="text-sm">{trackingOpen ? '▾' : '▸'}</span>
+                      <span className="text-sm">
+                        <ChevronRight size={14} className={`transform transition-transform duration-200 ${trackingOpen ? 'rotate-90' : 'rotate-0'}`} aria-hidden />
+                      </span>
                     </button>
-
-                    {trackingOpen && (
-                      <div className="mt-2 ml-3 flex flex-col gap-2">
-                        <Link to="/admin/tracking/orders" className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center gap-2 w-full whitespace-nowrap text-left" style={{ color: 'white' }}>
-                          <Package size={16} />
-                          <span>Order Tracking</span>
-                        </Link>
-                        <Link to="/admin/tracking/vendors" className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center gap-2 w-full whitespace-nowrap text-left" style={{ color: 'white' }}>
-                          <Users size={16} />
-                          <span>Vendor Tracking</span>
-                        </Link>
-                      </div>
-                    )}
+                    {/* submenu always present but animated for smooth open/close */}
+                    <div
+                      className={`mt-2 ml-3 flex flex-col gap-2 overflow-hidden transition-all duration-200 ease-in-out transform origin-top ${
+                        trackingOpen ? 'max-h-40 opacity-100 translate-y-0' : 'max-h-0 opacity-0 -translate-y-1'
+                      }`}
+                      aria-hidden={!trackingOpen}
+                    >
+                      <Link to="/admin/tracking/orders" className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center gap-2 w-full whitespace-nowrap text-left" style={{ color: 'white' }}>
+                        <Package size={16} />
+                        <span>Order Tracking</span>
+                      </Link>
+                      <Link to="/admin/tracking/vendors" className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center gap-2 w-full whitespace-nowrap text-left" style={{ color: 'white' }}>
+                        <Users size={16} />
+                        <span>Vendor Tracking</span>
+                      </Link>
+                    </div>
                   </div>
                 )
               }
