@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { 
   BarChart, 
   Bar, 
@@ -17,19 +17,156 @@ import jsPDF from 'jspdf'
 import * as XLSX from 'xlsx'
 
 // Sample data for charts
-const orderFulfillmentData = [
-  { month: 'Jan', fulfilled: 85, total: 100 },
-  { month: 'Feb', fulfilled: 92, total: 110 },
-  { month: 'Mar', fulfilled: 88, total: 105 },
-  { month: 'Apr', fulfilled: 95, total: 120 },
-  { month: 'May', fulfilled: 90, total: 115 },
-  { month: 'Jun', fulfilled: 94, total: 125 }
-]
+const orderFulfillmentData = {
+  monthly: [
+    { period: 'Jan', fulfilled: 85, total: 100 },
+    { period: 'Feb', fulfilled: 92, total: 110 },
+    { period: 'Mar', fulfilled: 88, total: 105 },
+    { period: 'Apr', fulfilled: 95, total: 120 },
+    { period: 'May', fulfilled: 90, total: 115 },
+    { period: 'Jun', fulfilled: 94, total: 125 }
+  ],
+  weekly: {
+    'Jan': [
+      { period: 'Week 1', fulfilled: 22, total: 25 },
+      { period: 'Week 2', fulfilled: 28, total: 30 },
+      { period: 'Week 3', fulfilled: 24, total: 28 },
+      { period: 'Week 4', fulfilled: 31, total: 35 }
+    ],
+    'Feb': [
+      { period: 'Week 1', fulfilled: 26, total: 30 },
+      { period: 'Week 2', fulfilled: 29, total: 32 },
+      { period: 'Week 3', fulfilled: 25, total: 28 },
+      { period: 'Week 4', fulfilled: 33, total: 36 }
+    ],
+    'Mar': [
+      { period: 'Week 1', fulfilled: 20, total: 24 },
+      { period: 'Week 2', fulfilled: 26, total: 30 },
+      { period: 'Week 3', fulfilled: 22, total: 26 },
+      { period: 'Week 4', fulfilled: 28, total: 32 }
+    ],
+    'Apr': [
+      { period: 'Week 1', fulfilled: 30, total: 33 },
+      { period: 'Week 2', fulfilled: 28, total: 31 },
+      { period: 'Week 3', fulfilled: 32, total: 35 },
+      { period: 'Week 4', fulfilled: 29, total: 32 }
+    ],
+    'May': [
+      { period: 'Week 1', fulfilled: 25, total: 28 },
+      { period: 'Week 2', fulfilled: 27, total: 30 },
+      { period: 'Week 3', fulfilled: 24, total: 27 },
+      { period: 'Week 4', fulfilled: 26, total: 29 }
+    ],
+    'Jun': [
+      { period: 'Week 1', fulfilled: 31, total: 34 },
+      { period: 'Week 2', fulfilled: 29, total: 32 },
+      { period: 'Week 3', fulfilled: 33, total: 36 },
+      { period: 'Week 4', fulfilled: 30, total: 33 }
+    ],
+    'Jul': [
+      { period: 'Week 1', fulfilled: 28, total: 31 },
+      { period: 'Week 2', fulfilled: 32, total: 35 },
+      { period: 'Week 3', fulfilled: 29, total: 32 },
+      { period: 'Week 4', fulfilled: 31, total: 34 }
+    ],
+    'Aug': [
+      { period: 'Week 1', fulfilled: 26, total: 29 },
+      { period: 'Week 2', fulfilled: 30, total: 33 },
+      { period: 'Week 3', fulfilled: 28, total: 31 },
+      { period: 'Week 4', fulfilled: 32, total: 35 }
+    ],
+    'Sep': [
+      { period: 'Week 1', fulfilled: 33, total: 36 },
+      { period: 'Week 2', fulfilled: 29, total: 32 },
+      { period: 'Week 3', fulfilled: 31, total: 34 },
+      { period: 'Week 4', fulfilled: 30, total: 33 }
+    ],
+    'Oct': [
+      { period: 'Week 1', fulfilled: 27, total: 30 },
+      { period: 'Week 2', fulfilled: 31, total: 34 },
+      { period: 'Week 3', fulfilled: 28, total: 31 },
+      { period: 'Week 4', fulfilled: 32, total: 35 }
+    ],
+    'Nov': [
+      { period: 'Week 1', fulfilled: 29, total: 32 },
+      { period: 'Week 2', fulfilled: 33, total: 36 },
+      { period: 'Week 3', fulfilled: 30, total: 33 },
+      { period: 'Week 4', fulfilled: 31, total: 34 }
+    ],
+    'Dec': [
+      { period: 'Week 1', fulfilled: 35, total: 38 },
+      { period: 'Week 2', fulfilled: 32, total: 35 },
+      { period: 'Week 3', fulfilled: 34, total: 37 },
+      { period: 'Week 4', fulfilled: 33, total: 36 }
+    ]
+  }
+}
 
 const ticketResolutionData = [
   { name: 'Resolved on Time', value: 70, color: '#10B981' },
   { name: 'Overdue', value: 20, color: '#F59E0B' },
   { name: 'Pending', value: 10, color: '#EF4444' }
+]
+
+const slaBreachesData = [
+  { name: 'On Time', value: 88, color: '#10B981' },
+  { name: 'Breaches', value: 12, color: '#EF4444' }
+]
+
+const vendorSlaDetails = [
+  { vendor: 'GreenLeaf Co', totalOrders: 25, breaches: 2, breachRate: 8.0, avgDelay: '2.5 hrs', slaTarget: '24 hrs', recentBreaches: ['ORD-1001', 'ORD-1006'] },
+  { vendor: 'Urban Roots', totalOrders: 33, breaches: 5, breachRate: 15.2, avgDelay: '4.2 hrs', slaTarget: '24 hrs', recentBreaches: ['ORD-1002', 'ORD-1005', 'ORD-2002', 'ORD-2005', 'ORD-3005'] },
+  { vendor: 'Plantify', totalOrders: 32, breaches: 1, breachRate: 3.1, avgDelay: '1.8 hrs', slaTarget: '24 hrs', recentBreaches: ['ORD-1003'] },
+  { vendor: 'Clay Works', totalOrders: 12, breaches: 4, breachRate: 33.3, avgDelay: '6.5 hrs', slaTarget: '24 hrs', recentBreaches: ['ORD-1004', 'ORD-1008', 'INV-2004', 'TKT-3004'] },
+  { vendor: 'EcoGarden Solutions', totalOrders: 28, breaches: 3, breachRate: 10.7, avgDelay: '3.2 hrs', slaTarget: '24 hrs', recentBreaches: ['ORD-2001', 'ORD-2003', 'ORD-3001'] },
+  { vendor: 'FreshHarvest Ltd', totalOrders: 45, breaches: 2, breachRate: 4.4, avgDelay: '2.1 hrs', slaTarget: '24 hrs', recentBreaches: ['ORD-3002', 'ORD-3003'] },
+  { vendor: 'Garden Paradise', totalOrders: 19, breaches: 6, breachRate: 31.6, avgDelay: '5.8 hrs', slaTarget: '24 hrs', recentBreaches: ['ORD-4001', 'ORD-4002', 'ORD-4003', 'ORD-4004', 'ORD-4005', 'ORD-4006'] },
+  { vendor: 'Nature\'s Best', totalOrders: 37, breaches: 1, breachRate: 2.7, avgDelay: '1.5 hrs', slaTarget: '24 hrs', recentBreaches: ['ORD-5001'] },
+  { vendor: 'Organic Valley', totalOrders: 52, breaches: 4, breachRate: 7.7, avgDelay: '2.8 hrs', slaTarget: '24 hrs', recentBreaches: ['ORD-6001', 'ORD-6002', 'ORD-6003', 'ORD-6004'] },
+  { vendor: 'Green Thumb Co', totalOrders: 23, breaches: 7, breachRate: 30.4, avgDelay: '6.2 hrs', slaTarget: '24 hrs', recentBreaches: ['ORD-7001', 'ORD-7002', 'ORD-7003', 'ORD-7004', 'ORD-7005', 'ORD-7006', 'ORD-7007'] }
+]
+
+// Simulate a larger dataset for demonstration
+const generateMoreVendors = () => {
+  const cities = ['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Hyderabad', 'Chennai', 'Kolkata', 'Ahmedabad']
+  const vendorTypes = ['Garden', 'Organic', 'Fresh', 'Green', 'Natural', 'Eco', 'Urban', 'Rural']
+  const suffixes = ['Co', 'Ltd', 'Solutions', 'Services', 'Farms', 'Gardens', 'Supply', 'Trade']
+  
+  const moreVendors = []
+  for (let i = 11; i <= 100; i++) {
+    const city = cities[Math.floor(Math.random() * cities.length)]
+    const type = vendorTypes[Math.floor(Math.random() * vendorTypes.length)]
+    const suffix = suffixes[Math.floor(Math.random() * suffixes.length)]
+    const vendor = `${type} ${suffix} ${city}`
+    const totalOrders = Math.floor(Math.random() * 50) + 10
+    const breaches = Math.floor(Math.random() * Math.min(totalOrders, 10))
+    const breachRate = (breaches / totalOrders) * 100
+    const avgDelay = (Math.random() * 8 + 1).toFixed(1) + ' hrs'
+    
+    const recentBreaches = []
+    for (let j = 0; j < breaches; j++) {
+      recentBreaches.push(`ORD-${i}${j.toString().padStart(3, '0')}`)
+    }
+    
+    moreVendors.push({
+      vendor,
+      totalOrders,
+      breaches,
+      breachRate: parseFloat(breachRate.toFixed(1)),
+      avgDelay,
+      slaTarget: '24 hrs',
+      recentBreaches
+    })
+  }
+  return moreVendors
+}
+
+const allVendorSlaDetails = [...vendorSlaDetails, ...generateMoreVendors()]
+
+const ticketResolutionDetails = [
+  { priority: 'High', total: 25, resolved: 18, overdue: 5, pending: 2, avgResolutionTime: '2.5 hrs' },
+  { priority: 'Medium', total: 45, resolved: 32, overdue: 8, pending: 5, avgResolutionTime: '4.2 hrs' },
+  { priority: 'Low', total: 30, resolved: 25, overdue: 3, pending: 2, avgResolutionTime: '6.8 hrs' }
 ]
 
 const paymentAgingData = [
@@ -99,6 +236,32 @@ export default function Analytics() {
   })
   const [reportData, setReportData] = useState<unknown[]>([])
   const [showReport, setShowReport] = useState(false)
+  const [fulfillmentView, setFulfillmentView] = useState<'weekly' | 'monthly'>('monthly')
+  const [selectedMonth, setSelectedMonth] = useState<string>('Sep')
+  const [selectedYear, setSelectedYear] = useState<string>('2025')
+  const [selectedVendorSla, setSelectedVendorSla] = useState<string>('')
+  const [vendorSearchTerm, setVendorSearchTerm] = useState<string>('')
+  const [showVendorDropdown, setShowVendorDropdown] = useState<boolean>(false)
+  const vendorDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Calculate metrics for the current view
+  const getCurrentMetrics = () => {
+    const data = fulfillmentView === 'weekly' 
+      ? orderFulfillmentData.weekly[selectedMonth as keyof typeof orderFulfillmentData.weekly] 
+      : orderFulfillmentData.monthly
+    
+    const totalOrders = data.reduce((sum: number, item: { total: number }) => sum + item.total, 0)
+    const fulfilledOrders = data.reduce((sum: number, item: { fulfilled: number }) => sum + item.fulfilled, 0)
+    const pendingOrders = totalOrders - fulfilledOrders
+    const fulfillmentRate = Math.round((fulfilledOrders / totalOrders) * 100)
+    
+    return {
+      totalOrders,
+      fulfilledOrders,
+      pendingOrders,
+      fulfillmentRate
+    }
+  }
 
   const getReportColumns = (metric: MetricType) => {
     switch (metric) {
@@ -311,6 +474,39 @@ export default function Analytics() {
     setReportData([])
   }
 
+  // Filter vendors based on search term
+  const filteredVendors = allVendorSlaDetails.filter(vendor =>
+    vendor.vendor.toLowerCase().includes(vendorSearchTerm.toLowerCase())
+  ).slice(0, 10) // Limit to 10 results for performance
+
+  const handleVendorSelect = (vendorName: string) => {
+    setSelectedVendorSla(vendorName)
+    setVendorSearchTerm(vendorName)
+    setShowVendorDropdown(false)
+  }
+
+  const handleVendorSearchChange = (value: string) => {
+    setVendorSearchTerm(value)
+    setShowVendorDropdown(value.length > 0)
+    if (value === '') {
+      setSelectedVendorSla('')
+    }
+  }
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (vendorDropdownRef.current && !vendorDropdownRef.current.contains(event.target as Node)) {
+        setShowVendorDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'confirmed':
@@ -342,7 +538,7 @@ export default function Analytics() {
   }
 
   return (
-    <div className="p-6 min-h-screen" style={{ backgroundColor: '#F5F3E7' }}>
+    <div className="p-6 min-h-screen" style={{ backgroundColor: '#ECDDC9' }}>
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-heading mb-2">Analytics & Reports</h1>
@@ -352,67 +548,406 @@ export default function Analytics() {
       {/* Prebuilt Reports Section */}
       <div className="mb-12">
         <h2 className="text-2xl font-semibold text-heading mb-6">Prebuilt Reports</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Order Fulfillment Rate */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-heading mb-4">Order Fulfillment Rate</h3>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={orderFulfillmentData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="fulfilled" fill="#10B981" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-4 text-center">
-              <span className="text-2xl font-bold text-green-600">94%</span>
-              <p className="text-sm text-gray-600">Average fulfillment rate</p>
+        {/* Order Fulfillment Rate - Full Width */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-semibold text-heading">Order Fulfillment Rate</h3>
+            <div className="flex items-center space-x-4">
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setFulfillmentView('monthly')}
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                    fulfillmentView === 'monthly'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setFulfillmentView('weekly')}
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                    fulfillmentView === 'weekly'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Weekly
+                </button>
+              </div>
+              
+              {/* Month and Year Selectors for Weekly View */}
+              {fulfillmentView === 'weekly' && (
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm font-medium text-gray-700">Month:</label>
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
+                    >
+                      <option value="Jan">January</option>
+                      <option value="Feb">February</option>
+                      <option value="Mar">March</option>
+                      <option value="Apr">April</option>
+                      <option value="May">May</option>
+                      <option value="Jun">June</option>
+                      <option value="Jul">July</option>
+                      <option value="Aug">August</option>
+                      <option value="Sep">September</option>
+                      <option value="Oct">October</option>
+                      <option value="Nov">November</option>
+                      <option value="Dec">December</option>
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm font-medium text-gray-700">Year:</label>
+                    <select
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
+                    >
+                      <option value="2023">2023</option>
+                      <option value="2024">2024</option>
+                      <option value="2025">2025</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Vendor SLA Breaches */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-heading mb-4">Vendor SLA Breaches</h3>
-            <div className="flex items-center justify-center h-48">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Chart Section */}
+            <div className="lg:col-span-2">
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={fulfillmentView === 'weekly' ? orderFulfillmentData.weekly[selectedMonth as keyof typeof orderFulfillmentData.weekly] : orderFulfillmentData.monthly}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="period" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="fulfilled" fill="#10B981" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            
+            {/* Metrics Section */}
+            <div className="flex flex-col justify-center space-y-6">
               <div className="text-center">
-                <div className="text-4xl font-bold text-red-600 mb-2">12</div>
-                <p className="text-gray-600 mb-4">breaches this week</p>
-                <div className="w-32 h-32 mx-auto">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={[{ name: 'Breaches', value: 12 }, { name: 'On Time', value: 88 }]}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={30}
-                        outerRadius={60}
-                        dataKey="value"
-                      >
-                        <Cell fill="#EF4444" />
-                        <Cell fill="#10B981" />
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className="text-4xl font-bold text-green-600 mb-2">
+                  {getCurrentMetrics().fulfillmentRate}%
+                </div>
+                <p className="text-sm text-gray-600 mb-1">
+                  Average {fulfillmentView} fulfillment rate
+                  {fulfillmentView === 'weekly' && ` (${selectedMonth} ${selectedYear})`}
+                </p>
+                <div className="w-16 h-1 bg-green-200 rounded-full mx-auto">
+                  <div 
+                    className="h-1 bg-green-600 rounded-full" 
+                    style={{ width: `${getCurrentMetrics().fulfillmentRate}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-600">Total Orders</span>
+                  <span className="font-semibold">
+                    {getCurrentMetrics().totalOrders}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-600">Fulfilled</span>
+                  <span className="font-semibold text-green-600">
+                    {getCurrentMetrics().fulfilledOrders}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-600">Pending</span>
+                  <span className="font-semibold text-orange-600">
+                    {getCurrentMetrics().pendingOrders}
+                  </span>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Other Charts Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          {/* Vendor SLA Breaches */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-heading">Vendor SLA Breaches</h3>
+              <div className="flex items-center space-x-3">
+                <div className="relative" ref={vendorDropdownRef}>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      placeholder="Search vendors..."
+                      value={vendorSearchTerm}
+                      onChange={(e) => handleVendorSearchChange(e.target.value)}
+                      onFocus={() => setShowVendorDropdown(vendorSearchTerm.length > 0)}
+                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent w-48"
+                    />
+                    {selectedVendorSla && (
+                      <button
+                        onClick={() => {
+                          setSelectedVendorSla('')
+                          setVendorSearchTerm('')
+                          setShowVendorDropdown(false)
+                        }}
+                        className="text-gray-400 hover:text-gray-600 text-sm"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Search Dropdown */}
+                  {showVendorDropdown && filteredVendors.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                      <div className="p-2 text-xs text-gray-500 border-b">
+                        Showing {filteredVendors.length} of {allVendorSlaDetails.length} vendors
+                      </div>
+                      {filteredVendors.map((vendor, index) => (
+                        <div
+                          key={index}
+                          onClick={() => handleVendorSelect(vendor.vendor)}
+                          className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-gray-900">{vendor.vendor}</span>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs text-gray-500">{vendor.breaches}/{vendor.totalOrders}</span>
+                              <span 
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  vendor.breachRate > 20 
+                                    ? 'bg-red-100 text-red-800' 
+                                    : vendor.breachRate > 10 
+                                      ? 'bg-yellow-100 text-yellow-800' 
+                                      : 'bg-green-100 text-green-800'
+                                }`}
+                              >
+                                {vendor.breachRate}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {filteredVendors.length === 10 && (
+                        <div className="p-2 text-xs text-gray-500 text-center border-t">
+                          Type more to narrow results...
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* No Results */}
+                  {showVendorDropdown && filteredVendors.length === 0 && vendorSearchTerm.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                      <div className="p-3 text-sm text-gray-500 text-center">
+                        No vendors found matching "{vendorSearchTerm}"
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {selectedVendorSla ? (
+              // Selected Vendor Details
+              (() => {
+                const vendor = allVendorSlaDetails.find(v => v.vendor === selectedVendorSla)
+                if (!vendor) return null
+                
+                return (
+                  <div className="space-y-6">
+                    {/* Vendor Specific Metrics */}
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="text-center p-3 bg-gray-50 rounded-lg">
+                        <div className="text-xl font-bold text-gray-900">{vendor.totalOrders}</div>
+                        <p className="text-xs text-gray-600">Total Orders</p>
+                      </div>
+                      <div className="text-center p-3 bg-red-50 rounded-lg">
+                        <div className="text-xl font-bold text-red-600">{vendor.breaches}</div>
+                        <p className="text-xs text-gray-600">Breaches</p>
+                      </div>
+                      <div className="text-center p-3 bg-orange-50 rounded-lg">
+                        <div className="text-xl font-bold text-orange-600">{vendor.breachRate}%</div>
+                        <p className="text-xs text-gray-600">Breach Rate</p>
+                      </div>
+                      <div className="text-center p-3 bg-blue-50 rounded-lg">
+                        <div className="text-xl font-bold text-blue-600">{vendor.avgDelay}</div>
+                        <p className="text-xs text-gray-600">Avg Delay</p>
+                      </div>
+                    </div>
+
+                    {/* Vendor Performance Chart */}
+                    <div className="h-32">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'On Time', value: vendor.totalOrders - vendor.breaches, color: '#10B981' },
+                              { name: 'Breaches', value: vendor.breaches, color: '#EF4444' }
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={25}
+                            outerRadius={50}
+                            dataKey="value"
+                          >
+                            <Cell fill="#10B981" />
+                            <Cell fill="#EF4444" />
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Recent Breaches */}
+                    <div className="border-t pt-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">Recent SLA Breaches</h4>
+                      <div className="space-y-2">
+                        {vendor.recentBreaches.map((breach, index) => (
+                          <div key={index} className="flex justify-between items-center p-2 bg-red-50 rounded-lg">
+                            <span className="text-sm font-medium text-gray-900">{breach}</span>
+                            <span className="text-xs text-red-600 font-medium">SLA Breach</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* SLA Target Info */}
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-700">SLA Target:</span>
+                        <span className="text-sm font-semibold text-blue-800">{vendor.slaTarget}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()
+            ) : (
+              // All Vendors Overview
+              <>
+                {/* Key Metrics */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">12</div>
+                    <p className="text-sm text-gray-600">Total Breaches</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-600">13.3%</div>
+                    <p className="text-sm text-gray-600">Breach Rate</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">3.6 hrs</div>
+                    <p className="text-sm text-gray-600">Avg Delay</p>
+                  </div>
+                </div>
+
+                {/* Chart */}
+                <div className="h-32 mb-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={slaBreachesData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={25}
+                        outerRadius={50}
+                        dataKey="value"
+                      >
+                        {slaBreachesData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Legend */}
+                <div className="flex justify-center space-x-4 mb-4">
+                  {slaBreachesData.map((item, index) => (
+                    <div key={index} className="flex items-center">
+                      <div 
+                        className="w-3 h-3 rounded-full mr-2" 
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-sm text-gray-600">{item.name}: {item.value}%</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Top Breaching Vendors */}
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Top Breaching Vendors</h4>
+                  <div className="space-y-2">
+                    {allVendorSlaDetails
+                      .sort((a, b) => b.breachRate - a.breachRate)
+                      .slice(0, 3)
+                      .map((vendor, index) => (
+                        <div key={index} className="flex justify-between items-center text-sm">
+                          <span className="font-medium text-gray-900">{vendor.vendor}</span>
+                          <div className="flex items-center space-x-3">
+                            <span className="text-gray-600">{vendor.breaches}/{vendor.totalOrders}</span>
+                            <span 
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                vendor.breachRate > 20 
+                                  ? 'bg-red-100 text-red-800' 
+                                  : vendor.breachRate > 10 
+                                    ? 'bg-yellow-100 text-yellow-800' 
+                                    : 'bg-green-100 text-green-800'
+                              }`}
+                            >
+                              {vendor.breachRate}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Ticket Resolution Stats */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-heading mb-4">Ticket Resolution Stats</h3>
-            <div className="h-48">
+            
+            {/* Key Metrics */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">100</div>
+                <p className="text-sm text-gray-600">Total Tickets</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">75</div>
+                <p className="text-sm text-gray-600">Resolved</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-600">4.2 hrs</div>
+                <p className="text-sm text-gray-600">Avg Resolution</p>
+              </div>
+            </div>
+
+            {/* Chart */}
+            <div className="h-32 mb-4">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={ticketResolutionData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={40}
-                    outerRadius={80}
+                    innerRadius={25}
+                    outerRadius={50}
                     dataKey="value"
                   >
                     {ticketResolutionData.map((entry, index) => (
@@ -423,7 +958,9 @@ export default function Analytics() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-4 flex justify-center space-x-4">
+
+            {/* Legend */}
+            <div className="flex justify-center space-x-4 mb-4">
               {ticketResolutionData.map((item, index) => (
                 <div key={index} className="flex items-center">
                   <div 
@@ -434,10 +971,47 @@ export default function Analytics() {
                 </div>
               ))}
             </div>
+
+            {/* Priority Breakdown */}
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Resolution by Priority</h4>
+              <div className="space-y-2">
+                {ticketResolutionDetails.map((priority, index) => (
+                  <div key={index} className="flex justify-between items-center text-sm">
+                    <div className="flex items-center">
+                      <div 
+                        className={`w-2 h-2 rounded-full mr-2 ${
+                          priority.priority === 'High' 
+                            ? 'bg-red-500' 
+                            : priority.priority === 'Medium' 
+                              ? 'bg-yellow-500' 
+                              : 'bg-green-500'
+                        }`}
+                      />
+                      <span className="font-medium text-gray-900">{priority.priority}</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className="text-gray-600">{priority.resolved}/{priority.total}</span>
+                      <span 
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          priority.priority === 'High' 
+                            ? 'bg-red-100 text-red-800' 
+                            : priority.priority === 'Medium' 
+                              ? 'bg-yellow-100 text-yellow-800' 
+                              : 'bg-green-100 text-green-800'
+                        }`}
+                      >
+                        {priority.avgResolutionTime}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Payment Aging Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:col-span-2">
             <div className="mb-4">
               <h3 className="text-lg font-semibold mb-1" style={{ fontFamily: 'Fraunces', color: '#1D4D43' }}>
                 Payment Aging

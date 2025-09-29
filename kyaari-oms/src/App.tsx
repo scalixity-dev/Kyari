@@ -17,6 +17,9 @@ import OrderDetails from './dashboards/admin/pages/OrderDetails'
 import VendorTracking from './dashboards/admin/pages/VendorTracking'
 import VendorDetails from './dashboards/admin/pages/VendorDetails'
 import Analytics from './dashboards/admin/pages/Analytics'
+import VendorSupport from './dashboards/admin/pages/VendorSupport'
+import AccountSupport from './dashboards/admin/pages/AccountSupport'
+import OpsSupport from './dashboards/admin/pages/OpsSupport'
 import AuditLogs from './dashboards/admin/pages/AuditLogs'
 import VendorsLayout from './dashboards/vendors/VendorsLayout'
 import VendorDashboard from './dashboards/vendors/pages/Dashboard'
@@ -26,6 +29,12 @@ import VendorDispatch from './dashboards/vendors/pages/Dispatch'
 import VendorPerformance from './dashboards/vendors/pages/Performance'
 import VendorProfileSettings from './dashboards/vendors/pages/ProfileSettings'
 import AccountsLayout from './dashboards/accounts/AccountsLayout'
+import AccountsDashboard from './dashboards/accounts/pages/Dashboard'
+import AccountsVendorOrders from './dashboards/accounts/pages/VendorOrders'
+import AccountsInvoices from './dashboards/accounts/pages/Invoices'
+import AccountsPaymentRelease from './dashboards/accounts/pages/PaymentRelease'
+import AccountsReports from './dashboards/accounts/pages/Reports'
+import AccountsProfileSettings from './dashboards/accounts/pages/ProfileSettings'
 import OperationsLayout from './dashboards/operations/OperationsLayout'
 import { AuthProvider } from './auth/AuthProvider'
 import ProtectedRoute from './auth/ProtectedRoute'
@@ -59,6 +68,9 @@ function App() {
             <Route path="orders/:id" element={<OrderDetails />} />
             <Route path="tracking/vendors" element={<VendorTracking />} />
             <Route path="vendors/:id" element={<VendorDetails />} />
+            <Route path="support/vendors" element={<VendorSupport />} />
+            <Route path="support/accounts" element={<AccountSupport />} />
+            <Route path="support/ops" element={<OpsSupport />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="audit-logs" element={<AuditLogs />} />
           </Route>
@@ -75,7 +87,14 @@ function App() {
             <Route path="performance" element={<VendorPerformance />} />
             <Route path="profile-settings" element={<VendorProfileSettings />} />
           </Route>
-          <Route path="/accounts" element={<ProtectedRoute redirectTo={'/accounts/signin'}><AccountsLayout /></ProtectedRoute>} />
+          <Route path="/accounts" element={<ProtectedRoute redirectTo={'/accounts/signin'}><AccountsLayout /></ProtectedRoute>}>
+            <Route index element={<AccountsDashboard />} />
+            <Route path="vendor-orders" element={<AccountsVendorOrders />} />
+            <Route path="po-invoices" element={<AccountsInvoices />} />
+            <Route path="payment-release" element={<AccountsPaymentRelease />} />
+            <Route path="reports" element={<AccountsReports />} />
+            <Route path="profile-settings" element={<AccountsProfileSettings />} />
+          </Route>
           <Route path="/operations" element={<ProtectedRoute redirectTo={'/operations/signin'}><OperationsLayout /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>

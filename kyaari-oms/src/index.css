@@ -33,3 +33,13 @@
   body { @apply font-sans antialiased text-base text-black bg-white m-0; }
   h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); }
 }
+
+/* Utility: hide scrollbars while keeping scroll behavior */
+.scrollbar-hidden {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+.scrollbar-hidden::-webkit-scrollbar { /* Chrome/Safari/Edge */
+  width: 0;
+  height: 0;
+}
