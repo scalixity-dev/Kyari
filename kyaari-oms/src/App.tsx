@@ -15,6 +15,7 @@ import MoneyFlow from './dashboards/admin/pages/MoneyFlow'
 import OrderTracking from './dashboards/admin/pages/OrderTracking'
 import OrderDetails from './dashboards/admin/pages/OrderDetails'
 import VendorTracking from './dashboards/admin/pages/VendorTracking'
+import VendorDetails from './dashboards/admin/pages/VendorDetails'
 import Analytics from './dashboards/admin/pages/Analytics'
 import AuditLogs from './dashboards/admin/pages/AuditLogs'
 import VendorsLayout from './dashboards/vendors/VendorsLayout'
@@ -51,6 +52,7 @@ function App() {
             <Route path="tracking/orders" element={<OrderTracking />} />
             <Route path="orders/:id" element={<OrderDetails />} />
             <Route path="tracking/vendors" element={<VendorTracking />} />
+            <Route path="vendors/:id" element={<VendorDetails />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="audit-logs" element={<AuditLogs />} />
           </Route>
