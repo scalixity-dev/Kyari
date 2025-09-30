@@ -1,17 +1,133 @@
-import { Link, Outlet } from 'react-router-dom'
+import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useState } from 'react'
+import { useAuth } from '../../auth/AuthProvider'
+import type { LucideIcon } from 'lucide-react'
+import { LayoutDashboard, Package, Bell, BarChart3, Users, Search, AlertTriangle } from 'lucide-react'
+
+type NavItem = {
+  to: string
+  icon: LucideIcon
+  label: string
+}
+
+const navItems: NavItem[] = [
+  { to: '/operations', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/operations/received-orders', icon: Package, label: 'Received Orders' },
+  { to: '/operations/tickets', icon: AlertTriangle, label: 'Manage Ticket' },
+  { to: '/operations/reports', icon: BarChart3, label: 'Reports' },
+  { to: '/operations/profile-settings', icon: Users, label: 'Profile & Settings' }
+]
 
 function OperationsLayout() {
+  const { logout, user } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [search, setSearch] = useState('')
+  const [showProfile, setShowProfile] = useState(false)
+  const [notifications] = useState(3)
+
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!search) return
+    // navigate to a search results page (not implemented) with query
+    navigate(`/operations/search?q=${encodeURIComponent(search)}`)
+  }
+
+  function handleLogout() {
+    logout()
+    navigate('/')
+  }
+
   return (
-    <div className="grid min-h-screen grid-cols-[220px_1fr]">
-      <aside className="border-r border-gray-200 p-4">
-        <h2 className="mb-3 text-xl font-semibold">Operations</h2>
-        <nav className="flex flex-col gap-2">
-          <Link className="text-blue-600 hover:underline" to="/">Back to Landing</Link>
-        </nav>
+    <div className="min-h-screen" style={{ background: 'var(--color-happyplant-bg)', width: '100%', minHeight: '100vh', boxSizing: 'border-box', overflowX: 'hidden' }}>
+      {/* Sidebar (fixed) */}
+      <aside className="p-6 flex flex-col justify-between" style={{ background: 'var(--color-secondary)', color: 'white', width: '230px', position: 'fixed', left: 0, top: 0, height: '100vh', zIndex: 30 }}>
+        <div>
+          <div className="mb-8">
+            <div style={{ fontFamily: 'var(--font-heading)', fontSize: 28, fontWeight: 600 }}>Kyari</div>
+            <div className="text-sm text-white/70 mt-1">Operations Portal</div>
+          </div>
+
+          <nav className="flex flex-col gap-4">
+            {navItems.map(({ to, icon: Icon, label }) => {
+              const isActive = location.pathname === to
+              
+              return (
+                <Link 
+                  key={to} 
+                  to={to} 
+                  className={`py-2 rounded-md flex items-center gap-2 w-full whitespace-nowrap text-left ${
+                    isActive ? 'bg-white text-gray-800 pl-3 pr-1' : 'hover:bg-white/5 px-3'
+                  }`} 
+                  style={{ color: isActive ? 'var(--color-primary)' : 'white' }}
+                >
+                  <Icon size={18} />
+                  <span>{label}</span>
+                </Link>
+              )
+            })}
+          </nav>
+        </div>
+
+        {/* footer intentionally removed per user request */}
       </aside>
-      <main className="p-4">
-        <h3 className="mb-4 text-lg font-medium">Operations Dashboard</h3>
-        <Outlet />
+
+      {/* Main area */}
+      <main style={{ marginLeft: '230px', marginTop: 0, paddingTop: 0, overflowX: 'hidden', height: '100vh' }}>
+        {/* Top bar (fixed) */}
+        <div className="flex items-center justify-between bg-[var(--color-secondary)] py-2 pr-6 pl-0 fixed top-0 left-[230px] right-0 h-16 z-40 border-l border-white/20">
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-3 w-[60%]">
+            <div className="relative w-full">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/90">
+                <Search size={18} />
+              </div>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search orders, tickets, reports..."
+                className="w-1/2 pl-11 pr-3 h-9 rounded-md bg-[var(--color-secondary)] text-white outline-none"
+              />
+            </div>
+          </form>
+
+          <div className="flex items-center gap-4">
+            <button aria-label="Notifications" className="relative p-0 rounded-md text-white" style={{ background: 'transparent' }}>
+              <Bell size={18} />
+              {notifications > 0 && (
+                <span className="absolute -top-1 -right-1 text-xs rounded-full px-1" style={{ background: 'var(--color-accent)', color: 'var(--color-button-text)' }}>{notifications}</span>
+              )}
+            </button>
+
+            <div className="relative">
+              <button onClick={() => setShowProfile((s) => !s)} className="flex items-center gap-3 p-1 rounded-md" style={{ background: 'transparent' }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 600, color: 'white' }}>{user?.email ? user.email.split('@')[0] : 'Operations'}</div>
+                  <div style={{ fontSize: 12, color: 'white' }}>Operations</div>
+                </div>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'var(--color-accent)', color: 'var(--color-button-text)', fontSize: 13 }}>O</div>
+              </button>
+
+              {showProfile && (
+                <div className="absolute right-0 mt-2 w-40 rounded-md shadow-md p-2" style={{ background: 'var(--color-header-bg)' }}>
+                  <Link to="/operations/profile-settings" className="block px-2 py-1 hover:underline" style={{ color: 'var(--color-primary)' }}>Settings</Link>
+                  <button onClick={handleLogout} className="w-full text-left px-2 py-1 mt-1" style={{ background: 'transparent', color: 'var(--color-primary)' }}>Logout</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Main content area - Outlet renders module content */}
+        <div style={{ marginTop: 64, height: 'calc(100vh - 64px)', overflow: 'auto' }}>
+          {/* Module area - transparent background, modules should use full width */}
+          <div style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box', padding: 0, background: 'transparent' }}>
+            <div style={{ width: '100%', padding: 0 }}>
+              <Outlet />
+            </div>
+          </div>
+        </div>
+
+        {/* main footer removed per user request */}
       </main>
     </div>
   )

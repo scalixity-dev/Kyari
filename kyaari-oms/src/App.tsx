@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import Landing from './pages/Landing'
 import AdminSignIn from './pages/AdminSignIn'
 import AccountsSignIn from './pages/AccountsSignIn'
-// import OperationsSignIn from './pages/OperationsSignIn'
+import OperationsSignIn from './pages/OperationsSignIn'
 import VendorsSignIn from './pages/VendorsSignIn'
 import VendorSignUp from './pages/VendorSignUp'
 import AdminLayout from './dashboards/admin/AdminLayout'
@@ -26,12 +26,12 @@ import VendorDispatch from './dashboards/vendors/pages/Dispatch'
 import VendorPerformance from './dashboards/vendors/pages/Performance'
 import VendorProfileSettings from './dashboards/vendors/pages/ProfileSettings'
 import AccountsLayout from './dashboards/accounts/AccountsLayout'
-// import OperationsLayout from './dashboards/operations/OperationsLayout'
-// import OperationsDashboard from './dashboards/operations/pages/Dashboard'
-// import OperationsReceivedOrders from './dashboards/operations/pages/ReceivedOrders'
-// import OperationsTicketManagement from './dashboards/operations/pages/TicketManagement'
-// import OperationsReports from './dashboards/operations/pages/Reports'
-// import OperationsProfileSettings from './dashboards/operations/pages/ProfileSettings'
+import OperationsLayout from './dashboards/operations/OperationsLayout'
+import OperationsDashboard from './dashboards/operations/pages/Dashboard'
+import OperationsReceivedOrders from './dashboards/operations/pages/ReceivedOrders'
+import OperationsTicketManagement from './dashboards/operations/pages/TicketManagement'
+import OperationsReports from './dashboards/operations/pages/Reports'
+import OperationsProfileSettings from './dashboards/operations/pages/ProfileSettings'
 import { AuthProvider } from './auth/AuthProvider'
 import ProtectedRoute from './auth/ProtectedRoute'
 import { Header } from './components'
@@ -69,7 +69,7 @@ function App() {
           </Route>
           <Route path="/admin/signin" element={<AdminSignIn />} />
           <Route path="/accounts/signin" element={<AccountsSignIn />} />
-          {/* <Route path="/operations/signin" element={<OperationsSignIn />} /> */}
+          <Route path="/operations/signin" element={<OperationsSignIn />} />
           <Route path="/vendors/signin" element={<VendorsSignIn />} />
           <Route path="/vendors/signup" element={<VendorSignUp />} />
           <Route path="/vendors" element={<ProtectedRoute redirectTo={'/vendors/signin'}><VendorsLayout /></ProtectedRoute>}>
@@ -81,13 +81,13 @@ function App() {
             <Route path="profile-settings" element={<VendorProfileSettings />} />
           </Route>
           <Route path="/accounts" element={<ProtectedRoute redirectTo={'/accounts/signin'}><AccountsLayout /></ProtectedRoute>} />
-          {/* <Route path="/operations" element={<ProtectedRoute redirectTo={'/operations/signin'}><OperationsLayout /></ProtectedRoute>}>
+          <Route path="/operations" element={<ProtectedRoute redirectTo={'/operations/signin'}><OperationsLayout /></ProtectedRoute>}>
             <Route index element={<OperationsDashboard />} />
             <Route path="received-orders" element={<OperationsReceivedOrders />} />
             <Route path="tickets" element={<OperationsTicketManagement />} />
             <Route path="reports" element={<OperationsReports />} />
             <Route path="profile-settings" element={<OperationsProfileSettings />} />
-          </Route> */}
+          </Route>
         </Routes>
       </BrowserRouter>
     </AuthProvider>
