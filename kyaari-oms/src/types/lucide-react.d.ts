@@ -34,6 +34,9 @@ declare module 'lucide-react' {
   export const X: LucideIcon
   export const Edit: LucideIcon
   export const Trash2: LucideIcon
+  export const Send: LucideIcon
+  export const Paperclip: LucideIcon
+  export const Image: LucideIcon
 }
 
 
