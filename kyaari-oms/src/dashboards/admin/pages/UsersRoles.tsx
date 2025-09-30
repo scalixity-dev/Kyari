@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
 
 type TabKey = 'accounts' | 'ops' | 'vendors' | 'matrix'
 type UserRole = 'Admin' | 'Accounts' | 'Ops'
@@ -118,6 +119,21 @@ export default function UsersRoles() {
   const [userForm, setUserForm] = useState<{ name: string; email: string; role: UserRole; status: UserStatus }>({ name: '', email: '', role: 'Accounts', status: 'Active' })
   const isAccountsTab = activeTab === 'accounts'
 
+  // Edit User modal
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editForm, setEditForm] = useState<
+    | {
+        id: string
+        name: string
+        email: string
+        role: UserRole
+        status: UserStatus
+        createdAt: string
+        source: 'accounts' | 'ops'
+      }
+    | null
+  >(null)
+
   function openCreateUserModal() {
     const defaultRole: UserRole = isAccountsTab ? 'Accounts' : 'Ops'
     setUserForm({ name: '', email: '', role: defaultRole, status: 'Active' })
@@ -173,6 +189,61 @@ export default function UsersRoles() {
       if (table === 'accounts') setAccountsUsers((rows) => mutate(rows))
       else setOpsUsers((rows) => mutate(rows))
     }
+  }
+
+  function openEditUserModal(row: UserRow, source: 'accounts' | 'ops') {
+    setEditForm({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      role: row.role,
+      status: row.status,
+      createdAt: row.createdAt,
+      source
+    })
+    setShowEditModal(true)
+  }
+
+  function handleEditUserSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editForm) return
+
+    const updated: UserRow = {
+      id: editForm.id,
+      name: editForm.name,
+      email: editForm.email,
+      role: editForm.role,
+      status: editForm.status,
+      createdAt: editForm.createdAt
+    }
+
+    // Determine previous role if needed in future; not used currently
+    // const prevRoleCandidate = editForm.source === 'accounts'
+    //   ? accountsUsers.find((u) => u.id === editForm.id)
+    //   : opsUsers.find((u) => u.id === editForm.id)
+    // const prevRole: UserRole = prevRoleCandidate ? prevRoleCandidate.role : editForm.role
+
+    const upsert = (rows: UserRow[], user: UserRow): UserRow[] => {
+      const exists = rows.some((r) => r.id === user.id)
+      return exists ? rows.map((r) => (r.id === user.id ? user : r)) : [user, ...rows]
+    }
+    const removeById = (rows: UserRow[], id: string): UserRow[] => rows.filter((r) => r.id !== id)
+
+    if (updated.role === 'Admin') {
+      setAccountsUsers((rows) => upsert(rows, updated))
+      setOpsUsers((rows) => upsert(rows, updated))
+    } else if (updated.role === 'Accounts') {
+      setAccountsUsers((rows) => upsert(rows, updated))
+      setOpsUsers((rows) => removeById(rows, updated.id))
+    } else if (updated.role === 'Ops') {
+      setOpsUsers((rows) => upsert(rows, updated))
+      setAccountsUsers((rows) => removeById(rows, updated.id))
+    }
+
+    // If previous role was Admin and now not Admin, removal from the other list handled above
+    // Close modal
+    setShowEditModal(false)
+    setEditForm(null)
   }
 
   // Vendors actions
@@ -234,7 +305,9 @@ export default function UsersRoles() {
           <div>
             <div className="flex justify-between items-center mb-3">
               <div />
-              <PrimaryButton onClick={openCreateUserModal}>➕ Create New User</PrimaryButton>
+              <PrimaryButton onClick={openCreateUserModal}>
+                <span className="inline-flex items-center gap-2"><Plus size={16} /> Create New User</span>
+              </PrimaryButton>
             </div>
 
             <div className="bg-header-bg rounded-xl overflow-hidden">
@@ -265,7 +338,7 @@ export default function UsersRoles() {
                       <td className="p-3">{row.createdAt}</td>
                       <td className="p-3 flex gap-2">
                         <SecondaryButton
-                          onClick={() => window.alert('Edit user coming soon')}
+                          onClick={() => openEditUserModal(row, 'accounts')}
                         >
                           Edit
                         </SecondaryButton>
@@ -343,7 +416,9 @@ export default function UsersRoles() {
           <div>
             <div className="flex justify-between items-center mb-3">
               <div />
-              <PrimaryButton onClick={openCreateUserModal}>➕ Create New User</PrimaryButton>
+              <PrimaryButton onClick={openCreateUserModal}>
+                <span className="inline-flex items-center gap-2"><Plus size={16} /> Create New User</span>
+              </PrimaryButton>
             </div>
 
             <div className="bg-header-bg rounded-xl overflow-hidden">
@@ -373,7 +448,7 @@ export default function UsersRoles() {
                       </td>
                       <td className="p-3">{row.createdAt}</td>
                       <td className="p-3 flex gap-2">
-                        <SecondaryButton onClick={() => window.alert('Edit user coming soon')}>Edit</SecondaryButton>
+                        <SecondaryButton onClick={() => openEditUserModal(row, 'ops')}>Edit</SecondaryButton>
                         <PrimaryButton
                           style={{ background: row.status === 'Active' ? '#EF4444' : 'var(--color-accent)' }}
                           onClick={() => handleDeactivateUser(row.id, 'ops')}
@@ -525,6 +600,83 @@ export default function UsersRoles() {
             </div>
           </div>
         )}
+        {/* Edit User Modal */}
+        <Modal
+          open={showEditModal && !!editForm}
+          onClose={() => {
+            setShowEditModal(false)
+            setEditForm(null)
+          }}
+          title={editForm ? `Edit User - ${editForm.name}` : 'Edit User'}
+          showClose={false}
+        >
+          {editForm && (
+            <form onSubmit={handleEditUserSubmit} className="grid gap-3">
+              <div>
+                <label className="block font-semibold mb-1">Name</label>
+                <input
+                  required
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((f) => (f ? { ...f, name: e.target.value } : f))}
+                  placeholder="Full name"
+                  className="w-full border border-gray-300 rounded-lg p-2.5"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Email</label>
+                <input
+                  required
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => (f ? { ...f, email: e.target.value } : f))}
+                  placeholder="name@kyari.com"
+                  className="w-full border border-gray-300 rounded-lg p-2.5"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Role</label>
+                <select
+                  required
+                  value={editForm.role}
+                  onChange={(e) =>
+                    setEditForm((f) => (f ? { ...f, role: e.target.value as UserRole } : f))
+                  }
+                  className="w-full border border-gray-300 rounded-lg p-2.5"
+                >
+                  <option value="Admin">Admin</option>
+                  <option value="Accounts">Accounts</option>
+                  <option value="Ops">Ops</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Status</label>
+                <select
+                  required
+                  value={editForm.status}
+                  onChange={(e) =>
+                    setEditForm((f) => (f ? { ...f, status: e.target.value as UserStatus } : f))
+                  }
+                  className="w-full border border-gray-300 rounded-lg p-2.5"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 mt-2">
+                <SecondaryButton
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false)
+                    setEditForm(null)
+                  }}
+                >
+                  Cancel
+                </SecondaryButton>
+                <PrimaryButton type="submit">Save Changes</PrimaryButton>
+              </div>
+            </form>
+          )}
+        </Modal>
       </div>
     </div>
   )

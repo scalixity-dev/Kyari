@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
+import { Edit, Trash2, Plus, Upload, Search, FileText } from 'lucide-react'
 
 type OrderStatus =
   | 'RECEIVED'
@@ -252,21 +253,24 @@ export default function Orders() {
         <div className="flex gap-3">
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-accent text-button-text rounded-full px-4 py-2.5 border border-transparent"
+            className="bg-accent text-button-text rounded-full px-4 py-2.5 border border-transparent flex items-center gap-2"
           >
-            ➕ Add New Order
+            <Plus size={16} />
+            <span>Add New Order</span>
           </button>
           <button
             onClick={() => setIsUploadModalOpen(true)}
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5"
+            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 flex items-center gap-2"
           >
-            ⬆️ Upload Excel
+            <Upload size={16} />
+            <span>Upload Excel</span>
           </button>
           <button
             onClick={() => setIsFilterOpen(v => !v)}
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5"
+            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 flex items-center gap-2"
           >
-            🔍 Filters
+            <Search size={16} />
+            <span>Filters</span>
           </button>
         </div>
       </div>
@@ -329,21 +333,27 @@ export default function Orders() {
                   </td>
                   <td className="p-3">{o.date}</td>
                   <td className="p-3">
-                    <div className="flex gap-2 flex-wrap">
-                      <button className="bg-white text-secondary border border-secondary rounded-full px-2.5 py-1.5 text-sm">Assign Vendor</button>
+                    <div className="flex gap-2">
+                      <button className="bg-white text-secondary border border-secondary rounded-full px-2.5 py-1.5 text-sm">Assign</button>
                       <button 
                         onClick={() => handleSplitOrder(o)}
                         className="bg-white text-secondary border border-secondary rounded-full px-2.5 py-1.5 text-sm hover:bg-gray-50"
                       >
-                        Split Order
+                        Split
                       </button>
                       <button 
                         onClick={() => handleEditOrder(o)}
-                        className="bg-white text-secondary border border-secondary rounded-full px-2.5 py-1.5 text-sm hover:bg-gray-50"
+                        className="bg-white text-secondary border border-secondary rounded-full px-2.5 py-1.5 text-sm hover:bg-gray-50 flex items-center justify-center"
+                        title="Edit Order"
                       >
-                        Edit
+                        <Edit size={16} />
                       </button>
-                      <button className="bg-white text-red-600 border border-red-600 rounded-full px-2.5 py-1.5 text-sm">Delete</button>
+                      <button 
+                        className="bg-white text-red-600 border border-red-600 rounded-full px-2.5 py-1.5 text-sm flex items-center justify-center"
+                        title="Delete Order"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -466,9 +476,10 @@ export default function Orders() {
                 <h4 className="font-medium text-secondary">Order Items</h4>
                 <button
                   onClick={() => setDraft({ ...draft, items: [...draft.items, { sku: '', product: '', qty: '' }] })}
-                  className="bg-accent text-button-text rounded-full px-3 py-1.5 text-sm"
+                  className="bg-accent text-button-text rounded-full px-3 py-1.5 text-sm flex items-center gap-2"
                 >
-                  + Add Item
+                  <Plus size={14} />
+                  <span>Add Item</span>
                 </button>
               </div>
               
@@ -562,13 +573,13 @@ export default function Orders() {
             >
               {selectedFile ? (
                 <div>
-                  <div className="text-lg mb-2">📄</div>
+                  <div className="text-lg mb-2 flex items-center justify-center"><FileText size={24} /></div>
                   <div className="font-semibold text-secondary mb-1">{selectedFile.name}</div>
                   <div className="text-sm">Click to select a different file</div>
                 </div>
               ) : (
                 <div>
-                  <div className="text-2xl mb-2">📁</div>
+                  <div className="text-2xl mb-2 flex items-center justify-center"><Upload size={24} /></div>
                   <div className="mb-1">Drag & drop your Excel file here, or click to browse</div>
                   <div className="text-xs">Supports .xls and .xlsx files</div>
                 </div>

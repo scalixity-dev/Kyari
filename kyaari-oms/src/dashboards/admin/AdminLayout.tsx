@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
   { to: '/admin/money-flow', icon: Wallet, label: 'Money Flow' },
   { to: '/admin/tracking', icon: MapPin, label: 'Tracking' },
+  { to: '/admin/support', icon: Users, label: 'Support' },
   { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/admin/audit-logs', icon: FileText, label: 'Audit Logs' }
 ]
@@ -29,6 +30,7 @@ function AdminLayout() {
   const [showProfile, setShowProfile] = useState(false)
   const [notifications] = useState(3)
   const [trackingOpen, setTrackingOpen] = useState(false)
+  const [supportOpen, setSupportOpen] = useState(false)
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -45,13 +47,13 @@ function AdminLayout() {
   return (
     <div className="min-h-screen" style={{ background: 'var(--color-happyplant-bg)', width: '100%', minHeight: '100vh', boxSizing: 'border-box', overflowX: 'hidden' }}>
       {/* Sidebar (fixed) */}
-      <aside className="p-6 flex flex-col justify-between" style={{ background: 'var(--color-secondary)', color: 'white', width: '230px', position: 'fixed', left: 0, top: 0, height: '100vh', zIndex: 30 }}>
+      <aside className="p-6 flex flex-col justify-between scrollbar-hidden" style={{ background: 'var(--color-secondary)', color: 'white', width: '230px', position: 'fixed', left: 0, top: 0, height: '100vh', zIndex: 30, overflowY: 'auto' }}>
         <div>
           <div className="mb-8">
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: 28, fontWeight: 600 }}>Kyari</div>
           </div>
 
-          <nav className="flex flex-col gap-4">
+          <nav className="flex flex-col gap-2">
             {navItems.map(({ to, icon: Icon, label }) => {
               const isActive = location.pathname === to
               
@@ -74,18 +76,88 @@ function AdminLayout() {
                     </button>
                     {/* submenu always present but animated for smooth open/close */}
                     <div
-                      className={`mt-2 ml-3 flex flex-col gap-2 overflow-hidden transition-all duration-200 ease-in-out transform origin-top ${
+                      className={`${trackingOpen ? 'mt-2' : 'mt-0'} ml-3 flex flex-col gap-2 overflow-hidden transition-all duration-200 ease-in-out transform origin-top ${
                         trackingOpen ? 'max-h-40 opacity-100 translate-y-0' : 'max-h-0 opacity-0 -translate-y-1'
                       }`}
                       aria-hidden={!trackingOpen}
                     >
-                      <Link to="/admin/tracking/orders" className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center gap-2 w-full whitespace-nowrap text-left" style={{ color: 'white' }}>
+                      <Link
+                        to="/admin/tracking/orders"
+                        className={`px-3 py-2 rounded-md flex items-center gap-2 w-full whitespace-nowrap text-left ${
+                          location.pathname.startsWith('/admin/tracking/orders') ? 'bg-white text-gray-800' : 'hover:bg-white/5'
+                        }`}
+                        style={{ color: location.pathname.startsWith('/admin/tracking/orders') ? 'var(--color-primary)' : 'white' }}
+                      >
                         <Package size={16} />
                         <span>Order Tracking</span>
                       </Link>
-                      <Link to="/admin/tracking/vendors" className="px-3 py-2 rounded-md hover:bg-white/5 flex items-center gap-2 w-full whitespace-nowrap text-left" style={{ color: 'white' }}>
+                      <Link
+                        to="/admin/tracking/vendors"
+                        className={`px-3 py-2 rounded-md flex items-center gap-2 w-full whitespace-nowrap text-left ${
+                          location.pathname.startsWith('/admin/tracking/vendors') ? 'bg-white text-gray-800' : 'hover:bg-white/5'
+                        }`}
+                        style={{ color: location.pathname.startsWith('/admin/tracking/vendors') ? 'var(--color-primary)' : 'white' }}
+                      >
                         <Users size={16} />
                         <span>Vendor Tracking</span>
+                      </Link>
+                    </div>
+                  </div>
+                )
+              }
+
+              if (label === 'Support') {
+                return (
+                  <div key={to} className="flex flex-col">
+                    <button
+                      onClick={() => setSupportOpen((s) => !s)}
+                      className={`py-2 rounded-md flex items-center gap-2 w-full whitespace-nowrap text-left ${
+                        isActive ? 'bg-white text-gray-800 pl-3 pr-1' : 'hover:bg-white/5 px-3'
+                      }`}
+                      style={{ color: isActive ? 'var(--color-primary)' : 'white' }}
+                      aria-expanded={supportOpen}
+                    >
+                      <Icon size={18} />
+                      <span className="flex-1 text-left">{label}</span>
+                      <span className="text-sm">
+                        <ChevronRight size={14} className={`transform transition-transform duration-200 ${supportOpen ? 'rotate-90' : 'rotate-0'}`} aria-hidden />
+                      </span>
+                    </button>
+                    <div
+                      className={`${supportOpen ? 'mt-2' : 'mt-0'} ml-3 flex flex-col gap-2 overflow-hidden transition-all duration-200 ease-in-out transform origin-top ${
+                        supportOpen ? 'max-h-40 opacity-100 translate-y-0' : 'max-h-0 opacity-0 -translate-y-1'
+                      }`}
+                      aria-hidden={!supportOpen}
+                    >
+                      <Link
+                        to="/admin/support/vendors"
+                        className={`px-3 py-2 rounded-md flex items-center gap-2 w-full whitespace-nowrap text-left ${
+                          location.pathname.startsWith('/admin/support/vendors') ? 'bg-white text-gray-800' : 'hover:bg-white/5'
+                        }`}
+                        style={{ color: location.pathname.startsWith('/admin/support/vendors') ? 'var(--color-primary)' : 'white' }}
+                      >
+                        <Users size={16} />
+                        <span>Vendor Support</span>
+                      </Link>
+                      <Link
+                        to="/admin/support/accounts"
+                        className={`px-3 py-2 rounded-md flex items-center gap-2 w-full whitespace-nowrap text-left ${
+                          location.pathname.startsWith('/admin/support/accounts') ? 'bg-white text-gray-800' : 'hover:bg-white/5'
+                        }`}
+                        style={{ color: location.pathname.startsWith('/admin/support/accounts') ? 'var(--color-primary)' : 'white' }}
+                      >
+                        <Wallet size={16} />
+                        <span>Account Support</span>
+                      </Link>
+                      <Link
+                        to="/admin/support/ops"
+                        className={`px-3 py-2 rounded-md flex items-center gap-2 w-full whitespace-nowrap text-left ${
+                          location.pathname.startsWith('/admin/support/ops') ? 'bg-white text-gray-800' : 'hover:bg-white/5'
+                        }`}
+                        style={{ color: location.pathname.startsWith('/admin/support/ops') ? 'var(--color-primary)' : 'white' }}
+                      >
+                        <Package size={16} />
+                        <span>Ops Support</span>
                       </Link>
                     </div>
                   </div>
