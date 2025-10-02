@@ -148,9 +148,8 @@ export class AuthController {
         roles: user.roles.map((ur: any) => ur.role.name),
         vendorProfile: user.vendorProfile ? {
           id: user.vendorProfile.id,
-          firstName: user.vendorProfile.firstName,
-          lastName: user.vendorProfile.lastName,
-          phone: user.vendorProfile.phone,
+          contactPersonName: user.vendorProfile.contactPersonName,
+          contactPhone: user.vendorProfile.contactPhone,
           warehouseLocation: user.vendorProfile.warehouseLocation,
           pincode: user.vendorProfile.pincode,
           companyName: user.vendorProfile.companyName || undefined,

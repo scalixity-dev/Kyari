@@ -21,10 +21,9 @@ export const loginSchema = z.object({
 });
 
 export const vendorRegistrationSchema = z.object({
-  firstName: nameSchema,
-  lastName: nameSchema,
+  contactPersonName: nameSchema,
   email: emailSchema,
-  phone: phoneSchema,
+  contactPhone: phoneSchema,
   password: passwordSchema,
   confirmPassword: z.string(),
   warehouseLocation: z.string().min(1, 'Warehouse location is required'),
