@@ -171,9 +171,8 @@ export class UserService {
   private mapToVendorProfileDto(profile: VendorProfile): VendorProfileDto {
     return {
       id: profile.id,
-      firstName: profile.firstName,
-      lastName: profile.lastName,
-      phone: profile.phone,
+      contactPersonName: profile.contactPersonName,
+      contactPhone: profile.contactPhone,
       warehouseLocation: profile.warehouseLocation,
       pincode: profile.pincode,
       companyName: profile.companyName || undefined,
