@@ -31,6 +31,7 @@ const navItems: NavItem[] = [
   { to: '/vendors/invoices', icon: FileText, label: 'Invoices' },
   { to: '/vendors/dispatch', icon: Wallet, label: 'Dispatch' },
   { to: '/vendors/performance', icon: BarChart3, label: 'Performance' },
+  { to: '/vendors/support', icon: Users, label: 'Support' },
   { to: '/vendors/profile-settings', icon: Users, label: 'Profile Settings' }
 ]
 

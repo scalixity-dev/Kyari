@@ -30,6 +30,7 @@ const navItems: NavItem[] = [
   { to: '/operations/received-orders', icon: Package, label: 'Received Orders' },
   { to: '/operations/tickets', icon: AlertTriangle, label: 'Manage Ticket' },
   { to: '/operations/reports', icon: BarChart3, label: 'Reports' },
+  { to: '/operations/support', icon: Users, label: 'Support' },
   { to: '/operations/profile-settings', icon: Users, label: 'Profile & Settings' }
 ]
 
