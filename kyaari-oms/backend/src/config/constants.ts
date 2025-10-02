@@ -40,6 +40,9 @@ export const APP_CONSTANTS = {
     VENDOR_APPROVE: 'vendor:approve',
     VENDOR_SUSPEND: 'vendor:suspend',
     TOKEN_REFRESH: 'token:refresh',
+    ORDER_CREATE: 'order:create',
+    ORDER_UPDATE: 'order:update',
+    ORDER_DELETE: 'order:delete',
   } as const,
 } as const;
 

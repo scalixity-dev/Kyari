@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { env } from './config/env';
 import { authRoutes } from './modules/auth/auth.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
+import { orderRoutes } from './modules/orders/order.routes';
 import { errorHandler, notFoundHandler, rateLimiter } from './middlewares/error.middleware';
 import { logger } from './utils/logger';
 
@@ -76,6 +77,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/orders', orderRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
