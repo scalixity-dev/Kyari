@@ -48,20 +48,26 @@ function Badge({ label, color }: { label: string; color: string }) {
 }
 
 function PrimaryButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const baseClasses = "bg-accent text-button-text border border-transparent px-4 py-2.5 rounded-xl font-bold shadow-sm transition-colors hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
+  const combinedClasses = props.className ? `${baseClasses} ${props.className}` : baseClasses
+  
   return (
     <button
       {...props}
-      className="bg-accent text-button-text border border-transparent px-3.5 py-2 rounded-xl font-bold shadow-sm"
+      className={combinedClasses}
       onMouseEnter={props.onMouseEnter}
     />
   )
 }
 
 function SecondaryButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const baseClasses = "bg-gray-100 text-gray-900 border border-gray-300 px-4 py-2.5 rounded-xl font-bold transition-colors hover:bg-gray-200"
+  const combinedClasses = props.className ? `${baseClasses} ${props.className}` : baseClasses
+  
   return (
     <button
       {...props}
-      className="bg-gray-100 text-gray-900 border border-gray-300 px-3.5 py-2 rounded-xl font-bold"
+      className={combinedClasses}
     />
   )
 }
@@ -69,15 +75,15 @@ function SecondaryButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
 function Modal({ open, onClose, title, children, showClose = true }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; showClose?: boolean }) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 bg-black/35 flex items-center justify-center z-50">
-      <div className="bg-white w-[520px] max-w-[96%] rounded-xl shadow-2xl">
-        <div className="p-4 border-b border-gray-200">
-          <h3 className="font-heading text-secondary text-xl">{title}</h3>
+    <div className="fixed inset-0 bg-black/35 flex items-center justify-center z-50 p-4">
+      <div className="bg-white w-full max-w-[520px] rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-4 sm:p-5 border-b border-gray-200">
+          <h3 className="font-heading text-secondary text-lg sm:text-xl">{title}</h3>
         </div>
-        <div className="p-4">{children}</div>
+        <div className="p-4 sm:p-5">{children}</div>
         {showClose && (
-          <div className="p-3 flex justify-end">
-            <SecondaryButton onClick={onClose}>Close</SecondaryButton>
+          <div className="p-4 sm:p-5 pt-0 flex justify-end">
+            <SecondaryButton onClick={onClose} className="w-full sm:w-auto justify-center">Close</SecondaryButton>
           </div>
         )}
       </div>
@@ -273,44 +279,47 @@ export default function UsersRoles() {
   }
 
   return (
-    <div className="p-6 font-sans text-primary">
+    <div className="p-4 sm:p-6 font-sans text-primary">
       {/* Page Header */}
-      <div className="mb-4">
-        <h2 className="font-heading text-secondary text-4xl font-semibold">Users & Roles</h2>
+      <div className="mb-4 sm:mb-6">
+        <h2 className="font-heading text-secondary text-2xl sm:text-3xl lg:text-4xl font-semibold">Users & Roles</h2>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b border-gray-200 mb-4">
-        {tabs.map((t) => {
-          const isActive = activeTab === t.key
-          return (
-            <button
-              key={t.key}
-              onClick={() => setActiveTab(t.key)}
-              className={`bg-transparent rounded-none px-1 py-2 font-semibold outline-none ${
-                isActive 
-                  ? 'text-secondary border-b-4 border-accent border-solid' 
-                  : 'text-gray-700 border-b-4 border-transparent'
-              }`}
-            >
-              {t.label}
-            </button>
-          )
-        })}
+      <div className="overflow-x-auto border-b border-gray-200 mb-4 sm:mb-6">
+        <div className="flex gap-2 sm:gap-4 min-w-max">
+          {tabs.map((t) => {
+            const isActive = activeTab === t.key
+            return (
+              <button
+                key={t.key}
+                onClick={() => setActiveTab(t.key)}
+                className={`bg-transparent rounded-none px-3 sm:px-4 py-3 font-semibold outline-none whitespace-nowrap text-sm sm:text-base transition-colors ${
+                  isActive 
+                    ? 'text-secondary border-b-4 border-accent border-solid' 
+                    : 'text-gray-700 border-b-4 border-transparent hover:text-secondary'
+                }`}
+              >
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Tab Content */}
       <div>
         {activeTab === 'accounts' && (
           <div>
-            <div className="flex justify-between items-center mb-3">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
               <div />
-              <PrimaryButton onClick={openCreateUserModal}>
+              <PrimaryButton onClick={openCreateUserModal} className="w-full sm:w-auto justify-center sm:justify-start">
                 <span className="inline-flex items-center gap-2"><Plus size={16} /> Create New User</span>
               </PrimaryButton>
             </div>
 
-            <div className="bg-header-bg rounded-xl overflow-hidden">
+            {/* Desktop Table View */}
+            <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-white">
@@ -353,6 +362,53 @@ export default function UsersRoles() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-4">
+              {accountsUsers.map((row) => (
+                <div key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-semibold text-secondary text-lg">{row.name}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{row.email}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      {row.status === 'Active' ? (
+                        <Badge label="Active" color="#10B981" />
+                      ) : (
+                        <Badge label="Inactive" color="#EF4444" />
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                    <div>
+                      <span className="text-gray-500 block">Role</span>
+                      <span className="font-medium">{row.role}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block">Created Date</span>
+                      <span className="font-medium">{row.createdAt}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <SecondaryButton
+                      onClick={() => openEditUserModal(row, 'accounts')}
+                      className="flex-1 justify-center text-sm"
+                    >
+                      Edit
+                    </SecondaryButton>
+                    <PrimaryButton
+                      className={`flex-1 justify-center text-sm ${row.status === 'Active' ? 'bg-red-500' : 'bg-accent'}`}
+                      onClick={() => handleDeactivateUser(row.id, 'accounts')}
+                    >
+                      {row.status === 'Active' ? 'Deactivate' : 'Activate'}
+                    </PrimaryButton>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <Modal open={showUserModal} onClose={() => setShowUserModal(false)} title="Create New User" showClose={false}>
@@ -403,9 +459,9 @@ export default function UsersRoles() {
                     <option value="Inactive">Inactive</option>
                   </select>
                 </div>
-                <div className="flex justify-end gap-2 mt-2">
-                  <SecondaryButton type="button" onClick={() => setShowUserModal(false)}>Cancel</SecondaryButton>
-                  <PrimaryButton type="submit">Create User</PrimaryButton>
+                <div className="flex flex-col sm:flex-row justify-end gap-3 mt-4">
+                  <SecondaryButton type="button" onClick={() => setShowUserModal(false)} className="w-full sm:w-auto justify-center">Cancel</SecondaryButton>
+                  <PrimaryButton type="submit" className="w-full sm:w-auto justify-center">Create User</PrimaryButton>
                 </div>
               </form>
             </Modal>
@@ -414,14 +470,15 @@ export default function UsersRoles() {
 
         {activeTab === 'ops' && (
           <div>
-            <div className="flex justify-between items-center mb-3">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
               <div />
-              <PrimaryButton onClick={openCreateUserModal}>
+              <PrimaryButton onClick={openCreateUserModal} className="w-full sm:w-auto justify-center sm:justify-start">
                 <span className="inline-flex items-center gap-2"><Plus size={16} /> Create New User</span>
               </PrimaryButton>
             </div>
 
-            <div className="bg-header-bg rounded-xl overflow-hidden">
+            {/* Desktop Table View */}
+            <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-white">
@@ -460,6 +517,54 @@ export default function UsersRoles() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-4">
+              {opsUsers.map((row) => (
+                <div key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-semibold text-secondary text-lg">{row.name}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{row.email}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      {row.status === 'Active' ? (
+                        <Badge label="Active" color="#10B981" />
+                      ) : (
+                        <Badge label="Inactive" color="#EF4444" />
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                    <div>
+                      <span className="text-gray-500 block">Role</span>
+                      <span className="font-medium">{row.role}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block">Created Date</span>
+                      <span className="font-medium">{row.createdAt}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <SecondaryButton
+                      onClick={() => openEditUserModal(row, 'ops')}
+                      className="flex-1 justify-center text-sm"
+                    >
+                      Edit
+                    </SecondaryButton>
+                    <PrimaryButton
+                      style={{ background: row.status === 'Active' ? '#EF4444' : 'var(--color-accent)' }}
+                      onClick={() => handleDeactivateUser(row.id, 'ops')}
+                      className="flex-1 justify-center text-sm"
+                    >
+                      {row.status === 'Active' ? 'Deactivate' : 'Activate'}
+                    </PrimaryButton>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <Modal open={showUserModal} onClose={() => setShowUserModal(false)} title="Create New User" showClose={false}>
@@ -521,7 +626,8 @@ export default function UsersRoles() {
 
         {activeTab === 'vendors' && (
           <div>
-            <div className="bg-header-bg rounded-xl overflow-hidden">
+            {/* Desktop Table View */}
+            <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-white">
@@ -561,6 +667,50 @@ export default function UsersRoles() {
               </table>
             </div>
 
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-4">
+              {vendors.map((row) => (
+                <div key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-semibold text-secondary text-lg">{row.name}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{row.gstOrPan}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      {row.status === 'Approved' ? (
+                        <Badge label="Approved" color="#16A34A" />
+                      ) : (
+                        <Badge label="Pending" color="#F59E0B" />
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">SLA Score</span>
+                      <span className="font-bold text-xl text-secondary">{row.slaScore}%</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col gap-2">
+                    <PrimaryButton
+                      disabled={row.status === 'Approved'}
+                      className={`w-full justify-center text-sm ${row.status === 'Approved' ? 'bg-green-500 text-white cursor-not-allowed' : 'bg-accent text-button-text'}`}
+                      onClick={() => approveVendor(row.id)}
+                    >
+                      {row.status === 'Approved' ? 'Approved' : 'Approve Vendor'}
+                    </PrimaryButton>
+                    <SecondaryButton 
+                      onClick={() => setShowKycModal({ open: true, vendorName: row.name })} 
+                      className="w-full justify-center text-sm"
+                    >
+                      View KYC Docs
+                    </SecondaryButton>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <Modal open={showKycModal.open} onClose={() => setShowKycModal({ open: false, vendorName: '' })} title={`KYC Documents - ${showKycModal.vendorName}`}>
               <div className="text-gray-700">Vendor KYC Documents Placeholder</div>
             </Modal>
@@ -569,7 +719,8 @@ export default function UsersRoles() {
 
         {activeTab === 'matrix' && (
           <div>
-            <div className="bg-header-bg rounded-xl overflow-hidden">
+            {/* Desktop Table View */}
+            <div className="hidden md:block bg-header-bg rounded-xl overflow-hidden">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-white">
@@ -598,6 +749,29 @@ export default function UsersRoles() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+              {matrixRoles.map((role) => (
+                <div key={role} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                  <h3 className="font-semibold text-secondary text-lg mb-4">{role}</h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    {permissions.map((perm) => (
+                      <div key={perm} className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-gray-700">{perm}</label>
+                        <input
+                          type="checkbox"
+                          checked={roleMatrix[role][perm]}
+                          onChange={() => togglePermission(role, perm)}
+                          className="scale-125 origin-center"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         {/* Edit User Modal */}
@@ -611,37 +785,37 @@ export default function UsersRoles() {
           showClose={false}
         >
           {editForm && (
-            <form onSubmit={handleEditUserSubmit} className="grid gap-3">
+            <form onSubmit={handleEditUserSubmit} className="grid gap-4">
               <div>
-                <label className="block font-semibold mb-1">Name</label>
+                <label className="block font-semibold mb-2 text-sm">Name</label>
                 <input
                   required
                   value={editForm.name}
                   onChange={(e) => setEditForm((f) => (f ? { ...f, name: e.target.value } : f))}
                   placeholder="Full name"
-                  className="w-full border border-gray-300 rounded-lg p-2.5"
+                  className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:border-accent focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block font-semibold mb-1">Email</label>
+                <label className="block font-semibold mb-2 text-sm">Email</label>
                 <input
                   required
                   type="email"
                   value={editForm.email}
                   onChange={(e) => setEditForm((f) => (f ? { ...f, email: e.target.value } : f))}
                   placeholder="name@kyari.com"
-                  className="w-full border border-gray-300 rounded-lg p-2.5"
+                  className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:border-accent focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block font-semibold mb-1">Role</label>
+                <label className="block font-semibold mb-2 text-sm">Role</label>
                 <select
                   required
                   value={editForm.role}
                   onChange={(e) =>
                     setEditForm((f) => (f ? { ...f, role: e.target.value as UserRole } : f))
                   }
-                  className="w-full border border-gray-300 rounded-lg p-2.5"
+                  className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:border-accent focus:outline-none"
                 >
                   <option value="Admin">Admin</option>
                   <option value="Accounts">Accounts</option>
@@ -649,30 +823,31 @@ export default function UsersRoles() {
                 </select>
               </div>
               <div>
-                <label className="block font-semibold mb-1">Status</label>
+                <label className="block font-semibold mb-2 text-sm">Status</label>
                 <select
                   required
                   value={editForm.status}
                   onChange={(e) =>
                     setEditForm((f) => (f ? { ...f, status: e.target.value as UserStatus } : f))
                   }
-                  className="w-full border border-gray-300 rounded-lg p-2.5"
+                  className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:border-accent focus:outline-none"
                 >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
                 </select>
               </div>
-              <div className="flex justify-end gap-2 mt-2">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-4">
                 <SecondaryButton
                   type="button"
                   onClick={() => {
                     setShowEditModal(false)
                     setEditForm(null)
                   }}
+                  className="w-full sm:w-auto justify-center"
                 >
                   Cancel
                 </SecondaryButton>
-                <PrimaryButton type="submit">Save Changes</PrimaryButton>
+                <PrimaryButton type="submit" className="w-full sm:w-auto justify-center">Save Changes</PrimaryButton>
               </div>
             </form>
           )}

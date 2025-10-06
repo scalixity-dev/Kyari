@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, FileText, Wallet, BarChart3, Bell, Search, Users } from 'lucide-react'
+import { LayoutDashboard, Package, FileText, Wallet, BarChart3, Bell, Search } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
 
@@ -13,10 +13,9 @@ type NavItem = {
 const navItems: NavItem[] = [
   { to: '/accounts', icon: LayoutDashboard, label: 'Dashboard ' },
   { to: '/accounts/vendor-orders', icon: Package, label: 'Vendor Orders' },
-  { to: '/accounts/po-invoices', icon: FileText, label: 'Invoice' },
+  { to: '/accounts/po-invoices', icon: FileText, label: 'Invoice Management' },
   { to: '/accounts/payment-release', icon: Wallet, label: 'Payment Release' },
   { to: '/accounts/reports', icon: BarChart3, label: 'Reports' },
-  { to: '/accounts/support', icon: Users, label: 'Support' },
   { to: '/accounts/profile-settings', icon: FileText, label: 'Profile & Settings' }
 ]
 
@@ -42,7 +41,7 @@ function AccountsLayout() {
   return (
     <div className="min-h-screen" style={{ background: 'var(--color-happyplant-bg)', width: '100%', minHeight: '100vh', boxSizing: 'border-box', overflowX: 'hidden' }}>
       {/* Sidebar (fixed) */}
-      <aside className="p-6 flex flex-col justify-between scrollbar-hidden" style={{ background: 'var(--color-secondary)', color: 'white', width: '230px', position: 'fixed', left: 0, top: 0, height: '100vh', zIndex: 30, overflowY: 'auto' }}>
+      <aside className="p-6 flex flex-col justify-between scrollbar-hidden" style={{ background: 'var(--color-secondary)', color: 'white', width: '260px', position: 'fixed', left: 0, top: 0, height: '100vh', zIndex: 30, overflowY: 'auto' }}>
         <div>
           <div className="mb-8">
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: 28, fontWeight: 600 }}>Kyari</div>
@@ -74,9 +73,9 @@ function AccountsLayout() {
       </aside>
 
       {/* Main area */}
-      <main style={{ marginLeft: '230px', marginTop: 0, paddingTop: 0, overflowX: 'hidden', height: '100vh' }}>
+      <main style={{ marginLeft: '260px', marginTop: 0, paddingTop: 0, overflowX: 'hidden', height: '100vh' }}>
         {/* Top bar (fixed) */}
-        <div className="flex items-center justify-between bg-[var(--color-secondary)] py-2 pr-6 pl-0 fixed top-0 left-[230px] right-0 h-16 z-40 border-l border-white/20">
+        <div className="flex items-center justify-between bg-[var(--color-secondary)] py-2 pr-6 pl-0 fixed top-0 left-[260px] right-0 h-16 z-40 border-l border-white/20">
           <form onSubmit={handleSearchSubmit} className="flex items-center gap-3 w-[60%]">
             <div className="relative w-full">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/90">

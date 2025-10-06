@@ -264,15 +264,19 @@ export default function Support() {
   }, [drawerTicket?.messages])
 
   return (
-    <div className="p-6 font-sans text-primary" style={{ background: 'transparent' }}>
+    <div className="p-4 sm:p-6 md:p-8 font-sans text-primary" style={{ background: 'transparent' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="font-heading text-secondary text-2xl font-semibold">Operations Support</h2>
-        <div className="flex items-center gap-2">
-          <button onClick={exportCSV} className="bg-white text-secondary border border-secondary rounded-full px-3 py-2 flex items-center gap-1"><FileDown size={16} /> CSV</button>
-          <button onClick={exportPDF} className="bg-white text-secondary border border-secondary rounded-full px-3 py-2 flex items-center gap-1"><FileDown size={16} /> PDF</button>
-          <button onClick={() => setShowNewTicket(true)} className="bg-accent text-button-text rounded-full px-4 py-2.5 border border-transparent flex items-center gap-2">
-            <Plus size={16} />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 gap-3">
+        <h2 className="font-heading text-secondary text-xl sm:text-2xl font-semibold">Operations Support</h2>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={exportCSV} className="bg-white text-secondary border border-secondary rounded-full px-3 py-2 flex items-center gap-1 text-sm min-h-[44px]">
+            <FileDown size={16} className="flex-shrink-0" /> CSV
+          </button>
+          <button onClick={exportPDF} className="bg-white text-secondary border border-secondary rounded-full px-3 py-2 flex items-center gap-1 text-sm min-h-[44px]">
+            <FileDown size={16} className="flex-shrink-0" /> PDF
+          </button>
+          <button onClick={() => setShowNewTicket(true)} className="bg-accent text-button-text rounded-full px-4 py-2.5 border border-transparent flex items-center gap-2 min-h-[44px] text-sm sm:text-base">
+            <Plus size={16} className="flex-shrink-0" />
             <span>Raise New Ticket</span>
           </button>
         </div>
@@ -281,41 +285,41 @@ export default function Support() {
       {/* Analytics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         <div className="rounded-2xl p-4 shadow-md bg-white">
-          <div className="text-sm text-gray-600">Open Tickets</div>
-          <div className="text-3xl font-semibold text-secondary mt-1">{openTickets}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Open Tickets</div>
+          <div className="text-2xl sm:text-3xl font-semibold text-secondary mt-1">{openTickets}</div>
         </div>
         <div className="rounded-2xl p-4 shadow-md bg-blue-50">
-          <div className="text-sm text-gray-700">In Progress</div>
-          <div className="text-3xl font-semibold text-blue-700 mt-1">{inProgressTickets}</div>
+          <div className="text-xs sm:text-sm text-gray-700">In Progress</div>
+          <div className="text-2xl sm:text-3xl font-semibold text-blue-700 mt-1">{inProgressTickets}</div>
         </div>
         <div className="rounded-2xl p-4 shadow-md bg-green-50">
-          <div className="text-sm text-gray-700">Resolved</div>
-          <div className="text-3xl font-semibold text-green-700 mt-1">{resolvedTickets}</div>
+          <div className="text-xs sm:text-sm text-gray-700">Resolved</div>
+          <div className="text-2xl sm:text-3xl font-semibold text-green-700 mt-1">{resolvedTickets}</div>
         </div>
         <div className="rounded-2xl p-4 shadow-md bg-white">
-          <div className="text-sm text-gray-600">Avg Resolution Time</div>
-          <div className="text-3xl font-semibold text-secondary mt-1">4.2 hrs</div>
+          <div className="text-xs sm:text-sm text-gray-600">Avg Resolution Time</div>
+          <div className="text-2xl sm:text-3xl font-semibold text-secondary mt-1">4.2 hrs</div>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center mb-4 bg-white border border-secondary/20 rounded-xl p-3">
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as TicketStatus | '')} className="px-3 py-2 rounded-xl border border-gray-300">
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as TicketStatus | '')} className="px-3 py-2 rounded-xl border border-gray-300 min-h-[44px] text-sm sm:text-base">
           <option value="">Status</option>
           {(['Open','In Progress','Resolved','Closed'] as TicketStatus[]).map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select value={filterPriority} onChange={e => setFilterPriority(e.target.value as TicketPriority | '')} className="px-3 py-2 rounded-xl border border-gray-300">
+        <select value={filterPriority} onChange={e => setFilterPriority(e.target.value as TicketPriority | '')} className="px-3 py-2 rounded-xl border border-gray-300 min-h-[44px] text-sm sm:text-base">
           <option value="">Priority</option>
           {(['Low','Medium','High'] as TicketPriority[]).map(p => <option key={p} value={p}>{p}</option>)}
         </select>
-        <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300" />
-        <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300" />
-        <input placeholder="Search by Ticket ID or description" value={search} onChange={e => setSearch(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300 flex-1 min-w-[240px]" />
-        <button onClick={resetFilters} className="bg-white text-secondary border border-secondary rounded-full px-4 py-2">Reset</button>
+        <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300 min-h-[44px] text-sm sm:text-base" />
+        <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300 min-h-[44px] text-sm sm:text-base" />
+        <input placeholder="Search by Ticket ID or description" value={search} onChange={e => setSearch(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300 flex-1 min-w-[200px] sm:min-w-[240px] min-h-[44px] text-sm sm:text-base" />
+        <button onClick={resetFilters} className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 min-h-[44px] text-sm sm:text-base">Reset</button>
       </div>
 
-      {/* Table */}
-      <div className="bg-header-bg rounded-xl">
+      {/* Desktop Table */}
+      <div className="bg-header-bg rounded-xl hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full border-separate border-spacing-0 whitespace-nowrap">
             <thead>
@@ -364,18 +368,71 @@ export default function Support() {
         </div>
       </div>
 
-      {/* Raise Ticket Modal */}
-      {showNewTicket && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-[680px] rounded-2xl p-5 max-h-[90vh] overflow-y-auto">
-            <div className="mb-3">
-              <h3 className="font-heading text-secondary font-normal">Raise New Ticket</h3>
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-4">
+        {filteredTickets.map((t) => (
+          <div key={t.id} className="bg-white rounded-xl p-4 shadow-md border border-secondary/20">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <div className="text-xs text-gray-500 mb-0.5">Ticket ID</div>
+                <div className="font-semibold text-secondary">{t.id}</div>
+              </div>
+              <div className="flex gap-2">
+                {(() => {
+                  const st = PRIORITY_STYLES[t.priority]
+                  return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border flex-shrink-0" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>{t.priority}</span>
+                })()}
+                {(() => {
+                  const st = STATUS_STYLES[t.status]
+                  return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border flex-shrink-0" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>{t.status}</span>
+                })()}
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="mb-3">
+              <div className="text-xs text-gray-500 mb-0.5">Issue Type</div>
+              <div className="text-sm font-medium">{t.issueType}</div>
+            </div>
+
+            <div className="mb-3">
+              <div className="text-xs text-gray-500 mb-0.5">Description</div>
+              <div className="text-sm line-clamp-2" title={t.description}>{t.description}</div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="block text-sm font-medium mb-1">Issue Type</label>
-                <select value={draftIssue} onChange={e => setDraftIssue(e.target.value as IssueType | '')} className="w-full px-2.5 py-2 rounded-lg border border-gray-300">
+                <div className="text-xs text-gray-500 mb-0.5">Date Created</div>
+                <div className="text-sm">{t.createdAt}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-0.5">Last Updated</div>
+                <div className="text-sm">{t.updatedAt}</div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button onClick={() => setDrawerTicket(t)} className="w-full bg-accent text-button-text rounded-full px-4 py-2 text-sm min-h-[44px]">View & Chat</button>
+              <button onClick={() => markClosed(t)} className="w-full bg-white text-secondary border border-secondary rounded-full px-4 py-2 text-sm min-h-[44px]">Close Ticket</button>
+            </div>
+          </div>
+        ))}
+        {filteredTickets.length === 0 && (
+          <div className="bg-white rounded-xl p-6 text-center text-gray-500">No tickets match current filters.</div>
+        )}
+      </div>
+
+      {/* Raise Ticket Modal */}
+      {showNewTicket && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-[680px] rounded-2xl p-4 sm:p-5 max-h-[90vh] overflow-y-auto">
+            <div className="mb-3 sm:mb-4">
+              <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">Raise New Ticket</h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium mb-1">Issue Type</label>
+                <select value={draftIssue} onChange={e => setDraftIssue(e.target.value as IssueType | '')} className="w-full px-2.5 py-2 rounded-lg border border-gray-300 min-h-[44px] text-sm sm:text-base">
                   <option value="">Select Issue</option>
                   {(['Order Discrepancy','Vendor Delay','System Error','Payment Mismatch','Other'] as IssueType[]).map(opt => (
                     <option key={opt} value={opt}>{opt}</option>
@@ -383,30 +440,30 @@ export default function Support() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Priority</label>
-                <select value={draftPriority} onChange={e => setDraftPriority(e.target.value as TicketPriority | '')} className="w-full px-2.5 py-2 rounded-lg border border-gray-300">
+                <label className="block text-xs sm:text-sm font-medium mb-1">Priority</label>
+                <select value={draftPriority} onChange={e => setDraftPriority(e.target.value as TicketPriority | '')} className="w-full px-2.5 py-2 rounded-lg border border-gray-300 min-h-[44px] text-sm sm:text-base">
                   <option value="">Select Priority</option>
                   {(['Low','Medium','High'] as TicketPriority[]).map(opt => (
                     <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>
               </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium mb-1">Attachments (optional)</label>
-                <input type="file" onChange={e => setDraftFile(e.target.files?.[0] || null)} className="w-full px-2.5 py-2 rounded-lg border border-gray-300" />
+              <div className="col-span-1 sm:col-span-2">
+                <label className="block text-xs sm:text-sm font-medium mb-1">Attachments (optional)</label>
+                <input type="file" onChange={e => setDraftFile(e.target.files?.[0] || null)} className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm" />
                 {draftFile && (
                   <div className="mt-1 text-xs text-gray-600">Selected: {draftFile.name}</div>
                 )}
               </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium mb-1">Description</label>
-                <textarea value={draftDescription} onChange={e => setDraftDescription(e.target.value)} rows={4} placeholder="Describe the issue..." className="w-full px-2.5 py-2 rounded-lg border border-gray-300" />
+              <div className="col-span-1 sm:col-span-2">
+                <label className="block text-xs sm:text-sm font-medium mb-1">Description</label>
+                <textarea value={draftDescription} onChange={e => setDraftDescription(e.target.value)} rows={4} placeholder="Describe the issue..." className="w-full px-2.5 py-2 rounded-lg border border-gray-300 min-h-[100px] text-sm sm:text-base" />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setShowNewTicket(false)} className="bg-white text-secondary border border-secondary rounded-full px-3.5 py-2">Cancel</button>
-              <button onClick={addTicket} className="bg-accent text-button-text rounded-full px-3.5 py-2">Submit</button>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 mt-4">
+              <button onClick={() => setShowNewTicket(false)} className="w-full sm:w-auto bg-white text-secondary border border-secondary rounded-full px-3.5 py-2 min-h-[44px] text-sm sm:text-base">Cancel</button>
+              <button onClick={addTicket} className="w-full sm:w-auto bg-accent text-button-text rounded-full px-3.5 py-2 min-h-[44px] text-sm sm:text-base">Submit</button>
             </div>
           </div>
         </div>
@@ -416,21 +473,21 @@ export default function Support() {
       {drawerTicket && (
         <div className="fixed inset-0 z-50">
           <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out ${isDrawerOpen ? 'opacity-100' : 'opacity-0'}`} onClick={closeDrawer} />
-          <div className={`absolute top-0 right-0 h-full w-[500px] bg-white shadow-xl flex flex-col transform transition-transform duration-300 ease-out ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-            <div className="p-5 border-b flex-shrink-0">
+          <div className={`absolute top-0 right-0 h-full w-full sm:w-[90%] md:w-[500px] bg-white shadow-xl flex flex-col transform transition-transform duration-300 ease-out ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className="p-4 sm:p-5 border-b flex-shrink-0">
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <div className="text-xs text-gray-500">Ticket</div>
-                  <div className="text-xl font-semibold text-secondary">{drawerTicket.id}</div>
+                  <div className="text-lg sm:text-xl font-semibold text-secondary">{drawerTicket.id}</div>
                 </div>
-                <button onClick={closeDrawer} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">✕</button>
+                <button onClick={closeDrawer} className="text-gray-500 hover:text-gray-700 text-2xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center">✕</button>
               </div>
 
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <div className="text-xs text-gray-500">Issue Type</div>
-                    <div className="font-medium text-sm">{drawerTicket.issueType}</div>
+                    <div className="font-medium text-xs sm:text-sm">{drawerTicket.issueType}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-500">Priority</div>
@@ -454,42 +511,42 @@ export default function Support() {
 
                 <div>
                   <div className="text-xs text-gray-500">Description</div>
-                  <div className="text-sm leading-relaxed">{drawerTicket.description}</div>
+                  <div className="text-xs sm:text-sm leading-relaxed">{drawerTicket.description}</div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <div className="text-xs text-gray-500">Date Created</div>
-                    <div className="font-medium text-sm">{drawerTicket.createdAt}</div>
+                    <div className="font-medium text-xs sm:text-sm">{drawerTicket.createdAt}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-500">Last Updated</div>
-                    <div className="font-medium text-sm">{drawerTicket.updatedAt}</div>
+                    <div className="font-medium text-xs sm:text-sm">{drawerTicket.updatedAt}</div>
                   </div>
                 </div>
 
                 <div className="flex gap-2 mt-2">
-                  <button onClick={() => markClosed(drawerTicket)} className="bg-accent text-button-text rounded-full px-3 py-1.5 text-sm hover:opacity-90 transition-opacity">Mark as Closed</button>
+                  <button onClick={() => markClosed(drawerTicket)} className="bg-accent text-button-text rounded-full px-3 py-1.5 text-xs sm:text-sm hover:opacity-90 transition-opacity min-h-[44px]">Mark as Closed</button>
                 </div>
               </div>
             </div>
 
             {/* Chat */}
-            <div className="flex-1 overflow-y-auto p-5 bg-gray-50">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-gray-50">
               <div className="text-sm font-medium text-gray-700 mb-3">Conversation</div>
               <div className="space-y-3">
                 {drawerTicket.messages && drawerTicket.messages.length > 0 ? (
                   drawerTicket.messages.map(m => (
                     <div key={m.id} className={`flex ${m.sender === 'ops' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[75%] ${m.sender === 'ops' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'} rounded-2xl p-3 shadow-sm`}>
+                      <div className={`max-w-[85%] sm:max-w-[75%] ${m.sender === 'ops' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'} rounded-2xl p-3 shadow-sm`}>
                         <div className={`text-xs mb-1 ${m.sender === 'ops' ? 'text-blue-100' : 'text-gray-500'}`}>{m.senderName} • {m.timestamp}</div>
-                        <div className="text-sm leading-relaxed">{m.text}</div>
+                        <div className="text-xs sm:text-sm leading-relaxed">{m.text}</div>
                         {m.attachments && m.attachments.length > 0 && (
                           <div className="mt-2 space-y-1">
                             {m.attachments.map((att, idx) => (
                               <div key={idx} className={`text-xs flex items-center gap-1 ${m.sender === 'ops' ? 'text-blue-100' : 'text-blue-600'}`}>
-                                <Paperclip size={12} />
-                                <span>{att.name}</span>
+                                <Paperclip size={12} className="flex-shrink-0" />
+                                <span className="truncate">{att.name}</span>
                               </div>
                             ))}
                           </div>
@@ -498,26 +555,26 @@ export default function Support() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center text-gray-400 text-sm py-8">No messages yet. Start the conversation!</div>
+                  <div className="text-center text-gray-400 text-xs sm:text-sm py-8">No messages yet. Start the conversation!</div>
                 )}
                 <div ref={chatEndRef} />
               </div>
             </div>
 
             {/* Chat Input */}
-            <div className="p-4 border-t bg-white flex-shrink-0">
+            <div className="p-3 sm:p-4 border-t bg-white flex-shrink-0">
               {chatAttachment && (
                 <div className="mb-2 px-3 py-2 bg-gray-100 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-gray-700 min-w-0">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 min-w-0">
                     <Paperclip size={14} className="flex-shrink-0" />
                     <span className="truncate">{chatAttachment.name}</span>
                   </div>
-                  <button onClick={() => setChatAttachment(null)} className="text-gray-500 hover:text-gray-700 ml-2 flex-shrink-0">✕</button>
+                  <button onClick={() => setChatAttachment(null)} className="text-gray-500 hover:text-gray-700 ml-2 flex-shrink-0 min-w-[24px] min-h-[24px]">✕</button>
                 </div>
               )}
               <div className="flex items-end gap-2">
                 <input ref={fileInputRef} type="file" className="hidden" onChange={e => setChatAttachment(e.target.files?.[0] || null)} />
-                <button onClick={() => fileInputRef.current?.click()} className="flex-shrink-0 p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Attach file">
+                <button onClick={() => fileInputRef.current?.click()} className="flex-shrink-0 p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="Attach file">
                   <Paperclip size={18} />
                 </button>
                 <textarea
@@ -530,10 +587,10 @@ export default function Support() {
                     }
                   }}
                   placeholder="Type your message..."
-                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm"
                   rows={2}
                 />
-                <button onClick={sendMessage} disabled={!messageText.trim()} className="flex-shrink-0 p-2.5 bg-accent text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed" title="Send message">
+                <button onClick={sendMessage} disabled={!messageText.trim()} className="flex-shrink-0 p-2.5 bg-accent text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center" title="Send message">
                   <Send size={18} />
                 </button>
               </div>

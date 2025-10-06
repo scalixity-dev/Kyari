@@ -223,13 +223,13 @@ export default function Notifications() {
   const mutedVendorIds = mutedVendors.map(v => v.id);
 
   return (
-    <div className="p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Page Header */}
-      <div className="bg-[var(--color-header-bg)] p-8 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] mb-8 border border-[rgba(0,0,0,0.03)]">
-        <h1 className="text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
+      <div className="bg-[var(--color-header-bg)] p-4 sm:p-6 lg:p-8 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] mb-6 sm:mb-8 border border-[rgba(0,0,0,0.03)]">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
           Notifications
         </h1>
-        <p className="text-lg text-[var(--color-primary)] font-medium">
+        <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium">
           Stay updated with critical alerts, information, and reminders
         </p>
       </div>
@@ -244,7 +244,7 @@ export default function Notifications() {
       />
 
       {/* Notification Sections */}
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <NotificationSection
           title="Critical Alerts"
           type="critical"
@@ -275,10 +275,10 @@ export default function Notifications() {
 
       {/* Empty State */}
       {filteredNotifications.length === 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-          <div className="text-gray-400 text-lg mb-4">🔔</div>
-          <h3 className="text-lg font-semibold text-gray-600 mb-2">No notifications found</h3>
-          <p className="text-gray-500">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sm:p-8 lg:p-12 text-center">
+          <div className="text-gray-400 text-2xl sm:text-3xl lg:text-4xl mb-4">🔔</div>
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-600 mb-2">No notifications found</h3>
+          <p className="text-sm sm:text-base text-gray-500 max-w-md mx-auto leading-relaxed">
             {filters.type?.length ? 
               `No ${filters.type.join(', ')} notifications match your current filters.` :
               'All caught up! No new notifications at this time.'

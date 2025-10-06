@@ -237,10 +237,10 @@ export default function AuditLogs() {
   }
 
   return (
-    <div className="p-3 sm:p-4 lg:p-6">
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen overflow-x-auto">
       {/* Header */}
-      <div className="mb-4 sm:mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ fontFamily: 'var(--font-heading)', color: '#1D4D43' }}>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2" style={{ fontFamily: 'var(--font-heading)', color: '#1D4D43' }}>
           Audit Logs
         </h1>
         <p className="text-sm sm:text-base text-gray-600">
@@ -249,25 +249,25 @@ export default function AuditLogs() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 sm:mb-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">User</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">User</label>
             <input
               type="text"
               value={filters.user}
               onChange={(e) => handleFilterChange('user', e.target.value)}
               placeholder="Search by name or email"
-              className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px] sm:min-h-auto"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
             <select
               value={filters.role}
               onChange={(e) => handleFilterChange('role', e.target.value)}
-              className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px] sm:min-h-auto"
             >
               <option value="">All Roles</option>
               <option value="Admin">Admin</option>
@@ -279,11 +279,11 @@ export default function AuditLogs() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Module</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Module</label>
             <select
               value={filters.module}
               onChange={(e) => handleFilterChange('module', e.target.value)}
-              className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px] sm:min-h-auto"
             >
               <option value="">All Modules</option>
               <option value="Orders">Orders</option>
@@ -295,20 +295,22 @@ export default function AuditLogs() {
             </select>
           </div>
           
-          <div className="sm:col-span-2 lg:col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-            <div className="flex flex-col sm:flex-row gap-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+            <div className="flex flex-col gap-2">
               <input
                 type="date"
                 value={filters.dateFrom}
                 onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                className="w-full sm:w-1/2 px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px] sm:min-h-auto"
+                placeholder="From date"
               />
               <input
                 type="date"
                 value={filters.dateTo}
                 onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                className="w-full sm:w-1/2 px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px] sm:min-h-auto"
+                placeholder="To date"
               />
             </div>
           </div>
@@ -317,14 +319,14 @@ export default function AuditLogs() {
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={() => setCurrentPage(1)}
-            className="w-full sm:w-auto px-4 py-2 rounded-md text-white font-medium text-sm sm:text-base"
+            className="w-full sm:w-auto px-4 py-3 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
             style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
           >
             Apply Filters
           </button>
           <button
             onClick={handleResetFilters}
-            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm sm:text-base"
+            className="w-full sm:w-auto px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
             style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
           >
             Reset
@@ -335,9 +337,9 @@ export default function AuditLogs() {
       {/* Table Container */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         {/* Export Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 sm:p-6 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-            <span className="text-xs sm:text-sm text-gray-600">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 p-4 sm:p-6 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full lg:w-auto">
+            <span className="text-sm text-gray-600">
               Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredAndSortedLogs.length)} of {filteredAndSortedLogs.length} logs
             </span>
             <select
@@ -346,7 +348,7 @@ export default function AuditLogs() {
                 setItemsPerPage(Number(e.target.value))
                 setCurrentPage(1)
               }}
-              className="px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm min-h-[44px] sm:min-h-auto"
             >
               <option value={10}>10 per page</option>
               <option value={15}>15 per page</option>
@@ -354,50 +356,48 @@ export default function AuditLogs() {
             </select>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
             <button
               onClick={handleExportCSV}
-              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-xs sm:text-sm w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
             >
-              <FileText size={14} className="sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Export CSV</span>
-              <span className="sm:hidden">CSV</span>
+              <FileText size={16} className="flex-shrink-0" />
+              <span>Export CSV</span>
             </button>
             <button
               onClick={handleExportPDF}
-              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-xs sm:text-sm w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
             >
-              <FileText size={14} className="sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Export PDF</span>
-              <span className="sm:hidden">PDF</span>
+              <FileText size={16} className="flex-shrink-0" />
+              <span>Export PDF</span>
             </button>
           </div>
         </div>
 
         {/* Desktop Table */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full min-w-[800px]">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <button
                     onClick={handleSort}
-                    className="flex items-center gap-1 hover:text-gray-700"
+                    className="flex items-center gap-1 hover:text-gray-700 min-h-[44px] lg:min-h-auto"
                   >
                     Timestamp
-                    ↕
+                    <span className="text-gray-400">↕</span>
                   </button>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Action
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Module
                 </th>
               </tr>
@@ -405,25 +405,27 @@ export default function AuditLogs() {
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedLogs.map((log) => (
                 <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 text-sm text-gray-900">
+                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-900">
                     <div className="font-medium">{formatTimestamp(log.timestamp)}</div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-4">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{log.user}</div>
-                      <div className="text-sm text-gray-500">{log.userEmail}</div>
+                      <div className="text-sm text-gray-500 break-all">{log.userEmail}</div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                  <td className="px-4 sm:px-6 py-4">
+                    <span className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
                       {log.role}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {log.action}
+                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-900 max-w-xs">
+                    <div className="line-clamp-2">{log.action}</div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {log.module}
+                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-900">
+                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-700">
+                      {log.module}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -432,27 +434,29 @@ export default function AuditLogs() {
         </div>
 
         {/* Mobile Card Layout */}
-        <div className="md:hidden">
+        <div className="lg:hidden">
           {paginatedLogs.map((log) => (
             <div key={log.id} className="border-b border-gray-200 p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900 truncate">{log.user}</div>
-                  <div className="text-xs text-gray-500 truncate">{log.userEmail}</div>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 min-w-0 pr-3">
+                  <div className="text-sm font-medium text-gray-900 mb-1">{log.user}</div>
+                  <div className="text-xs text-gray-500 break-all">{log.userEmail}</div>
                 </div>
-                <div className="flex items-center gap-2 ml-2">
-                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                    {log.role.split(' ')[0]}
+                <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                  <span className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                    {log.role}
                   </span>
-                  <span className="text-xs text-gray-500">{log.module.charAt(0)}</span>
+                  <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-700">
+                    {log.module}
+                  </span>
                 </div>
               </div>
               
-              <div className="text-sm text-gray-900 mb-2 line-clamp-2">
+              <div className="text-sm text-gray-900 mb-3 leading-relaxed">
                 {log.action}
               </div>
               
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 font-medium">
                 {formatTimestamp(log.timestamp)}
               </div>
             </div>
@@ -462,44 +466,52 @@ export default function AuditLogs() {
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 order-2 sm:order-1">
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="flex items-center gap-1 px-2 sm:px-3 py-2 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-auto"
               >
-                <span className="hidden sm:inline">←</span>
-                <span className="sm:hidden">‹</span>
-                <span className="hidden sm:inline">Previous</span>
-                <span className="sm:hidden">Prev</span>
+                <span>←</span>
+                <span>Previous</span>
               </button>
               
               <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
-                  const pageNum = i + 1
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number
+                  if (totalPages <= 5) {
+                    pageNum = i + 1
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i
+                  } else {
+                    pageNum = currentPage - 2 + i
+                  }
+                  
                   return (
                     <button
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
-                      className={`px-2 sm:px-3 py-2 text-xs sm:text-sm rounded-md ${
+                      className={`px-3 sm:px-4 py-3 sm:py-2 text-sm rounded-md min-h-[44px] sm:min-h-auto ${
                         currentPage === pageNum
                           ? 'bg-blue-500 text-white'
-                          : 'text-gray-700 hover:bg-gray-50'
+                          : 'text-gray-700 hover:bg-gray-50 border border-gray-300'
                       }`}
                     >
                       {pageNum}
                     </button>
                   )
                 })}
-                {totalPages > 3 && (
+                {totalPages > 5 && currentPage < totalPages - 2 && (
                   <>
-                    <span className="px-1 sm:px-2 text-gray-500 text-xs sm:text-sm">...</span>
+                    <span className="px-2 text-gray-500 text-sm">...</span>
                     <button
                       onClick={() => setCurrentPage(totalPages)}
-                      className={`px-2 sm:px-3 py-2 text-xs sm:text-sm rounded-md ${
+                      className={`px-3 sm:px-4 py-3 sm:py-2 text-sm rounded-md min-h-[44px] sm:min-h-auto ${
                         currentPage === totalPages
                           ? 'bg-blue-500 text-white'
-                          : 'text-gray-700 hover:bg-gray-50'
+                          : 'text-gray-700 hover:bg-gray-50 border border-gray-300'
                       }`}
                     >
                       {totalPages}
@@ -511,16 +523,14 @@ export default function AuditLogs() {
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="flex items-center gap-1 px-2 sm:px-3 py-2 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-auto"
               >
-                <span className="hidden sm:inline">Next</span>
-                <span className="sm:hidden">Next</span>
-                <span className="hidden sm:inline">→</span>
-                <span className="sm:hidden">›</span>
+                <span>Next</span>
+                <span>→</span>
               </button>
             </div>
             
-            <div className="text-xs sm:text-sm text-gray-700">
+            <div className="text-sm text-gray-700 order-1 sm:order-2">
               Page {currentPage} of {totalPages}
             </div>
           </div>

@@ -247,27 +247,27 @@ export default function Orders() {
   }
 
   return (
-    <div className="p-6 font-sans text-primary">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-heading text-secondary text-2xl font-semibold">Orders</h2>
-        <div className="flex gap-3">
+    <div className="p-4 sm:p-6 font-sans text-primary">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h2 className="font-heading text-secondary text-xl sm:text-2xl font-semibold">Orders</h2>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-accent text-button-text rounded-full px-4 py-2.5 border border-transparent flex items-center gap-2"
+            className="bg-accent text-button-text rounded-full px-4 py-2.5 border border-transparent flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap"
           >
             <Plus size={16} />
             <span>Add New Order</span>
           </button>
           <button
             onClick={() => setIsUploadModalOpen(true)}
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 flex items-center gap-2"
+            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap"
           >
             <Upload size={16} />
             <span>Upload Excel</span>
           </button>
           <button
             onClick={() => setIsFilterOpen(v => !v)}
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 flex items-center gap-2"
+            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap"
           >
             <Search size={16} />
             <span>Filters</span>
@@ -276,31 +276,58 @@ export default function Orders() {
       </div>
 
       {isFilterOpen && (
-        <div className="flex gap-3 items-center mb-4 bg-white border border-secondary/20 rounded-xl p-3">
-          <select value={filterCity} onChange={e => setFilterCity(e.target.value)} className="px-3 py-2 rounded-xl">
-            <option value="">City</option>
-            {cities.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <select value={filterVendor} onChange={e => setFilterVendor(e.target.value)} className="px-3 py-2 rounded-xl">
-            <option value="">Vendor</option>
-            {vendors.map(v => (
-              <option key={v} value={v}>{v}</option>
-            ))}
-          </select>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as OrderStatus | '')} className="px-3 py-2 rounded-xl">
-            <option value="">Status</option>
-            {Object.keys(STATUS_STYLES).map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="px-3 py-2 rounded-xl" />
-          <button onClick={resetFilters} className="bg-white text-secondary border border-secondary rounded-full px-4 py-2">Reset</button>
+        <div className="mb-6 bg-white border border-secondary/20 rounded-xl p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            <select 
+              value={filterCity} 
+              onChange={e => setFilterCity(e.target.value)} 
+              className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-accent focus:outline-none"
+            >
+              <option value="">All Cities</option>
+              {cities.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <select 
+              value={filterVendor} 
+              onChange={e => setFilterVendor(e.target.value)} 
+              className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-accent focus:outline-none"
+            >
+              <option value="">All Vendors</option>
+              {vendors.map(v => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+            <select 
+              value={filterStatus} 
+              onChange={e => setFilterStatus(e.target.value as OrderStatus | '')} 
+              className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-accent focus:outline-none"
+            >
+              <option value="">All Status</option>
+              {Object.keys(STATUS_STYLES).map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <input 
+              type="date" 
+              value={filterDate} 
+              onChange={e => setFilterDate(e.target.value)} 
+              className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-accent focus:outline-none" 
+            />
+          </div>
+          <div className="flex justify-center sm:justify-end">
+            <button 
+              onClick={resetFilters} 
+              className="bg-white text-secondary border border-secondary rounded-full px-6 py-2.5 text-sm hover:bg-gray-50 transition-colors"
+            >
+              Reset Filters
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="bg-header-bg rounded-xl overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
         <table className="w-full border-separate border-spacing-0">
           <thead>
             <tr className="bg-white">
@@ -368,99 +395,197 @@ export default function Orders() {
         </table>
       </div>
 
+      {/* Mobile Card View */}
+      <div className="lg:hidden space-y-3">
+        {paginatedOrders.length === 0 ? (
+          <div className="bg-white rounded-xl p-6 text-center text-gray-500">
+            No orders match current filters.
+          </div>
+        ) : (
+          paginatedOrders.map((o, idx) => {
+            const st = STATUS_STYLES[o.status]
+            return (
+              <div key={`${o.id}-${o.sku}-${idx}`} className="bg-white rounded-xl p-4 border border-gray-200">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="font-semibold text-secondary text-lg">{o.id}</h3>
+                    <p className="text-sm text-gray-600">{o.date}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <span 
+                      className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap"
+                      style={{
+                        backgroundColor: st.bg,
+                        color: st.color,
+                        borderColor: st.border,
+                      }}
+                    >
+                      {st.label}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                  <div>
+                    <span className="text-gray-500 block">SKU</span>
+                    <span className="font-medium">{o.sku}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block">Quantity</span>
+                    <span className="font-medium">{o.qty}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block">Product</span>
+                    <span className="font-medium">{o.product}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block">City</span>
+                    <span className="font-medium">{o.city}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500 block">Vendor</span>
+                    <span className="font-medium">{o.vendor}</span>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  <button className="bg-white text-secondary border border-secondary rounded-full px-3 py-1.5 text-sm flex-1 min-w-0">
+                    Assign
+                  </button>
+                  <button 
+                    onClick={() => handleSplitOrder(o)}
+                    className="bg-white text-secondary border border-secondary rounded-full px-3 py-1.5 text-sm flex-1 min-w-0 hover:bg-gray-50"
+                  >
+                    Split
+                  </button>
+                  <button 
+                    onClick={() => handleEditOrder(o)}
+                    className="bg-white text-secondary border border-secondary rounded-full px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center justify-center min-w-[44px]"
+                    title="Edit Order"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button 
+                    className="bg-white text-red-600 border border-red-600 rounded-full px-3 py-1.5 text-sm flex items-center justify-center min-w-[44px]"
+                    title="Delete Order"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+
       {/* Pagination Controls */}
       {filteredOrders.length > 0 && (
-        <div className="flex items-center justify-between mt-4 bg-white border border-secondary/20 rounded-xl p-4">
-          <div className="text-sm text-gray-600">
-            Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className={`px-3 py-2 rounded-lg border text-sm ${
-                currentPage === 1 
-                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
-                  : 'bg-white text-secondary border-secondary hover:bg-gray-50'
-              }`}
-            >
-              Previous
-            </button>
-            
-            <div className="flex gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`px-3 py-2 rounded-lg border text-sm ${
-                    currentPage === page
-                      ? 'bg-accent text-button-text border-accent'
-                      : 'bg-white text-secondary border-secondary hover:bg-gray-50'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+        <div className="mt-6 bg-white border border-secondary/20 rounded-xl p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="text-sm text-gray-600 text-center sm:text-left">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
             </div>
             
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className={`px-3 py-2 rounded-lg border text-sm ${
-                currentPage === totalPages 
-                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
-                  : 'bg-white text-secondary border-secondary hover:bg-gray-50'
-              }`}
-            >
-              Next
-            </button>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className={`px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+                  currentPage === 1 
+                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+                    : 'bg-white text-secondary border-secondary hover:bg-gray-50'
+                }`}
+              >
+                Previous
+              </button>
+              
+              <div className="flex gap-1 max-w-[200px] overflow-x-auto">
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  let page: number;
+                  if (totalPages <= 5) {
+                    page = i + 1;
+                  } else if (currentPage <= 3) {
+                    page = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    page = totalPages - 4 + i;
+                  } else {
+                    page = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-2.5 rounded-lg border text-sm min-w-[44px] transition-colors ${
+                        currentPage === page
+                          ? 'bg-accent text-button-text border-accent'
+                          : 'bg-white text-secondary border-secondary hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className={`px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+                  currentPage === totalPages 
+                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+                    : 'bg-white text-secondary border-secondary hover:bg-gray-50'
+                }`}
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-[600px] rounded-2xl p-5 max-h-[90vh] overflow-y-auto">
-            <div className="mb-3">
-              <h3 className="font-heading text-secondary font-normal">Add New Order</h3>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-[600px] rounded-2xl p-4 sm:p-5 max-h-[90vh] overflow-y-auto">
+            <div className="mb-4">
+              <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">Add New Order</h3>
             </div>
             
             {/* Order Details */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Order ID</label>
+                <label className="block text-sm font-medium mb-2">Order ID</label>
                 <input 
                   value={draft.id} 
                   onChange={e => setDraft({ ...draft, id: e.target.value })} 
                   placeholder="ORD-XXXX" 
-                  className="w-full px-2.5 py-2 rounded-lg border border-gray-300" 
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Date</label>
+                <label className="block text-sm font-medium mb-2">Date</label>
                 <input 
                   type="date" 
                   value={draft.date} 
                   onChange={e => setDraft({ ...draft, date: e.target.value })} 
-                  className="w-full px-2.5 py-2 rounded-lg border border-gray-300" 
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">City/Address</label>
+                <label className="block text-sm font-medium mb-2">City/Address</label>
                 <input 
                   value={draft.city} 
                   onChange={e => setDraft({ ...draft, city: e.target.value })} 
                   placeholder="Mumbai" 
-                  className="w-full px-2.5 py-2 rounded-lg border border-gray-300" 
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Vendor</label>
+                <label className="block text-sm font-medium mb-2">Vendor</label>
                 <select 
                   value={draft.vendor} 
                   onChange={e => setDraft({ ...draft, vendor: e.target.value })} 
-                  className="w-full px-2.5 py-2 rounded-lg border border-gray-300"
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
                 >
                   <option value="">Select Vendor</option>
                   {vendors.map(v => (
@@ -484,74 +609,76 @@ export default function Orders() {
               </div>
               
               {draft.items.map((item, index) => (
-                <div key={index} className="grid grid-cols-4 gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">SKU</label>
-                    <input 
-                      value={item.sku} 
-                      onChange={e => {
-                        const newItems = [...draft.items]
-                        newItems[index] = { ...item, sku: e.target.value }
-                        setDraft({ ...draft, items: newItems })
-                      }} 
-                      placeholder="KY-PLNT-01" 
-                      className="w-full px-2.5 py-2 rounded-lg border border-gray-300" 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Product Name</label>
-                    <input 
-                      value={item.product} 
-                      onChange={e => {
-                        const newItems = [...draft.items]
-                        newItems[index] = { ...item, product: e.target.value }
-                        setDraft({ ...draft, items: newItems })
-                      }} 
-                      placeholder="Rose" 
-                      className="w-full px-2.5 py-2 rounded-lg border border-gray-300" 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Quantity</label>
-                    <input 
-                      type="number" 
-                      value={item.qty} 
-                      onChange={e => {
-                        const newItems = [...draft.items]
-                        newItems[index] = { ...item, qty: e.target.value === '' ? '' : Number(e.target.value) }
-                        setDraft({ ...draft, items: newItems })
-                      }} 
-                      min={1} 
-                      className="w-full px-2.5 py-2 rounded-lg border border-gray-300" 
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    {draft.items.length > 1 && (
-                      <button
-                        onClick={() => {
-                          const newItems = draft.items.filter((_, i) => i !== index)
+                <div key={index} className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">SKU</label>
+                      <input 
+                        value={item.sku} 
+                        onChange={e => {
+                          const newItems = [...draft.items]
+                          newItems[index] = { ...item, sku: e.target.value }
                           setDraft({ ...draft, items: newItems })
-                        }}
-                        className="bg-red-500 text-white rounded-full px-3 py-2 text-sm w-full"
-                      >
-                        Remove
-                      </button>
-                    )}
+                        }} 
+                        placeholder="KY-PLNT-01" 
+                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Product Name</label>
+                      <input 
+                        value={item.product} 
+                        onChange={e => {
+                          const newItems = [...draft.items]
+                          newItems[index] = { ...item, product: e.target.value }
+                          setDraft({ ...draft, items: newItems })
+                        }} 
+                        placeholder="Rose" 
+                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Quantity</label>
+                      <input 
+                        type="number" 
+                        value={item.qty} 
+                        onChange={e => {
+                          const newItems = [...draft.items]
+                          newItems[index] = { ...item, qty: e.target.value === '' ? '' : Number(e.target.value) }
+                          setDraft({ ...draft, items: newItems })
+                        }} 
+                        min={1} 
+                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      {draft.items.length > 1 && (
+                        <button
+                          onClick={() => {
+                            const newItems = draft.items.filter((_, i) => i !== index)
+                            setDraft({ ...draft, items: newItems })
+                          }}
+                          className="bg-red-500 text-white rounded-full px-3 py-2.5 text-sm w-full hover:bg-red-600 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
               <button 
                 onClick={() => setIsAddModalOpen(false)} 
-                className="bg-white text-secondary border border-secondary rounded-full px-3.5 py-2"
+                className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleAddOrder} 
-                className="bg-accent text-button-text rounded-full px-3.5 py-2"
+                className="bg-accent text-button-text rounded-full px-4 py-2.5 text-sm sm:text-base hover:bg-accent/90 transition-colors"
               >
                 Save Order
               </button>
@@ -561,10 +688,10 @@ export default function Orders() {
       )}
 
       {isUploadModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-[520px] rounded-2xl p-5">
-            <div className="mb-3">
-              <h3 className="font-heading text-secondary font-normal">Upload Orders (Excel)</h3>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-[520px] rounded-2xl p-4 sm:p-5">
+            <div className="mb-4">
+              <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">Upload Orders (Excel)</h3>
             </div>
             
             <div 
@@ -594,22 +721,22 @@ export default function Orders() {
               />
             </div>
             
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="flex flex-col sm:flex-row justify-end gap-3 mt-4">
               <button 
                 onClick={() => {
                   setIsUploadModalOpen(false)
                   setSelectedFile(null)
                 }} 
-                className="bg-white text-secondary border border-secondary rounded-full px-3.5 py-2"
+                className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleFileUpload}
                 disabled={!selectedFile}
-                className={`rounded-full px-3.5 py-2 border-none ${
+                className={`rounded-full px-4 py-2.5 text-sm sm:text-base border-none transition-colors ${
                   selectedFile 
-                    ? 'bg-accent text-button-text cursor-pointer' 
+                    ? 'bg-accent text-button-text cursor-pointer hover:bg-accent/90' 
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
@@ -679,17 +806,17 @@ function SplitOrderModal({ order, onClose, onSubmit }: {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white w-[500px] rounded-2xl p-5">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white w-full max-w-[500px] rounded-2xl p-4 sm:p-5">
         <div className="mb-4">
-          <h3 className="font-heading text-secondary font-normal">Split Order</h3>
+          <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">Split Order</h3>
           <p className="text-sm text-gray-600 mt-1">
             Split "{order.product}" (Qty: {order.qty}) into multiple orders
           </p>
         </div>
 
         <div className="mb-4">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-3">
             <input
               type="number"
               value={newQuantity}
@@ -697,12 +824,12 @@ function SplitOrderModal({ order, onClose, onSubmit }: {
               placeholder="Enter quantity"
               min={1}
               max={remainingQty}
-              className="flex-1 px-3 py-2 rounded-lg border border-gray-300"
+              className="flex-1 px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
             />
             <button
               onClick={addSplit}
               disabled={newQuantity <= 0 || newQuantity > remainingQty}
-              className="bg-accent text-button-text rounded-full px-4 py-2 text-sm disabled:bg-gray-300"
+              className="bg-accent text-button-text rounded-full px-4 py-2.5 text-sm disabled:bg-gray-300 hover:bg-accent/90 transition-colors whitespace-nowrap"
             >
               Add Split
             </button>
@@ -735,16 +862,19 @@ function SplitOrderModal({ order, onClose, onSubmit }: {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="bg-white text-secondary border border-secondary rounded-full px-4 py-2">
+        <div className="flex flex-col sm:flex-row justify-end gap-3">
+          <button 
+            onClick={onClose} 
+            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
+          >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!isValid}
-            className={`rounded-full px-4 py-2 ${
+            className={`rounded-full px-4 py-2.5 text-sm sm:text-base transition-colors ${
               isValid 
-                ? 'bg-accent text-button-text' 
+                ? 'bg-accent text-button-text hover:bg-accent/90' 
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
@@ -774,58 +904,58 @@ function EditOrderModal({ order, onClose, onSubmit, vendors }: {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white w-[500px] rounded-2xl p-5">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white w-full max-w-[500px] rounded-2xl p-4 sm:p-5 max-h-[90vh] overflow-y-auto">
         <div className="mb-4">
-          <h3 className="font-heading text-secondary font-normal">Edit Order</h3>
+          <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">Edit Order</h3>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Order ID</label>
+            <label className="block text-sm font-medium mb-2">Order ID</label>
             <input
               value={editedOrder.id}
               onChange={e => setEditedOrder({ ...editedOrder, id: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300"
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">SKU</label>
+              <label className="block text-sm font-medium mb-2">SKU</label>
               <input
                 value={editedOrder.sku}
                 onChange={e => setEditedOrder({ ...editedOrder, sku: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300"
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Product</label>
+              <label className="block text-sm font-medium mb-2">Product</label>
               <input
                 value={editedOrder.product}
                 onChange={e => setEditedOrder({ ...editedOrder, product: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300"
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Quantity</label>
+              <label className="block text-sm font-medium mb-2">Quantity</label>
               <input
                 type="number"
                 value={editedOrder.qty}
                 onChange={e => setEditedOrder({ ...editedOrder, qty: Number(e.target.value) })}
                 min={1}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300"
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Status</label>
+              <label className="block text-sm font-medium mb-2">Status</label>
               <select
                 value={editedOrder.status}
                 onChange={e => setEditedOrder({ ...editedOrder, status: e.target.value as OrderStatus })}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300"
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
               >
                 {Object.keys(STATUS_STYLES).map(status => (
                   <option key={status} value={status}>{status}</option>
@@ -834,13 +964,13 @@ function EditOrderModal({ order, onClose, onSubmit, vendors }: {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Vendor</label>
+              <label className="block text-sm font-medium mb-2">Vendor</label>
               <select
                 value={editedOrder.vendor}
                 onChange={e => setEditedOrder({ ...editedOrder, vendor: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300"
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
               >
                 {vendors.map(vendor => (
                   <option key={vendor} value={vendor}>{vendor}</option>
@@ -848,31 +978,37 @@ function EditOrderModal({ order, onClose, onSubmit, vendors }: {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">City</label>
+              <label className="block text-sm font-medium mb-2">City</label>
               <input
                 value={editedOrder.city}
                 onChange={e => setEditedOrder({ ...editedOrder, city: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300"
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Date</label>
+            <label className="block text-sm font-medium mb-2">Date</label>
             <input
               type="date"
               value={editedOrder.date}
               onChange={e => setEditedOrder({ ...editedOrder, date: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300"
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
             />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-6">
-          <button onClick={onClose} className="bg-white text-secondary border border-secondary rounded-full px-4 py-2">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
+          <button 
+            onClick={onClose} 
+            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
+          >
             Cancel
           </button>
-          <button onClick={handleSubmit} className="bg-accent text-button-text rounded-full px-4 py-2">
+          <button 
+            onClick={handleSubmit} 
+            className="bg-accent text-button-text rounded-full px-4 py-2.5 text-sm sm:text-base hover:bg-accent/90 transition-colors"
+          >
             Save Changes
           </button>
         </div>

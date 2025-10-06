@@ -80,19 +80,20 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, index, isDragDisabled = fa
         {...provided.dragHandleProps}
         onClick={() => onOrderClick?.(order.id)}
         className={`
-          bg-white rounded-lg border border-gray-200 p-3 mb-2 shadow-sm
-          hover:shadow-md transition-shadow duration-200
+          bg-white rounded-lg border border-gray-200 p-3 sm:p-4 mb-2 shadow-sm
+          hover:shadow-md transition-shadow duration-200 active:shadow-lg
           ${snapshot.isDragging ? 'shadow-lg rotate-2' : ''}
           ${isDragDisabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing hover:cursor-pointer'}
+          touch-manipulation
         `}
       >
-        <div className="font-semibold text-[var(--color-heading)] text-sm mb-1">
+        <div className="font-semibold text-[var(--color-heading)] text-sm sm:text-base mb-1">
           {order.id}
         </div>
-        <div className="text-gray-600 text-sm mb-1">
+        <div className="text-gray-600 text-sm mb-2 leading-relaxed">
           {order.vendor}
         </div>
-        <div className="text-gray-500 text-xs">
+        <div className="text-gray-500 text-xs sm:text-sm">
           Qty: {order.qty}
         </div>
       </div>
@@ -160,32 +161,32 @@ const ListView: React.FC<ListViewProps> = ({ orders, onOrderClick }) => (
     </div>
 
     {/* Mobile Card View */}
-    <div className="md:hidden">
+    <div className="md:hidden space-y-1">
       {orders.map((order, index) => (
         <div
           key={order.id}
           onClick={() => onOrderClick?.(order.id)}
           className={`
-            p-4 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-100 transition-colors
+            p-4 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-100 transition-colors active:bg-gray-200
             ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
           `}
         >
-          <div className="flex items-start justify-between mb-2">
-            <div className="font-medium text-[var(--color-heading)]">
+          <div className="flex items-start justify-between mb-3">
+            <div className="font-semibold text-[var(--color-heading)] text-base">
               {order.id}
             </div>
             <span className={`
-              inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+              inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border flex-shrink-0
               ${getStatusColor(order.status)}
             `}>
               {order.status}
             </span>
           </div>
-          <div className="text-gray-700 text-sm mb-1">
+          <div className="text-gray-700 text-sm mb-2 leading-relaxed">
             {order.vendor}
           </div>
           <div className="text-gray-600 text-sm">
-            Quantity: {order.qty}
+            <span className="font-medium">Quantity:</span> {order.qty}
           </div>
         </div>
       ))}
@@ -200,9 +201,9 @@ interface BoardColumnProps {
 }
 
 const BoardColumn: React.FC<BoardColumnProps> = ({ status, orders, onOrderClick }) => (
-  <div className="flex-shrink-0 w-72 bg-gray-100 rounded-lg p-3 mr-4 last:mr-0">
+  <div className="flex-shrink-0 w-64 sm:w-72 bg-gray-100 rounded-lg p-3 mr-3 sm:mr-4 last:mr-0">
     <div className="flex items-center justify-between mb-3">
-      <h3 className="font-semibold text-[var(--color-heading)] text-sm">
+      <h3 className="font-semibold text-[var(--color-heading)] text-sm sm:text-base">
         {status}
       </h3>
       <span className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full">
@@ -250,7 +251,7 @@ const BoardView: React.FC<BoardViewProps> = ({ orders, onOrderMove, onOrderClick
 
   return (
     <DragDropContext onDragEnd={onOrderMove}>
-      <div className="overflow-x-auto pb-4">
+      <div className="overflow-x-auto pb-4 -mx-4 sm:-mx-6 px-4 sm:px-6">
         <div className="flex min-w-max">
           {statusColumns.map((status) => (
             <BoardColumn
@@ -305,25 +306,25 @@ const OrderTracking: React.FC = () => {
   };
 
   return (
-    <div className="p-6 bg-[var(--color-happyplant-bg)] min-h-screen">
+    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-screen font-sans w-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-[var(--color-heading)] mb-2">
+        <div className="bg-[var(--color-header-bg)] p-4 sm:p-6 lg:p-8 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] mb-4 sm:mb-6 border border-[rgba(0,0,0,0.03)]">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
             Order Tracking
           </h1>
-          <p className="text-gray-600">
+          <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium">
             Monitor and manage order status across the fulfillment pipeline
           </p>
         </div>
 
         {/* View Toggle */}
-        <div className="mb-6">
-          <div className="inline-flex bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="mb-4 sm:mb-6">
+          <div className="inline-flex bg-white rounded-lg border border-gray-200 shadow-sm w-full sm:w-auto">
             <button
               onClick={() => setViewMode('list')}
               className={`
-                flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-l-lg transition-colors
+                flex items-center justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-medium rounded-l-lg transition-colors flex-1 sm:flex-none min-h-[44px]
                 ${viewMode === 'list'
                   ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-sm'
                   : 'text-gray-700 hover:text-[var(--color-heading)] hover:bg-gray-50'
@@ -331,12 +332,12 @@ const OrderTracking: React.FC = () => {
               `}
             >
               <LayoutDashboard size={16} />
-              List View
+              <span className="text-xs sm:text-sm">List View</span>
             </button>
             <button
               onClick={() => setViewMode('board')}
               className={`
-                flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-r-lg transition-colors
+                flex items-center justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-medium rounded-r-lg transition-colors flex-1 sm:flex-none min-h-[44px]
                 ${viewMode === 'board'
                   ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-sm'
                   : 'text-gray-700 hover:text-[var(--color-heading)] hover:bg-gray-50'
@@ -344,27 +345,27 @@ const OrderTracking: React.FC = () => {
               `}
             >
               <Package size={16} />
-              Board View
+              <span className="text-xs sm:text-sm">Board View</span>
             </button>
           </div>
         </div>
 
         {/* Orders Summary */}
-        <div className="mb-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        <div className="mb-4 sm:mb-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4">
           {statusColumns.map(status => {
             const count = orders.filter(order => order.status === status).length;
             return (
               <div
                 key={status}
-                className="bg-white rounded-lg border border-gray-200 p-3 text-center shadow-sm"
+                className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 text-center shadow-sm"
               >
                 <div className="flex items-center justify-center mb-2">
                   {getStatusIcon(status)}
                 </div>
-                <div className="text-2xl font-bold text-[var(--color-heading)] mb-1">
+                <div className="text-xl sm:text-2xl font-bold text-[var(--color-heading)] mb-1">
                   {count}
                 </div>
-                <div className="text-xs text-gray-600 uppercase tracking-wide">
+                <div className="text-xs text-gray-600 uppercase tracking-wide leading-tight">
                   {status}
                 </div>
               </div>
@@ -373,7 +374,7 @@ const OrderTracking: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
           {viewMode === 'list' ? (
             <ListView orders={orders} onOrderClick={handleOrderClick} />
           ) : (
@@ -383,9 +384,9 @@ const OrderTracking: React.FC = () => {
 
         {/* Empty State (if no orders) */}
         {orders.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-lg mb-2">No orders found</div>
-            <div className="text-gray-500 text-sm">
+          <div className="text-center py-8 sm:py-12">
+            <div className="text-gray-400 text-lg sm:text-xl mb-2">No orders found</div>
+            <div className="text-gray-500 text-sm sm:text-base">
               Orders will appear here once they are created
             </div>
           </div>

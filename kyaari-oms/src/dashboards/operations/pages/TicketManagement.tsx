@@ -316,52 +316,52 @@ export default function TicketManagement() {
   const resolvedTickets = tickets.filter(ticket => ticket.status === 'resolved').length
 
   return (
-    <div className="p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 md:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
           Ticket Management
         </h1>
-        <p className="text-[var(--color-primary)]">
+        <p className="text-sm sm:text-base text-[var(--color-primary)]">
           Manage and resolve vendor tickets and issues
         </p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-            <span className="text-sm font-medium text-gray-600">Open Tickets</span>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 flex-shrink-0" />
+            <span className="text-xs sm:text-sm font-medium text-gray-600">Open Tickets</span>
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{openTickets}</div>
+          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{openTickets}</div>
         </div>
         
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <Clock className="w-5 h-5 text-yellow-500" />
-            <span className="text-sm font-medium text-gray-600">Under Review</span>
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 flex-shrink-0" />
+            <span className="text-xs sm:text-sm font-medium text-gray-600">Under Review</span>
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{underReviewTickets}</div>
+          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{underReviewTickets}</div>
         </div>
         
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <CheckSquare className="w-5 h-5 text-green-500" />
-            <span className="text-sm font-medium text-gray-600">Resolved Tickets</span>
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 flex-shrink-0" />
+            <span className="text-xs sm:text-sm font-medium text-gray-600">Resolved Tickets</span>
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{resolvedTickets}</div>
+          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{resolvedTickets}</div>
         </div>
       </div>
 
       {/* Filters and Actions */}
       <div className="bg-white rounded-xl shadow-md border border-white/20 mb-6">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-[var(--color-heading)]">All Tickets</h2>
+        <div className="p-4 sm:p-6 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+            <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">All Tickets</h2>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
             >
               <Filter size={16} />
               Filters
@@ -370,11 +370,11 @@ export default function TicketManagement() {
 
           {/* Filters */}
           {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
                   value={filters.status}
                   onChange={(e) => setFilters({...filters, status: e.target.value})}
                 >
@@ -392,7 +392,7 @@ export default function TicketManagement() {
                   <input
                     type="text"
                     placeholder="Search vendor..."
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
                     value={filters.vendor}
                     onChange={(e) => setFilters({...filters, vendor: e.target.value})}
                   />
@@ -403,7 +403,7 @@ export default function TicketManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
                 <input
                   type="date"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
                   value={filters.date}
                   onChange={(e) => setFilters({...filters, date: e.target.value})}
                 />
@@ -412,7 +412,7 @@ export default function TicketManagement() {
               <div className="flex items-end">
                 <button
                   onClick={() => setFilters({status: 'all', vendor: '', date: ''})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
                 >
                   Clear Filters
                 </button>
@@ -421,8 +421,8 @@ export default function TicketManagement() {
           )}
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Desktop Table View - Hidden on Mobile */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
@@ -501,6 +501,69 @@ export default function TicketManagement() {
           </table>
         </div>
 
+        {/* Mobile Card View - Visible only on Mobile */}
+        <div className="md:hidden space-y-4 p-4">
+          {filteredTickets.map((ticket) => (
+            <div key={ticket.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold text-[var(--color-heading)]">{ticket.ticketNumber}</span>
+                    {getPriorityBadge(ticket.priority)}
+                  </div>
+                  <div className="text-xs text-gray-500">{ticket.orderNumber}</div>
+                </div>
+                {getStatusBadge(ticket.status)}
+              </div>
+
+              <div className="space-y-2 mb-3">
+                <div>
+                  <span className="text-xs text-gray-500">Vendor:</span>
+                  <div className="text-sm font-medium text-gray-900">{ticket.vendor.name}</div>
+                  <div className="text-xs text-gray-500">{ticket.vendor.email}</div>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500">Issue:</span>
+                  <div className="text-sm font-medium text-gray-900">{getIssueTypeLabel(ticket.issueType)}</div>
+                  <div className="text-xs text-gray-600 line-clamp-2">{ticket.issueDescription}</div>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Raised: {ticket.raisedOn}</span>
+                  <span>Updated: {ticket.lastUpdated}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  onClick={() => handleViewDetails(ticket)}
+                  className="w-full px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-medium flex items-center justify-center gap-2 min-h-[44px]"
+                >
+                  <Eye size={16} />
+                  View Details
+                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  {ticket.status !== 'resolved' && (
+                    <button
+                      onClick={() => handleUpdateStatus(ticket)}
+                      className="px-3 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors text-sm font-medium min-h-[44px]"
+                    >
+                      Update
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleAddComment(ticket)}
+                    className={`px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm font-medium flex items-center justify-center gap-1 min-h-[44px] ${
+                      ticket.status !== 'resolved' ? '' : 'col-span-2'
+                    }`}
+                  >
+                    💬 Comment
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {filteredTickets.length === 0 && (
           <div className="p-8 text-center text-gray-500">
             No tickets found matching the current filters.
@@ -510,58 +573,58 @@ export default function TicketManagement() {
 
       {/* View Details Modal */}
       {detailsModalOpen && selectedTicket && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[var(--color-heading)]">Ticket Details</h3>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Ticket Details</h3>
               <button 
                 onClick={() => setDetailsModalOpen(false)} 
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 <X size={20} />
               </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-3">Ticket Information</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
+              <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Ticket Information</h4>
                 <div className="space-y-2">
-                  <p className="text-sm"><span className="font-medium">Ticket ID:</span> {selectedTicket.ticketNumber}</p>
-                  <p className="text-sm"><span className="font-medium">Order ID:</span> {selectedTicket.orderNumber}</p>
-                  <p className="text-sm"><span className="font-medium">Issue Type:</span> {getIssueTypeLabel(selectedTicket.issueType)}</p>
-                  <p className="text-sm"><span className="font-medium">Priority:</span> {getPriorityBadge(selectedTicket.priority)}</p>
-                  <p className="text-sm"><span className="font-medium">Status:</span> {getStatusBadge(selectedTicket.status)}</p>
-                  <p className="text-sm"><span className="font-medium">Raised By:</span> {selectedTicket.raisedBy}</p>
+                  <p className="text-xs sm:text-sm"><span className="font-medium">Ticket ID:</span> {selectedTicket.ticketNumber}</p>
+                  <p className="text-xs sm:text-sm"><span className="font-medium">Order ID:</span> {selectedTicket.orderNumber}</p>
+                  <p className="text-xs sm:text-sm"><span className="font-medium">Issue Type:</span> {getIssueTypeLabel(selectedTicket.issueType)}</p>
+                  <p className="text-xs sm:text-sm flex items-center gap-2"><span className="font-medium">Priority:</span> {getPriorityBadge(selectedTicket.priority)}</p>
+                  <p className="text-xs sm:text-sm flex items-center gap-2"><span className="font-medium">Status:</span> {getStatusBadge(selectedTicket.status)}</p>
+                  <p className="text-xs sm:text-sm"><span className="font-medium">Raised By:</span> {selectedTicket.raisedBy}</p>
                   {selectedTicket.assignedTo && (
-                    <p className="text-sm"><span className="font-medium">Assigned To:</span> {selectedTicket.assignedTo}</p>
+                    <p className="text-xs sm:text-sm"><span className="font-medium">Assigned To:</span> {selectedTicket.assignedTo}</p>
                   )}
                 </div>
               </div>
               
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-3">Vendor Information</h4>
+              <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Vendor Information</h4>
                 <div className="space-y-2">
-                  <p className="text-sm"><span className="font-medium">Name:</span> {selectedTicket.vendor.name}</p>
-                  <p className="text-sm"><span className="font-medium">Email:</span> {selectedTicket.vendor.email}</p>
-                  <p className="text-sm"><span className="font-medium">Vendor ID:</span> {selectedTicket.vendor.id}</p>
+                  <p className="text-xs sm:text-sm"><span className="font-medium">Name:</span> {selectedTicket.vendor.name}</p>
+                  <p className="text-xs sm:text-sm"><span className="font-medium">Email:</span> {selectedTicket.vendor.email}</p>
+                  <p className="text-xs sm:text-sm"><span className="font-medium">Vendor ID:</span> {selectedTicket.vendor.id}</p>
                 </div>
               </div>
             </div>
 
-            <div className="mb-6">
-              <h4 className="font-medium text-gray-900 mb-3">Issue Description</h4>
-              <p className="text-sm text-gray-700 p-4 bg-gray-50 rounded-lg">{selectedTicket.issueDescription}</p>
+            <div className="mb-4 sm:mb-6">
+              <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Issue Description</h4>
+              <p className="text-xs sm:text-sm text-gray-700 p-3 sm:p-4 bg-gray-50 rounded-lg">{selectedTicket.issueDescription}</p>
             </div>
 
             {selectedTicket.attachments.length > 0 && (
-              <div className="mb-6">
-                <h4 className="font-medium text-gray-900 mb-3">Attachments</h4>
+              <div className="mb-4 sm:mb-6">
+                <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Attachments</h4>
                 <div className="space-y-2">
                   {selectedTicket.attachments.map((attachment) => (
-                    <div key={attachment.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <span className="text-gray-400">📎</span>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{attachment.fileName}</p>
+                    <div key={attachment.id} className="flex items-center gap-2 sm:gap-3 p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-400 text-lg sm:text-xl">📎</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm font-medium truncate">{attachment.fileName}</p>
                         <p className="text-xs text-gray-500">Uploaded by {attachment.uploadedBy} on {attachment.uploadedAt}</p>
                       </div>
                     </div>
@@ -570,18 +633,18 @@ export default function TicketManagement() {
               </div>
             )}
 
-            <div className="mb-6">
-              <h4 className="font-medium text-gray-900 mb-3">Comments History</h4>
-              <div className="space-y-4 max-h-60 overflow-y-auto">
+            <div className="mb-4 sm:mb-6">
+              <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Comments History</h4>
+              <div className="space-y-3 sm:space-y-4 max-h-60 overflow-y-auto">
                 {selectedTicket.comments.map((comment) => (
-                  <div key={comment.id} className={`p-4 rounded-lg ${
+                  <div key={comment.id} className={`p-3 sm:p-4 rounded-lg ${
                     comment.type === 'internal' ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-green-50 border-l-4 border-green-500'
                   }`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">{comment.author}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-1">
+                      <span className="text-xs sm:text-sm font-medium">{comment.author}</span>
                       <span className="text-xs text-gray-500">{comment.timestamp}</span>
                     </div>
-                    <p className="text-sm text-gray-700">{comment.message}</p>
+                    <p className="text-xs sm:text-sm text-gray-700">{comment.message}</p>
                   </div>
                 ))}
               </div>
@@ -592,29 +655,29 @@ export default function TicketManagement() {
 
       {/* Update Status Modal */}
       {updateStatusModalOpen && selectedTicket && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[var(--color-heading)]">Update Status</h3>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-lg">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Update Status</h3>
               <button 
                 onClick={() => setUpdateStatusModalOpen(false)} 
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 <X size={20} />
               </button>
             </div>
             
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-2">Ticket: <span className="font-medium">{selectedTicket.ticketNumber}</span></p>
-              <p className="text-sm text-gray-600 mb-2">Current Status: {getStatusBadge(selectedTicket.status)}</p>
+            <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs sm:text-sm text-gray-600 mb-2">Ticket: <span className="font-medium">{selectedTicket.ticketNumber}</span></p>
+              <p className="text-xs sm:text-sm text-gray-600 mb-2">Current Status: {getStatusBadge(selectedTicket.status)}</p>
             </div>
 
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="mb-4 sm:mb-6">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 New Status
               </label>
               <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+                className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] text-sm sm:text-base"
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value as any)}
               >
@@ -624,16 +687,16 @@ export default function TicketManagement() {
               </select>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
               <button
                 onClick={() => setUpdateStatusModalOpen(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] text-sm sm:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={submitStatusUpdate}
-                className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+                className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors min-h-[44px] text-sm sm:text-base"
               >
                 Update Status
               </button>
@@ -644,30 +707,30 @@ export default function TicketManagement() {
 
       {/* Add Comment Modal */}
       {commentModalOpen && selectedTicket && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[var(--color-heading)]">Add Comment</h3>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Add Comment</h3>
               <button 
                 onClick={() => setCommentModalOpen(false)} 
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 <X size={20} />
               </button>
             </div>
             
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-2">Ticket: <span className="font-medium">{selectedTicket.ticketNumber}</span></p>
-              <p className="text-sm text-gray-600">Vendor: <span className="font-medium">{selectedTicket.vendor.name}</span></p>
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs sm:text-sm text-gray-600 mb-2">Ticket: <span className="font-medium">{selectedTicket.ticketNumber}</span></p>
+              <p className="text-xs sm:text-sm text-gray-600">Vendor: <span className="font-medium">{selectedTicket.vendor.name}</span></p>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                   Comment *
                 </label>
                 <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+                  className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[100px] text-sm sm:text-base"
                   rows={4}
                   placeholder="Add your comment or update..."
                   value={newComment}
@@ -676,14 +739,14 @@ export default function TicketManagement() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                   Attach File (Optional)
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                  <div className="mx-auto h-12 w-12 text-gray-400 mb-4 flex items-center justify-center">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 text-center hover:border-gray-400 transition-colors">
+                  <div className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-3 sm:mb-4 flex items-center justify-center text-2xl sm:text-3xl">
                     📎
                   </div>
-                  <div className="text-sm text-gray-600 mb-2">
+                  <div className="text-xs sm:text-sm text-gray-600 mb-2">
                     <label htmlFor="attachment-upload" className="cursor-pointer text-[var(--color-accent)] hover:underline">
                       Click to upload
                     </label>
@@ -698,7 +761,7 @@ export default function TicketManagement() {
                     onChange={(e) => setNewAttachment(e.target.files?.[0] || null)}
                   />
                   {newAttachment && (
-                    <p className="mt-2 text-sm text-green-600">
+                    <p className="mt-2 text-xs sm:text-sm text-green-600 truncate px-2">
                       Selected: {newAttachment.name}
                     </p>
                   )}
@@ -706,17 +769,17 @@ export default function TicketManagement() {
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex flex-col-reverse sm:flex-row gap-3 mt-4 sm:mt-6">
               <button
                 onClick={() => setCommentModalOpen(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] text-sm sm:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={submitComment}
                 disabled={!newComment.trim()}
-                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] text-sm sm:text-base"
               >
                 Add Comment
               </button>
