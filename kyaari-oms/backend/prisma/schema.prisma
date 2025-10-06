@@ -1,0 +1,166 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String       @id @default(cuid())
+  email             String?      @unique @db.VarChar(255)
+  name              String       @db.VarChar(255)
+  passwordHash      String
+  passwordVersion   Int          @default(1)
+  status            UserStatus   @default(PENDING)
+  lastLoginAt       DateTime?
+  metadata          Json?
+  
+  createdBy         String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  deletedAt         DateTime?
+  
+  roles             UserRole[]
+  vendorProfile     VendorProfile?
+  refreshTokens     RefreshToken[]
+  auditLogs         AuditLog[]
+  
+  @@index([email])
+  @@index([status])
+  @@map("users")
+}
+
+model Role {
+  id                String       @id @default(cuid())
+  name              String       @unique @db.VarChar(50)
+  description       String?
+  
+  users             UserRole[]
+  permissions       RolePermission[]
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  @@map("roles")
+}
+
+model UserRole {
+  userId            String
+  roleId            String
+  
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role              Role         @relation(fields: [roleId], references: [id])
+  
+  assignedAt        DateTime     @default(now())
+  assignedBy        String?
+  
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model Permission {
+  id                String       @id @default(cuid())
+  name              String       @unique @db.VarChar(100)
+  description       String?
+  resource          String       @db.VarChar(50)
+  action            String       @db.VarChar(50)
+  
+  roles             RolePermission[]
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId            String
+  permissionId      String
+  
+  role              Role         @relation(fields: [roleId], references: [id])
+  permission        Permission   @relation(fields: [permissionId], references: [id])
+  
+  assignedAt        DateTime     @default(now())
+  
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model VendorProfile {
+  id                String       @id @default(cuid())
+  userId            String       @unique
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  firstName         String       @db.VarChar(100)
+  lastName          String       @db.VarChar(100)
+  phone             String       @unique @db.VarChar(20)
+  warehouseLocation String       @db.Text
+  pincode           String       @db.VarChar(10)
+  
+  companyName       String?      @db.VarChar(255)
+  gstNumber         String?      @db.VarChar(50)
+  panNumber         String?      @db.VarChar(50)
+  
+  verified          Boolean      @default(false)
+  verifiedAt        DateTime?
+  verifiedBy        String?
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  @@index([phone])
+  @@map("vendor_profiles")
+}
+
+model RefreshToken {
+  id                String       @id @default(cuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  tokenHash         String       @unique
+  family            String       @db.VarChar(100)
+  issuedAt          DateTime     @default(now())
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  
+  ipAddress         String?      @db.VarChar(50)
+  userAgent         String?      @db.Text
+  
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([family])
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id                String       @id @default(cuid())
+  actorUserId       String?
+  actorUser         User?        @relation(fields: [actorUserId], references: [id])
+  
+  action            String       @db.VarChar(100)
+  entityType        String?      @db.VarChar(50)
+  entityId          String?      @db.VarChar(100)
+  metadata          Json?
+  
+  ipAddress         String?      @db.VarChar(50)
+  userAgent         String?      @db.Text
+  
+  createdAt         DateTime     @default(now())
+  
+  @@index([actorUserId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
