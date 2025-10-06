@@ -429,15 +429,15 @@ export default function Orders() {
   const declinedOrders = orders.filter(order => order.overallStatus === 'Declined')
 
   return (
-    <div className="p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Orders Management</h1>
-        <p className="text-[var(--color-primary)]">Manage and respond to incoming orders</p>
+      <div className="mb-4 sm:mb-6 lg:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-1 sm:mb-2">Orders Management</h1>
+        <p className="text-sm sm:text-base text-[var(--color-primary)]">Manage and respond to incoming orders</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
           <div className="flex items-center gap-3 mb-2">
             <Clock className="w-5 h-5 text-yellow-500" />
@@ -474,7 +474,7 @@ export default function Orders() {
       {/* Orders Table */}
       <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-[var(--color-heading)]">All Orders</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">All Orders</h2>
         </div>
         
         {/* Desktop Table */}
@@ -482,18 +482,18 @@ export default function Orders() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order Details</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order Details</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {orders.map((order) => (
                 <React.Fragment key={order.id}>
                   <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleOrderExpansion(order.id)}>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         {expandedOrders.has(order.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         <div>
@@ -502,10 +502,10 @@ export default function Orders() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {order.customerName}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       <div className="flex items-center gap-2">
                         <Package size={16} className="text-gray-400" />
                         <span>{order.totalItems} items</span>
@@ -514,10 +514,10 @@ export default function Orders() {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(order.overallStatus)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm">
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
@@ -532,12 +532,12 @@ export default function Orders() {
                   
                   {expandedOrders.has(order.id) && order.products.map((product) => (
                     <tr key={product.id} className="bg-gray-50">
-                      <td className="px-12 py-3 text-sm">
+                      <td className="pl-10 lg:pl-12 pr-4 lg:pr-6 py-3 text-sm">
                         <div className="text-gray-600">
                           <span className="font-medium">SKU:</span> {product.sku}
                         </div>
                       </td>
-                      <td className="px-6 py-3 text-sm">
+                      <td className="px-4 lg:px-6 py-3 text-sm">
                         <div>
                           <div className="font-medium text-gray-900">{product.name}</div>
                           {product.backorderQty > 0 && (
@@ -547,10 +547,10 @@ export default function Orders() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-3 text-sm text-gray-600">
+                      <td className="px-4 lg:px-6 py-3 text-sm text-gray-600">
                         {product.confirmedQty > 0 ? `${product.confirmedQty}/${product.requestedQty}` : product.requestedQty}
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="px-4 lg:px-6 py-3">
                         {getStatusBadge(product.status)}
                       </td>
                       <td className="px-6 py-3">
@@ -617,76 +617,87 @@ export default function Orders() {
         {/* Mobile Cards */}
         <div className="md:hidden divide-y divide-gray-200">
           {orders.map((order) => (
-            <div key={order.id} className="p-6">
+            <div key={order.id} className="p-4 sm:p-6">
               <div className="flex justify-between items-start mb-3">
                 <div>
                   <h3 className="font-medium text-[var(--color-heading)]">{order.orderNumber}</h3>
-                  <p className="text-sm text-gray-600">{order.date}</p>
-                  <p className="text-sm text-gray-600">{order.customerName}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">{order.date}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">{order.customerName}</p>
                 </div>
-                {getStatusBadge(order.overallStatus)}
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(order.overallStatus)}
+                  <button
+                    aria-label={expandedOrders.has(order.id) ? 'Collapse items' : 'Expand items'}
+                    onClick={() => toggleOrderExpansion(order.id)}
+                    className="flex items-center text-[var(--color-accent)]"
+                  >
+                    {expandedOrders.has(order.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
+                </div>
               </div>
               
               <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-2">
+                <p className="text-xs sm:text-sm text-gray-600 mb-2">
                   <span className="font-medium">Products:</span> {order.totalItems} items
                   {order.totalConfirmed > 0 && (
                     <span className="text-green-600 ml-2">({order.totalConfirmed} confirmed)</span>
                   )}
                 </p>
                 
-                <div className="space-y-3 mt-3">
-                  {order.products.map((product) => (
-                    <div key={product.id} className="bg-gray-50 p-3 rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="font-medium text-gray-900">{product.name}</p>
-                          <p className="text-xs text-gray-500">SKU: {product.sku}</p>
-                          <p className="text-xs text-gray-600">
-                            Qty: {product.confirmedQty > 0 ? `${product.confirmedQty}/${product.requestedQty}` : product.requestedQty}
-                          </p>
-                          {product.backorderQty > 0 && (
-                            <p className="text-xs text-yellow-600">
-                              Backorder: {product.backorderQty} units
+                {expandedOrders.has(order.id) && (
+                  <div className="space-y-3 mt-3">
+                    {order.products.map((product) => (
+                      <div key={product.id} className="bg-gray-50 p-3 rounded-lg">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="font-medium text-gray-900">{product.name}</p>
+                            <p className="text-[10px] sm:text-xs text-gray-500">SKU: {product.sku}</p>
+                            <p className="text-[10px] sm:text-xs text-gray-600">
+                              Qty: {product.confirmedQty > 0 ? `${product.confirmedQty}/${product.requestedQty}` : product.requestedQty}
                             </p>
-                          )}
-                          {product.status === 'Declined' && product.declineReason && (
-                            <p className="text-xs text-red-500">
-                              Decline Reason: {product.declineReason}
-                            </p>
-                          )}
+                            {product.backorderQty > 0 && (
+                              <p className="text-[10px] sm:text-xs text-yellow-600">
+                                Backorder: {product.backorderQty} units
+                              </p>
+                            )}
+                            {product.status === 'Declined' && product.declineReason && (
+                              <p className="text-[10px] sm:text-xs text-red-500">
+                                Decline Reason: {product.declineReason}
+                              </p>
+                            )}
+                          </div>
+                          {getStatusBadge(product.status)}
                         </div>
-                        {getStatusBadge(product.status)}
-                      </div>
 
-                      {product.status === 'Pending' && (
-                        <div className="flex gap-2 flex-wrap">
-                          <button
-                            onClick={() => handleProductConfirmFull(order.id, product.id)}
-                            className="px-2 py-1 bg-green-500 text-white rounded text-xs font-medium flex items-center gap-1"
-                          >
-                            <CheckSquare size={14} />
-                            <span>Full</span>
-                          </button>
-                          <button
-                            onClick={() => handleProductConfirmPartial(order.id, product.id)}
-                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs font-medium flex items-center gap-1"
-                          >
-                            <FileText size={14} />
-                            <span>Partial</span>
-                          </button>
-                          <button
-                            onClick={() => handleProductDecline(order.id, product.id)}
-                            className="px-2 py-1 bg-red-500 text-white rounded text-xs font-medium flex items-center gap-1"
-                          >
-                            <X size={14} />
-                            <span>Decline</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                        {product.status === 'Pending' && (
+                          <div className="flex gap-2 flex-wrap">
+                            <button
+                              onClick={() => handleProductConfirmFull(order.id, product.id)}
+                              className="px-2 py-1 bg-green-500 text-white rounded text-xs font-medium flex items-center gap-1"
+                            >
+                              <CheckSquare size={14} />
+                              <span>Full</span>
+                            </button>
+                            <button
+                              onClick={() => handleProductConfirmPartial(order.id, product.id)}
+                              className="px-2 py-1 bg-blue-500 text-white rounded text-xs font-medium flex items-center gap-1"
+                            >
+                              <FileText size={14} />
+                              <span>Partial</span>
+                            </button>
+                            <button
+                              onClick={() => handleProductDecline(order.id, product.id)}
+                              className="px-2 py-1 bg-red-500 text-white rounded text-xs font-medium flex items-center gap-1"
+                            >
+                              <X size={14} />
+                              <span>Decline</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}

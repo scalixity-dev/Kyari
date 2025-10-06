@@ -33,6 +33,7 @@ declare module 'lucide-react' {
   export const Eye: LucideIcon
   export const EyeOff: LucideIcon
   export const X: LucideIcon
+  export const Menu: LucideIcon
   export const Edit: LucideIcon
   export const Trash2: LucideIcon
   export const Send: LucideIcon

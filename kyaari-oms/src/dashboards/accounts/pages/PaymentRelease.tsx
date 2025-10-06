@@ -140,55 +140,55 @@ function AccountsPaymentRelease() {
   }, [filteredPayments])
 
   return (
-    <div className="p-6 font-sans text-primary">
+    <div className="p-3 sm:p-6 font-sans text-primary">
       {/* Page Header */}
-      <div className="mb-6">
-        <h2 className="font-heading text-secondary text-3xl font-semibold mb-2">Payment Release</h2>
-        <p className="text-sm text-gray-600">Release payments to vendors after verification</p>
+      <div className="mb-4 sm:mb-6">
+        <h2 className="font-heading text-secondary text-xl sm:text-3xl font-semibold mb-2">Payment Release</h2>
+        <p className="text-xs sm:text-sm text-gray-600">Release payments to vendors after verification</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
           <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Records</div>
-          <div className="text-2xl font-bold text-secondary">{filteredPayments.length}</div>
+          <div className="text-xl sm:text-2xl font-bold text-secondary">{filteredPayments.length}</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
           <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Pending Payments</div>
-          <div className="text-2xl font-bold text-yellow-600">{summaryStats.pendingCount}</div>
-          <div className="text-sm text-gray-600">₹{summaryStats.totalPending.toLocaleString('en-IN')}</div>
+          <div className="text-xl sm:text-2xl font-bold text-yellow-600">{summaryStats.pendingCount}</div>
+          <div className="text-xs sm:text-sm text-gray-600">₹{summaryStats.totalPending.toLocaleString('en-IN')}</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
           <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Overdue Payments</div>
-          <div className="text-2xl font-bold text-red-600">{summaryStats.overdueCount}</div>
-          <div className="text-sm text-gray-600">₹{summaryStats.totalOverdue.toLocaleString('en-IN')}</div>
+          <div className="text-xl sm:text-2xl font-bold text-red-600">{summaryStats.overdueCount}</div>
+          <div className="text-xs sm:text-sm text-gray-600">₹{summaryStats.totalOverdue.toLocaleString('en-IN')}</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
           <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Released Payments</div>
-          <div className="text-2xl font-bold text-green-600">{summaryStats.releasedCount}</div>
+          <div className="text-xl sm:text-2xl font-bold text-green-600">{summaryStats.releasedCount}</div>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="mb-4 bg-white border border-secondary/20 rounded-xl p-4">
+      <div className="mb-4 bg-white border border-secondary/20 rounded-xl p-3 sm:p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-heading text-secondary text-lg font-medium">Filters</h3>
+          <h3 className="font-heading text-secondary text-base sm:text-lg font-medium">Filters</h3>
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="text-sm text-secondary underline"
+            className="text-xs sm:text-sm text-secondary underline"
           >
             {isFilterOpen ? 'Hide' : 'Show'} Filters
           </button>
         </div>
 
         {isFilterOpen && (
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="flex-1 min-w-[180px]">
-              <label className="block text-sm font-medium mb-1 text-gray-700">Payment Status</label>
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
+            <div className="flex-1 min-w-0">
+              <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Payment Status</label>
               <select 
                 value={filterStatus} 
                 onChange={e => setFilterStatus(e.target.value as PaymentStatus | '')} 
-                className="w-full px-3 py-2 rounded-xl border border-gray-300"
+                className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm"
               >
                 <option value="">All Statuses</option>
                 <option value="Pending">Pending</option>
@@ -197,12 +197,12 @@ function AccountsPaymentRelease() {
               </select>
             </div>
 
-            <div className="flex-1 min-w-[180px]">
-              <label className="block text-sm font-medium mb-1 text-gray-700">Delivery Verified</label>
+            <div className="flex-1 min-w-0">
+              <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Delivery Verified</label>
               <select 
                 value={filterDeliveryVerified} 
                 onChange={e => setFilterDeliveryVerified(e.target.value as DeliveryVerified | '')} 
-                className="w-full px-3 py-2 rounded-xl border border-gray-300"
+                className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm"
               >
                 <option value="">All</option>
                 <option value="Yes">Yes</option>
@@ -211,10 +211,10 @@ function AccountsPaymentRelease() {
               </select>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex justify-end sm:justify-start">
               <button 
                 onClick={resetFilters} 
-                className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 hover:bg-gray-50"
+                className="bg-white text-secondary border border-secondary rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-50"
               >
                 Reset
               </button>
@@ -225,23 +225,23 @@ function AccountsPaymentRelease() {
 
       {/* Bulk Actions */}
       {selectedCount > 0 && (
-        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
-          <div className="text-sm text-blue-800">
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="text-xs sm:text-sm text-blue-800">
             <strong>{selectedCount}</strong> payment{selectedCount !== 1 ? 's' : ''} selected
           </div>
           <button
             onClick={handleBulkRelease}
-            className="bg-accent text-button-text rounded-full px-4 py-2 flex items-center gap-2 hover:opacity-90"
+            className="bg-accent text-button-text rounded-full px-3 sm:px-4 py-2 flex items-center gap-2 hover:opacity-90 text-xs sm:text-sm w-full sm:w-auto justify-center"
           >
-            <CheckSquare size={16} />
+            <CheckSquare size={14} className="sm:w-4 sm:h-4" />
             <span>Release Selected Payments</span>
           </button>
         </div>
       )}
 
-      {/* Table */}
+      {/* Table - Desktop View */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full border-separate border-spacing-0">
             <thead>
               <tr className="bg-gray-50">
@@ -361,6 +361,105 @@ function AccountsPaymentRelease() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Card View */}
+        <div className="lg:hidden">
+          {filteredPayments.length === 0 ? (
+            <div className="p-6 text-center text-gray-500">No payment records match current filters.</div>
+          ) : (
+            <div className="space-y-3 p-3">
+              {filteredPayments.map((payment) => {
+                const paymentStyle = PAYMENT_STATUS_STYLES[payment.paymentStatus]
+                const deliveryStyle = DELIVERY_VERIFIED_STYLES[payment.deliveryVerified]
+                const isSelected = selectedPayments.has(payment.id)
+                const canRelease = payment.paymentStatus !== 'Released' && payment.deliveryVerified === 'Yes'
+                const isReleased = payment.paymentStatus === 'Released'
+
+                return (
+                  <div key={payment.id} className={`border rounded-xl p-4 ${isSelected ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'}`}>
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => togglePaymentSelection(payment.id)}
+                          disabled={isReleased}
+                          className="rounded mt-1"
+                        />
+                        <div>
+                          <h4 className="font-medium text-base text-secondary">{payment.vendor}</h4>
+                          <p className="text-xs text-gray-500">{payment.orderId}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-lg text-secondary">₹{payment.invoiceAmount.toLocaleString('en-IN')}</div>
+                        <div className="text-xs text-gray-500">{payment.dueDate}</div>
+                      </div>
+                    </div>
+
+                    {/* Status Badges */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <span 
+                        className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
+                        style={{
+                          backgroundColor: paymentStyle.bg,
+                          color: paymentStyle.color,
+                          borderColor: paymentStyle.border,
+                        }}
+                      >
+                        {payment.paymentStatus}
+                      </span>
+                      <span 
+                        className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
+                        style={{
+                          backgroundColor: deliveryStyle.bg,
+                          color: deliveryStyle.color,
+                          borderColor: deliveryStyle.border,
+                        }}
+                      >
+                        Delivery: {payment.deliveryVerified}
+                      </span>
+                    </div>
+
+                    {/* Additional Info */}
+                    {(payment.releaseDate || payment.referenceId) && (
+                      <div className="text-xs text-gray-500 mb-3 space-y-1">
+                        {payment.releaseDate && <div>Released: {payment.releaseDate}</div>}
+                        {payment.referenceId && <div>Ref: {payment.referenceId}</div>}
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleMarkAsReleased(payment)}
+                        disabled={!canRelease}
+                        className={`flex-1 rounded-full px-3 py-2 text-xs flex items-center justify-center gap-1 ${
+                          canRelease 
+                            ? 'bg-accent text-button-text hover:opacity-90' 
+                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        }`}
+                        title={!canRelease ? 'Payment must be verified and not already released' : 'Mark as Released'}
+                      >
+                        <CheckSquare size={12} />
+                        <span>Release</span>
+                      </button>
+                      <button 
+                        onClick={() => handleSendNotification(payment)}
+                        className="flex-1 bg-blue-100 text-blue-700 rounded-full px-3 py-2 text-xs flex items-center justify-center gap-1 hover:bg-blue-200"
+                        title="Send Notification to Vendor"
+                      >
+                        <Bell size={12} />
+                        <span>Notify</span>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Mark as Released Modal */}
@@ -416,60 +515,60 @@ function MarkAsReleasedModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white w-[540px] max-w-[96%] rounded-2xl p-6">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white w-full max-w-lg rounded-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-heading text-secondary text-2xl">Mark Payment as Released</h3>
+          <h3 className="font-heading text-secondary text-lg sm:text-2xl">Mark Payment as Released</h3>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100">
             <X size={20} className="text-gray-500" />
           </button>
         </div>
 
-        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="text-sm text-gray-700 mb-2">
+        <div className="mb-4 p-3 sm:p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="text-xs sm:text-sm text-gray-700 mb-2">
             <strong>Vendor:</strong> {payment.vendor}
           </div>
-          <div className="text-sm text-gray-700 mb-2">
+          <div className="text-xs sm:text-sm text-gray-700 mb-2">
             <strong>Invoice:</strong> {payment.invoiceNumber} ({payment.orderId})
           </div>
-          <div className="text-sm text-gray-700">
+          <div className="text-xs sm:text-sm text-gray-700">
             <strong>Amount:</strong> ₹{payment.invoiceAmount.toLocaleString('en-IN')}
           </div>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Payment Reference ID *</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Payment Reference ID *</label>
             <input
               value={referenceId}
               onChange={(e) => setReferenceId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
               placeholder="e.g. UTR-1234567890, IMPS/REF123"
             />
             <p className="text-xs text-gray-500 mt-1">Enter transaction reference number for tracking</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Release Date</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Release Date</label>
             <input
               type="date"
               value={releaseDate}
               onChange={(e) => setReleaseDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
             />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-6">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 mt-6">
           <button 
             onClick={onClose} 
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 hover:bg-gray-50"
+            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 hover:bg-gray-50 text-sm order-2 sm:order-1"
           >
             Cancel
           </button>
           <button 
             onClick={handleSubmit} 
-            className="bg-accent text-button-text rounded-full px-4 py-2 hover:opacity-90 flex items-center gap-2"
+            className="bg-accent text-button-text rounded-full px-4 py-2 hover:opacity-90 flex items-center justify-center gap-2 text-sm order-1 sm:order-2"
           >
             <CheckSquare size={16} />
             <span>Confirm Release</span>
@@ -501,28 +600,28 @@ function SendNotificationModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white w-[600px] max-w-[96%] rounded-2xl p-6">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white w-full max-w-lg rounded-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-heading text-secondary text-2xl">Send Notification to Vendor</h3>
+          <h3 className="font-heading text-secondary text-lg sm:text-2xl">Send Notification to Vendor</h3>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100">
             <X size={20} className="text-gray-500" />
           </button>
         </div>
 
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-          <div className="text-sm text-gray-700 mb-1">
+        <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+          <div className="text-xs sm:text-sm text-gray-700 mb-1">
             <strong>Vendor:</strong> {payment.vendor}
           </div>
-          <div className="text-sm text-gray-700">
+          <div className="text-xs sm:text-sm text-gray-700">
             <strong>Invoice:</strong> {payment.invoiceNumber} • <strong>Amount:</strong> ₹{payment.invoiceAmount.toLocaleString('en-IN')}
           </div>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Notification Type</label>
-            <div className="flex gap-4">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notification Type</label>
+            <div className="flex flex-wrap gap-3 sm:gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
@@ -531,7 +630,7 @@ function SendNotificationModal({
                   onChange={() => setNotificationType('email')}
                   className="rounded-full"
                 />
-                <span className="text-sm">Email</span>
+                <span className="text-xs sm:text-sm">Email</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -541,7 +640,7 @@ function SendNotificationModal({
                   onChange={() => setNotificationType('sms')}
                   className="rounded-full"
                 />
-                <span className="text-sm">SMS</span>
+                <span className="text-xs sm:text-sm">SMS</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -551,33 +650,33 @@ function SendNotificationModal({
                   onChange={() => setNotificationType('both')}
                   className="rounded-full"
                 />
-                <span className="text-sm">Both</span>
+                <span className="text-xs sm:text-sm">Both</span>
               </label>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Message</label>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent resize-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent resize-none text-sm"
               placeholder="Enter notification message..."
             />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-6">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 mt-6">
           <button 
             onClick={onClose} 
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 hover:bg-gray-50"
+            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 hover:bg-gray-50 text-sm order-2 sm:order-1"
           >
             Cancel
           </button>
           <button 
             onClick={handleSend} 
-            className="bg-accent text-button-text rounded-full px-4 py-2 hover:opacity-90 flex items-center gap-2"
+            className="bg-accent text-button-text rounded-full px-4 py-2 hover:opacity-90 flex items-center justify-center gap-2 text-sm order-1 sm:order-2"
           >
             <Bell size={16} />
             <span>Send Notification</span>

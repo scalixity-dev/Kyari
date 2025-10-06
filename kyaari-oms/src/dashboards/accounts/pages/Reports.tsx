@@ -92,16 +92,16 @@ function KPICard({ title, value, icon, color, subtitle }: KPICardProps) {
       : 'border-t-4 border-red-600'
 
   return (
-    <div className={`bg-white p-6 rounded-xl shadow-md flex items-center gap-4 border border-white/20 relative overflow-hidden ${borderTopClass}`}>
-      <div className="w-16 h-16 flex items-center justify-center rounded-lg text-3xl text-[var(--color-heading)]">
+    <div className={`bg-white p-4 sm:p-6 rounded-xl shadow-md flex items-center gap-3 sm:gap-4 border border-white/20 relative overflow-hidden ${borderTopClass}`}>
+      <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded-lg text-2xl sm:text-3xl text-[var(--color-heading)]">
         {icon}
       </div>
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <h3 className="text-xs font-semibold text-[var(--color-primary)] uppercase tracking-wide mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
           {title}
         </h3>
-        <div className="text-2xl font-bold text-[var(--color-heading)] mb-1">{value}</div>
-        {subtitle && <div className="text-sm text-gray-500">{subtitle}</div>}
+        <div className="text-lg sm:text-xl lg:text-2xl font-bold text-[var(--color-heading)] mb-1 break-words">{value}</div>
+        {subtitle && <div className="text-xs sm:text-sm text-gray-500">{subtitle}</div>}
       </div>
     </div>
   )
@@ -146,23 +146,23 @@ function AccountsReports() {
   const paymentChartData = timeRange === 'weekly' ? PAYMENT_WEEKLY_DATA : PAYMENT_MONTHLY_DATA
 
   return (
-    <div className="p-6 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-3 sm:p-6 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Page Header */}
-      <div className="bg-white p-8 rounded-xl shadow-lg mb-8 border border-gray-200">
-        <h1 className="text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
+      <div className="bg-white p-4 sm:p-8 rounded-xl shadow-lg mb-6 sm:mb-8 border border-gray-200">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
           Accounts Reports & KPIs
         </h1>
-        <p className="text-lg text-[var(--color-primary)] font-medium">
+        <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium">
           Comprehensive overview of vendor payments, compliance, and performance metrics
         </p>
       </div>
 
       {/* Top KPI Cards */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-[var(--color-heading)] mb-6 font-[var(--font-heading)]">
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">
           Key Metrics Overview
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <KPICard
             title="Total Outstanding"
             value={`₹${summaryMetrics.totalOutstanding.toLocaleString('en-IN')}`}
@@ -195,88 +195,90 @@ function AccountsReports() {
       </div>
 
       {/* Section 1: Vendor Payment Aging */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">
           Vendor Payment Aging
         </h2>
         
         {/* Filter Bar */}
-        <div className="mb-4 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div className="mb-4 bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-[var(--font-heading)] text-[var(--color-heading)] text-lg font-medium flex items-center gap-2">
-              <Clock size={20} />
+            <h3 className="font-[var(--font-heading)] text-[var(--color-heading)] text-base sm:text-lg font-medium flex items-center gap-2">
+              <Clock size={18} className="sm:w-5 sm:h-5" />
               Filters
             </h3>
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="text-sm text-[var(--color-accent)] underline"
+              className="text-xs sm:text-sm text-[var(--color-accent)] underline"
             >
               {isFilterOpen ? 'Hide' : 'Show'} Filters
             </button>
           </div>
 
           {isFilterOpen && (
-            <div className="flex flex-wrap gap-4 items-end">
-              <div className="flex-1 min-w-[180px]">
-                <label className="block text-sm font-medium mb-1 text-gray-700">Date From</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="lg:col-span-1">
+                <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Date From</label>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={e => setDateFrom(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
                 />
               </div>
 
-              <div className="flex-1 min-w-[180px]">
-                <label className="block text-sm font-medium mb-1 text-gray-700">Date To</label>
+              <div className="lg:col-span-1">
+                <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Date To</label>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={e => setDateTo(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
                 />
               </div>
 
-              <div className="flex-1 min-w-[180px]">
-                <label className="block text-sm font-medium mb-1 text-gray-700">Vendor</label>
+              <div className="lg:col-span-1">
+                <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Vendor</label>
                 <input
                   type="text"
                   value={vendorFilter}
                   onChange={e => setVendorFilter(e.target.value)}
                   placeholder="Search vendor..."
-                  className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
                 />
               </div>
 
-              <button
-                onClick={() => {
-                  setDateFrom('2025-09-01')
-                  setDateTo('2025-10-01')
-                  setVendorFilter('')
-                }}
-                className="bg-white text-[var(--color-secondary)] border border-[var(--color-secondary)] rounded-full px-4 py-2 hover:bg-gray-50"
-              >
-                Reset Filters
-              </button>
+              <div className="flex items-end">
+                <button
+                  onClick={() => {
+                    setDateFrom('2025-09-01')
+                    setDateTo('2025-10-01')
+                    setVendorFilter('')
+                  }}
+                  className="w-full bg-white text-[var(--color-secondary)] border border-[var(--color-secondary)] rounded-full px-3 py-2 text-xs sm:text-sm hover:bg-gray-50"
+                >
+                  Reset Filters
+                </button>
+              </div>
             </div>
           )}
         </div>
 
         <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[600px]">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium">
+                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
                     Vendor
                   </th>
-                  <th className="text-left p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium">
+                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
                     Outstanding Amount
                   </th>
-                  <th className="text-left p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium">
+                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
                     Avg Days Pending
                   </th>
-                  <th className="text-left p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium">
+                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
                     Oldest Invoice
                   </th>
                 </tr>
@@ -289,13 +291,13 @@ function AccountsReports() {
                       key={record.vendor}
                       className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
                     >
-                      <td className="p-4 font-medium text-[var(--color-primary)]">{record.vendor}</td>
-                      <td className="p-4 font-semibold text-[var(--color-primary)]">
+                      <td className="p-3 sm:p-4 font-medium text-[var(--color-primary)] text-sm sm:text-base">{record.vendor}</td>
+                      <td className="p-3 sm:p-4 font-semibold text-[var(--color-primary)] text-sm sm:text-base">
                         ₹{record.outstandingAmount.toLocaleString('en-IN')}
                       </td>
-                      <td className="p-4">
+                      <td className="p-3 sm:p-4">
                         <span
-                          className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                          className={`inline-block px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold ${
                             record.avgDaysPending > 30
                               ? 'bg-red-100 text-red-700 border border-red-300'
                               : record.avgDaysPending > 15
@@ -306,12 +308,12 @@ function AccountsReports() {
                           {record.avgDaysPending} days
                         </span>
                       </td>
-                      <td className="p-4">
-                        <div className={isOverdue ? 'text-red-600 font-semibold' : 'text-gray-700'}>
+                      <td className="p-3 sm:p-4">
+                        <div className={`text-xs sm:text-sm ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
                           {record.oldestInvoiceDate}
                         </div>
-                        <div className={`text-sm flex items-center gap-1 mt-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
-                          {isOverdue && <AlertTriangle size={14} />}
+                        <div className={`text-xs sm:text-sm flex items-center gap-1 mt-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
+                          {isOverdue && <AlertTriangle size={12} className="sm:w-3.5 sm:h-3.5" />}
                           <span>{record.oldestInvoiceDays} days old</span>
                         </div>
                       </td>
@@ -320,7 +322,7 @@ function AccountsReports() {
                 })}
                 {filteredPaymentAging.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="p-6 text-center text-gray-500">
+                    <td colSpan={4} className="p-6 text-center text-gray-500 text-sm">
                       No records match the current filters
                     </td>
                   </tr>
@@ -332,35 +334,35 @@ function AccountsReports() {
       </div>
 
       {/* Section 2: Invoice vs PO Compliance */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">
           Invoice vs PO Compliance
         </h2>
         
         {/* Overall Compliance KPI */}
         <div className="mb-4">
-          <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
+          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-[var(--color-primary)] uppercase tracking-wide mb-2">
+                <h3 className="text-xs sm:text-sm font-semibold text-[var(--color-primary)] uppercase tracking-wide mb-2">
                   Overall Compliance Rate
                 </h3>
-                <div className="text-5xl font-bold text-[var(--color-heading)]">
+                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--color-heading)]">
                   {summaryMetrics.avgCompliance}%
                 </div>
               </div>
-              <div className="w-24 h-24 flex items-center justify-center rounded-full bg-green-100">
-                <CheckSquare size={48} color="#16a34a" />
+              <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 flex items-center justify-center rounded-full bg-green-100">
+                <CheckSquare size={32} className="sm:w-10 sm:h-10 lg:w-12 lg:h-12" color="#16a34a" />
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-2">
-              <div className="flex-1 bg-gray-200 rounded-full h-3">
+            <div className="mt-3 sm:mt-4 flex items-center gap-2">
+              <div className="flex-1 bg-gray-200 rounded-full h-2 sm:h-3">
                 <div
-                  className="bg-green-600 h-3 rounded-full transition-all"
+                  className="bg-green-600 h-2 sm:h-3 rounded-full transition-all"
                   style={{ width: `${summaryMetrics.avgCompliance}%` }}
                 />
               </div>
-              <span className="text-sm text-gray-600 font-medium">{summaryMetrics.avgCompliance}%</span>
+              <span className="text-xs sm:text-sm text-gray-600 font-medium">{summaryMetrics.avgCompliance}%</span>
             </div>
           </div>
         </div>
@@ -368,19 +370,19 @@ function AccountsReports() {
         {/* Compliance Table */}
         <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[600px]">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium">
+                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
                     Vendor
                   </th>
-                  <th className="text-left p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium">
+                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
                     Total Invoices
                   </th>
-                  <th className="text-left p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium">
+                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
                     Compliant %
                   </th>
-                  <th className="text-left p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium">
+                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
                     Issues Found
                   </th>
                 </tr>
@@ -391,11 +393,11 @@ function AccountsReports() {
                     key={record.vendor}
                     className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
                   >
-                    <td className="p-4 font-medium text-[var(--color-primary)]">{record.vendor}</td>
-                    <td className="p-4 text-[var(--color-primary)]">{record.totalInvoices}</td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[120px]">
+                    <td className="p-3 sm:p-4 font-medium text-[var(--color-primary)] text-sm sm:text-base">{record.vendor}</td>
+                    <td className="p-3 sm:p-4 text-[var(--color-primary)] text-sm sm:text-base">{record.totalInvoices}</td>
+                    <td className="p-3 sm:p-4">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[80px] sm:max-w-[120px]">
                           <div
                             className={`h-2 rounded-full transition-all ${
                               record.compliantPercentage >= 95
@@ -408,7 +410,7 @@ function AccountsReports() {
                           />
                         </div>
                         <span
-                          className={`font-semibold text-sm ${
+                          className={`font-semibold text-xs sm:text-sm ${
                             record.compliantPercentage >= 95
                               ? 'text-green-600'
                               : record.compliantPercentage >= 85
@@ -420,9 +422,9 @@ function AccountsReports() {
                         </span>
                       </div>
                     </td>
-                    <td className="p-4">
+                    <td className="p-3 sm:p-4">
                       <span
-                        className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                        className={`inline-block px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold ${
                           record.issuesFound === 0
                             ? 'bg-green-100 text-green-700 border border-green-300'
                             : record.issuesFound <= 3
@@ -437,7 +439,7 @@ function AccountsReports() {
                 ))}
                 {filteredCompliance.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="p-6 text-center text-gray-500">
+                    <td colSpan={4} className="p-6 text-center text-gray-500 text-sm">
                       No records match the current filters
                     </td>
                   </tr>
@@ -449,27 +451,27 @@ function AccountsReports() {
       </div>
 
       {/* Section 3: SLA Breaches */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">
           SLA Breaches
         </h2>
         
         {/* Full-width table with visual bars */}
         <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[600px]">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium">
+                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
                     SLA Type
                   </th>
-                  <th className="text-left p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium">
+                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
                     Breaches Count
                   </th>
-                  <th className="text-left p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium">
+                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
                     Avg Delay (Days)
                   </th>
-                  <th className="text-left p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium">
+                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
                     Breach Visualization
                   </th>
                 </tr>
@@ -484,19 +486,19 @@ function AccountsReports() {
                       key={record.slaType}
                       className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
                     >
-                      <td className="p-4 font-medium text-[var(--color-primary)]">
+                      <td className="p-3 sm:p-4 font-medium text-[var(--color-primary)] text-sm sm:text-base">
                         <div className="flex items-center gap-2">
-                          <AlertTriangle size={18} className="text-red-600" />
+                          <AlertTriangle size={16} className="sm:w-4.5 sm:h-4.5 text-red-600" />
                           <span>{record.slaType}</span>
                         </div>
                       </td>
-                      <td className="p-4">
-                        <span className="inline-block px-3 py-1.5 rounded-full text-sm font-bold bg-red-100 text-red-700 border border-red-300">
+                      <td className="p-3 sm:p-4">
+                        <span className="inline-block px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold bg-red-100 text-red-700 border border-red-300">
                           {record.breachCount}
                         </span>
                       </td>
-                      <td className="p-4">
-                        <span className={`font-semibold ${
+                      <td className="p-3 sm:p-4">
+                        <span className={`font-semibold text-sm sm:text-base ${
                           record.avgDelayDays > 5 
                             ? 'text-red-600' 
                             : record.avgDelayDays > 3 
@@ -506,11 +508,11 @@ function AccountsReports() {
                           {record.avgDelayDays} days
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3 sm:p-4">
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-6 max-w-[200px]">
+                          <div className="flex-1 bg-gray-200 rounded-full h-4 sm:h-6 max-w-[150px] sm:max-w-[200px]">
                             <div
-                              className="bg-gradient-to-r from-red-500 to-red-600 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
+                              className="bg-gradient-to-r from-red-500 to-red-600 h-4 sm:h-6 rounded-full flex items-center justify-end pr-1 sm:pr-2 transition-all"
                               style={{ width: `${barWidth}%` }}
                             >
                               {barWidth > 25 && (
@@ -528,10 +530,10 @@ function AccountsReports() {
           </div>
           
           {/* Summary footer */}
-          <div className="bg-red-50 border-t border-red-200 p-4">
-            <div className="flex items-center justify-between text-sm">
+          <div className="bg-red-50 border-t border-red-200 p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs sm:text-sm">
               <div className="flex items-center gap-2 text-red-800 font-medium">
-                <AlertTriangle size={16} />
+                <AlertTriangle size={14} className="sm:w-4 sm:h-4" />
                 <span>Total SLA Breaches: <strong>{SLA_BREACH_DATA.reduce((sum, r) => sum + r.breachCount, 0)}</strong></span>
               </div>
               <div className="text-red-700">
@@ -543,39 +545,39 @@ function AccountsReports() {
       </div>
 
       {/* Section 4: Payment Summary */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">
           Payment Summary
         </h2>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-xl shadow-md border border-white/20 border-t-4 border-t-green-600">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 flex items-center justify-center rounded-lg bg-green-100">
-                <CheckSquare size={32} color="#16a34a" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
+          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20 border-t-4 border-t-green-600">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded-lg bg-green-100">
+                <CheckSquare size={24} className="sm:w-8 sm:h-8" color="#16a34a" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <h3 className="text-xs font-semibold text-[var(--color-primary)] uppercase tracking-wide mb-1">
                   Payments Released This {timeRange === 'weekly' ? 'Week' : 'Month'}
                 </h3>
-                <div className="text-3xl font-bold text-[var(--color-heading)]">
+                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-heading)] break-words">
                   ₹{summaryMetrics.paymentsReleased.toLocaleString('en-IN')}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-md border border-white/20 border-t-4 border-t-orange-600">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 flex items-center justify-center rounded-lg bg-orange-100">
-                <Clock size={32} color="#ea580c" />
+          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20 border-t-4 border-t-orange-600">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded-lg bg-orange-100">
+                <Clock size={24} className="sm:w-8 sm:h-8" color="#ea580c" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <h3 className="text-xs font-semibold text-[var(--color-primary)] uppercase tracking-wide mb-1">
                   Pending Payments
                 </h3>
-                <div className="text-3xl font-bold text-[var(--color-heading)]">
+                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-heading)] break-words">
                   ₹{summaryMetrics.pendingPayments.toLocaleString('en-IN')}
                 </div>
               </div>
@@ -584,13 +586,13 @@ function AccountsReports() {
         </div>
 
         {/* Chart with Toggle */}
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-[#2d3748]">Payment Trends</h3>
-            <div className="flex gap-2 bg-gray-100 rounded-full p-1">
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-semibold text-[#2d3748]">Payment Trends</h3>
+            <div className="flex gap-2 bg-gray-100 rounded-full p-1 w-full sm:w-auto">
               <button
                 onClick={() => setTimeRange('weekly')}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                className={`flex-1 sm:flex-none px-3 py-2 sm:px-4 rounded-full text-xs sm:text-sm font-medium transition-all ${
                   timeRange === 'weekly'
                     ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -600,7 +602,7 @@ function AccountsReports() {
               </button>
               <button
                 onClick={() => setTimeRange('monthly')}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                className={`flex-1 sm:flex-none px-3 py-2 sm:px-4 rounded-full text-xs sm:text-sm font-medium transition-all ${
                   timeRange === 'monthly'
                     ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -611,29 +613,41 @@ function AccountsReports() {
             </div>
           </div>
 
-          <ResponsiveContainer width="100%" height={350}>
+          <ResponsiveContainer width="100%" height={280}>
             <LineChart data={paymentChartData}>
-              <XAxis dataKey="period" />
-              <YAxis tickFormatter={(value) => `₹${(value / 1000)}K`} />
-              <Tooltip formatter={(value: number) => `₹${value.toLocaleString('en-IN')}`} />
+              <XAxis 
+                dataKey="period" 
+                fontSize={12}
+                tick={{ fontSize: 12 }}
+              />
+              <YAxis 
+                tickFormatter={(value) => `₹${(value / 1000)}K`} 
+                fontSize={12}
+                tick={{ fontSize: 12 }}
+              />
+              <Tooltip 
+                formatter={(value: number) => `₹${value.toLocaleString('en-IN')}`}
+                labelStyle={{ fontSize: 12 }}
+                contentStyle={{ fontSize: 12 }}
+              />
               <Legend />
               <Line
                 type="monotone"
                 dataKey="released"
                 stroke="#16a34a"
-                strokeWidth={3}
+                strokeWidth={2}
                 name="Released"
-                dot={{ r: 5 }}
-                activeDot={{ r: 7 }}
+                dot={{ r: 4 }}
+                activeDot={{ r: 6 }}
               />
               <Line
                 type="monotone"
                 dataKey="pending"
                 stroke="#ea580c"
-                strokeWidth={3}
+                strokeWidth={2}
                 name="Pending"
-                dot={{ r: 5 }}
-                activeDot={{ r: 7 }}
+                dot={{ r: 4 }}
+                activeDot={{ r: 6 }}
               />
             </LineChart>
           </ResponsiveContainer>

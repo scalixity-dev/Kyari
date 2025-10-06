@@ -295,15 +295,15 @@ export default function Dispatch() {
   const delivered = dispatchOrders.filter(order => ['Delivered - Verified', 'Delivered - Mismatch', 'Received by Store'].includes(order.status))
 
   return (
-    <div className="p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Dispatch Management</h1>
-        <p className="text-[var(--color-primary)]">Manage order dispatch and track delivery status</p>
+      <div className="mb-4 sm:mb-6 lg:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-1 sm:mb-2">Dispatch Management</h1>
+        <p className="text-sm sm:text-base text-[var(--color-primary)]">Manage order dispatch and track delivery status</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
           <div className="flex items-center gap-3 mb-2">
             <Package className="w-5 h-5 text-blue-500" />
@@ -338,8 +338,8 @@ export default function Dispatch() {
       </div>
 
       {/* Status Flow Indicator */}
-      <div className="bg-white rounded-xl shadow-md border border-white/20 p-6 mb-8">
-        <h3 className="text-lg font-semibold text-[var(--color-heading)] mb-4">Order Status Flow</h3>
+      <div className="bg-white rounded-xl shadow-md border border-white/20 p-4 sm:p-6 mb-6 sm:mb-8">
+        <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-3 sm:mb-4">Order Status Flow</h3>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium">1</div>
@@ -371,7 +371,7 @@ export default function Dispatch() {
       {/* Dispatch Orders Table */}
       <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-[var(--color-heading)]">Dispatch Orders</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">Dispatch Orders</h2>
         </div>
         
         {/* Desktop Table */}
@@ -379,38 +379,38 @@ export default function Dispatch() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO Number</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Store Verification</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO Number</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Store Verification</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {dispatchOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-[var(--color-heading)]">{order.orderNumber}</div>
                       <div className="text-xs text-gray-500">{order.date}</div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {order.poNumber}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {order.items}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {order.quantity}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     ₹{order.amount.toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(order.status)}
                     {order.dispatchDate && (
                       <div className="text-xs text-gray-500 mt-1">
@@ -418,7 +418,7 @@ export default function Dispatch() {
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                     {getVerificationBadge(order.storeVerification)}
                     {order.verificationNotes && (
                       <div className="text-xs text-gray-500 mt-1 max-w-40">
@@ -426,7 +426,7 @@ export default function Dispatch() {
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm">
                     {order.status === 'Ready for Dispatch' && (
                       <button
                         onClick={() => handleMarkDispatch(order.id)}
@@ -457,33 +457,33 @@ export default function Dispatch() {
         {/* Mobile Cards */}
         <div className="lg:hidden divide-y divide-gray-200">
           {dispatchOrders.map((order) => (
-            <div key={order.id} className="p-6">
+            <div key={order.id} className="p-4 sm:p-6">
               <div className="flex justify-between items-start mb-3">
                 <div>
                   <h3 className="font-medium text-[var(--color-heading)]">{order.orderNumber}</h3>
-                  <p className="text-sm text-gray-600 mb-1">{order.date}</p>
-                  <p className="text-xs text-gray-500">PO: {order.poNumber}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 mb-1">{order.date}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500">PO: {order.poNumber}</p>
                 </div>
                 {getStatusBadge(order.status)}
               </div>
               
               <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-1">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">
                   <span className="font-medium">Item:</span> {order.items}
                 </p>
-                <p className="text-sm text-gray-600 mb-1">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">
                   <span className="font-medium">Quantity:</span> {order.quantity}
                 </p>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-xs sm:text-sm font-medium text-gray-900">
                   <span className="font-medium">Amount:</span> ₹{order.amount.toLocaleString()}
                 </p>
                 {order.dispatchDate && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-[10px] sm:text-xs text-gray-500 mt-1">
                     Dispatched: {order.dispatchDate}
                   </p>
                 )}
                 {order.estimatedDelivery && order.status !== 'Received by Store' && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-[10px] sm:text-xs text-gray-500">
                     ETA: {order.estimatedDelivery}
                   </p>
                 )}
@@ -511,7 +511,7 @@ export default function Dispatch() {
               {order.dispatchProof && (
                 <div className="flex items-center gap-2 mt-2 p-2 bg-gray-50 rounded">
                   <FileText className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">{order.dispatchProof}</span>
+                  <span className="text-xs sm:text-sm text-gray-600">{order.dispatchProof}</span>
                 </div>
               )}
             </div>
