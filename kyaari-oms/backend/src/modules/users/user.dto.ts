@@ -11,9 +11,8 @@ export interface UserDto {
 
 export interface VendorProfileDto {
   id: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
+  contactPersonName: string;
+  contactPhone: string;
   warehouseLocation: string;
   pincode: string;
   companyName?: string;
@@ -31,10 +30,9 @@ export interface CreateUserDto {
 }
 
 export interface VendorRegistrationDto {
-  firstName: string;
-  lastName: string;
+  contactPersonName: string;
   email: string;
-  phone: string;
+  contactPhone: string;
   password: string;
   confirmPassword: string;
   warehouseLocation: string;
