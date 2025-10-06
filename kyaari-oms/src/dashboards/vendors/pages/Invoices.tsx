@@ -57,33 +57,35 @@ const InvoiceUploadModal: React.FC<InvoiceUploadModalProps> = ({ isOpen, po, onC
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-lg mx-2 sm:mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-[var(--color-heading)]">Upload Invoice</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <h3 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">Upload Invoice</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
             <X size={20} />
           </button>
         </div>
         
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-2">PO Number: <span className="font-medium">{po.poNumber}</span></p>
-          <p className="text-sm text-gray-600 mb-2">Items: <span className="font-medium">{po.items}</span></p>
-          <p className="text-sm text-gray-600 mb-2">Quantity: <span className="font-medium">{po.quantity}</span></p>
-          <p className="text-sm text-gray-600">Amount: <span className="font-medium">₹{po.amount.toLocaleString()}</span></p>
+        <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <p className="text-sm text-gray-600">PO Number: <span className="font-medium">{po.poNumber}</span></p>
+            <p className="text-sm text-gray-600">Amount: <span className="font-medium">₹{po.amount.toLocaleString()}</span></p>
+            <p className="text-sm text-gray-600 sm:col-span-2">Items: <span className="font-medium">{po.items}</span></p>
+            <p className="text-sm text-gray-600 sm:col-span-2">Quantity: <span className="font-medium">{po.quantity}</span></p>
+          </div>
         </div>
 
         <div 
-          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+          className={`border-2 border-dashed rounded-lg p-4 sm:p-6 text-center transition-colors ${
             dragOver ? 'border-[var(--color-accent)] bg-blue-50' : 'border-gray-300'
           }`}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
         >
-          <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-sm text-gray-600 mb-2">Drag & drop your invoice file here, or</p>
-          <label className="inline-block px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg cursor-pointer hover:bg-[var(--color-accent)]/90">
+          <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 mx-auto mb-2" />
+          <p className="text-xs sm:text-sm text-gray-600 mb-2">Drag & drop your invoice file here, or</p>
+          <label className="inline-block px-3 sm:px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg cursor-pointer hover:bg-[var(--color-accent)]/90 text-sm">
             Browse Files
             <input
               type="file"
@@ -105,17 +107,17 @@ const InvoiceUploadModal: React.FC<InvoiceUploadModalProps> = ({ isOpen, po, onC
           </div>
         )}
 
-        <div className="flex gap-3 mt-6">
+        <div className="flex flex-col sm:flex-row gap-3 mt-6">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!selectedFile}
-            className="flex-1 px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:bg-[var(--color-accent)]/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:bg-[var(--color-accent)]/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm sm:text-base"
           >
             Upload Invoice
           </button>
@@ -307,60 +309,60 @@ export default function Invoices() {
   const paidPOs = purchaseOrders.filter(po => po.status === 'Payment Processed')
 
   return (
-    <div className="p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Invoice Management</h1>
-        <p className="text-[var(--color-primary)]">Manage Purchase Orders and upload invoices for validation</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-[var(--font-heading)] text-[var(--color-heading)] mb-2">Invoice Management</h1>
+        <p className="text-sm sm:text-base text-[var(--color-primary)]">Manage Purchase Orders and upload invoices for validation</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <FileText className="w-5 h-5 text-blue-500" />
-            <span className="text-sm font-medium text-gray-600">New POs</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+            <span className="text-xs sm:text-sm font-medium text-gray-600">New POs</span>
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{receivedPOs.length}</div>
+          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{receivedPOs.length}</div>
         </div>
         
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <Clock className="w-5 h-5 text-yellow-500" />
-            <span className="text-sm font-medium text-gray-600">Validating</span>
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
+            <span className="text-xs sm:text-sm font-medium text-gray-600">Validating</span>
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{pendingValidation.length}</div>
+          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{pendingValidation.length}</div>
         </div>
         
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <CheckSquare className="w-5 h-5 text-green-500" />
-            <span className="text-sm font-medium text-gray-600">Approved</span>
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+            <span className="text-xs sm:text-sm font-medium text-gray-600">Approved</span>
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{approvedPOs.length}</div>
+          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{approvedPOs.length}</div>
         </div>
         
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <X className="w-5 h-5 text-red-500" />
-            <span className="text-sm font-medium text-gray-600">Rejected</span>
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <X className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+            <span className="text-xs sm:text-sm font-medium text-gray-600">Rejected</span>
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{rejectedPOs.length}</div>
+          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{rejectedPOs.length}</div>
         </div>
         
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <Wallet className="w-5 h-5 text-purple-500" />
-            <span className="text-sm font-medium text-gray-600">Paid</span>
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
+            <span className="text-xs sm:text-sm font-medium text-gray-600">Paid</span>
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{paidPOs.length}</div>
+          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{paidPOs.length}</div>
         </div>
       </div>
 
       {/* Purchase Orders Table */}
       <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-[var(--color-heading)]">Purchase Orders</h2>
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+          <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">Purchase Orders</h2>
         </div>
         
         {/* Desktop Table */}
@@ -368,46 +370,46 @@ export default function Invoices() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO Number</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Linked Orders</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO Number</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Linked Orders</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {purchaseOrders.map((po) => (
                 <tr key={po.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--color-heading)]">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--color-heading)]">
                     {po.poNumber}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {po.date}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {po.linkedOrders.join(', ')}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {po.items}
                     {getValidationDisplay(po)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {po.quantity}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     ₹{po.rate}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     ₹{po.amount.toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(po.status)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm">
                     {po.status === 'Received' && (
                       <button
                         onClick={() => handleUploadInvoice(po.id)}
@@ -438,24 +440,26 @@ export default function Invoices() {
         {/* Mobile Cards */}
         <div className="lg:hidden divide-y divide-gray-200">
           {purchaseOrders.map((po) => (
-            <div key={po.id} className="p-6">
+            <div key={po.id} className="p-4 sm:p-6">
               <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-medium text-[var(--color-heading)]">{po.poNumber}</h3>
-                  <p className="text-sm text-gray-600 mb-1">{po.date}</p>
-                  <p className="text-xs text-gray-500">Orders: {po.linkedOrders.join(', ')}</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-[var(--color-heading)] text-sm sm:text-base truncate">{po.poNumber}</h3>
+                  <p className="text-xs sm:text-sm text-gray-600 mb-1">{po.date}</p>
+                  <p className="text-xs text-gray-500 truncate">Orders: {po.linkedOrders.join(', ')}</p>
                 </div>
-                {getStatusBadge(po.status)}
+                <div className="ml-2 flex-shrink-0">
+                  {getStatusBadge(po.status)}
+                </div>
               </div>
               
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-1">
+              <div className="mb-4 space-y-1">
+                <p className="text-xs sm:text-sm text-gray-600">
                   <span className="font-medium">Item:</span> {po.items}
                 </p>
-                <p className="text-sm text-gray-600 mb-1">
+                <p className="text-xs sm:text-sm text-gray-600">
                   <span className="font-medium">Quantity:</span> {po.quantity} @ ₹{po.rate}
                 </p>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-xs sm:text-sm font-medium text-gray-900">
                   <span className="font-medium">Amount:</span> ₹{po.amount.toLocaleString()}
                 </p>
                 {getValidationDisplay(po)}
@@ -464,23 +468,23 @@ export default function Invoices() {
               {po.status === 'Received' && (
                 <button
                   onClick={() => handleUploadInvoice(po.id)}
-                  className="w-full px-4 py-2 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                  className="w-full px-3 sm:px-4 py-2 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2"
                 >
-                  <FileText size={16} />
+                  <FileText size={14} />
                   Upload Invoice
                 </button>
               )}
               
               {po.invoiceFile && (
                 <div className="flex items-center gap-2 mt-2 p-2 bg-gray-50 rounded">
-                  <FileText className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">{po.invoiceFile}</span>
+                  <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                  <span className="text-xs sm:text-sm text-gray-600 truncate">{po.invoiceFile}</span>
                 </div>
               )}
               
               {po.status === 'Rejected' && po.rejectionReason && (
                 <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
-                  <p className="text-sm text-red-600">{po.rejectionReason}</p>
+                  <p className="text-xs sm:text-sm text-red-600">{po.rejectionReason}</p>
                 </div>
               )}
             </div>

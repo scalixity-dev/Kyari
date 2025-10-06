@@ -90,7 +90,7 @@ export class AuthService {
 
       // Check if phone already exists
       const existingPhone = await prisma.vendorProfile.findUnique({
-        where: { phone: registrationData.phone }
+        where: { contactPhone: registrationData.contactPhone }
       });
       if (existingPhone) {
         throw new Error('Phone number already registered');
@@ -111,7 +111,7 @@ export class AuthService {
       const result = await prisma.$transaction(async (tx: any) => {
         const user = await tx.user.create({
           data: {
-            name: `${registrationData.firstName} ${registrationData.lastName}`,
+            name: registrationData.contactPersonName,
             email: registrationData.email,
             passwordHash,
             status: 'PENDING', // Requires admin approval
@@ -126,9 +126,8 @@ export class AuthService {
         await tx.vendorProfile.create({
           data: {
             userId: user.id,
-            firstName: registrationData.firstName,
-            lastName: registrationData.lastName,
-            phone: registrationData.phone,
+            contactPersonName: registrationData.contactPersonName,
+            contactPhone: registrationData.contactPhone,
             warehouseLocation: registrationData.warehouseLocation,
             pincode: registrationData.pincode,
             companyName: registrationData.companyName,
@@ -148,7 +147,7 @@ export class AuthService {
         result.id,
         { 
           email: registrationData.email, 
-          phone: registrationData.phone,
+          phone: registrationData.contactPhone,
           type: 'vendor'
         },
         ipAddress,
@@ -158,7 +157,7 @@ export class AuthService {
       logger.info('Vendor registered successfully', { 
         userId: result.id, 
         email: registrationData.email,
-        phone: registrationData.phone
+        phone: registrationData.contactPhone
       });
 
       return { message: 'Registration successful. Awaiting admin approval.' };
@@ -166,7 +165,7 @@ export class AuthService {
       logger.error('Vendor registration failed', { 
         error, 
         email: registrationData.email,
-        phone: registrationData.phone 
+        phone: registrationData.contactPhone 
       });
       throw error;
     }

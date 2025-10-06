@@ -1,5 +1,90 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// =======================================
+// == ENUMS
+// =======================================
+enum UserStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum OrderStatus {
+  RECEIVED
+  ASSIGNED
+  PROCESSING
+  FULFILLED
+  PARTIALLY_FULFILLED
+  CLOSED
+  CANCELLED
+}
+
+enum OrderSource {
+  API
+  EXCEL_UPLOAD
+  MANUAL_ENTRY
+}
+
+enum AssignmentStatus {
+  PENDING_CONFIRMATION
+  VENDOR_CONFIRMED_FULL
+  VENDOR_CONFIRMED_PARTIAL
+  VENDOR_DECLINED
+  INVOICED
+  DISPATCHED
+  STORE_RECEIVED
+  VERIFIED_OK
+  VERIFIED_MISMATCH
+  COMPLETED
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ISSUED
+  ACCEPTED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  PENDING_VERIFICATION
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum DispatchStatus {
+  PROCESSING
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+}
+
+enum GRNStatus {
+  VERIFIED_OK
+  VERIFIED_MISMATCH
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
 
 generator client {
   provider = "prisma-client-js"
@@ -10,157 +95,411 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// =======================================
+// == 1. AUTH & USER MANAGEMENT 
+// =======================================
+
 model User {
-  id                String       @id @default(cuid())
-  email             String?      @unique @db.VarChar(255)
-  name              String       @db.VarChar(255)
-  passwordHash      String
-  passwordVersion   Int          @default(1)
-  status            UserStatus   @default(PENDING)
-  lastLoginAt       DateTime?
-  metadata          Json?
-  
-  createdBy         String?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  deletedAt         DateTime?
-  
-  roles             UserRole[]
-  vendorProfile     VendorProfile?
-  refreshTokens     RefreshToken[]
-  auditLogs         AuditLog[]
-  
+  id              String         @id @default(cuid())
+  email           String?        @unique @db.VarChar(255)
+  name            String         @db.VarChar(255)
+  passwordHash    String
+  passwordVersion Int            @default(1)
+  status          UserStatus     @default(PENDING)
+  lastLoginAt     DateTime?
+  metadata        Json?
+  createdBy       String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+  roles           UserRole[]
+  vendorProfile   VendorProfile?
+  refreshTokens   RefreshToken[]
+  auditLogs       AuditLog[]      @relation("ActorUser")
+  assignedTickets Ticket[]        @relation("AssignedToUser")
+  createdTickets  Ticket[]        @relation("CreatedByUser")
+  ticketComments  TicketComment[]
+  createdOrders   Order[]         @relation("CreatedByAdmin")
+  assignedItems   AssignedOrderItem[] @relation("AssignedByAdmin")
+  verifiedGRNs    GoodsReceiptNote[] @relation("VerifiedByUser")
+  createdPOs      PurchaseOrder[] @relation("CreatedByAccountsUser")
+  processedPayments Payment[]       @relation("ProcessedByUser")
   @@index([email])
   @@index([status])
   @@map("users")
 }
 
+// ... (Other auth models like Role, Permission, etc. remain unchanged)
 model Role {
-  id                String       @id @default(cuid())
-  name              String       @unique @db.VarChar(50)
-  description       String?
-  
-  users             UserRole[]
-  permissions       RolePermission[]
-  
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  
+  id          String   @id @default(cuid())
+  name        String   @unique @db.VarChar(50)
+  description String?
+  users       UserRole[]
+  permissions RolePermission[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   @@map("roles")
 }
-
 model UserRole {
-  userId            String
-  roleId            String
-  
-  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role              Role         @relation(fields: [roleId], references: [id])
-  
-  assignedAt        DateTime     @default(now())
-  assignedBy        String?
-  
+  userId     String
+  roleId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+  assignedBy String?
   @@id([userId, roleId])
   @@map("user_roles")
 }
-
 model Permission {
-  id                String       @id @default(cuid())
-  name              String       @unique @db.VarChar(100)
-  description       String?
-  resource          String       @db.VarChar(50)
-  action            String       @db.VarChar(50)
-  
-  roles             RolePermission[]
-  
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  
+  id          String   @id @default(cuid())
+  name        String   @unique @db.VarChar(100)
+  description String?
+  resource    String   @db.VarChar(50)
+  action      String   @db.VarChar(50)
+  roles       RolePermission[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   @@map("permissions")
 }
-
 model RolePermission {
-  roleId            String
-  permissionId      String
-  
-  role              Role         @relation(fields: [roleId], references: [id])
-  permission        Permission   @relation(fields: [permissionId], references: [id])
-  
-  assignedAt        DateTime     @default(now())
-  
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  assignedAt   DateTime   @default(now())
   @@id([roleId, permissionId])
   @@map("role_permissions")
 }
-
-model VendorProfile {
-  id                String       @id @default(cuid())
-  userId            String       @unique
-  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  firstName         String       @db.VarChar(100)
-  lastName          String       @db.VarChar(100)
-  phone             String       @unique @db.VarChar(20)
-  warehouseLocation String       @db.Text
-  pincode           String       @db.VarChar(10)
-  
-  companyName       String?      @db.VarChar(255)
-  gstNumber         String?      @db.VarChar(50)
-  panNumber         String?      @db.VarChar(50)
-  
-  verified          Boolean      @default(false)
-  verifiedAt        DateTime?
-  verifiedBy        String?
-  
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  
-  @@index([phone])
-  @@map("vendor_profiles")
-}
-
 model RefreshToken {
-  id                String       @id @default(cuid())
-  userId            String
-  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  tokenHash         String       @unique
-  family            String       @db.VarChar(100)
-  issuedAt          DateTime     @default(now())
-  expiresAt         DateTime
-  revokedAt         DateTime?
-  
-  ipAddress         String?      @db.VarChar(50)
-  userAgent         String?      @db.Text
-  
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  family    String   @db.VarChar(100)
+  issuedAt  DateTime @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  ipAddress String?  @db.VarChar(50)
+  userAgent String?  @db.Text
   @@index([userId])
   @@index([tokenHash])
   @@index([family])
   @@map("refresh_tokens")
 }
-
 model AuditLog {
-  id                String       @id @default(cuid())
-  actorUserId       String?
-  actorUser         User?        @relation(fields: [actorUserId], references: [id])
-  
-  action            String       @db.VarChar(100)
-  entityType        String?      @db.VarChar(50)
-  entityId          String?      @db.VarChar(100)
-  metadata          Json?
-  
-  ipAddress         String?      @db.VarChar(50)
-  userAgent         String?      @db.Text
-  
-  createdAt         DateTime     @default(now())
-  
+  id          String   @id @default(cuid())
+  actorUserId String?
+  actorUser   User?    @relation("ActorUser", fields: [actorUserId], references: [id], onDelete: SetNull)
+  action      String   @db.VarChar(100)
+  entityType  String?  @db.VarChar(50)
+  entityId    String?  @db.VarChar(100)
+  metadata    Json?
+  ipAddress   String?  @db.VarChar(50)
+  userAgent   String?  @db.Text
+  createdAt   DateTime @default(now())
   @@index([actorUserId])
   @@index([action])
   @@index([entityType, entityId])
   @@map("audit_logs")
 }
 
-enum UserStatus {
-  PENDING
-  ACTIVE
-  INACTIVE
-  SUSPENDED
+
+// =======================================
+// == 2. VENDOR MANAGEMENT
+// =======================================
+
+model VendorProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName       String   @db.VarChar(255)
+  contactPersonName String   @db.VarChar(255)
+  contactPhone      String   @unique @db.VarChar(20)
+  warehouseLocation String   @db.Text
+  pincode           String   @db.VarChar(10)
+  gstNumber         String?  @unique @db.VarChar(50)
+  panNumber         String?  @unique @db.VarChar(50)
+  kycDocuments      Json?
+  verified          Boolean  @default(false)
+  verifiedAt        DateTime?
+  verifiedBy        String?
+  fillRate          Float?   @default(0)
+  slaComplianceRate Float?   @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  primaryOrders     Order[]             @relation("PrimaryVendorForOrder")
+  assignedItems     AssignedOrderItem[]
+  purchaseOrders    PurchaseOrder[]
+  @@index([contactPhone])
+  @@index([gstNumber])
+  @@map("vendor_profiles")
 }
+
+//=======================================
+// == PRODUCT TABLE REMOVED AS REQUESTED
+//=======================================
+
+
+// =======================================
+// == 3. CORE ORDER MANAGEMENT
+// =======================================
+
+model Order {
+  id              String      @id @default(cuid())
+  clientOrderId   String      @unique
+  orderNumber     String      @unique
+  status          OrderStatus @default(RECEIVED)
+  source          OrderSource @default(API)
+  totalValue      Decimal?    @db.Decimal(12, 2)
+  createdById     String?
+  createdBy       User?       @relation("CreatedByAdmin", fields: [createdById], references: [id], onDelete: SetNull)
+  primaryVendorId String
+  primaryVendor   VendorProfile @relation("PrimaryVendorForOrder", fields: [primaryVendorId], references: [id], onDelete: Restrict)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+  items           OrderItem[]
+  @@index([status])
+  @@index([createdAt])
+  @@index([primaryVendorId])
+  @@map("orders")
+}
+
+// ===================================
+// == MODIFIED OrderItem MODEL
+// ===================================
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Product details are now stored only here as free text
+  productName String  @db.VarChar(255)
+  sku         String? @db.VarChar(100)
+
+  // Order details
+  quantity      Int
+  pricePerUnit  Decimal?  @db.Decimal(10, 2)
+  totalPrice    Decimal?  @db.Decimal(12, 2)
+  
+  // Backorder relationship is maintained
+  parentOrderItemId String?
+  parentOrderItem   OrderItem?  @relation("BackOrder", fields: [parentOrderItemId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  backOrderItems    OrderItem[] @relation("BackOrder")
+
+  // Relation to the fulfillment process
+  assignedItems AssignedOrderItem[]
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model AssignedOrderItem {
+  id                  String           @id @default(cuid())
+  orderItemId         String
+  orderItem           OrderItem        @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  vendorId            String
+  vendor              VendorProfile    @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  status              AssignmentStatus @default(PENDING_CONFIRMATION)
+  assignedQuantity    Int
+  confirmedQuantity   Int?
+  vendorRemarks       String?
+  assignedById        String
+  assignedBy          User             @relation("AssignedByAdmin", fields: [assignedById], references: [id], onDelete: Restrict)
+  assignedAt          DateTime         @default(now())
+  vendorActionAt      DateTime?
+  purchaseOrderItem   PurchaseOrderItem?
+  dispatchItems       DispatchItem[]
+  goodsReceiptItems   GoodsReceiptItem[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  @@index([orderItemId])
+  @@index([vendorId])
+  @@index([status])
+  @@map("assigned_order_items")
+}
+
+// ... (Rest of schema for Finance, Logistics, Tickets, and Enums remains the same)
+// =======================================
+// == 4. ACCOUNTS & FINANCE
+// =======================================
+model PurchaseOrder {
+  id              String              @id @default(cuid())
+  poNumber        String              @unique
+  vendorId        String
+  vendor          VendorProfile       @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  status          PurchaseOrderStatus @default(DRAFT)
+  totalAmount     Decimal             @db.Decimal(12, 2)
+  poJson          Json
+  notes           String?
+  createdById     String
+  createdBy       User                @relation("CreatedByAccountsUser", fields: [createdById], references: [id], onDelete: Restrict)
+  issuedAt        DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  items           PurchaseOrderItem[]
+  vendorInvoice   VendorInvoice?
+  payment         Payment?
+  @@index([vendorId])
+  @@index([status])
+  @@map("purchase_orders")
+}
+model PurchaseOrderItem {
+  id                  String            @id @default(cuid())
+  purchaseOrderId     String
+  purchaseOrder       PurchaseOrder     @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  assignedOrderItemId String            @unique
+  assignedOrderItem   AssignedOrderItem @relation(fields: [assignedOrderItemId], references: [id], onDelete: Restrict)
+  quantity            Int
+  pricePerUnit        Decimal           @db.Decimal(10, 2)
+  totalPrice          Decimal           @db.Decimal(12, 2)
+  @@index([purchaseOrderId])
+  @@map("purchase_order_items")
+}
+model VendorInvoice {
+  id                String        @id @default(cuid())
+  purchaseOrderId   String        @unique
+  purchaseOrder     PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  invoiceNumber     String
+  invoiceDate       DateTime
+  invoiceAmount     Decimal       @db.Decimal(12, 2)
+  status            InvoiceStatus @default(PENDING_VERIFICATION)
+  attachmentId      String?       @unique
+  attachment        Attachment?   @relation(fields: [attachmentId], references: [id], onDelete: SetNull)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  @@index([status])
+  @@map("vendor_invoices")
+}
+model Payment {
+  id                String        @id @default(cuid())
+  purchaseOrderId   String        @unique
+  purchaseOrder     PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  amount            Decimal       @db.Decimal(12, 2)
+  status            PaymentStatus @default(PENDING)
+  paymentMethod     String?
+  transactionId     String?       @unique
+  notes             String?
+  processedById     String
+  processedBy       User          @relation("ProcessedByUser", fields: [processedById], references: [id], onDelete: Restrict)
+  processedAt       DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  @@index([status])
+  @@map("payments")
+}
+// =======================================
+// == 5. LOGISTICS & DISPATCH
+// =======================================
+model Dispatch {
+  id                String         @id @default(cuid())
+  dispatchNumber    String         @unique
+  awbNumber         String?
+  logisticsPartner  String?
+  status            DispatchStatus @default(PROCESSING)
+  dispatchedAt      DateTime?
+  items             DispatchItem[]
+  proofAttachmentId String?        @unique
+  proofAttachment   Attachment?    @relation(fields: [proofAttachmentId], references: [id], onDelete: SetNull)
+  goodsReceiptNote  GoodsReceiptNote?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  @@index([awbNumber])
+  @@map("dispatches")
+}
+model DispatchItem {
+  id                  String            @id @default(cuid())
+  dispatchId          String
+  dispatch            Dispatch          @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  assignedOrderItemId String
+  assignedOrderItem   AssignedOrderItem @relation(fields: [assignedOrderItemId], references: [id], onDelete: Restrict)
+  dispatchedQuantity  Int
+  @@index([dispatchId])
+  @@index([assignedOrderItemId])
+  @@map("dispatch_items")
+}
+model GoodsReceiptNote {
+  id           String     @id @default(cuid())
+  grnNumber    String     @unique
+  dispatchId   String     @unique
+  dispatch     Dispatch   @relation(fields: [dispatchId], references: [id], onDelete: Restrict)
+  status       GRNStatus
+  notes        String?
+  verifiedById String
+  verifiedBy   User       @relation("VerifiedByUser", fields: [verifiedById], references: [id], onDelete: Restrict)
+  receivedAt   DateTime   @default(now())
+  verifiedAt   DateTime?
+  items        GoodsReceiptItem[]
+  ticket       Ticket?
+  @@index([status])
+  @@map("goods_receipt_notes")
+}
+model GoodsReceiptItem {
+  id                  String            @id @default(cuid())
+  goodsReceiptNoteId  String
+  goodsReceiptNote    GoodsReceiptNote  @relation(fields: [goodsReceiptNoteId], references: [id], onDelete: Cascade)
+  assignedOrderItemId String
+  assignedOrderItem   AssignedOrderItem @relation(fields: [assignedOrderItemId], references: [id], onDelete: Restrict)
+  expectedQuantity    Int
+  receivedQuantity    Int
+  discrepancyReason   String?
+  @@index([goodsReceiptNoteId])
+  @@index([assignedOrderItemId])
+  @@map("goods_receipt_items")
+}
+// =======================================
+// == 6. TICKETING & DISPUTES
+// =======================================
+model Ticket {
+  id                 String         @id @default(cuid())
+  ticketNumber       String         @unique
+  title              String         @db.VarChar(255)
+  description        String         @db.Text
+  status             TicketStatus   @default(OPEN)
+  priority           TicketPriority @default(MEDIUM)
+  goodsReceiptNoteId String?        @unique
+  goodsReceiptNote   GoodsReceiptNote? @relation(fields: [goodsReceiptNoteId], references: [id], onDelete: SetNull)
+  createdById        String
+  createdBy          User           @relation("CreatedByUser", fields: [createdById], references: [id], onDelete: Restrict)
+  assigneeId         String?
+  assignee           User?          @relation("AssignedToUser", fields: [assigneeId], references: [id], onDelete: SetNull)
+  resolvedAt         DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  comments           TicketComment[]
+  attachments        Attachment[]
+  @@index([status])
+  @@index([priority])
+  @@index([assigneeId])
+  @@map("tickets")
+}
+model TicketComment {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  @@index([ticketId])
+  @@map("ticket_comments")
+}
+// =======================================
+// == 7. UTILITY MODELS
+// =======================================
+model Attachment {
+  id            String         @id @default(cuid())
+  fileName      String
+  fileType      String         @db.VarChar(100)
+  fileSize      Int
+  s3Key         String         @unique
+  s3Url         String         @unique
+  ticketId      String?
+  ticket        Ticket?        @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  dispatchProof Dispatch?      @relation
+  vendorInvoice VendorInvoice? @relation
+  createdAt     DateTime       @default(now())
+  @@index([ticketId])
+  @@map("attachments")
+}
+

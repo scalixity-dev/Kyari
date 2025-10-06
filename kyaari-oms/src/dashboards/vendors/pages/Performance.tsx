@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ChevronUp as TrendingUpIcon, ChevronDown as TrendingDownIcon, AlertTriangle, Wallet, Clock, CheckSquare, X, Package, BarChart3 } from 'lucide-react'
 import { 
   LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
@@ -153,6 +153,54 @@ export default function Performance() {
     to: '2025-09-29'
   })
   const [useCustomDateRange, setUseCustomDateRange] = useState(false)
+  const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
+
+  // Hook to detect screen size
+  useEffect(() => {
+    const checkScreenSize = () => {
+      if (window.innerWidth < 768) {
+        setScreenSize('mobile')
+      } else if (window.innerWidth < 1024) {
+        setScreenSize('tablet')
+      } else {
+        setScreenSize('desktop')
+      }
+    }
+
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+    return () => window.removeEventListener('resize', checkScreenSize)
+  }, [])
+
+  // Get responsive chart height based on screen size
+  const getChartHeight = () => {
+    switch (screenSize) {
+      case 'mobile': return 200
+      case 'tablet': return 225
+      case 'desktop': return 250
+      default: return 250
+    }
+  }
+
+  // Get responsive font sizes for chart elements
+  const getChartFontSizes = () => {
+    switch (screenSize) {
+      case 'mobile': return { axis: 10, tooltip: 11, legend: 10 }
+      case 'tablet': return { axis: 11, tooltip: 12, legend: 11 }
+      case 'desktop': return { axis: 12, tooltip: 13, legend: 12 }
+      default: return { axis: 12, tooltip: 13, legend: 12 }
+    }
+  }
+
+  // Get responsive pie chart outer radius
+  const getPieChartRadius = () => {
+    switch (screenSize) {
+      case 'mobile': return 60
+      case 'tablet': return 70
+      case 'desktop': return 80
+      default: return 80
+    }
+  }
 
   // Function to get appropriate data based on time range
   const getDataForTimeRange = () => {
@@ -187,14 +235,15 @@ export default function Performance() {
   }
 
   // Function to filter data based on date range
-  const filterDataByDateRange = (data: any[], dateField: string = 'period') => {
+  const filterDataByDateRange = (data: { [key: string]: string | number }[], dateField: string = 'period') => {
     if (!useCustomDateRange) return data
     
     return data.filter((item) => {
       // For demo purposes, we'll use month names to simulate date filtering
       // In a real app, you'd have actual date values to filter with
+      const fieldValue = item[dateField]
       const monthIndex = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        .indexOf(item[dateField]?.substring(0, 3))
+        .indexOf(typeof fieldValue === 'string' ? fieldValue.substring(0, 3) : '')
       
       if (monthIndex === -1) return true // Keep items that don't match month pattern
       
@@ -222,13 +271,26 @@ export default function Performance() {
     }
   }
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  interface TooltipProps {
+    active?: boolean
+    payload?: Array<{
+      color: string
+      name: string
+      value: number
+    }>
+    label?: string
+  }
+
+  const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
+    const fontSizes = getChartFontSizes()
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-md">
-          <p className="font-medium text-gray-800">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} style={{ color: entry.color }} className="text-sm">
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-md max-w-xs">
+          <p className="font-medium text-gray-800" style={{ fontSize: fontSizes.tooltip }}>
+            {label}
+          </p>
+          {payload.map((entry, index: number) => (
+            <p key={index} style={{ color: entry.color, fontSize: fontSizes.tooltip }} className="font-medium">
               {entry.name}: {entry.value}{entry.name.includes('Rate') ? '%' : ''}
             </p>
           ))}
@@ -239,15 +301,15 @@ export default function Performance() {
   }
 
   return (
-    <div className="p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Performance Analytics</h1>
-        <p className="text-[var(--color-primary)]">Track your vendor performance metrics and insights</p>
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-2xl sm:text-3xl text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Performance Analytics</h1>
+        <p className="text-[var(--color-primary)] text-sm sm:text-base">Track your vendor performance metrics and insights</p>
       </div>
 
       {/* Time Range Selector */}
-      <div className="flex flex-col lg:flex-row gap-4 mb-8">
+      <div className="flex flex-col lg:flex-row gap-4 mb-6 lg:mb-8">
         <div className="flex gap-2 flex-wrap">
           {(['1W', '1M', '3M', '6M', '1Y'] as const).map((range) => (
             <button
@@ -332,7 +394,7 @@ export default function Performance() {
       )}
 
       {/* Key Performance Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
         <MetricCard
           title="Fill Rate"
           value={performanceData.fillRate}
@@ -374,156 +436,207 @@ export default function Performance() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6 mb-6 lg:mb-8 -ml-2 sm:ml-0">
         {/* Fill Rate & Rejection Trend */}
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-[var(--color-heading)]">
+            <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">
               {getChartTitle('Fill Rate & Rejection Trend')}
             </h3>
-            <TrendingUpIcon className="w-5 h-5 text-green-500" />
+            <TrendingUpIcon className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
           </div>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={fillRateData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="fillRate" 
-                stroke="#10b981" 
-                strokeWidth={3}
-                name="Fill Rate"
-                dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="rejectionRate" 
-                stroke="#ef4444" 
-                strokeWidth={3}
-                name="Rejection Rate"
-                dot={{ fill: '#ef4444', strokeWidth: 2, r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="flex">
+            <div className="flex-1 -ml-4 sm:ml-0">
+              <ResponsiveContainer width="100%" height={getChartHeight()}>
+                <LineChart data={fillRateData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="period" tick={{ fontSize: getChartFontSizes().axis }} />
+                  <YAxis tick={{ fontSize: getChartFontSizes().axis }} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: getChartFontSizes().legend }} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="fillRate" 
+                    stroke="#10b981" 
+                    strokeWidth={3}
+                    name="Fill Rate"
+                    dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="rejectionRate" 
+                    stroke="#ef4444" 
+                    strokeWidth={3}
+                    name="Rejection Rate"
+                    dot={{ fill: '#ef4444', strokeWidth: 2, r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
 
         {/* Payment Summary */}
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-[var(--color-heading)]">
+            <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">
               {getChartTitle('Payment Summary')}
             </h3>
-            <Wallet className="w-5 h-5 text-blue-500" />
+            <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
           </div>
-          <ResponsiveContainer width="100%" height={250}>
-            <AreaChart data={paymentData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip 
-                formatter={(value: number) => [`₹${(value / 1000).toFixed(0)}K`, '']}
-                labelFormatter={(label) => `Period: ${label}`}
-              />
-              <Legend />
-              <Area
-                type="monotone"
-                dataKey="released"
-                stackId="1"
-                stroke="#10b981"
-                fill="#10b981"
-                name="Released Payments"
-                fillOpacity={0.8}
-              />
-              <Area
-                type="monotone"
-                dataKey="pending"
-                stackId="2"
-                stroke="#f59e0b"
-                fill="#f59e0b"
-                name="Pending Payments"
-                fillOpacity={0.8}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div className="flex">
+            <div className="flex-1 -ml-4 sm:ml-0">
+              <ResponsiveContainer width="100%" height={getChartHeight()}>
+                <AreaChart data={paymentData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="period" tick={{ fontSize: getChartFontSizes().axis }} />
+                  <YAxis tick={{ fontSize: getChartFontSizes().axis }} />
+                  <Tooltip 
+                    formatter={(value: number) => [`₹${(value / 1000).toFixed(0)}K`, '']}
+                    labelFormatter={(label) => `Period: ${label}`}
+                    contentStyle={{ fontSize: getChartFontSizes().tooltip }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: getChartFontSizes().legend }} />
+                  <Area
+                    type="monotone"
+                    dataKey="released"
+                    stackId="1"
+                    stroke="#10b981"
+                    fill="#10b981"
+                    name="Released Payments"
+                    fillOpacity={0.8}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="pending"
+                    stackId="2"
+                    stroke="#f59e0b"
+                    fill="#f59e0b"
+                    name="Pending Payments"
+                    fillOpacity={0.8}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Second Row Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6 mb-6 lg:mb-8 -ml-2 sm:ml-0">
         {/* SLA Breach Analysis */}
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-[var(--color-heading)]">SLA Breach Analysis</h3>
-            <Clock className="w-5 h-5 text-yellow-500" />
+            <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">SLA Breach Analysis</h3>
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
           </div>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={slaBreachData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="type" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="count" fill="#ef4444" name="Actual Breaches" />
-              <Bar dataKey="target" fill="#10b981" name="Target (Max)" />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="flex">
+            <div className="flex-1 -ml-4 sm:ml-0">
+              <ResponsiveContainer width="100%" height={getChartHeight()}>
+                <BarChart data={slaBreachData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="type" tick={{ fontSize: getChartFontSizes().axis }} />
+                  <YAxis tick={{ fontSize: getChartFontSizes().axis }} />
+                  <Tooltip contentStyle={{ fontSize: getChartFontSizes().tooltip }} />
+                  <Legend wrapperStyle={{ fontSize: getChartFontSizes().legend }} />
+                  <Bar dataKey="count" fill="#ef4444" name="Actual Breaches" />
+                  <Bar dataKey="target" fill="#10b981" name="Target (Max)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
 
         {/* Rejection Reasons */}
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-[var(--color-heading)]">Rejection Reasons</h3>
-            <BarChart3 className="w-5 h-5 text-red-500" />
+            <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Rejection Reasons</h3>
+            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
           </div>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={rejectionReasons}
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-                label={(entry: any) => `${entry.name}: ${entry.percent?.toFixed(0) || 0}%`}
-              >
+          <ResponsiveContainer width="100%" height={getChartHeight()}>
+                <PieChart margin={{ top: 20, right: 30, bottom: 20, left: 30 }}>
+                  <Pie
+                    data={rejectionReasons}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={getPieChartRadius()}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={(entry: { name?: string; percent?: number }) => {
+                      if (screenSize === 'mobile') return ''
+                      const name = entry.name || 'Unknown'
+                      // Shorten long names for better visibility
+                      const shortName = name.length > 12 ? name.substring(0, 12) + '...' : name
+                      return `${shortName}: ${entry.percent?.toFixed(0) || 0}%`
+                    }}
+                    labelLine={screenSize !== 'mobile'}
+                  >
                 {rejectionReasons.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => [`${value}%`, 'Percentage']} />
+              <Tooltip 
+                formatter={(value, name, props) => [
+                  `${value}%`, 
+                  props.payload?.name || 'Unknown'
+                ]} 
+                contentStyle={{ fontSize: getChartFontSizes().tooltip }}
+                labelFormatter={() => ''}
+              />
             </PieChart>
           </ResponsiveContainer>
+          
+          {/* Chart Details Below - Mobile Only */}
+          <div className="mt-4 space-y-3 sm:hidden">
+            {rejectionReasons.map((reason, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-4 h-4 rounded-full" 
+                    style={{ backgroundColor: reason.color }}
+                  ></div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {reason.name}
+                  </span>
+                </div>
+                <span className="text-sm font-semibold text-gray-900">
+                  {reason.value}%
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Order Fulfillment Weekly Analysis */}
-      <div className="bg-white p-6 rounded-xl shadow-md border border-white/20 mb-8">
+      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20 mb-6 lg:mb-8 -ml-2 sm:ml-0">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-[var(--color-heading)]">Weekly Order Fulfillment</h3>
-          <Package className="w-5 h-5 text-blue-500" />
+          <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Weekly Order Fulfillment</h3>
+          <Package className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
         </div>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={orderFulfillmentData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="delivered" fill="#10b981" name="Delivered" />
-            <Bar dataKey="rejected" fill="#ef4444" name="Rejected" />
-            <Bar dataKey="pending" fill="#f59e0b" name="Pending" />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="flex">
+          <div className="flex-1 -ml-4 sm:ml-0">
+            <ResponsiveContainer width="100%" height={getChartHeight() + 50}>
+              <BarChart data={orderFulfillmentData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="week" tick={{ fontSize: getChartFontSizes().axis }} />
+                <YAxis tick={{ fontSize: getChartFontSizes().axis }} />
+                <Tooltip contentStyle={{ fontSize: getChartFontSizes().tooltip }} />
+                <Legend wrapperStyle={{ fontSize: getChartFontSizes().legend }} />
+                <Bar dataKey="delivered" fill="#10b981" name="Delivered" />
+                <Bar dataKey="rejected" fill="#ef4444" name="Rejected" />
+                <Bar dataKey="pending" fill="#f59e0b" name="Pending" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
       {/* Performance Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
         {/* Performance Insights */}
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <h3 className="text-lg font-semibold text-[var(--color-heading)] mb-4">Performance Insights</h3>
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+          <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-4">Performance Insights</h3>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
@@ -550,8 +663,8 @@ export default function Performance() {
         </div>
 
         {/* Performance Goals */}
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <h3 className="text-lg font-semibold text-[var(--color-heading)] mb-4">Performance Goals</h3>
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+          <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-4">Performance Goals</h3>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between items-center mb-2">

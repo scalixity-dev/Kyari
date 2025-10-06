@@ -77,185 +77,185 @@ export default function ProfileSettings() {
   ]
 
   return (
-    <div className="p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Profile & Settings</h1>
-        <p className="text-[var(--color-primary)]">Manage your vendor profile, users, and preferences</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-[var(--font-heading)] text-[var(--color-heading)] mb-2">Profile & Settings</h1>
+        <p className="text-sm sm:text-base text-[var(--color-primary)]">Manage your vendor profile, users, and preferences</p>
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white rounded-xl shadow-md border border-white/20 mb-6">
-        <div className="flex border-b border-gray-200">
+      <div className="bg-white rounded-xl shadow-md border border-white/20 mb-4 sm:mb-6">
+        <div className="flex border-b border-gray-200 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
+              className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-3 sm:py-4 font-medium transition-colors whitespace-nowrap min-w-0 ${
                 activeTab === tab.id
                   ? 'text-[var(--color-accent)] border-b-2 border-[var(--color-accent)]'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
-              <tab.icon size={18} />
-              {tab.label}
+              <tab.icon size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <span className="text-sm sm:text-base">{tab.label}</span>
             </button>
           ))}
         </div>
 
         {/* Company Details Tab */}
         {activeTab === 'company' && (
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-[var(--color-heading)]">Company Information</h2>
+          <div className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+              <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">Company Information</h2>
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:bg-[var(--color-accent)]/90 transition-colors"
+                className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:bg-[var(--color-accent)]/90 transition-colors text-sm sm:text-base w-full sm:w-auto"
               >
                 {isEditing ? 'Save Changes' : 'Edit Details'}
               </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {/* Basic Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-[var(--color-heading)] mb-4">Basic Information</h3>
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="text-base sm:text-lg font-medium text-[var(--color-heading)] mb-3 sm:mb-4">Basic Information</h3>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Company Name</label>
                   <input
                     type="text"
                     value={companyDetails.companyName}
                     onChange={(e) => handleCompanyDetailsChange('companyName', e.target.value)}
                     disabled={!isEditing}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
+                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Contact Person</label>
                   <input
                     type="text"
                     value={companyDetails.contactPerson}
                     onChange={(e) => handleCompanyDetailsChange('contactPerson', e.target.value)}
                     disabled={!isEditing}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
+                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Email</label>
                   <input
                     type="email"
                     value={companyDetails.email}
                     onChange={(e) => handleCompanyDetailsChange('email', e.target.value)}
                     disabled={!isEditing}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
+                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Phone</label>
                   <input
                     type="tel"
                     value={companyDetails.phone}
                     onChange={(e) => handleCompanyDetailsChange('phone', e.target.value)}
                     disabled={!isEditing}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
+                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Address</label>
                   <textarea
                     value={companyDetails.address}
                     onChange={(e) => handleCompanyDetailsChange('address', e.target.value)}
                     disabled={!isEditing}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
+                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
               </div>
 
               {/* Legal & Financial Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-[var(--color-heading)] mb-4">Legal & Financial Details</h3>
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="text-base sm:text-lg font-medium text-[var(--color-heading)] mb-3 sm:mb-4">Legal & Financial Details</h3>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">GST Number</label>
                   <input
                     type="text"
                     value={companyDetails.gstNumber}
                     onChange={(e) => handleCompanyDetailsChange('gstNumber', e.target.value)}
                     disabled={!isEditing}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
+                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">PAN Number</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">PAN Number</label>
                   <input
                     type="text"
                     value={companyDetails.panNumber}
                     onChange={(e) => handleCompanyDetailsChange('panNumber', e.target.value)}
                     disabled={!isEditing}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
+                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Bank Name</label>
                   <input
                     type="text"
                     value={companyDetails.bankName}
                     onChange={(e) => handleCompanyDetailsChange('bankName', e.target.value)}
                     disabled={!isEditing}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
+                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Account Number</label>
                   <input
                     type="text"
                     value={companyDetails.accountNumber}
                     onChange={(e) => handleCompanyDetailsChange('accountNumber', e.target.value)}
                     disabled={!isEditing}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
+                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">IFSC Code</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">IFSC Code</label>
                   <input
                     type="text"
                     value={companyDetails.ifscCode}
                     onChange={(e) => handleCompanyDetailsChange('ifscCode', e.target.value)}
                     disabled={!isEditing}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
+                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Account Holder Name</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Account Holder Name</label>
                   <input
                     type="text"
                     value={companyDetails.accountHolderName}
                     onChange={(e) => handleCompanyDetailsChange('accountHolderName', e.target.value)}
                     disabled={!isEditing}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
+                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
               </div>
             </div>
 
             {isEditing && (
-              <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-yellow-800">Important Note</p>
-                    <p className="text-xs text-yellow-700 mt-1">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-yellow-800">Important Note</p>
+                    <p className="text-xs text-yellow-700 mt-1 break-words">
                       Changes to GST, PAN, and bank details may require verification and could take 2-3 business days to process.
                     </p>
                   </div>
@@ -269,19 +269,19 @@ export default function ProfileSettings() {
 
         {/* Notifications Tab */}
         {activeTab === 'notifications' && (
-          <div className="p-6">
-            <h2 className="text-xl font-semibold text-[var(--color-heading)] mb-6">Notification Preferences</h2>
+          <div className="p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6">Notification Preferences</h2>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Order & Business Notifications */}
-              <div className="space-y-6">
-                <h3 className="text-lg font-medium text-[var(--color-heading)]">Order & Business</h3>
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-base sm:text-lg font-medium text-[var(--color-heading)]">Order & Business</h3>
                 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-800">Order Notifications</p>
-                      <p className="text-sm text-gray-600">New orders, confirmations, and updates</p>
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                    <div className="min-w-0 flex-1 mr-3">
+                      <p className="font-medium text-gray-800 text-sm sm:text-base">Order Notifications</p>
+                      <p className="text-xs sm:text-sm text-gray-600">New orders, confirmations, and updates</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -294,10 +294,10 @@ export default function ProfileSettings() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-800">Payment Notifications</p>
-                      <p className="text-sm text-gray-600">Payment releases and invoice updates</p>
+                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                    <div className="min-w-0 flex-1 mr-3">
+                      <p className="font-medium text-gray-800 text-sm sm:text-base">Payment Notifications</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Payment releases and invoice updates</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -310,10 +310,10 @@ export default function ProfileSettings() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-800">Dispatch Notifications</p>
-                      <p className="text-sm text-gray-600">Dispatch confirmations and delivery updates</p>
+                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                    <div className="min-w-0 flex-1 mr-3">
+                      <p className="font-medium text-gray-800 text-sm sm:text-base">Dispatch Notifications</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Dispatch confirmations and delivery updates</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -326,10 +326,10 @@ export default function ProfileSettings() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-800">Performance Reports</p>
-                      <p className="text-sm text-gray-600">Weekly and monthly performance summaries</p>
+                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                    <div className="min-w-0 flex-1 mr-3">
+                      <p className="font-medium text-gray-800 text-sm sm:text-base">Performance Reports</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Weekly and monthly performance summaries</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -345,14 +345,14 @@ export default function ProfileSettings() {
               </div>
 
               {/* System & Communication Notifications */}
-              <div className="space-y-6">
-                <h3 className="text-lg font-medium text-[var(--color-heading)]">System & Communication</h3>
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-base sm:text-lg font-medium text-[var(--color-heading)]">System & Communication</h3>
                 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-800">System Alerts</p>
-                      <p className="text-sm text-gray-600">Important system messages and updates</p>
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                    <div className="min-w-0 flex-1 mr-3">
+                      <p className="font-medium text-gray-800 text-sm sm:text-base">System Alerts</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Important system messages and updates</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -365,10 +365,10 @@ export default function ProfileSettings() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-800">Email Digest</p>
-                      <p className="text-sm text-gray-600">Daily summary emails</p>
+                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                    <div className="min-w-0 flex-1 mr-3">
+                      <p className="font-medium text-gray-800 text-sm sm:text-base">Email Digest</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Daily summary emails</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -381,10 +381,10 @@ export default function ProfileSettings() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-800">SMS Notifications</p>
-                      <p className="text-sm text-gray-600">Critical alerts via SMS</p>
+                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                    <div className="min-w-0 flex-1 mr-3">
+                      <p className="font-medium text-gray-800 text-sm sm:text-base">SMS Notifications</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Critical alerts via SMS</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -397,10 +397,10 @@ export default function ProfileSettings() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-800">Maintenance Alerts</p>
-                      <p className="text-sm text-gray-600">System maintenance and downtime notices</p>
+                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                    <div className="min-w-0 flex-1 mr-3">
+                      <p className="font-medium text-gray-800 text-sm sm:text-base">Maintenance Alerts</p>
+                      <p className="text-xs sm:text-sm text-gray-600">System maintenance and downtime notices</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -416,12 +416,12 @@ export default function ProfileSettings() {
               </div>
             </div>
 
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-start gap-2">
-                <Bell className="w-4 h-4 text-blue-600 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-blue-800">Notification Delivery</p>
-                  <p className="text-xs text-blue-700 mt-1">
+                <Bell className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-blue-800">Notification Delivery</p>
+                  <p className="text-xs text-blue-700 mt-1 break-words">
                     Most notifications are delivered instantly. Email digests are sent daily at 9:00 AM. 
                     SMS notifications are only sent for critical alerts to avoid spam.
                   </p>
