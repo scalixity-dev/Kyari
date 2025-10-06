@@ -128,30 +128,32 @@ function AccountsInvoices() {
   const selectedPOCount = selectedPOs.size
 
   return (
-    <div className="p-6 font-sans text-primary">
+    <div className="p-3 sm:p-6 font-sans text-primary max-w-7xl mx-auto">
       {/* Page Header */}
-      <div className="mb-6">
-        <h2 className="font-heading text-secondary text-3xl font-semibold mb-2">Invoice Management</h2>
+      <div className="mb-4 sm:mb-6">
+        <h2 className="font-heading text-secondary text-2xl sm:text-3xl font-semibold mb-2">Invoice Management</h2>
         <p className="text-sm text-gray-600">Manage Purchase Orders and Vendor Invoices</p>
       </div>
 
       {/* Section 1: PO Generation */}
-      <div className="mb-8">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-heading text-secondary text-xl font-medium">Purchase Order Generation</h3>
+      <div className="mb-6 sm:mb-8">
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h3 className="font-heading text-secondary text-lg sm:text-xl font-medium">Purchase Order Generation</h3>
           {selectedPOCount > 0 && (
             <button
               onClick={handleBulkGeneratePO}
-              className="bg-accent text-button-text rounded-full px-4 py-2 flex items-center gap-2 hover:opacity-90"
+              className="bg-accent text-button-text rounded-full px-4 py-2 flex items-center gap-2 hover:opacity-90 text-sm sm:text-base"
             >
               <FileText size={16} />
-              <span>Generate PO for {selectedPOCount} order{selectedPOCount !== 1 ? 's' : ''}</span>
+              <span className="hidden sm:inline">Generate PO for {selectedPOCount} order{selectedPOCount !== 1 ? 's' : ''}</span>
+              <span className="sm:hidden">Generate PO ({selectedPOCount})</span>
             </button>
           )}
         </div>
 
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
+          {/* Desktop Table View */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full border-separate border-spacing-0">
               <thead>
                 <tr className="bg-gray-50">
@@ -242,24 +244,108 @@ function AccountsInvoices() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Card View */}
+          <div className="lg:hidden">
+            {poOrders.map((order, idx) => {
+              const poStyle = PO_STATUS_STYLES[order.poStatus]
+              const isSelected = selectedPOs.has(order.id)
+              const canGeneratePO = order.poStatus === 'Pending'
+
+              return (
+                <div key={order.id} className={`p-4 border-b border-gray-200 last:border-b-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => togglePOSelection(order.id)}
+                        disabled={!canGeneratePO}
+                        className="rounded mt-1"
+                      />
+                      <div>
+                        <div className="font-medium text-secondary">{order.id}</div>
+                        <div className="text-sm text-gray-600">{order.vendor}</div>
+                      </div>
+                    </div>
+                    <span 
+                      className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap"
+                      style={{
+                        backgroundColor: poStyle.bg,
+                        color: poStyle.color,
+                        borderColor: poStyle.border,
+                      }}
+                    >
+                      {order.poStatus}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2 mb-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Items:</span>
+                      <span className="font-medium">{order.items}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Qty:</span>
+                      <span className="font-medium">{order.confirmedQty}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Amount:</span>
+                      <span className="font-medium">₹{order.amount.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleGeneratePO(order, 'pdf')}
+                      disabled={!canGeneratePO}
+                      className={`flex-1 rounded-full px-3 py-2 text-sm flex items-center justify-center gap-1 ${
+                        canGeneratePO 
+                          ? 'bg-accent text-button-text hover:opacity-90' 
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <FileText size={14} />
+                      <span>PDF</span>
+                    </button>
+                    <button 
+                      onClick={() => handleGeneratePO(order, 'json')}
+                      disabled={!canGeneratePO}
+                      className={`flex-1 rounded-full px-3 py-2 text-sm flex items-center justify-center gap-1 ${
+                        canGeneratePO 
+                          ? 'bg-secondary text-white hover:opacity-90' 
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <FileText size={14} />
+                      <span>JSON</span>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
 
       {/* Section 2: Invoice Upload & Validation */}
       <div>
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-heading text-secondary text-xl font-medium">Invoice Upload & Validation</h3>
-          <button
-            onClick={() => setIsUploadModalOpen(true)}
-            className="bg-accent text-button-text rounded-full px-4 py-2 flex items-center gap-2 hover:opacity-90"
-          >
-            <Upload size={16} />
-            <span>Upload Invoice</span>
-          </button>
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h3 className="font-heading text-secondary text-lg sm:text-xl font-medium">Invoice Upload & Validation</h3>
+          <div className="flex justify-start">
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="bg-accent text-button-text rounded-full px-4 py-2 flex items-center gap-2 hover:opacity-90 text-sm sm:text-base w-1/2 sm:w-auto"
+            >
+              <Upload size={16} />
+              <span>Upload Invoice</span>
+            </button>
+          </div>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
+          {/* Desktop Table View */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full border-separate border-spacing-0">
               <thead>
                 <tr className="bg-gray-50">
@@ -353,6 +439,92 @@ function AccountsInvoices() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Card View */}
+          <div className="lg:hidden">
+            {invoices.map((invoice, idx) => {
+              const validationStyle = VALIDATION_STATUS_STYLES[invoice.validationStatus]
+
+              return (
+                <div key={invoice.id} className={`p-4 border-b border-gray-200 last:border-b-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <div className="font-medium text-secondary">{invoice.orderId}</div>
+                      <div className="text-sm text-gray-600">{invoice.vendor}</div>
+                    </div>
+                    <span 
+                      className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap"
+                      style={{
+                        backgroundColor: validationStyle.bg,
+                        color: validationStyle.color,
+                        borderColor: validationStyle.border,
+                      }}
+                    >
+                      {invoice.validationStatus}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2 mb-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Invoice Number:</span>
+                      <span className="font-medium">{invoice.invoiceNumber || '—'}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">PO Linked:</span>
+                      <span className={invoice.poLinked ? 'text-green-600 font-medium' : 'text-gray-400'}>
+                        {invoice.poLinked ? '✓ Yes' : '✗ No'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Invoice Uploaded:</span>
+                      <span className={invoice.invoiceUploaded ? 'text-green-600 font-medium' : 'text-gray-400'}>
+                        {invoice.invoiceUploaded ? '✓ Yes' : '✗ No'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 justify-center">
+                    <button 
+                      onClick={() => handleApproveInvoice(invoice)}
+                      disabled={!invoice.invoiceUploaded}
+                      className={`rounded-full p-2 flex items-center justify-center ${
+                        invoice.invoiceUploaded
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}
+                      title="Approve Invoice"
+                    >
+                      <CheckSquare size={18} />
+                    </button>
+                    <button 
+                      onClick={() => handleRejectInvoice(invoice)}
+                      disabled={!invoice.invoiceUploaded}
+                      className={`rounded-full p-2 flex items-center justify-center ${
+                        invoice.invoiceUploaded
+                          ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}
+                      title="Reject Invoice"
+                    >
+                      <X size={18} />
+                    </button>
+                    <button 
+                      onClick={() => handleAutoCheck(invoice)}
+                      disabled={!invoice.invoiceUploaded}
+                      className={`rounded-full p-2 flex items-center justify-center ${
+                        invoice.invoiceUploaded
+                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}
+                      title="Auto-Check (Compare Invoice vs PO)"
+                    >
+                      <Search size={18} />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
 
@@ -391,10 +563,10 @@ function UploadInvoiceModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white w-[540px] max-w-[96%] rounded-2xl p-6">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white w-full max-w-[540px] max-h-[90vh] overflow-y-auto rounded-2xl p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-heading text-secondary text-2xl">Upload Invoice</h3>
+          <h3 className="font-heading text-secondary text-xl sm:text-2xl">Upload Invoice</h3>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100">
             <X size={20} className="text-gray-500" />
           </button>
@@ -443,16 +615,16 @@ function UploadInvoiceModal({
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-6">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 mt-6">
           <button 
             onClick={onClose} 
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 hover:bg-gray-50"
+            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 hover:bg-gray-50 order-2 sm:order-1"
           >
             Cancel
           </button>
           <button 
             onClick={handleSubmit} 
-            className="bg-accent text-button-text rounded-full px-4 py-2 hover:opacity-90"
+            className="bg-accent text-button-text rounded-full px-4 py-2 hover:opacity-90 order-1 sm:order-2"
           >
             Upload Invoice
           </button>
