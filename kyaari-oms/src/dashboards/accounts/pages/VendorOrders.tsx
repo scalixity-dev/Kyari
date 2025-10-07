@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { Eye, FileText, CheckSquare, ChevronDown, ChevronRight, X } from 'lucide-react'
+import { Eye, FileText, ChevronRight, X, ChevronDown, CheckSquare } from 'lucide-react'
+import { CustomDropdown } from '../../../components'
 
 type OrderStatus = 'Confirmed' | 'Awaiting PO' | 'PO Generated' | 'Delivered' | 'Closed'
 type POStatus = 'Pending' | 'Generated'
@@ -221,57 +222,59 @@ export default function VendorOrders() {
       <div className="bg-white rounded-xl shadow-md p-3 sm:p-4 mb-4 sm:mb-6 border border-gray-200">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
-            <select 
-              value={filterVendor} 
-              onChange={(e) => setFilterVendor(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
-            >
-              <option value="">All Vendors</option>
-              {vendors.map(vendor => (
-                <option key={vendor} value={vendor}>{vendor}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select 
-              value={filterStatus} 
-              onChange={(e) => setFilterStatus(e.target.value as OrderStatus | '')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
-            >
-              <option value="">All Statuses</option>
-              {Object.keys(STATUS_STYLES).map(status => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date From</label>
-            <input 
-              type="date" 
-              value={filterDateFrom} 
-              onChange={(e) => setFilterDateFrom(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
+            <label className="block text-sm font-medium text-secondary mb-1">Vendor</label>
+            <CustomDropdown
+              value={filterVendor}
+              onChange={(value) => setFilterVendor(value)}
+              options={[
+                { value: '', label: 'All Vendors' },
+                ...vendors.map(vendor => ({ value: vendor, label: vendor }))
+              ]}
+              placeholder="All Vendors"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date To</label>
+            <label className="block text-sm font-medium text-secondary mb-1">Status</label>
+            <CustomDropdown
+              value={filterStatus}
+              onChange={(value) => setFilterStatus(value as OrderStatus | '')}
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'Confirmed', label: 'Confirmed' },
+                { value: 'Awaiting PO', label: 'Awaiting PO' },
+                { value: 'PO Generated', label: 'PO Generated' },
+                { value: 'Delivered', label: 'Delivered' },
+                { value: 'Closed', label: 'Closed' }
+              ]}
+              placeholder="All Statuses"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-1">Date From</label>
+            <input 
+              type="date" 
+              value={filterDateFrom} 
+              onChange={(e) => setFilterDateFrom(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm hover:border-accent transition-all duration-200"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-1">Date To</label>
             <input 
               type="date" 
               value={filterDateTo} 
               onChange={(e) => setFilterDateTo(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm hover:border-accent transition-all duration-200"
             />
           </div>
           
           <div className="flex items-end sm:col-span-2 lg:col-span-1">
             <button 
               onClick={resetFilters}
-              className="w-full bg-white text-secondary border border-secondary rounded-lg px-4 py-2 hover:bg-gray-50 text-sm font-medium"
+              className="w-full bg-white text-secondary border border-secondary rounded-lg px-4 py-2 hover:bg-secondary hover:text-white text-sm font-medium transition-colors duration-200"
             >
               Reset
             </button>

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { Plus, Send, Paperclip } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { CustomDropdown } from '../../../components'
 
 type IssueType = 'Mismatch' | 'Missing Item' | 'Damaged Item' | 'Escalation' | 'Others'
 type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent'
@@ -358,24 +359,47 @@ export default function OpsSupport() {
       </div>
 
       <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 items-stretch sm:items-center mb-4 bg-white border border-secondary/20 rounded-xl p-3">
-        <select value={filterIssue} onChange={e => setFilterIssue(e.target.value as IssueType | '')} className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:w-auto">
-          <option value="">Issue Type</option>
-          {(['Mismatch','Missing Item','Damaged Item','Escalation','Others'] as IssueType[]).map(v => (
-            <option key={v} value={v}>{v}</option>
-          ))}
-        </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as TicketStatus | '')} className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:w-auto">
-          <option value="">Status</option>
-          {Object.keys(STATUS_STYLES).map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <select value={filterPriority} onChange={e => setFilterPriority(e.target.value as TicketPriority | '')} className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:w-auto">
-          <option value="">Priority</option>
-          {Object.keys(PRIORITY_STYLES).map(p => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
+        <CustomDropdown
+          value={filterIssue}
+          onChange={(value) => setFilterIssue(value as IssueType | '')}
+          options={[
+            { value: '', label: 'Issue Type' },
+            { value: 'Mismatch', label: 'Mismatch' },
+            { value: 'Missing Item', label: 'Missing Item' },
+            { value: 'Damaged Item', label: 'Damaged Item' },
+            { value: 'Escalation', label: 'Escalation' },
+            { value: 'Others', label: 'Others' }
+          ]}
+          placeholder="Issue Type"
+          className="w-full sm:w-auto"
+        />
+        <CustomDropdown
+          value={filterStatus}
+          onChange={(value) => setFilterStatus(value as TicketStatus | '')}
+          options={[
+            { value: '', label: 'Status' },
+            { value: 'Open', label: 'Open' },
+            { value: 'Under Review', label: 'Under Review' },
+            { value: 'Escalated', label: 'Escalated' },
+            { value: 'Resolved', label: 'Resolved' },
+            { value: 'Closed', label: 'Closed' }
+          ]}
+          placeholder="Status"
+          className="w-full sm:w-auto"
+        />
+        <CustomDropdown
+          value={filterPriority}
+          onChange={(value) => setFilterPriority(value as TicketPriority | '')}
+          options={[
+            { value: '', label: 'Priority' },
+            { value: 'Low', label: 'Low' },
+            { value: 'Medium', label: 'Medium' },
+            { value: 'High', label: 'High' },
+            { value: 'Urgent', label: 'Urgent' }
+          ]}
+          placeholder="Priority"
+          className="w-full sm:w-auto"
+        />
         <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:w-auto" />
         <input placeholder="Search ticket / order / store" value={search} onChange={e => setSearch(e.target.value)} className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:flex-1 sm:min-w-[220px]" />
         <button onClick={resetFilters} className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 min-h-[44px] w-full sm:w-auto">Reset</button>

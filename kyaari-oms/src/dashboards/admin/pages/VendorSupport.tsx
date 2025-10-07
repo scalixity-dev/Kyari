@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { Plus, Send, Paperclip } from 'lucide-react'
+import { CustomDropdown } from '../../../components'
 
 type IssueType = 'Payment' | 'SLA Breach' | 'Order Delay' | 'Onboarding' | 'Others'
 type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent'
@@ -315,27 +316,46 @@ export default function VendorSupport() {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 items-stretch sm:items-center mb-4 bg-white border border-secondary/20 rounded-xl p-3">
-        <select value={filterVendor} onChange={e => setFilterVendor(e.target.value)} className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:w-auto">
-          <option value="">Vendor Name</option>
-          {vendors.map(v => (
-            <option key={v} value={v}>{v}</option>
-          ))}
-        </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as TicketStatus | '')} className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:w-auto">
-          <option value="">Status</option>
-          {Object.keys(STATUS_STYLES).map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <select value={filterPriority} onChange={e => setFilterPriority(e.target.value as TicketPriority | '')} className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:w-auto">
-          <option value="">Priority</option>
-          {Object.keys(PRIORITY_STYLES).map(p => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
-        <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:w-auto" />
-        <input placeholder="Search ticket/vendor" value={search} onChange={e => setSearch(e.target.value)} className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:flex-1 sm:min-w-[200px]" />
-        <button onClick={resetFilters} className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 min-h-[44px] w-full sm:w-auto">Reset</button>
+        <CustomDropdown
+          value={filterVendor}
+          onChange={(value) => setFilterVendor(value)}
+          options={[
+            { value: '', label: 'Vendor Name' },
+            ...vendors.map(vendor => ({ value: vendor, label: vendor }))
+          ]}
+          placeholder="Vendor Name"
+          className="w-full sm:w-auto"
+        />
+        <CustomDropdown
+          value={filterStatus}
+          onChange={(value) => setFilterStatus(value as TicketStatus | '')}
+          options={[
+            { value: '', label: 'Status' },
+            { value: 'Open', label: 'Open' },
+            { value: 'In-progress', label: 'In-progress' },
+            { value: 'Escalated', label: 'Escalated' },
+            { value: 'Resolved', label: 'Resolved' },
+            { value: 'Closed', label: 'Closed' }
+          ]}
+          placeholder="Status"
+          className="w-full sm:w-auto"
+        />
+        <CustomDropdown
+          value={filterPriority}
+          onChange={(value) => setFilterPriority(value as TicketPriority | '')}
+          options={[
+            { value: '', label: 'Priority' },
+            { value: 'Low', label: 'Low' },
+            { value: 'Medium', label: 'Medium' },
+            { value: 'High', label: 'High' },
+            { value: 'Urgent', label: 'Urgent' }
+          ]}
+          placeholder="Priority"
+          className="w-full sm:w-auto"
+        />
+        <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:w-auto hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" />
+        <input placeholder="Search ticket/vendor" value={search} onChange={e => setSearch(e.target.value)} className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:flex-1 sm:min-w-[200px] hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" />
+        <button onClick={resetFilters} className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 min-h-[44px] w-full sm:w-auto hover:bg-secondary hover:text-white transition-colors duration-200">Reset</button>
       </div>
 
       {/* Table - Desktop view (hidden on mobile) */}
@@ -474,31 +494,47 @@ export default function VendorSupport() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Vendor Name</label>
-                <select value={draftVendor} onChange={e => setDraftVendor(e.target.value)} className="w-full px-2.5 py-2 min-h-[44px] rounded-lg border border-gray-300">
-                  <option value="">Select Vendor</option>
-                  {vendors.map(v => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium mb-1 text-secondary">Vendor Name</label>
+                <CustomDropdown
+                  value={draftVendor}
+                  onChange={(value) => setDraftVendor(value)}
+                  options={[
+                    { value: '', label: 'Select Vendor' },
+                    ...vendors.map(vendor => ({ value: vendor, label: vendor }))
+                  ]}
+                  placeholder="Select Vendor"
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Issue Type</label>
-                <select value={draftIssue} onChange={e => setDraftIssue(e.target.value as IssueType | '')} className="w-full px-2.5 py-2 min-h-[44px] rounded-lg border border-gray-300">
-                  <option value="">Select Issue</option>
-                  {(['Payment','SLA Breach','Order Delay','Onboarding','Others'] as IssueType[]).map(opt => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium mb-1 text-secondary">Issue Type</label>
+                <CustomDropdown
+                  value={draftIssue}
+                  onChange={(value) => setDraftIssue(value as IssueType | '')}
+                  options={[
+                    { value: '', label: 'Select Issue' },
+                    { value: 'Payment', label: 'Payment' },
+                    { value: 'SLA Breach', label: 'SLA Breach' },
+                    { value: 'Order Delay', label: 'Order Delay' },
+                    { value: 'Onboarding', label: 'Onboarding' },
+                    { value: 'Others', label: 'Others' }
+                  ]}
+                  placeholder="Select Issue"
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Priority</label>
-                <select value={draftPriority} onChange={e => setDraftPriority(e.target.value as TicketPriority | '')} className="w-full px-2.5 py-2 min-h-[44px] rounded-lg border border-gray-300">
-                  <option value="">Select Priority</option>
-                  {(['Low','Medium','High','Urgent'] as TicketPriority[]).map(opt => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium mb-1 text-secondary">Priority</label>
+                <CustomDropdown
+                  value={draftPriority}
+                  onChange={(value) => setDraftPriority(value as TicketPriority | '')}
+                  options={[
+                    { value: '', label: 'Select Priority' },
+                    { value: 'Low', label: 'Low' },
+                    { value: 'Medium', label: 'Medium' },
+                    { value: 'High', label: 'High' },
+                    { value: 'Urgent', label: 'Urgent' }
+                  ]}
+                  placeholder="Select Priority"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Attachments</label>

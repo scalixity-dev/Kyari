@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { FileText } from 'lucide-react'
+import { CustomDropdown } from '../../../components'
 
 interface AuditLog {
   id: string
@@ -258,41 +259,43 @@ export default function AuditLogs() {
               value={filters.user}
               onChange={(e) => handleFilterChange('user', e.target.value)}
               placeholder="Search by name or email"
-              className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px] sm:min-h-auto"
+              className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
             />
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-            <select
+            <CustomDropdown
               value={filters.role}
-              onChange={(e) => handleFilterChange('role', e.target.value)}
-              className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px] sm:min-h-auto"
-            >
-              <option value="">All Roles</option>
-              <option value="Admin">Admin</option>
-              <option value="Vendor">Vendor</option>
-              <option value="Accounts">Accounts</option>
-              <option value="Ops">Ops</option>
-              <option value="Store Operator">Store Operator</option>
-            </select>
+              onChange={(value) => handleFilterChange('role', value)}
+              options={[
+                { value: '', label: 'All Roles' },
+                { value: 'Admin', label: 'Admin' },
+                { value: 'Vendor', label: 'Vendor' },
+                { value: 'Accounts', label: 'Accounts' },
+                { value: 'Ops', label: 'Ops' },
+                { value: 'Store Operator', label: 'Store Operator' }
+              ]}
+              placeholder="All Roles"
+            />
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Module</label>
-            <select
+            <CustomDropdown
               value={filters.module}
-              onChange={(e) => handleFilterChange('module', e.target.value)}
-              className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px] sm:min-h-auto"
-            >
-              <option value="">All Modules</option>
-              <option value="Orders">Orders</option>
-              <option value="Vendors">Vendors</option>
-              <option value="Payments">Payments</option>
-              <option value="Tickets">Tickets</option>
-              <option value="Users">Users</option>
-              <option value="Analytics">Analytics</option>
-            </select>
+              onChange={(value) => handleFilterChange('module', value)}
+              options={[
+                { value: '', label: 'All Modules' },
+                { value: 'Orders', label: 'Orders' },
+                { value: 'Vendors', label: 'Vendors' },
+                { value: 'Payments', label: 'Payments' },
+                { value: 'Tickets', label: 'Tickets' },
+                { value: 'Users', label: 'Users' },
+                { value: 'Analytics', label: 'Analytics' }
+              ]}
+              placeholder="All Modules"
+            />
           </div>
           
           <div>
@@ -302,14 +305,14 @@ export default function AuditLogs() {
                 type="date"
                 value={filters.dateFrom}
                 onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px] sm:min-h-auto"
+                className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
                 placeholder="From date"
               />
               <input
                 type="date"
                 value={filters.dateTo}
                 onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px] sm:min-h-auto"
+                className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
                 placeholder="To date"
               />
             </div>

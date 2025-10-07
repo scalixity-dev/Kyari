@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
+import { CustomDropdown } from '../../../components'
 
 type TabKey = 'accounts' | 'ops' | 'vendors' | 'matrix'
 type UserRole = 'Admin' | 'Accounts' | 'Ops'
@@ -430,39 +431,39 @@ export default function UsersRoles() {
                     type="email"
                     value={userForm.email}
                     onChange={(e) => setUserForm((f) => ({ ...f, email: e.target.value }))}
-                    placeholder="name@kyari.com"
-                    className="w-full border border-gray-300 rounded-lg p-2.5"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Role</label>
-                  <select
-                    required
-                    value={userForm.role}
-                    onChange={(e) => setUserForm((f) => ({ ...f, role: e.target.value as UserRole }))}
-                    className="w-full border border-gray-300 rounded-lg p-2.5"
-                  >
-                    <option value="Admin">Admin</option>
-                    <option value="Accounts">Accounts</option>
-                    <option value="Ops">Ops</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Status</label>
-                  <select
-                    required
-                    value={userForm.status}
-                    onChange={(e) => setUserForm((f) => ({ ...f, status: e.target.value as UserStatus }))}
-                    className="w-full border border-gray-300 rounded-lg p-2.5"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
-                </div>
-                <div className="flex flex-col sm:flex-row justify-end gap-3 mt-4">
-                  <SecondaryButton type="button" onClick={() => setShowUserModal(false)} className="w-full sm:w-auto justify-center">Cancel</SecondaryButton>
-                  <PrimaryButton type="submit" className="w-full sm:w-auto justify-center">Create User</PrimaryButton>
-                </div>
+                  placeholder="name@kyari.com"
+                  className="w-full border border-gray-300 rounded-lg p-2.5"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Role</label>
+                <CustomDropdown
+                  required
+                  value={userForm.role}
+                  onChange={(value) => setUserForm((f) => ({ ...f, role: value as UserRole }))}
+                  options={[
+                    { value: 'Admin', label: 'Admin' },
+                    { value: 'Accounts', label: 'Accounts' },
+                    { value: 'Ops', label: 'Ops' }
+                  ]}
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Status</label>
+                <CustomDropdown
+                  required
+                  value={userForm.status}
+                  onChange={(value) => setUserForm((f) => ({ ...f, status: value as UserStatus }))}
+                  options={[
+                    { value: 'Active', label: 'Active' },
+                    { value: 'Inactive', label: 'Inactive' }
+                  ]}
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-4">
+                <SecondaryButton type="button" onClick={() => setShowUserModal(false)} className="w-full sm:w-auto justify-center">Cancel</SecondaryButton>
+                <PrimaryButton type="submit" className="w-full sm:w-auto justify-center">Create User</PrimaryButton>
+              </div>
               </form>
             </Modal>
           </div>
@@ -592,28 +593,28 @@ export default function UsersRoles() {
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Role</label>
-                  <select
+                  <CustomDropdown
                     required
                     value={userForm.role}
-                    onChange={(e) => setUserForm((f) => ({ ...f, role: e.target.value as UserRole }))}
-                    className="w-full border border-gray-300 rounded-lg p-2.5"
-                  >
-                    <option value="Admin">Admin</option>
-                    <option value="Accounts">Accounts</option>
-                    <option value="Ops">Ops</option>
-                  </select>
+                    onChange={(value) => setUserForm((f) => ({ ...f, role: value as UserRole }))}
+                    options={[
+                      { value: 'Admin', label: 'Admin' },
+                      { value: 'Accounts', label: 'Accounts' },
+                      { value: 'Ops', label: 'Ops' }
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Status</label>
-                  <select
+                  <CustomDropdown
                     required
                     value={userForm.status}
-                    onChange={(e) => setUserForm((f) => ({ ...f, status: e.target.value as UserStatus }))}
-                    className="w-full border border-gray-300 rounded-lg p-2.5"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
+                    onChange={(value) => setUserForm((f) => ({ ...f, status: value as UserStatus }))}
+                    options={[
+                      { value: 'Active', label: 'Active' },
+                      { value: 'Inactive', label: 'Inactive' }
+                    ]}
+                  />
                 </div>
                 <div className="flex justify-end gap-2 mt-2">
                   <SecondaryButton type="button" onClick={() => setShowUserModal(false)}>Cancel</SecondaryButton>
@@ -809,32 +810,34 @@ export default function UsersRoles() {
               </div>
               <div>
                 <label className="block font-semibold mb-2 text-sm">Role</label>
-                <select
+                <CustomDropdown
                   required
                   value={editForm.role}
-                  onChange={(e) =>
-                    setEditForm((f) => (f ? { ...f, role: e.target.value as UserRole } : f))
+                  onChange={(value) =>
+                    setEditForm((f) => (f ? { ...f, role: value as UserRole } : f))
                   }
-                  className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:border-accent focus:outline-none"
-                >
-                  <option value="Admin">Admin</option>
-                  <option value="Accounts">Accounts</option>
-                  <option value="Ops">Ops</option>
-                </select>
+                  options={[
+                    { value: 'Admin', label: 'Admin' },
+                    { value: 'Accounts', label: 'Accounts' },
+                    { value: 'Ops', label: 'Ops' }
+                  ]}
+                  className="p-3"
+                />
               </div>
               <div>
                 <label className="block font-semibold mb-2 text-sm">Status</label>
-                <select
+                <CustomDropdown
                   required
                   value={editForm.status}
-                  onChange={(e) =>
-                    setEditForm((f) => (f ? { ...f, status: e.target.value as UserStatus } : f))
+                  onChange={(value) =>
+                    setEditForm((f) => (f ? { ...f, status: value as UserStatus } : f))
                   }
-                  className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:border-accent focus:outline-none"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
+                  options={[
+                    { value: 'Active', label: 'Active' },
+                    { value: 'Inactive', label: 'Inactive' }
+                  ]}
+                  className="p-3"
+                />
               </div>
               <div className="flex flex-col sm:flex-row justify-end gap-3 mt-4">
                 <SecondaryButton
