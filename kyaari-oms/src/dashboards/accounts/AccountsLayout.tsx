@@ -1,8 +1,23 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, FileText, Wallet, BarChart3, Bell, Search, Users, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Package, FileText, Wallet, BarChart3, Bell, Search, Users, Menu, X, Clock, CheckSquare } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
+
+type NotificationType = 'payment' | 'invoice' | 'order' | 'vendor' | 'support'
+
+interface Notification {
+  id: string
+  type: NotificationType
+  title: string
+  message: string
+  timestamp: Date
+  isRead: boolean
+  action?: {
+    label: string
+    path: string
+  }
+}
 
 type NavItem = {
   to: string
@@ -13,10 +28,60 @@ type NavItem = {
 const navItems: NavItem[] = [
   { to: '/accounts', icon: LayoutDashboard, label: 'Dashboard ' },
   { to: '/accounts/vendor-orders', icon: Package, label: 'Vendor Orders' },
-  { to: '/accounts/po-invoices', icon: FileText, label: 'Invoice Management' },
+  { to: '/accounts/po-invoices', icon: FileText, label: 'Invoice' },
   { to: '/accounts/payment-release', icon: Wallet, label: 'Payment Release' },
   { to: '/accounts/reports', icon: BarChart3, label: 'Reports' },
+  { to: '/accounts/support', icon: Users, label: 'Support' },
   { to: '/accounts/profile-settings', icon: FileText, label: 'Profile & Settings' }
+]
+
+// Accounts-specific sample notifications
+const sampleNotifications: Notification[] = [
+  {
+    id: '1',
+    type: 'payment',
+    title: 'Payment Approval Required',
+    message: 'Invoice #INV-2025-024 for ₹45,000 requires approval',
+    timestamp: new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago
+    isRead: false,
+    action: { label: 'Review Payment', path: '/accounts/payment-release' }
+  },
+  {
+    id: '2',
+    type: 'invoice',
+    title: 'New Invoice Received',
+    message: 'Invoice #INV-2025-025 from Vendor ABC for ₹28,500',
+    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
+    isRead: false,
+    action: { label: 'View Invoice', path: '/accounts/po-invoices' }
+  },
+  {
+    id: '3',
+    type: 'order',
+    title: 'Order Status Update',
+    message: 'Order #ORD-2025-018 has been dispatched by vendor',
+    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
+    isRead: false,
+    action: { label: 'View Order', path: '/accounts/vendor-orders' }
+  },
+  {
+    id: '4',
+    type: 'vendor',
+    title: 'Vendor Payment Completed',
+    message: 'Payment of ₹52,000 to Vendor XYZ has been processed',
+    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+    isRead: true,
+    action: { label: 'View Details', path: '/accounts/payment-release' }
+  },
+  {
+    id: '5',
+    type: 'support',
+    title: 'Support Query Resolved',
+    message: 'Your query regarding invoice discrepancy has been resolved',
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+    isRead: true,
+    action: { label: 'View Support', path: '/accounts/support' }
+  }
 ]
 
 function AccountsLayout() {
@@ -25,10 +90,14 @@ function AccountsLayout() {
   const { logout, user } = useAuth()
   const [search, setSearch] = useState('')
   const [showProfile, setShowProfile] = useState(false)
-  const [notifications] = useState(2)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>(sampleNotifications)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const sidebarRef = useRef<HTMLDivElement>(null)
+  const notificationsRef = useRef<HTMLDivElement>(null)
+  
+  const unreadCount = notifications.filter(n => !n.isRead).length
   
   // Check if screen is mobile/tablet
   useEffect(() => {
@@ -43,6 +112,20 @@ function AccountsLayout() {
     window.addEventListener('resize', checkScreenSize)
     return () => window.removeEventListener('resize', checkScreenSize)
   }, [])
+
+  // Close notifications dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setShowNotifications(false)
+      }
+    }
+
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showNotifications])
 
   // Close sidebar when clicking outside on mobile
   useEffect(() => {
@@ -77,6 +160,53 @@ function AccountsLayout() {
     if (isMobile) {
       setSidebarOpen(false)
     }
+  }
+
+  function markAsRead(notificationId: string) {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === notificationId ? { ...notif, isRead: true } : notif
+      )
+    )
+  }
+
+  function markAllAsRead() {
+    setNotifications(prev => 
+      prev.map(notif => ({ ...notif, isRead: true }))
+    )
+  }
+
+  function handleNotificationClick(notification: Notification) {
+    markAsRead(notification.id)
+    if (notification.action) {
+      navigate(notification.action.path)
+    }
+    setShowNotifications(false)
+  }
+
+  function getNotificationIcon(type: NotificationType) {
+    switch (type) {
+      case 'payment': return Wallet
+      case 'invoice': return FileText
+      case 'order': return Package
+      case 'vendor': return Users
+      case 'support': return Users
+      default: return Bell
+    }
+  }
+
+  function formatTimeAgo(date: Date) {
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return 'Just now'
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+    
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (diffInHours < 24) return `${diffInHours}h ago`
+    
+    const diffInDays = Math.floor(diffInHours / 24)
+    return `${diffInDays}d ago`
   }
 
   return (
@@ -182,12 +312,119 @@ function AccountsLayout() {
           </form>
 
           <div className="flex items-center gap-4">
-            <button aria-label="Notifications" className="relative p-0 rounded-md text-white" style={{ background: 'transparent' }}>
-              <Bell size={18} />
-              {notifications > 0 && (
-                <span className="absolute -top-1 -right-1 text-xs rounded-full px-1" style={{ background: 'var(--color-accent)', color: 'var(--color-button-text)' }}>{notifications}</span>
+            <div className="relative" ref={notificationsRef}>
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                aria-label="Notifications" 
+                className="relative p-2 rounded-md text-white hover:bg-white/10 transition-colors" 
+                style={{ background: 'transparent' }}
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center" style={{ background: 'var(--color-accent)', color: 'var(--color-button-text)' }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className={`absolute right-0 mt-2 rounded-lg shadow-lg border border-gray-200 z-50 ${
+                  isMobile ? 'w-[calc(100vw-2rem)] max-w-sm -mr-12' : 'w-96'
+                } max-h-[500px]`} style={{ background: 'white' }}>
+                  {/* Notifications Header */}
+                  <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">Accounts Notifications</h3>
+                    <div className="flex items-center gap-2">
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={markAllAsRead}
+                          className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                        >
+                          <CheckSquare size={14} />
+                          Mark all read
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowNotifications(false)}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Notifications List */}
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-gray-500">
+                        <Bell size={24} className="mx-auto mb-2 text-gray-300" />
+                        <p>No notifications</p>
+                      </div>
+                    ) : (
+                      notifications.map((notification) => {
+                        const IconComponent = getNotificationIcon(notification.type)
+                        return (
+                          <div
+                            key={notification.id}
+                            onClick={() => handleNotificationClick(notification)}
+                            className={`px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                              !notification.isRead ? 'bg-blue-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`p-2 rounded-full flex-shrink-0 ${
+                                notification.type === 'payment' ? 'bg-green-100 text-green-600' :
+                                notification.type === 'invoice' ? 'bg-blue-100 text-blue-600' :
+                                notification.type === 'order' ? 'bg-purple-100 text-purple-600' :
+                                notification.type === 'vendor' ? 'bg-orange-100 text-orange-600' :
+                                'bg-red-100 text-red-600'
+                              }`}>
+                                <IconComponent size={16} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <h4 className={`text-sm font-medium ${!notification.isRead ? 'text-gray-900' : 'text-gray-700'}`}>
+                                    {notification.title}
+                                  </h4>
+                                  {!notification.isRead && (
+                                    <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                                <div className="flex items-center justify-between mt-2">
+                                  <span className="text-xs text-gray-400 flex items-center gap-1">
+                                    <Clock size={12} />
+                                    {formatTimeAgo(notification.timestamp)}
+                                  </span>
+                                  {notification.action && (
+                                    <span className="text-xs text-blue-600 font-medium">
+                                      {notification.action.label} →
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+
+                  {/* Notifications Footer */}
+                  {notifications.length > 0 && (
+                    <div className="px-4 py-3 border-t border-gray-200">
+                      <Link
+                        to="/accounts/notifications"
+                        className="text-sm text-blue-600 hover:text-blue-800 flex items-center justify-center gap-1"
+                        onClick={() => setShowNotifications(false)}
+                      >
+                        View all notifications
+                      </Link>
+                    </div>
+                  )}
+                </div>
               )}
-            </button>
+            </div>
 
             <div className="relative">
               <button onClick={() => setShowProfile((s) => !s)} className="flex items-center gap-3 p-1 rounded-md" style={{ background: 'transparent' }}>

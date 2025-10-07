@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { Edit, Trash2, Plus, Upload, Search, FileText } from 'lucide-react'
+import { CustomDropdown } from '../../../components'
 
 type OrderStatus =
   | 'RECEIVED'
@@ -278,41 +279,38 @@ export default function Orders() {
       {isFilterOpen && (
         <div className="mb-6 bg-white border border-secondary/20 rounded-xl p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-            <select 
-              value={filterCity} 
-              onChange={e => setFilterCity(e.target.value)} 
-              className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-accent focus:outline-none"
-            >
-              <option value="">All Cities</option>
-              {cities.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-            <select 
-              value={filterVendor} 
-              onChange={e => setFilterVendor(e.target.value)} 
-              className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-accent focus:outline-none"
-            >
-              <option value="">All Vendors</option>
-              {vendors.map(v => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
-            <select 
-              value={filterStatus} 
-              onChange={e => setFilterStatus(e.target.value as OrderStatus | '')} 
-              className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-accent focus:outline-none"
-            >
-              <option value="">All Status</option>
-              {Object.keys(STATUS_STYLES).map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+            <CustomDropdown
+              value={filterCity}
+              onChange={(value) => setFilterCity(value)}
+              options={[
+                { value: '', label: 'All Cities' },
+                ...cities.map(city => ({ value: city, label: city }))
+              ]}
+              placeholder="All Cities"
+            />
+            <CustomDropdown
+              value={filterVendor}
+              onChange={(value) => setFilterVendor(value)}
+              options={[
+                { value: '', label: 'All Vendors' },
+                ...vendors.map(vendor => ({ value: vendor, label: vendor }))
+              ]}
+              placeholder="All Vendors"
+            />
+            <CustomDropdown
+              value={filterStatus}
+              onChange={(value) => setFilterStatus(value as OrderStatus | '')}
+              options={[
+                { value: '', label: 'All Status' },
+                ...Object.keys(STATUS_STYLES).map(status => ({ value: status, label: status }))
+              ]}
+              placeholder="All Status"
+            />
             <input 
               type="date" 
               value={filterDate} 
               onChange={e => setFilterDate(e.target.value)} 
-              className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-accent focus:outline-none" 
+              className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" 
             />
           </div>
           <div className="flex justify-center sm:justify-end">
@@ -582,16 +580,15 @@ export default function Orders() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Vendor</label>
-                <select 
-                  value={draft.vendor} 
-                  onChange={e => setDraft({ ...draft, vendor: e.target.value })} 
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
-                >
-                  <option value="">Select Vendor</option>
-                  {vendors.map(v => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
-                </select>
+                <CustomDropdown
+                  value={draft.vendor}
+                  onChange={(value) => setDraft({ ...draft, vendor: value })}
+                  options={[
+                    { value: '', label: 'Select Vendor' },
+                    ...vendors.map(vendor => ({ value: vendor, label: vendor }))
+                  ]}
+                  placeholder="Select Vendor"
+                />
               </div>
             </div>
 
@@ -952,30 +949,28 @@ function EditOrderModal({ order, onClose, onSubmit, vendors }: {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
-              <select
+              <CustomDropdown
                 value={editedOrder.status}
-                onChange={e => setEditedOrder({ ...editedOrder, status: e.target.value as OrderStatus })}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
-              >
-                {Object.keys(STATUS_STYLES).map(status => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
+                onChange={(value) => setEditedOrder({ ...editedOrder, status: value as OrderStatus })}
+                options={Object.keys(STATUS_STYLES).map(status => ({ 
+                  value: status, 
+                  label: status 
+                }))}
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium mb-2">Vendor</label>
-              <select
+              <CustomDropdown
                 value={editedOrder.vendor}
-                onChange={e => setEditedOrder({ ...editedOrder, vendor: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
-              >
-                {vendors.map(vendor => (
-                  <option key={vendor} value={vendor}>{vendor}</option>
-                ))}
-              </select>
+                onChange={(value) => setEditedOrder({ ...editedOrder, vendor: value })}
+                options={vendors.map(vendor => ({ 
+                  value: vendor, 
+                  label: vendor 
+                }))}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">City</label>

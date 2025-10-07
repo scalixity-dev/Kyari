@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Plus, Send, Paperclip } from 'lucide-react'
+import { CustomDropdown } from '../../../components'
 
 type IssueType = 'Invoice Mismatch' | 'Duplicate Entry' | 'Payment Pending' | 'Payment Delay' | 'Others'
 type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent'
@@ -376,29 +377,50 @@ export default function AccountsSupport() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center mb-4 bg-white border border-secondary/20 rounded-xl p-3">
         <div className="flex flex-col sm:flex-row gap-3 flex-1">
-          <select value={filterIssue} onChange={e => setFilterIssue(e.target.value as IssueType | '')} className="px-3 py-2 rounded-xl border border-gray-300 text-sm min-w-0 flex-1 sm:flex-none">
-            <option value="">Issue Type</option>
-            {(['Invoice Mismatch','Duplicate Entry','Payment Pending','Payment Delay','Others'] as IssueType[]).map(v => (
-              <option key={v} value={v}>{v}</option>
-            ))}
-          </select>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as TicketStatus | '')} className="px-3 py-2 rounded-xl border border-gray-300 text-sm min-w-0 flex-1 sm:flex-none">
-            <option value="">Status</option>
-            {Object.keys(STATUS_STYLES).map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          <select value={filterPriority} onChange={e => setFilterPriority(e.target.value as TicketPriority | '')} className="px-3 py-2 rounded-xl border border-gray-300 text-sm min-w-0 flex-1 sm:flex-none">
-            <option value="">Priority</option>
-            {Object.keys(PRIORITY_STYLES).map(p => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300 text-sm min-w-0 flex-1 sm:flex-none" />
+          <CustomDropdown
+            value={filterIssue}
+            onChange={(value) => setFilterIssue(value as IssueType | '')}
+            options={[
+              { value: '', label: 'Issue Type' },
+              { value: 'Invoice Mismatch', label: 'Invoice Mismatch' },
+              { value: 'Duplicate Entry', label: 'Duplicate Entry' },
+              { value: 'Payment Pending', label: 'Payment Pending' },
+              { value: 'Payment Delay', label: 'Payment Delay' },
+              { value: 'Others', label: 'Others' }
+            ]}
+            placeholder="Issue Type"
+            className="min-w-0 flex-1 sm:flex-none"
+          />
+          <CustomDropdown
+            value={filterStatus}
+            onChange={(value) => setFilterStatus(value as TicketStatus | '')}
+            options={[
+              { value: '', label: 'Status' },
+              { value: 'Open', label: 'Open' },
+              { value: 'In Progress', label: 'In Progress' },
+              { value: 'Resolved', label: 'Resolved' }
+            ]}
+            placeholder="Status"
+            className="min-w-0 flex-1 sm:flex-none"
+          />
+          <CustomDropdown
+            value={filterPriority}
+            onChange={(value) => setFilterPriority(value as TicketPriority | '')}
+            options={[
+              { value: '', label: 'Priority' },
+              { value: 'Low', label: 'Low' },
+              { value: 'Medium', label: 'Medium' },
+              { value: 'High', label: 'High' },
+              { value: 'Urgent', label: 'Urgent' }
+            ]}
+            placeholder="Priority"
+            className="min-w-0 flex-1 sm:flex-none"
+          />
+          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300 text-sm min-w-0 flex-1 sm:flex-none hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" />
         </div>
         <div className="flex gap-3 flex-1 sm:flex-none">
-          <input placeholder="Search ticket / issue" value={search} onChange={e => setSearch(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300 text-sm flex-1" />
-          <button onClick={resetFilters} className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 text-sm whitespace-nowrap">Reset</button>
+          <input placeholder="Search ticket / issue" value={search} onChange={e => setSearch(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300 text-sm flex-1 hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" />
+          <button onClick={resetFilters} className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 text-sm whitespace-nowrap hover:bg-secondary hover:text-white transition-colors duration-200">Reset</button>
         </div>
       </div>
 
@@ -527,41 +549,54 @@ export default function AccountsSupport() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               <div className="col-span-1 sm:col-span-2">
-                <label className="block text-sm font-medium mb-1">Issue Title</label>
-                <input value={draftIssueTitle} onChange={e => setDraftIssueTitle(e.target.value)} placeholder="Brief description of the issue" className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm" />
+                <label className="block text-sm font-medium mb-1 text-secondary">Issue Title</label>
+                <input value={draftIssueTitle} onChange={e => setDraftIssueTitle(e.target.value)} placeholder="Brief description of the issue" className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Issue Type</label>
-                <select value={draftIssue} onChange={e => setDraftIssue(e.target.value as IssueType | '')} className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm">
-                  <option value="">Select Issue</option>
-                  {(['Invoice Mismatch','Duplicate Entry','Payment Pending','Payment Delay','Others'] as IssueType[]).map(opt => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium mb-1 text-secondary">Issue Type</label>
+                <CustomDropdown
+                  value={draftIssue}
+                  onChange={(value) => setDraftIssue(value as IssueType | '')}
+                  options={[
+                    { value: '', label: 'Select Issue' },
+                    { value: 'Invoice Mismatch', label: 'Invoice Mismatch' },
+                    { value: 'Duplicate Entry', label: 'Duplicate Entry' },
+                    { value: 'Payment Pending', label: 'Payment Pending' },
+                    { value: 'Payment Delay', label: 'Payment Delay' },
+                    { value: 'Others', label: 'Others' }
+                  ]}
+                  placeholder="Select Issue"
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Priority</label>
-                <select value={draftPriority} onChange={e => setDraftPriority(e.target.value as TicketPriority | '')} className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm">
-                  <option value="">Select Priority</option>
-                  {(['Low','Medium','High','Urgent'] as TicketPriority[]).map(opt => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium mb-1 text-secondary">Priority</label>
+                <CustomDropdown
+                  value={draftPriority}
+                  onChange={(value) => setDraftPriority(value as TicketPriority | '')}
+                  options={[
+                    { value: '', label: 'Select Priority' },
+                    { value: 'Low', label: 'Low' },
+                    { value: 'Medium', label: 'Medium' },
+                    { value: 'High', label: 'High' },
+                    { value: 'Urgent', label: 'Urgent' }
+                  ]}
+                  placeholder="Select Priority"
+                />
               </div>
               <div className="col-span-1 sm:col-span-2">
-                <label className="block text-sm font-medium mb-1">Attachments (Invoice/Screenshots)</label>
+                <label className="block text-sm font-medium mb-1 text-secondary">Attachments (Invoice/Screenshots)</label>
                 <input 
                   type="file" 
                   onChange={e => setDraftFile(e.target.files?.[0] || null)} 
-                  className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm" 
+                  className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" 
                 />
                 {draftFile && (
                   <div className="mt-1 text-xs text-gray-600">Selected: {draftFile.name}</div>
                 )}
               </div>
               <div className="col-span-1 sm:col-span-2">
-                <label className="block text-sm font-medium mb-1">Description</label>
-                <textarea value={draftDescription} onChange={e => setDraftDescription(e.target.value)} rows={4} placeholder="Describe the issue in detail..." className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm" />
+                <label className="block text-sm font-medium mb-1 text-secondary">Description</label>
+                <textarea value={draftDescription} onChange={e => setDraftDescription(e.target.value)} rows={4} placeholder="Describe the issue in detail..." className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 resize-none" />
               </div>
             </div>
 

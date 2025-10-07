@@ -331,7 +331,7 @@ function VendorsLayout() {
 
               {showNotifications && (
                 <div className={`absolute right-0 mt-2 rounded-lg shadow-lg border border-gray-200 z-50 ${
-                  isMobile ? 'w-[calc(100vw-2rem)] max-w-sm -mr-4' : 'w-96'
+                  isMobile ? 'w-[calc(100vw-2rem)] max-w-sm -mr-12' : 'w-96'
                 } max-h-[500px]`} style={{ background: 'white' }}>
                   {/* Notifications Header */}
                   <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
