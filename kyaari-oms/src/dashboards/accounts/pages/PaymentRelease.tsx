@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import { Bell, X, AlertTriangle, CheckSquare } from 'lucide-react'
 import { CustomDropdown } from '../../../components'
 

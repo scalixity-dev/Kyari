@@ -576,7 +576,7 @@ export default function Performance() {
                 ))}
               </Pie>
               <Tooltip 
-                formatter={(value, name, props) => [
+                formatter={(value, _name, props) => [
                   `${value}%`, 
                   props.payload?.name || 'Unknown'
                 ]} 
