@@ -13,10 +13,9 @@ type NavItem = {
 const navItems: NavItem[] = [
   { to: '/accounts', icon: LayoutDashboard, label: 'Dashboard ' },
   { to: '/accounts/vendor-orders', icon: Package, label: 'Vendor Orders' },
-  { to: '/accounts/po-invoices', icon: FileText, label: 'Invoice' },
+  { to: '/accounts/po-invoices', icon: FileText, label: 'Invoice Management' },
   { to: '/accounts/payment-release', icon: Wallet, label: 'Payment Release' },
   { to: '/accounts/reports', icon: BarChart3, label: 'Reports' },
-  { to: '/accounts/support', icon: Users, label: 'Support' },
   { to: '/accounts/profile-settings', icon: FileText, label: 'Profile & Settings' }
 ]
 

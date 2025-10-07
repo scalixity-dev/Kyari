@@ -94,25 +94,25 @@ const MetricCard = ({ title, value, unit, change, icon: Icon, subtitle }: {
   icon: any
   subtitle?: string
 }) => (
-  <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-blue-100 rounded-lg">
-          <Icon className="w-5 h-5 text-blue-600" />
+  <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+    <div className="flex items-center justify-between mb-3 sm:mb-4">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+          <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
         </div>
         <div>
-          <h3 className="text-sm font-medium text-gray-600">{title}</h3>
+          <h3 className="text-xs sm:text-sm font-medium text-gray-600">{title}</h3>
           {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
         </div>
       </div>
       {change && (
-        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${change.bgColor} ${change.color}`}>
+        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${change.bgColor} ${change.color} flex-shrink-0`}>
           {change.isPositive ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           {change.value}%
         </div>
       )}
     </div>
-    <div className="text-2xl font-bold text-[var(--color-primary)] mb-1">
+    <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)] mb-1">
       {value}{unit}
     </div>
   </div>
@@ -133,24 +133,24 @@ export default function Reports() {
   const resolutionRate = ((currentTicketMetrics.resolved / currentTicketMetrics.raised) * 100).toFixed(1)
 
   return (
-    <div className="p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 md:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
           Reports & Analytics
         </h1>
-        <p className="text-[var(--color-primary)]">
+        <p className="text-sm sm:text-base text-[var(--color-primary)]">
           Track operations performance and identify improvement areas
         </p>
       </div>
 
       {/* Time Range Filter */}
-      <div className="mb-8 flex items-center gap-4">
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
         <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-gray-500" />
+          <Clock className="w-4 h-4 text-gray-500 flex-shrink-0" />
           <span className="text-sm font-medium text-gray-700">Time Range:</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {[
             { label: '7D', value: '7d' },
             { label: '30D', value: '30d' },
@@ -160,7 +160,7 @@ export default function Reports() {
             <button
               key={option.value}
               onClick={() => setTimeRange(option.value)}
-              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 sm:py-1 rounded-lg text-sm font-medium transition-colors min-h-[44px] sm:min-h-0 min-w-[60px] ${
                 timeRange === option.value
                   ? 'bg-[var(--color-accent)] text-white'
                   : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
@@ -173,7 +173,7 @@ export default function Reports() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <MetricCard
           title="Tickets Raised"
           value={currentTicketMetrics.raised}
@@ -205,21 +205,21 @@ export default function Reports() {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
         {/* Tickets Trend */}
-        <div className="bg-white rounded-xl shadow-md border border-white/20 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-[var(--color-heading)]">Tickets Trend</h3>
+        <div className="bg-white rounded-xl shadow-md border border-white/20 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3">
+            <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Tickets Trend</h3>
             <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-600">Monthly Overview</span>
+              <BarChart3 className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <span className="text-xs sm:text-sm text-gray-600">Monthly Overview</span>
             </div>
           </div>
           
           <div className="space-y-4">
             {monthlyTrends.map((data) => (
-              <div key={data.month} className="flex items-center gap-4">
-                <div className="w-12 text-sm font-medium text-gray-600">{data.month}</div>
+              <div key={data.month} className="flex items-center gap-2 sm:gap-4">
+                <div className="w-10 sm:w-12 text-xs sm:text-sm font-medium text-gray-600">{data.month}</div>
                 <div className="flex-1">
                   <div className="flex items-center gap-4 mb-1">
                     <div className="flex-1">
@@ -227,7 +227,7 @@ export default function Reports() {
                         <span>Raised: {data.ticketsRaised}</span>
                         <span>Resolved: {data.ticketsResolved}</span>
                       </div>
-                      <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="relative h-3 sm:h-4 bg-gray-100 rounded-full overflow-hidden">
                         <div 
                           className="absolute left-0 top-0 h-full bg-red-200 rounded-full"
                           style={{ width: `${(data.ticketsRaised / 50) * 100}%` }}
@@ -240,26 +240,26 @@ export default function Reports() {
                     </div>
                   </div>
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 w-16 sm:w-auto text-right">
                   {((data.ticketsResolved / data.ticketsRaised) * 100).toFixed(0)}% resolved
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-4">
+          <div className="mt-4 sm:mt-6 pt-4 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-sm gap-3">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-200 rounded-full" />
-                  <span className="text-gray-600">Raised</span>
+                  <div className="w-3 h-3 bg-red-200 rounded-full flex-shrink-0" />
+                  <span className="text-xs sm:text-sm text-gray-600">Raised</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full" />
-                  <span className="text-gray-600">Resolved</span>
+                  <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0" />
+                  <span className="text-xs sm:text-sm text-gray-600">Resolved</span>
                 </div>
               </div>
-              <div className="text-lg font-semibold text-[var(--color-primary)]">
+              <div className="text-base sm:text-lg font-semibold text-[var(--color-primary)]">
                 {resolutionRate}% Overall Resolution Rate
               </div>
             </div>
@@ -267,12 +267,12 @@ export default function Reports() {
         </div>
 
         {/* Resolution Time Trend */}
-        <div className="bg-white rounded-xl shadow-md border border-white/20 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-[var(--color-heading)]">Resolution Time Trend</h3>
+        <div className="bg-white rounded-xl shadow-md border border-white/20 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3">
+            <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Resolution Time Trend</h3>
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-600">Average Hours</span>
+              <Clock className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <span className="text-xs sm:text-sm text-gray-600">Average Hours</span>
             </div>
           </div>
           
@@ -283,8 +283,8 @@ export default function Reports() {
               const isImprovement = index > 0 && data.avgResolutionHours < monthlyTrends[index - 1].avgResolutionHours
               
               return (
-                <div key={data.month} className="flex items-center gap-4">
-                  <div className="w-12 text-sm font-medium text-gray-600">{data.month}</div>
+                <div key={data.month} className="flex items-center gap-2 sm:gap-4">
+                  <div className="w-10 sm:w-12 text-xs sm:text-sm font-medium text-gray-600">{data.month}</div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
                       <span>{data.avgResolutionHours}h avg</span>
@@ -295,7 +295,7 @@ export default function Reports() {
                         </span>
                       )}
                     </div>
-                    <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="relative h-3 sm:h-4 bg-gray-100 rounded-full overflow-hidden">
                       <div 
                         className={`absolute left-0 top-0 h-full rounded-full transition-all duration-300 ${
                           isImprovement ? 'bg-green-500' : 'bg-yellow-500'
@@ -309,30 +309,31 @@ export default function Reports() {
             })}
           </div>
 
-          <div className="mt-6 pt-4 border-t border-gray-200">
+          <div className="mt-4 sm:mt-6 pt-4 border-t border-gray-200">
             <div className="text-center">
-              <div className="text-2xl font-bold text-[var(--color-primary)] mb-1">
+              <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)] mb-1">
                 {currentTicketMetrics.avgResolutionTime}h
               </div>
-              <div className="text-sm text-gray-600">Current Average</div>
+              <div className="text-xs sm:text-sm text-gray-600">Current Average</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Vendor-wise Mismatch Analysis */}
-      <div className="bg-white rounded-xl shadow-md border border-white/20 mb-8">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-[var(--color-heading)]">Vendor-wise Mismatch Analysis</h3>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Filter className="w-4 h-4" />
+      <div className="bg-white rounded-xl shadow-md border border-white/20 mb-6 sm:mb-8">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Vendor-wise Mismatch Analysis</h3>
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+              <Filter className="w-4 h-4 flex-shrink-0" />
               <span>Last 30 days</span>
             </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
@@ -401,62 +402,120 @@ export default function Reports() {
           </table>
         </div>
 
-        <div className="p-6 border-t border-gray-200 bg-gray-50">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+        {/* Mobile Card View */}
+        <div className="md:hidden divide-y divide-gray-200">
+          {vendorMismatchData.map((vendor) => {
+            const getPerformanceColor = (percentage: number) => {
+              if (percentage <= 2) return 'bg-green-100 text-green-800'
+              if (percentage <= 5) return 'bg-yellow-100 text-yellow-800'
+              return 'bg-red-100 text-red-800'
+            }
+
+            const getPerformanceLabel = (percentage: number) => {
+              if (percentage <= 2) return 'Excellent'
+              if (percentage <= 5) return 'Good'
+              return 'Needs Attention'
+            }
+
+            return (
+              <div key={vendor.vendorId} className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900 mb-0.5">{vendor.vendorName}</div>
+                    <div className="text-xs text-gray-500">{vendor.vendorId}</div>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPerformanceColor(vendor.mismatchPercentage)} flex-shrink-0`}>
+                    {getPerformanceLabel(vendor.mismatchPercentage)}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="bg-gray-50 p-2 rounded-lg">
+                    <div className="text-xs text-gray-500 mb-0.5">Total Orders</div>
+                    <div className="text-sm font-semibold text-gray-900">{vendor.totalOrders}</div>
+                  </div>
+                  <div className="bg-gray-50 p-2 rounded-lg">
+                    <div className="text-xs text-gray-500 mb-0.5">Mismatches</div>
+                    <div className="text-sm font-semibold text-gray-900">{vendor.mismatchOrders}</div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                    <span>Mismatch Rate</span>
+                    <span className="font-medium text-gray-900">{vendor.mismatchPercentage}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full ${
+                        vendor.mismatchPercentage <= 2 ? 'bg-green-500' :
+                        vendor.mismatchPercentage <= 5 ? 'bg-yellow-500' : 'bg-red-500'
+                      }`}
+                      style={{ width: `${Math.min(vendor.mismatchPercentage * 10, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-50">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">
                 {vendorMismatchData.filter(v => v.mismatchPercentage <= 2).length}
               </div>
-              <div className="text-sm text-gray-600">Excellent Performers</div>
+              <div className="text-xs sm:text-sm text-gray-600">Excellent Performers</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-yellow-600">
+              <div className="text-xl sm:text-2xl font-bold text-yellow-600">
                 {vendorMismatchData.filter(v => v.mismatchPercentage > 2 && v.mismatchPercentage <= 5).length}
               </div>
-              <div className="text-sm text-gray-600">Good Performers</div>
+              <div className="text-xs sm:text-sm text-gray-600">Good Performers</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-red-600">
+              <div className="text-xl sm:text-2xl font-bold text-red-600">
                 {vendorMismatchData.filter(v => v.mismatchPercentage > 5).length}
               </div>
-              <div className="text-sm text-gray-600">Need Attention</div>
+              <div className="text-xs sm:text-sm text-gray-600">Need Attention</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Summary Insights */}
-      <div className="bg-white rounded-xl shadow-md border border-white/20 p-6">
-        <h3 className="text-lg font-semibold text-[var(--color-heading)] mb-4">Key Insights</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="bg-white rounded-xl shadow-md border border-white/20 p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-4">Key Insights</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full mt-2" />
+              <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-gray-900">Resolution rate improved by {resolutionRate}%</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-900">Resolution rate improved by {resolutionRate}%</p>
                 <p className="text-xs text-gray-600">Tickets are being resolved more efficiently this month</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2" />
+              <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-gray-900">{currentTicketMetrics.pending} tickets pending resolution</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-900">{currentTicketMetrics.pending} tickets pending resolution</p>
                 <p className="text-xs text-gray-600">Focus on clearing backlog to maintain performance</p>
               </div>
             </div>
           </div>
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2" />
+              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-gray-900">Metro Vegetables has lowest mismatch rate (0.9%)</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-900">Metro Vegetables has lowest mismatch rate (0.9%)</p>
                 <p className="text-xs text-gray-600">Benchmark vendor for quality consistency</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />
+              <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-gray-900">Green Valley Suppliers needs attention (6.7%)</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-900">Green Valley Suppliers needs attention (6.7%)</p>
                 <p className="text-xs text-gray-600">Schedule quality review meeting</p>
               </div>
             </div>
