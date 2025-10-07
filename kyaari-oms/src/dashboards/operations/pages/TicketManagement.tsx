@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { AlertTriangle, Eye, Filter, Search, X, CheckSquare, Clock } from 'lucide-react'
+import { CustomDropdown } from '../../../components'
 
 interface Ticket {
   id: string
@@ -373,16 +374,17 @@ export default function TicketManagement() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
+                <CustomDropdown
                   value={filters.status}
-                  onChange={(e) => setFilters({...filters, status: e.target.value})}
-                >
-                  <option value="all">All Status</option>
-                  <option value="open">Open</option>
-                  <option value="under-review">Under Review</option>
-                  <option value="resolved">Resolved</option>
-                </select>
+                  onChange={(value) => setFilters({...filters, status: value})}
+                  options={[
+                    { value: 'all', label: 'All Status' },
+                    { value: 'open', label: 'Open' },
+                    { value: 'under-review', label: 'Under Review' },
+                    { value: 'resolved', label: 'Resolved' }
+                  ]}
+                  placeholder="All Status"
+                />
               </div>
               
               <div>
@@ -676,15 +678,15 @@ export default function TicketManagement() {
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 New Status
               </label>
-              <select
-                className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] text-sm sm:text-base"
+              <CustomDropdown
                 value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value as any)}
-              >
-                <option value="open">Open</option>
-                <option value="under-review">Under Review</option>
-                <option value="resolved">Resolved</option>
-              </select>
+                onChange={(value) => setNewStatus(value as 'open' | 'under-review' | 'resolved')}
+                options={[
+                  { value: 'open', label: 'Open' },
+                  { value: 'under-review', label: 'Under Review' },
+                  { value: 'resolved', label: 'Resolved' }
+                ]}
+              />
             </div>
 
             <div className="flex flex-col-reverse sm:flex-row gap-3">

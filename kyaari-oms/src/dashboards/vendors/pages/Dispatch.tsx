@@ -340,30 +340,68 @@ export default function Dispatch() {
       {/* Status Flow Indicator */}
       <div className="bg-white rounded-xl shadow-md border border-white/20 p-4 sm:p-6 mb-6 sm:mb-8">
         <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-3 sm:mb-4">Order Status Flow</h3>
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium">1</div>
-            <span className="text-sm font-medium">Confirmed</span>
+        
+        {/* Mobile & Tablet View (Vertical) */}
+        <div className="md:hidden flex flex-col gap-2 items-center max-w-xs  mx-auto">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0">1</div>
+            <span className="text-xs sm:text-sm font-medium">Confirmed</span>
           </div>
-          <div className="flex-1 h-px bg-gray-300 mx-2"></div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium">2</div>
-            <span className="text-sm font-medium">PO Generated</span>
+          <div className="w-px h-6 bg-gray-300 ml-4 sm:ml-5"></div>
+          
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0">2</div>
+            <span className="text-xs sm:text-sm font-medium">PO Generated</span>
           </div>
-          <div className="flex-1 h-px bg-gray-300 mx-2"></div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium">3</div>
-            <span className="text-sm font-medium">Invoice Uploaded</span>
+          <div className="w-px h-6 bg-gray-300 ml-4 sm:ml-5"></div>
+          
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0">3</div>
+            <span className="text-xs sm:text-sm font-medium">Invoice Uploaded</span>
           </div>
-          <div className="flex-1 h-px bg-gray-300 mx-2"></div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-medium">4</div>
-            <span className="text-sm font-medium">Dispatch Marked</span>
+          <div className="w-px h-6 bg-gray-300 ml-4 sm:ml-5"></div>
+          
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-500 text-white flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0">4</div>
+            <span className="text-xs sm:text-sm font-medium">Dispatch Marked</span>
           </div>
-          <div className="flex-1 h-px bg-gray-300 mx-2"></div>
+          <div className="w-px h-6 bg-gray-300 ml-4 sm:ml-5"></div>
+          
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-500 text-white flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0">5</div>
+            <span className="text-xs sm:text-sm font-medium">Store Verified</span>
+          </div>
+        </div>
+
+        {/* Desktop View (Horizontal) */}
+        <div className="hidden md:flex items-center justify-between gap-2 lg:gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-medium">5</div>
-            <span className="text-sm font-medium">Store Verified</span>
+            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium flex-shrink-0">1</div>
+            <span className="text-xs lg:text-sm font-medium whitespace-nowrap">Confirmed</span>
+          </div>
+          <div className="flex-1 h-px bg-gray-300 min-w-[20px]"></div>
+          
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium flex-shrink-0">2</div>
+            <span className="text-xs lg:text-sm font-medium whitespace-nowrap">PO Generated</span>
+          </div>
+          <div className="flex-1 h-px bg-gray-300 min-w-[20px]"></div>
+          
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium flex-shrink-0">3</div>
+            <span className="text-xs lg:text-sm font-medium whitespace-nowrap">Invoice Uploaded</span>
+          </div>
+          <div className="flex-1 h-px bg-gray-300 min-w-[20px]"></div>
+          
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-medium flex-shrink-0">4</div>
+            <span className="text-xs lg:text-sm font-medium whitespace-nowrap">Dispatch Marked</span>
+          </div>
+          <div className="flex-1 h-px bg-gray-300 min-w-[20px]"></div>
+          
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-medium flex-shrink-0">5</div>
+            <span className="text-xs lg:text-sm font-medium whitespace-nowrap">Store Verified</span>
           </div>
         </div>
       </div>

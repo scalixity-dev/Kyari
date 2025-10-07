@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { CheckSquare, AlertTriangle, Filter, X, Search } from 'lucide-react'
+import { CustomDropdown } from '../../../components'
 
 interface ReceivedOrder {
   id: string
@@ -323,16 +324,17 @@ export default function ReceivedOrders() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
+                <CustomDropdown
                   value={filters.status}
-                  onChange={(e) => setFilters({...filters, status: e.target.value})}
-                >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="verified">Verified</option>
-                  <option value="mismatch">Mismatch</option>
-                </select>
+                  onChange={(value) => setFilters({...filters, status: value})}
+                  options={[
+                    { value: 'all', label: 'All Status' },
+                    { value: 'pending', label: 'Pending' },
+                    { value: 'verified', label: 'Verified' },
+                    { value: 'mismatch', label: 'Mismatch' }
+                  ]}
+                  placeholder="All Status"
+                />
               </div>
               
               <div className="flex items-end">
@@ -586,15 +588,15 @@ export default function ReceivedOrders() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Issue Type *
                 </label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
+                <CustomDropdown
                   value={ticketData.issueType}
-                  onChange={(e) => setTicketData({...ticketData, issueType: e.target.value as any})}
-                >
-                  <option value="qty-mismatch">Quantity Mismatch</option>
-                  <option value="damaged">Damaged Items</option>
-                  <option value="missing-item">Missing Item</option>
-                </select>
+                  onChange={(value) => setTicketData({...ticketData, issueType: value as 'qty-mismatch' | 'damaged' | 'missing-item'})}
+                  options={[
+                    { value: 'qty-mismatch', label: 'Quantity Mismatch' },
+                    { value: 'damaged', label: 'Damaged Items' },
+                    { value: 'missing-item', label: 'Missing Item' }
+                  ]}
+                />
               </div>
 
               <div>

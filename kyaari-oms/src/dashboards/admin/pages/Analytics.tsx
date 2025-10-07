@@ -15,6 +15,7 @@ import Button from '../../../components/Button/Button'
 import { FileText } from 'lucide-react'
 import jsPDF from 'jspdf'
 import * as XLSX from 'xlsx'
+import { CustomDropdown } from '../../../components'
 
 // Sample data for charts
 const orderFulfillmentData = {
@@ -223,8 +224,6 @@ type FilterType = {
   vendor: string
   status: string
 }
-
-
 
 export default function Analytics() {
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('Orders')
@@ -581,37 +580,39 @@ export default function Analytics() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
                     <label className="text-sm font-medium text-gray-700">Month:</label>
-                    <select
+                    <CustomDropdown
                       value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent min-h-[44px] sm:min-h-auto"
-                    >
-                      <option value="Jan">January</option>
-                      <option value="Feb">February</option>
-                      <option value="Mar">March</option>
-                      <option value="Apr">April</option>
-                      <option value="May">May</option>
-                      <option value="Jun">June</option>
-                      <option value="Jul">July</option>
-                      <option value="Aug">August</option>
-                      <option value="Sep">September</option>
-                      <option value="Oct">October</option>
-                      <option value="Nov">November</option>
-                      <option value="Dec">December</option>
-                    </select>
+                      onChange={(value) => setSelectedMonth(value)}
+                      options={[
+                        { value: 'Jan', label: 'January' },
+                        { value: 'Feb', label: 'February' },
+                        { value: 'Mar', label: 'March' },
+                        { value: 'Apr', label: 'April' },
+                        { value: 'May', label: 'May' },
+                        { value: 'Jun', label: 'June' },
+                        { value: 'Jul', label: 'July' },
+                        { value: 'Aug', label: 'August' },
+                        { value: 'Sep', label: 'September' },
+                        { value: 'Oct', label: 'October' },
+                        { value: 'Nov', label: 'November' },
+                        { value: 'Dec', label: 'December' }
+                      ]}
+                      className="w-full sm:w-auto"
+                    />
                   </div>
                   
                   <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
                     <label className="text-sm font-medium text-gray-700">Year:</label>
-                    <select
+                    <CustomDropdown
                       value={selectedYear}
-                      onChange={(e) => setSelectedYear(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent min-h-[44px] sm:min-h-auto"
-                    >
-                      <option value="2023">2023</option>
-                      <option value="2024">2024</option>
-                      <option value="2025">2025</option>
-                    </select>
+                      onChange={(value) => setSelectedYear(value)}
+                      options={[
+                        { value: '2023', label: '2023' },
+                        { value: '2024', label: '2024' },
+                        { value: '2025', label: '2025' }
+                      ]}
+                      className="w-full sm:w-auto"
+                    />
                   </div>
                 </div>
               )}
@@ -1135,78 +1136,82 @@ export default function Analytics() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Metric</label>
-            <select
+            <CustomDropdown
               value={selectedMetric}
-              onChange={(e) => setSelectedMetric(e.target.value as MetricType)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent min-h-[44px] sm:min-h-auto"
-            >
-              <option value="Orders">Orders</option>
-              <option value="Vendors">Vendors</option>
-              <option value="Payments">Payments</option>
-              <option value="Tickets">Tickets</option>
-            </select>
+              onChange={(value) => setSelectedMetric(value as MetricType)}
+              options={[
+                { value: 'Orders', label: 'Orders' },
+                { value: 'Vendors', label: 'Vendors' },
+                { value: 'Payments', label: 'Payments' },
+                { value: 'Tickets', label: 'Tickets' }
+              ]}
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
-            <select
+            <CustomDropdown
               value={filters.dateRange}
-              onChange={(e) => setFilters({...filters, dateRange: e.target.value})}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent min-h-[44px] sm:min-h-auto"
-            >
-              <option value="">All Time</option>
-              <option value="last7days">Last 7 Days</option>
-              <option value="last30days">Last 30 Days</option>
-              <option value="last90days">Last 90 Days</option>
-            </select>
+              onChange={(value) => setFilters({...filters, dateRange: value})}
+              options={[
+                { value: '', label: 'All Time' },
+                { value: 'last7days', label: 'Last 7 Days' },
+                { value: 'last30days', label: 'Last 30 Days' },
+                { value: 'last90days', label: 'Last 90 Days' }
+              ]}
+              placeholder="All Time"
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-            <select
+            <CustomDropdown
               value={filters.city}
-              onChange={(e) => setFilters({...filters, city: e.target.value})}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent min-h-[44px] sm:min-h-auto"
-            >
-              <option value="">All Cities</option>
-              <option value="Mumbai">Mumbai</option>
-              <option value="Delhi">Delhi</option>
-              <option value="Bengaluru">Bengaluru</option>
-              <option value="Pune">Pune</option>
-              <option value="Hyderabad">Hyderabad</option>
-            </select>
+              onChange={(value) => setFilters({...filters, city: value})}
+              options={[
+                { value: '', label: 'All Cities' },
+                { value: 'Mumbai', label: 'Mumbai' },
+                { value: 'Delhi', label: 'Delhi' },
+                { value: 'Bengaluru', label: 'Bengaluru' },
+                { value: 'Pune', label: 'Pune' },
+                { value: 'Hyderabad', label: 'Hyderabad' }
+              ]}
+              placeholder="All Cities"
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Vendor</label>
-            <select
+            <CustomDropdown
               value={filters.vendor}
-              onChange={(e) => setFilters({...filters, vendor: e.target.value})}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent min-h-[44px] sm:min-h-auto"
-            >
-              <option value="">All Vendors</option>
-              <option value="GreenLeaf Co">GreenLeaf Co</option>
-              <option value="Urban Roots">Urban Roots</option>
-              <option value="Plantify">Plantify</option>
-              <option value="Clay Works">Clay Works</option>
-            </select>
+              onChange={(value) => setFilters({...filters, vendor: value})}
+              options={[
+                { value: '', label: 'All Vendors' },
+                { value: 'GreenLeaf Co', label: 'GreenLeaf Co' },
+                { value: 'Urban Roots', label: 'Urban Roots' },
+                { value: 'Plantify', label: 'Plantify' },
+                { value: 'Clay Works', label: 'Clay Works' }
+              ]}
+              placeholder="All Vendors"
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select
+            <CustomDropdown
               value={filters.status}
-              onChange={(e) => setFilters({...filters, status: e.target.value})}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent min-h-[44px] sm:min-h-auto"
-            >
-              <option value="">All Status</option>
-              <option value="ACTIVE">Active</option>
-              <option value="PENDING">Pending</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="DISPATCHED">Dispatched</option>
-              <option value="PAID">Paid</option>
-              <option value="RESOLVED">Resolved</option>
-            </select>
+              onChange={(value) => setFilters({...filters, status: value})}
+              options={[
+                { value: '', label: 'All Status' },
+                { value: 'ACTIVE', label: 'Active' },
+                { value: 'PENDING', label: 'Pending' },
+                { value: 'CONFIRMED', label: 'Confirmed' },
+                { value: 'DISPATCHED', label: 'Dispatched' },
+                { value: 'PAID', label: 'Paid' },
+                { value: 'RESOLVED', label: 'Resolved' }
+              ]}
+              placeholder="All Status"
+            />
           </div>
         </div>
 
