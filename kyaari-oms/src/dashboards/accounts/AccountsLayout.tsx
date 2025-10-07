@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, FileText, Wallet, BarChart3, Bell, Search, Users, Menu, X, Clock, CheckSquare } from 'lucide-react'
+import { LayoutDashboard, Package, FileText, Wallet, BarChart3, Bell, Search,Users, Menu, X, Clock, CheckSquare } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
 
