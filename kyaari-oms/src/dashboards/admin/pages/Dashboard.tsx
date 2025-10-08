@@ -29,20 +29,23 @@ interface KPICardProps {
 /* styles migrated to Tailwind classes */
 
 const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, subtitle, onClick }) => {
-  const borderTopClass = color === 'blue' ? 'border-t-4 border-blue-600' : color === 'orange' ? 'border-t-4 border-orange-600' : color === 'green' ? 'border-t-4 border-green-600' : color === 'red' ? 'border-t-4 border-red-600' : ''
+  const iconBgClass = color === 'blue' ? 'bg-blue-600' : color === 'orange' ? 'bg-orange-600' : color === 'green' ? 'bg-green-600' : color === 'red' ? 'bg-red-600' : 'bg-gray-600'
+  
   return (
     <div
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : -1}
       onKeyDown={(e) => { if (onClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() } }}
       onClick={onClick}
-      className={`bg-white p-4 sm:p-6 rounded-xl shadow-md flex flex-col sm:flex-row items-center sm:items-center gap-3 sm:gap-4 border border-white/20 relative overflow-hidden ${borderTopClass} ${onClick ? 'cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-transform' : ''}`}
+      className={`bg-[#f5f0e8] p-6 rounded-xl shadow-sm flex flex-col items-center gap-3 border border-gray-200 relative overflow-hidden ${onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all' : ''}`}
     >
-      <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded-lg text-2xl sm:text-3xl text-[var(--color-heading)]">{React.isValidElement(icon) ? React.cloneElement(icon as any, { color: 'var(--color-heading)', size: 24, className: 'sm:w-8 sm:h-8' } as any) : icon}</div>
-      <div className="flex-1 text-center sm:text-left">
-        <h3 className="text-xs font-semibold text-[var(--color-primary)] uppercase tracking-wide mb-1">{title}</h3>
-        <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)] mb-1">{value}</div>
-        {subtitle && <div className="text-xs sm:text-sm text-gray-400 leading-tight">{subtitle}</div>}
+      <div className={`w-14 h-14 flex items-center justify-center rounded-full ${iconBgClass} text-white`}>
+        {React.isValidElement(icon) ? React.cloneElement(icon as any, { color: 'white', size: 28 } as any) : icon}
+      </div>
+      <div className="flex flex-col items-center text-center w-full">
+        <h3 className="text-sm font-bold text-[#2d3748] mb-2">{title}</h3>
+        <div className="text-3xl font-bold text-[#2d3748] mb-2">{value}</div>
+        {subtitle && <div className="text-xs text-orange-600 font-medium leading-tight">{subtitle}</div>}
       </div>
     </div>
   )
@@ -100,33 +103,11 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-[#ECDDC9] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 lg:p-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header Section */}
       <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg mb-6 lg:mb-8 border border-gray-200">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Welcome, Admin..!</h1>
         <p className="text-base sm:text-lg text-[var(--color-primary)] font-medium">{today}</p>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="mb-6 lg:mb-8">
-        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Today's Overview</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
-          {kpiData.map((kpi, index) => (
-            <KPICard
-              key={index}
-              title={kpi.title}
-              value={kpi.value}
-              icon={kpi.icon}
-              color={kpi.color}
-              subtitle={kpi.subtitle}
-              onClick={
-                kpi.title === 'Orders Today' ? () => navigate('/admin/tracking/orders') :
-                kpi.title === 'Vendor Confirmations' ? () => navigate('/admin/tracking/vendors') :
-                kpi.title === 'Payments Pending' ? () => navigate('/admin/money-flow') : undefined
-              }
-            />
-          ))}
-        </div>
       </div>
 
       {/* Task Center */}
@@ -161,12 +142,12 @@ export default function Dashboard() {
         {/* Desktop Table Layout */}
         <div className="hidden sm:block bg-white rounded-xl shadow-md border border-white/20 overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-[var(--color-accent)]">
               <tr>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Urgency</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--color-button-text)] uppercase tracking-wider">Task</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--color-button-text)] uppercase tracking-wider">Urgency</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--color-button-text)] uppercase tracking-wider">Count</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--color-button-text)] uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -187,6 +168,28 @@ export default function Dashboard() {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="mb-6 lg:mb-8">
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Today's Overview</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
+          {kpiData.map((kpi, index) => (
+            <KPICard
+              key={index}
+              title={kpi.title}
+              value={kpi.value}
+              icon={kpi.icon}
+              color={kpi.color}
+              subtitle={kpi.subtitle}
+              onClick={
+                kpi.title === 'Orders Today' ? () => navigate('/admin/tracking/orders') :
+                kpi.title === 'Vendor Confirmations' ? () => navigate('/admin/tracking/vendors') :
+                kpi.title === 'Payments Pending' ? () => navigate('/admin/money-flow') : undefined
+              }
+            />
+          ))}
         </div>
       </div>
 

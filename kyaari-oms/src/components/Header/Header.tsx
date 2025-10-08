@@ -29,7 +29,7 @@ export default function Header() {
   }, [])
 
   return (
-    <header className="flex items-center justify-between px-4 py-2 bg-header-bg border-b border-black/4">
+    <header className="flex items-center justify-between px-4 py-2 bg-[var(--color-sharktank-bg)] border-b border-black/4">
       <div className="flex items-center">
         <Link to="/">
           <img src={kyariLogo} alt="Kyari" className="h-10" />
