@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { Eye, FileText, ChevronRight, X, ChevronDown, CheckSquare } from 'lucide-react'
+import { Eye, FileText, ChevronRight, X, ChevronDown } from 'lucide-react'
 import { CustomDropdown } from '../../../components'
 
 type OrderStatus = 'Confirmed' | 'Awaiting PO' | 'PO Generated' | 'Delivered' | 'Closed'
@@ -109,6 +109,10 @@ export default function VendorOrders() {
   const [filterDateFrom, setFilterDateFrom] = useState('')
   const [filterDateTo, setFilterDateTo] = useState('')
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+
   const vendors = useMemo(() => Array.from(new Set(orders.map(o => o.vendorName))).sort(), [orders])
 
   const filteredOrders = useMemo(() => {
@@ -120,6 +124,17 @@ export default function VendorOrders() {
       return true
     })
   }, [orders, filterVendor, filterStatus, filterDateFrom, filterDateTo])
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterVendor, filterStatus, filterDateFrom, filterDateTo])
 
   const handleSelectOrder = (orderId: string) => {
     const newSelected = new Set(selectedOrders)
@@ -174,14 +189,6 @@ export default function VendorOrders() {
     alert(`PO generated for order ${orderId}. Download started.`)
   }
 
-  const handleMarkDelivered = (orderId: string) => {
-    setOrders(prev => prev.map(order => 
-      order.id === orderId 
-        ? { ...order, orderStatus: 'Delivered' as OrderStatus }
-        : order
-    ))
-  }
-
   const handleBulkGeneratePO = () => {
     const ordersToUpdate = Array.from(selectedOrders)
     setOrders(prev => prev.map(order => 
@@ -208,6 +215,7 @@ export default function VendorOrders() {
     setFilterStatus('')
     setFilterDateFrom('')
     setFilterDateTo('')
+    setCurrentPage(1)
   }
 
   return (
@@ -271,7 +279,8 @@ export default function VendorOrders() {
             />
           </div>
           
-          <div className="flex items-end sm:col-span-2 lg:col-span-1">
+          <div className="sm:col-span-2 lg:col-span-1">
+            <label className="block text-sm font-medium text-secondary mb-1">&nbsp;</label>
             <button 
               onClick={resetFilters}
               className="w-full bg-white text-secondary border border-secondary rounded-lg px-4 py-2 hover:bg-secondary hover:text-white text-sm font-medium transition-colors duration-200"
@@ -308,10 +317,10 @@ export default function VendorOrders() {
       {/* Orders Table - Desktop View */}
       <div className="hidden lg:block bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
         <div className="overflow-x-auto">
-          <table className="w-full border-separate border-spacing-0">
+          <table className="w-full border-separate border-spacing-0 min-w-max">
             <thead>
               <tr className="bg-gray-50">
-                <th className="text-left p-4 font-heading text-secondary font-medium">
+                <th className="text-left p-3 lg:p-4 font-heading text-secondary font-medium whitespace-nowrap">
                   <input
                     type="checkbox"
                     checked={selectedOrders.size === filteredOrders.length && filteredOrders.length > 0}
@@ -319,13 +328,13 @@ export default function VendorOrders() {
                     className="rounded border-gray-300"
                   />
                 </th>
-                {['Order ID', 'Vendor Name', 'Items', 'Confirmed Qty', 'Order Status', 'PO Status', 'Invoice Status', 'Actions'].map(header => (
-                  <th key={header} className="text-left p-4 font-heading text-secondary font-medium">{header}</th>
+                {['Order ID', 'Vendor Name', 'Confirmed Qty', 'Order Status', 'PO Status', 'Invoice Status', 'Actions'].map(header => (
+                  <th key={header} className="text-left p-3 lg:p-4 font-heading text-secondary font-medium whitespace-nowrap">{header}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.map((order, index) => {
+              {paginatedOrders.map((order, index) => {
                 const isExpanded = expandedRows.has(order.id)
                 const orderStatusStyle = STATUS_STYLES[order.orderStatus]
                 const poStatusStyle = PO_STATUS_STYLES[order.poStatus]
@@ -334,7 +343,7 @@ export default function VendorOrders() {
                 return (
                   <React.Fragment key={order.id}>
                     <tr className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="p-4">
+                      <td className="p-3 lg:p-4">
                         <input
                           type="checkbox"
                           checked={selectedOrders.has(order.id)}
@@ -342,25 +351,22 @@ export default function VendorOrders() {
                           className="rounded border-gray-300"
                         />
                       </td>
-                      <td className="p-4 font-medium">{order.id}</td>
-                      <td className="p-4">{order.vendorName}</td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <span>{order.items.length} item{order.items.length !== 1 ? 's' : ''}</span>
-                          <button
-                            onClick={() => toggleRowExpansion(order.id)}
-                            className="text-accent hover:text-accent/80"
-                          >
-                            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                          </button>
-                        </div>
+                      <td className="p-3 lg:p-4 font-medium whitespace-nowrap">{order.id}</td>
+                      <td className="p-3 lg:p-4">
+                        <button
+                          onClick={() => toggleRowExpansion(order.id)}
+                          className="flex items-center gap-2 hover:text-accent transition-colors"
+                        >
+                          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          <span>{order.vendorName}</span>
+                        </button>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3 lg:p-4 whitespace-nowrap">
                         {order.items.reduce((sum, item) => sum + item.confirmedQty, 0)}
                       </td>
-                      <td className="p-4">
+                      <td className="p-3 lg:p-4">
                         <span 
-                          className="inline-block px-3 py-1 rounded-full text-xs font-semibold border"
+                          className="inline-block px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap"
                           style={{
                             backgroundColor: orderStatusStyle.bg,
                             color: orderStatusStyle.color,
@@ -370,9 +376,9 @@ export default function VendorOrders() {
                           {orderStatusStyle.label}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3 lg:p-4">
                         <span 
-                          className="inline-block px-3 py-1 rounded-full text-xs font-semibold border"
+                          className="inline-block px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap"
                           style={{
                             backgroundColor: poStatusStyle.bg,
                             color: poStatusStyle.color,
@@ -382,9 +388,9 @@ export default function VendorOrders() {
                           {poStatusStyle.label}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3 lg:p-4">
                         <span 
-                          className="inline-block px-3 py-1 rounded-full text-xs font-semibold border"
+                          className="inline-block px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap"
                           style={{
                             backgroundColor: invoiceStatusStyle.bg,
                             color: invoiceStatusStyle.color,
@@ -394,8 +400,8 @@ export default function VendorOrders() {
                           {invoiceStatusStyle.label}
                         </span>
                       </td>
-                      <td className="p-4">
-                        <div className="flex gap-2">
+                      <td className="p-3 lg:p-4">
+                        <div className="flex gap-2 whitespace-nowrap">
                           <button
                             onClick={() => handleViewDetails(order)}
                             className="bg-white text-secondary border border-secondary rounded-lg px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-1"
@@ -413,15 +419,6 @@ export default function VendorOrders() {
                             <FileText size={14} />
                             Generate PO
                           </button>
-                          <button
-                            onClick={() => handleMarkDelivered(order.id)}
-                            disabled={order.poStatus !== 'Generated' || order.orderStatus === 'Delivered'}
-                            className="bg-green-600 text-white rounded-lg px-3 py-1.5 text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                            title="Mark Delivered"
-                          >
-                            <CheckSquare size={14} />
-                            Mark Delivered
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -429,19 +426,19 @@ export default function VendorOrders() {
                     {/* Expanded Item Details */}
                     {isExpanded && (
                       <tr className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                        <td colSpan={9} className="p-4 border-t border-gray-200">
-                          <div className="bg-white rounded-lg p-4 border border-gray-200">
-                            <h4 className="font-medium text-secondary mb-3">Order Items</h4>
+                        <td colSpan={8} className="p-3 lg:p-4 pl-12">
+                          <div className="bg-gray-100 rounded-lg p-3 max-w-2xl">
+                            <div className="text-sm font-medium text-secondary mb-2">Items:</div>
                             <div className="space-y-2">
                               {order.items.map((item, itemIndex) => (
-                                <div key={itemIndex} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                  <div className="flex items-center gap-4">
+                                <div key={itemIndex} className="text-sm text-gray-700 flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
                                     <span className="font-medium">{item.sku}</span>
                                     <span>{item.product}</span>
                                   </div>
-                                  <div className="flex items-center gap-4">
-                                    <span className="text-sm text-gray-600">Ordered: {item.qty}</span>
-                                    <span className="text-sm text-green-600 font-medium">Confirmed: {item.confirmedQty}</span>
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-gray-600">Ordered: {item.qty}</span>
+                                    <span className="text-green-600 font-medium">Confirmed: {item.confirmedQty}</span>
                                   </div>
                                 </div>
                               ))}
@@ -454,9 +451,9 @@ export default function VendorOrders() {
                 )
               })}
               
-              {filteredOrders.length === 0 && (
+              {paginatedOrders.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-gray-500">
+                  <td colSpan={8} className="p-8 text-center text-gray-500">
                     No orders match current filters.
                   </td>
                 </tr>
@@ -464,12 +461,78 @@ export default function VendorOrders() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {filteredOrders.length > 0 && (
+          <div className="mt-6 bg-white border border-gray-200 rounded-xl p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="text-sm text-gray-600 text-center sm:text-left">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
+              </div>
+              
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
+                    currentPage === 1 
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+                      : 'bg-white text-secondary border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Previous
+                </button>
+                
+                <div className="flex gap-1 max-w-[200px] overflow-x-auto">
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    let page: number;
+                    if (totalPages <= 5) {
+                      page = i + 1;
+                    } else if (currentPage <= 3) {
+                      page = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      page = totalPages - 4 + i;
+                    } else {
+                      page = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-2 rounded-lg border text-sm min-w-[44px] transition-colors ${
+                          currentPage === page
+                            ? 'bg-accent text-button-text border-accent'
+                            : 'bg-white text-secondary border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
+                    currentPage === totalPages 
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+                      : 'bg-white text-secondary border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Mobile Card View */}
       <div className="lg:hidden space-y-4">
         {/* Mobile Select All */}
-        {filteredOrders.length > 0 && (
+        {paginatedOrders.length > 0 && (
           <div className="bg-white rounded-xl shadow-md p-4 border border-gray-200">
             <div className="flex items-center gap-3">
               <input
@@ -485,7 +548,7 @@ export default function VendorOrders() {
           </div>
         )}
 
-        {filteredOrders.map((order) => {
+        {paginatedOrders.map((order) => {
           const isExpanded = expandedRows.has(order.id)
           const orderStatusStyle = STATUS_STYLES[order.orderStatus]
           const poStatusStyle = PO_STATUS_STYLES[order.poStatus]
@@ -517,25 +580,44 @@ export default function VendorOrders() {
                           {orderStatusStyle.label}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 truncate">{order.vendorName}</p>
+                      <button
+                        onClick={() => toggleRowExpansion(order.id)}
+                        className="flex items-center gap-1 text-sm text-gray-600 hover:text-accent transition-colors mt-1"
+                      >
+                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        <span>{order.vendorName}</span>
+                      </button>
                     </div>
                   </div>
-                  <button
-                    onClick={() => toggleRowExpansion(order.id)}
-                    className="text-accent hover:text-accent/80 p-1"
-                  >
-                    {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-                  </button>
                 </div>
               </div>
 
+              {/* Expanded Items */}
+              {isExpanded && (
+                <div className="p-4 bg-gray-50 border-t border-gray-100">
+                  <div className="text-xs font-medium text-secondary mb-2">Items:</div>
+                  <div className="space-y-2">
+                    {order.items.map((item, itemIndex) => (
+                      <div key={itemIndex} className="bg-white rounded-lg p-3">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{item.sku}</span>
+                            <span className="text-sm text-gray-600">{item.product}</span>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="text-gray-600">Ordered: {item.qty}</span>
+                            <span className="text-green-600 font-medium">Confirmed: {item.confirmedQty}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Card Body */}
               <div className="p-4">
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Items</p>
-                    <p className="text-sm font-medium">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
-                  </div>
+                <div className="grid grid-cols-1 gap-4 mb-4">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Confirmed Qty</p>
                     <p className="text-sm font-medium">{order.items.reduce((sum, item) => sum + item.confirmedQty, 0)}</p>
@@ -582,46 +664,81 @@ export default function VendorOrders() {
                     <FileText size={16} />
                     Generate PO
                   </button>
-                  <button
-                    onClick={() => handleMarkDelivered(order.id)}
-                    disabled={order.poStatus !== 'Generated' || order.orderStatus === 'Delivered'}
-                    className="flex-1 bg-green-600 text-white rounded-lg px-3 py-2 text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    <CheckSquare size={16} />
-                    Mark Delivered
-                  </button>
                 </div>
               </div>
-
-              {/* Expanded Item Details */}
-              {isExpanded && (
-                <div className="border-t border-gray-100 p-4 bg-gray-50">
-                  <h4 className="font-medium text-secondary mb-3 text-sm">Order Items</h4>
-                  <div className="space-y-2">
-                    {order.items.map((item, itemIndex) => (
-                      <div key={itemIndex} className="bg-white rounded-lg p-3">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                            <span className="font-medium text-sm">{item.sku}</span>
-                            <span className="text-sm text-gray-600">{item.product}</span>
-                          </div>
-                          <div className="flex items-center gap-4 text-xs">
-                            <span className="text-gray-600">Ordered: {item.qty}</span>
-                            <span className="text-green-600 font-medium">Confirmed: {item.confirmedQty}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )
         })}
 
-        {filteredOrders.length === 0 && (
+        {paginatedOrders.length === 0 && (
           <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500 border border-gray-200">
             No orders match current filters.
+          </div>
+        )}
+
+        {/* Pagination Controls for Mobile */}
+        {filteredOrders.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="text-sm text-gray-600 text-center sm:text-left">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
+              </div>
+              
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
+                    currentPage === 1 
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+                      : 'bg-white text-secondary border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Previous
+                </button>
+                
+                <div className="flex gap-1 max-w-[200px] overflow-x-auto">
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    let page: number;
+                    if (totalPages <= 5) {
+                      page = i + 1;
+                    } else if (currentPage <= 3) {
+                      page = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      page = totalPages - 4 + i;
+                    } else {
+                      page = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-2 rounded-lg border text-sm min-w-[44px] transition-colors ${
+                          currentPage === page
+                            ? 'bg-accent text-button-text border-accent'
+                            : 'bg-white text-secondary border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
+                    currentPage === totalPages 
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+                      : 'bg-white text-secondary border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -720,7 +837,7 @@ export default function VendorOrders() {
                     <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                       <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0"></div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs sm:text-sm font-medium">Marked Delivered</div>
+                        <div className="text-xs sm:text-sm font-medium">Delivered</div>
                         <div className="text-xs text-gray-600">{selectedOrder.confirmationDate}</div>
                       </div>
                     </div>
@@ -732,18 +849,10 @@ export default function VendorOrders() {
                 <button
                   onClick={() => handleGeneratePO(selectedOrder.id)}
                   disabled={selectedOrder.poStatus === 'Generated'}
-                  className="flex-1 bg-accent text-button-text rounded-lg px-4 py-2 font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                  className="w-full bg-accent text-button-text rounded-lg px-4 py-2 font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                 >
                   <FileText size={16} />
                   Generate PO
-                </button>
-                <button
-                  onClick={() => handleMarkDelivered(selectedOrder.id)}
-                  disabled={selectedOrder.poStatus !== 'Generated' || selectedOrder.orderStatus === 'Delivered'}
-                  className="flex-1 bg-green-600 text-white rounded-lg px-4 py-2 font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
-                >
-                  <CheckSquare size={16} />
-                  Mark Delivered
                 </button>
               </div>
             </div>

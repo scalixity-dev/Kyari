@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom';
 import { Package, BarChart3, Wallet, FileText } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -104,32 +104,32 @@ export default function Dashboard() {
   // Mock data - in a real app, this would come from API calls
   const kpiData = [
     {
-      title: 'Orders Today',
+      title: 'Order Today',
       value: '47',
       icon: <Package size={32} />,
-      color: 'blue',
+      color: 'orange',
       subtitle: 'Pending: 12 | Confirmed: 20 | Dispatched: 15'
     },
     {
-      title: 'Vendor Confirmations',
+      title: 'Vendor Confirmation',
       value: '8',
       icon: <BarChart3 size={32} />,
       color: 'orange',
       subtitle: 'Pending Approval'
     },
     {
-      title: 'Payments Pending',
+      title: 'Payment Pending',
       value: '₹2,34,500',
       icon: <Wallet size={32} />,
-      color: 'green',
-      subtitle: '15 invoices'
+      color: 'orange',
+      subtitle: '15 Invoices'
     },
     {
       title: 'Tickets Open',
       value: '6',
       icon: <FileText size={32} />,
-      color: 'red',
-      subtitle: '2 high priority'
+      color: 'orange',
+      subtitle: '2 High Priority'
     }
   ];
 
@@ -142,15 +142,12 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
+    <div className="py-4 px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header Section */}
-      <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg mb-6 lg:mb-8 border border-gray-200">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Welcome, Admin..!</h1>
-        <p className="text-base sm:text-lg text-[var(--color-primary)] font-medium">{today}</p>
-      </div>
+     
 
       {/* Task Center */}
-      <div className="mb-6 lg:mb-8">
+      <div className="mb-6 lg:mb-8 py-10">
         <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Actions Required Today</h2>
         
         {/* Mobile Card Layout */}
@@ -211,7 +208,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="mb-6 lg:mb-8">
+      <div className="mb-6 lg:mb-8 ">
         <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Today's Overview</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
           {kpiData.map((kpi, index) => (
@@ -222,11 +219,6 @@ export default function Dashboard() {
               icon={kpi.icon}
               color={kpi.color}
               subtitle={kpi.subtitle}
-              onClick={
-                kpi.title === 'Orders Today' ? () => navigate('/admin/tracking/orders') :
-                kpi.title === 'Vendor Confirmations' ? () => navigate('/admin/tracking/vendors') :
-                kpi.title === 'Payments Pending' ? () => navigate('/admin/money-flow') : undefined
-              }
             />
           ))}
         </div>
