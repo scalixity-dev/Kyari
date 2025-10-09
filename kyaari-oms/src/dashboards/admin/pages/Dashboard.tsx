@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import { Package, BarChart3, Wallet, FileText } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -52,7 +52,7 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, icon, subtitle, onClick
 // TaskItem removed; tasks are now rendered as a table with an Actions column
 
 export default function Dashboard() {
-  const navigate = useNavigate()
+  // const navigate = useNavigate()
   const [fulfillmentPeriod, setFulfillmentPeriod] = React.useState<'daily'|'weekly'|'monthly'|'yearly'>('weekly')
 
   const fulfillmentDataSets = {
@@ -94,12 +94,12 @@ export default function Dashboard() {
       { name: 'Dec', value: 86 }
     ]
   }
-  const today = new Date().toLocaleDateString('en-GB', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  // const today = new Date().toLocaleDateString('en-GB', {
+  //   weekday: 'long',
+  //   year: 'numeric',
+  //   month: 'long',
+  //   day: 'numeric'
+  // });
 
   // Mock data - in a real app, this would come from API calls
   const kpiData = [

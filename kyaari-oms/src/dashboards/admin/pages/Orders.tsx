@@ -249,31 +249,31 @@ export default function Orders() {
   }
 
   return (
-    <div className="p-4 sm:p-6 font-sans text-primary">
+    <div className="p-4 sm:p-6 font-sans text-primary min-h-[calc(100vh-4rem)] w-full" style={{ background: 'var(--color-sharktank-bg)' }}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h2 className="font-heading text-secondary text-xl sm:text-2xl font-semibold">Orders</h2>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-accent text-button-text rounded-full px-4 py-2.5 border border-transparent flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap"
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-accent text-button-text rounded-lg px-4 py-2.5 border border-transparent flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap"
           >
             <Plus size={16} />
             <span>Add New Order</span>
           </button>
-          <button
-            onClick={() => setIsUploadModalOpen(true)}
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap"
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="bg-white text-secondary rounded-lg px-4 py-2.5 flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap"
           >
             <Upload size={16} />
             <span>Upload Excel</span>
           </button>
-          <button
-            onClick={() => setIsFilterOpen(v => !v)}
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap"
-          >
-            <Search size={16} />
-            <span>Filters</span>
-          </button>
+            <button
+              onClick={() => setIsFilterOpen(v => !v)}
+              className="bg-accent text-button-text rounded-lg px-4 py-2.5 border border-transparent flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap"
+            >
+              <Search size={16} />
+              <span>Filters</span>
+            </button>
         </div>
       </div>
 
@@ -317,7 +317,7 @@ export default function Orders() {
           <div className="flex justify-center sm:justify-end">
             <button 
               onClick={resetFilters} 
-              className="bg-white text-secondary border border-secondary rounded-full px-6 py-2.5 text-sm hover:bg-gray-50 transition-colors"
+              className="bg-white text-secondary border border-secondary rounded-lg px-6 py-2.5 text-sm hover:bg-gray-50 transition-colors"
             >
               Reset Filters
             </button>
@@ -329,9 +329,9 @@ export default function Orders() {
       <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
         <table className="w-full border-separate border-spacing-0">
           <thead>
-            <tr className="bg-white">
+            <tr className="" style={{ background: 'var(--color-accent)' }}>
               {['Order ID','SKU','Product','Qty','Vendor','Status','Date','Actions'].map(h => (
-                <th key={h} className="text-left p-3 font-heading text-secondary font-normal">{h}</th>
+                <th key={h} className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -339,7 +339,7 @@ export default function Orders() {
             {paginatedOrders.map((o, idx) => {
               const st = STATUS_STYLES[o.status]
               return (
-                <tr key={`${o.id}-${o.sku}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-header-bg'}>
+                <tr key={`${o.id}-${o.sku}-${idx}`} className={'bg-white'}>
                   <td className="p-3">{o.id}</td>
                   <td className="p-3">{o.sku}</td>
                   <td className="p-3">{o.product}</td>
@@ -359,23 +359,23 @@ export default function Orders() {
                   </td>
                   <td className="p-3">{o.date}</td>
                   <td className="p-3">
-                    <div className="flex gap-2">
-                      <button className="bg-white text-secondary border border-secondary rounded-full px-2.5 py-1.5 text-sm">Assign</button>
+                    <div className="flex items-center gap-2">
+                      <button className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-3 py-1.5 text-sm">Assign</button>
                       <button 
                         onClick={() => handleSplitOrder(o)}
-                        className="bg-white text-secondary border border-secondary rounded-full px-2.5 py-1.5 text-sm hover:bg-gray-50"
+                        className="bg-[var(--color-secondary)] text-white rounded-md px-3 py-1.5 text-sm hover:brightness-95"
                       >
                         Split
                       </button>
                       <button 
                         onClick={() => handleEditOrder(o)}
-                        className="bg-white text-secondary border border-secondary rounded-full px-2.5 py-1.5 text-sm hover:bg-gray-50 flex items-center justify-center"
+                        className="p-2 text-secondary hover:bg-gray-100 rounded-md flex items-center justify-center"
                         title="Edit Order"
                       >
                         <Edit size={16} />
                       </button>
                       <button 
-                        className="bg-white text-red-600 border border-red-600 rounded-full px-2.5 py-1.5 text-sm flex items-center justify-center"
+                        className="p-2 text-red-600 hover:bg-gray-100 rounded-md flex items-center justify-center"
                         title="Delete Order"
                       >
                         <Trash2 size={16} />
@@ -599,7 +599,7 @@ export default function Orders() {
                 <h4 className="font-medium text-secondary">Order Items</h4>
                 <button
                   onClick={() => setDraft({ ...draft, items: [...draft.items, { sku: '', product: '', qty: '', amount: '' }] })}
-                  className="bg-accent text-button-text rounded-full px-3 py-1.5 text-sm flex items-center gap-2"
+                  className="bg-accent text-button-text rounded-lg px-3 py-1.5 text-sm flex items-center gap-2"
                 >
                   <Plus size={14} />
                   <span>Add Item</span>
@@ -686,13 +686,13 @@ export default function Orders() {
             <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
               <button 
                 onClick={() => setIsAddModalOpen(false)} 
-                className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
+                className="bg-white text-secondary border border-secondary rounded-lg px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleAddOrder} 
-                className="bg-accent text-button-text rounded-full px-4 py-2.5 text-sm sm:text-base hover:bg-accent/90 transition-colors"
+                className="bg-accent text-button-text rounded-lg px-4 py-2.5 text-sm sm:text-base hover:bg-accent/90 transition-colors"
               >
                 Save Order
               </button>
@@ -741,14 +741,14 @@ export default function Orders() {
                   setIsUploadModalOpen(false)
                   setSelectedFile(null)
                 }} 
-                className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
+                className="bg-white text-secondary border border-secondary rounded-lg px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleFileUpload}
                 disabled={!selectedFile}
-                className={`rounded-full px-4 py-2.5 text-sm sm:text-base border-none transition-colors ${
+                className={`rounded-lg px-4 py-2.5 text-sm sm:text-base border-none transition-colors ${
                   selectedFile 
                     ? 'bg-accent text-button-text cursor-pointer hover:bg-accent/90' 
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
