@@ -1,7 +1,6 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 import { logger } from '../utils/logger';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export interface SendCredentialsEmailParams {
   to: string;
@@ -12,12 +11,54 @@ export interface SendCredentialsEmailParams {
 }
 
 export class EmailService {
+  private transporter: Transporter | null = null;
+
+  constructor() {
+    const gmailUser = process.env.SMTP_USER;
+    const gmailAppPassword = process.env.SMTP_PASS;
+
+    if (gmailUser && gmailAppPassword && gmailUser.trim() !== '' && gmailAppPassword.trim() !== '') {
+      this.transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: gmailUser,
+          pass: gmailAppPassword,
+        },
+      });
+      logger.info('Email service initialized with SMTP');
+    } else {
+      logger.warn('SMTP credentials not configured. Emails will be logged instead of sent.');
+    }
+  }
+
   /**
    * Send welcome email with login credentials to new user
    */
   async sendCredentialsEmail(params: SendCredentialsEmailParams): Promise<void> {
     try {
       const { to, name, email, password, role } = params;
+
+      // If Gmail is not configured, just log the credentials
+      if (!this.transporter) {
+        logger.warn('Email not sent (SMTP not configured). User credentials:', {
+          to,
+          name,
+          email,
+          password,
+          role,
+          message: '⚠️ Configure SMTP_USER and SMTP_PASS in .env to enable email sending'
+        });
+        console.log('\n==============================================');
+        console.log('📧 EMAIL NOT SENT - SMTP NOT CONFIGURED');
+        console.log('==============================================');
+        console.log(`To: ${to}`);
+        console.log(`Name: ${name}`);
+        console.log(`Role: ${role}`);
+        console.log(`Email: ${email}`);
+        console.log(`Temporary Password: ${password}`);
+        console.log('==============================================\n');
+        return;
+      }
 
       const htmlContent = `
 <!DOCTYPE html>
@@ -209,17 +250,21 @@ Kyaari OMS
 Order Management System
       `;
 
-      await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || 'Kyaari OMS <onboarding@resend.dev>',
+      const info = await this.transporter.sendMail({
+        from: `"Kyaari OMS" <${process.env.SMTP_USER}>`,
         to,
         subject: `Welcome to Kyaari OMS - Your ${role} Account Credentials`,
         html: htmlContent,
         text: textContent,
       });
 
-      logger.info('Credentials email sent successfully', { to, role });
+      logger.info('Credentials email sent successfully', { to, role, messageId: info.messageId });
+      console.log(`✅ Email sent to ${to} - Password: ${password}`);
     } catch (error) {
       logger.error('Failed to send credentials email', { error, to: params.to });
+      // Log credentials in console so admin can manually share them
+      console.error('\n⚠️ EMAIL FAILED - User credentials:');
+      console.error(`Email: ${params.email}, Password: ${params.password}\n`);
       throw new Error('Failed to send credentials email');
     }
   }
@@ -229,6 +274,12 @@ Order Management System
    */
   async sendPasswordResetEmail(to: string, name: string, resetToken: string): Promise<void> {
     try {
+      if (!this.transporter) {
+        logger.warn('Password reset email not sent (SMTP not configured)', { to, resetToken });
+        console.log(`\n📧 Password reset token for ${to}: ${resetToken}\n`);
+        return;
+      }
+
       const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
 
       const htmlContent = `
@@ -258,8 +309,8 @@ Order Management System
 </html>
       `;
 
-      await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || 'Kyaari OMS <onboarding@resend.dev>',
+      await this.transporter.sendMail({
+        from: `"Kyaari OMS" <${process.env.SMTP_USER}>`,
         to,
         subject: 'Reset Your Kyaari OMS Password',
         html: htmlContent,
