@@ -280,7 +280,7 @@ export default function UsersRoles() {
   }
 
   return (
-    <div className="p-4 sm:p-6 font-sans text-primary">
+    <div className="p-4 sm:p-6 font-sans text-primary min-h-[calc(100vh-4rem)] w-full" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
         <h2 className="font-heading text-secondary text-2xl sm:text-3xl lg:text-4xl font-semibold">Users & Roles</h2>
@@ -295,10 +295,10 @@ export default function UsersRoles() {
               <button
                 key={t.key}
                 onClick={() => setActiveTab(t.key)}
-                className={`bg-transparent rounded-none px-3 sm:px-4 py-3 font-semibold outline-none whitespace-nowrap text-sm sm:text-base transition-colors ${
+                className={`px-3 sm:px-4 py-3 font-semibold outline-none whitespace-nowrap text-sm sm:text-base transition-colors ${
                   isActive 
-                    ? 'text-secondary border-b-4 border-accent border-solid' 
-                    : 'text-gray-700 border-b-4 border-transparent hover:text-secondary'
+                    ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md' 
+                    : 'text-gray-700 hover:text-secondary'
                 }`}
               >
                 {t.label}
@@ -323,18 +323,18 @@ export default function UsersRoles() {
             <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-white">
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Name</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Email</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Role</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Status</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Created Date</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Actions</th>
+                  <tr className="bg-[var(--color-accent)]">
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Name</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Email</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Role</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Status</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Created Date</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {accountsUsers.map((row, idx) => (
-                    <tr key={row.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-header-bg'}>
+                  {accountsUsers.map((row) => (
+                    <tr key={row.id} className={'bg-white'}>
                       <td className="p-3">{row.name}</td>
                       <td className="p-3">{row.email}</td>
                       <td className="p-3">{row.role}</td>
@@ -482,18 +482,18 @@ export default function UsersRoles() {
             <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-white">
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Name</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Email</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Role</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Status</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Created Date</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Actions</th>
+                  <tr className="bg-[var(--color-accent)]">
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Name</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Email</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Role</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Status</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Created Date</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {opsUsers.map((row, idx) => (
-                    <tr key={row.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-header-bg'}>
+                  {opsUsers.map((row) => (
+                    <tr key={row.id} className={'bg-white'}>
                       <td className="p-3">{row.name}</td>
                       <td className="p-3">{row.email}</td>
                       <td className="p-3">{row.role}</td>
@@ -631,17 +631,17 @@ export default function UsersRoles() {
             <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-white">
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Vendor Name</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">GST/PAN</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Status</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">SLA Score (%)</th>
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Actions</th>
+                  <tr className="bg-[var(--color-accent)]">
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Vendor Name</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">GST/PAN</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Status</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">SLA Score (%)</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {vendors.map((row, idx) => (
-                    <tr key={row.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-header-bg'}>
+                  {vendors.map((row) => (
+                    <tr key={row.id} className={'bg-white'}>
                       <td className="p-3">{row.name}</td>
                       <td className="p-3">{row.gstOrPan}</td>
                       <td className="p-3">
@@ -724,16 +724,16 @@ export default function UsersRoles() {
             <div className="hidden md:block bg-header-bg rounded-xl overflow-hidden">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-white">
-                    <th className="text-left p-3 font-heading text-secondary font-normal">Role</th>
+                  <tr className="bg-[var(--color-accent)]">
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Role</th>
                     {permissions.map((p) => (
-                      <th key={p} className="text-left p-3 font-heading text-secondary font-normal">{p}</th>
+                      <th key={p} className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">{p}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {matrixRoles.map((role, idx) => (
-                    <tr key={role} className={idx % 2 === 0 ? 'bg-white' : 'bg-header-bg'}>
+                  {matrixRoles.map((role) => (
+                    <tr key={role} className={'bg-white'}>
                       <td className="p-3 font-semibold">{role}</td>
                       {permissions.map((perm) => (
                         <td key={perm} className="p-3">
