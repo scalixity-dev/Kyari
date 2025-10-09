@@ -6,6 +6,7 @@ import { env } from './config/env';
 import { authRoutes } from './modules/auth/auth.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
 import { userRoutes } from './modules/users/user.routes';
+import { vendorRoutes } from './modules/vendors/vendor.routes';
 import { orderRoutes } from './modules/orders/order.routes';
 import { assignmentRoutes } from './modules/assignments/assignment.routes';
 import dispatchRoutes from './routes/dispatch.routes';
@@ -82,6 +83,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/vendors', vendorRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/dispatches', dispatchRoutes);

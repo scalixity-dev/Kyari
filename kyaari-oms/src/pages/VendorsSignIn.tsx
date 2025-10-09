@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
+import { ResetPassword } from '../components'
 
 export default function VendorsSignIn() {
   const [email, setEmail] = useState('')
@@ -8,6 +9,7 @@ export default function VendorsSignIn() {
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showResetPassword, setShowResetPassword] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
@@ -41,10 +43,18 @@ export default function VendorsSignIn() {
       if (success) {
         navigate('/vendors')
       } else {
-        setError('Invalid credentials or insufficient permissions for vendor access')
+        setError('Invalid credentials, account not approved, or you do not have vendor access. Please contact admin if your account is pending approval.')
       }
-    } catch (error: any) {
-      setError(error.message || 'Login failed. Please try again.')
+    } catch (error: unknown) {
+      const err = error as { message?: string }
+      const errorMsg = err.message || 'Login failed. Please try again.'
+      
+      // Handle specific vendor errors
+      if (errorMsg.includes('not active')) {
+        setError('Your vendor account is pending admin approval. Please wait for approval before signing in.')
+      } else {
+        setError(errorMsg)
+      }
     } finally {
       setIsLoading(false)
     }
@@ -64,11 +74,16 @@ export default function VendorsSignIn() {
         .admin-signin__label { font-size:0.9rem; text-align:left; color: var(--color-primary); }
         .admin-signin__input { width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid #e6e6e6; margin-top:0.25rem; box-sizing:border-box; }
         .admin-signin__error { color:#b00020; font-size:0.9rem; text-align:left; }
-        .admin-signin__button { margin-top:0.5rem; background-color: var(--color-accent); color: var(--color-button-text); padding:0.75rem 1rem; border-radius:8px; border:none; cursor:pointer; font-weight: var(--fw-bold); }
+        .admin-signin__button { margin-top:0.5rem; background-color: var(--color-accent); color: var(--color-button-text); padding:0.75rem 1rem; border-radius:8px; border:none; cursor:pointer; font-weight: var(--fw-bold); width:100%; }
         .admin-signin__button:hover { opacity:0.95; }
-  .admin-signin__signup { margin-top:0.5rem; font-size:0.9rem; color:var(--color-primary); display:flex; justify-content:center; gap:0.5rem; }
-  .admin-signin__signup-link { background:transparent; border:none; color:var(--color-accent); cursor:pointer; font-weight:var(--fw-medium); text-decoration:none; padding:0; }
-  .admin-signin__signup-link:hover { text-decoration:underline; }
+        .admin-signin__button:disabled { opacity:0.6; cursor:not-allowed; }
+        .admin-signin__signup { margin-top:0.5rem; font-size:0.9rem; color:var(--color-primary); display:flex; justify-content:center; gap:0.5rem; }
+        .admin-signin__signup-link { background:transparent; border:none; color:var(--color-accent); cursor:pointer; font-weight:var(--fw-medium); text-decoration:none; padding:0; }
+        .admin-signin__signup-link:hover { text-decoration:underline; }
+        .admin-signin__forgot-password { margin-top:0.75rem; text-align:center; }
+        .admin-signin__forgot-link { background:none; border:none; color: var(--color-accent); font-size:0.9rem; cursor:pointer; text-decoration:none; }
+        .admin-signin__forgot-link:hover { text-decoration:underline; }
+        .admin-signin__success { background-color: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 0.75rem; border-radius: 8px; font-size: 0.9rem; text-align: left; margin-bottom: 0.5rem; }
       `}</style>
 
       <div className="admin-signin__card">
@@ -97,8 +112,8 @@ export default function VendorsSignIn() {
           </label>
 
           {successMessage && (
-            <div className="text-green-700 text-sm text-left bg-green-50 border border-green-200 rounded-md p-3 mb-2">
-              {successMessage}
+            <div className="admin-signin__success">
+              ✓ {successMessage}
             </div>
           )}
           
@@ -108,12 +123,32 @@ export default function VendorsSignIn() {
             {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
 
+          <div className="admin-signin__forgot-password">
+            <button 
+              type="button"
+              onClick={() => setShowResetPassword(true)}
+              className="admin-signin__forgot-link"
+            >
+              Forgot Password?
+            </button>
+          </div>
+
           <div className="admin-signin__signup">
             <span>Don't have an account?</span>
             <Link to="/vendors/signup" className="admin-signin__signup-link">Sign up</Link>
           </div>
         </form>
       </div>
+
+      {showResetPassword && (
+        <ResetPassword
+          onClose={() => setShowResetPassword(false)}
+          onSuccess={() => {
+            setEmail('')
+            setPassword('')
+          }}
+        />
+      )}
     </div>
   )
 }

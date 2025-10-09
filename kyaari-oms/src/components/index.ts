@@ -6,3 +6,4 @@ export { default as NotificationSection } from './Notifications/NotificationSect
 export { CustomDropdown, default as CustomDropdownDefault } from './CustomDropdown'
 export type { CustomDropdownProps, DropdownOption } from './CustomDropdown'
 export { default as ResetPassword } from './ResetPassword/ResetPassword'
+export { default as ConfirmationModal } from './ConfirmationModal/ConfirmationModal'
