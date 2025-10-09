@@ -20,20 +20,20 @@ export class AdminController {
       }
 
       const createdBy = req.user?.userId;
-      const result = await userService.createUser(validation.data, createdBy);
+      const result = await userService.createUser(validation.data, createdBy, true);
 
       // Audit log
       await this.createAuditLog(
         createdBy || null,
         APP_CONSTANTS.AUDIT_ACTIONS.USER_CREATE,
         'User',
-        result.id,
+        result.user.id,
         { role: validation.data.role, email: validation.data.email },
         req.ip,
         req.get('User-Agent')
       );
 
-      ResponseHelper.success(res, result, 'User created successfully', 201);
+      ResponseHelper.success(res, result.user, 'User created successfully', 201);
     } catch (error) {
       logger.error('Admin create user error', { error });
       ResponseHelper.error(res, error instanceof Error ? error.message : 'Failed to create user');

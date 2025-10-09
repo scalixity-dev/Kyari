@@ -12,8 +12,8 @@ function Landing() {
         {/* ↓ Reduced gap between cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-5 mt-8">
           <Link 
-            to="/admin" 
-            className="relative rounded-xl border border-gray-200/90 bg-white p-3 pt-8 text-center shadow-sm transition-all duration-150 ease-in-out hover:shadow-md hover:-translate-y-1 focus:outline-none focus-visible:outline-[3px] focus-visible:outline-green-500/15 focus-visible:outline-offset-[3px] no-underline flex flex-col items-center justify-center min-h-[110px] w-full mx-auto cursor-pointer [&>*]:pointer-events-none"
+            to="/admin/signin" 
+            className="rounded-xl border border-gray-200/90 bg-white p-4 sm:p-5 lg:p-6 text-center shadow-sm transition-all duration-150 ease-in-out hover:shadow-[0_6px_12px_-4px_rgba(0,0,0,0.12)] hover:border-[var(--color-accent)] hover:text-[var(--color-secondary)] hover:-translate-y-0.5 focus:outline-none focus-visible:outline-[3px] focus-visible:outline-green-500/15 focus-visible:outline-offset-[3px] no-underline font-[var(--font-body)] font-[var(--fw-medium)] text-[var(--color-primary)] flex items-center justify-center min-h-[56px] sm:min-h-[64px] lg:min-h-[72px] cursor-pointer [&>*]:pointer-events-none"
             aria-label="Go to Admin dashboard"
           >
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-16 h-16 bg-[#C3754C] rounded-full flex items-center justify-center text-white shadow-md">
@@ -23,8 +23,8 @@ function Landing() {
           </Link>
 
           <Link 
-            to="/vendors" 
-            className="relative rounded-xl border border-gray-200/90 bg-white p-3 pt-8 text-center shadow-sm transition-all duration-150 ease-in-out hover:shadow-md hover:-translate-y-1 focus:outline-none focus-visible:outline-[3px] focus-visible:outline-green-500/15 focus-visible:outline-offset-[3px] no-underline flex flex-col items-center justify-center min-h-[110px] w-full mx-auto cursor-pointer [&>*]:pointer-events-none"
+            to="/vendors/signin" 
+            className="rounded-xl border border-gray-200/90 bg-white p-4 sm:p-5 lg:p-6 text-center shadow-sm transition-all duration-150 ease-in-out hover:shadow-[0_6px_12px_-4px_rgba(0,0,0,0.12)] hover:border-[var(--color-accent)] hover:text-[var(--color-secondary)] hover:-translate-y-0.5 focus:outline-none focus-visible:outline-[3px] focus-visible:outline-green-500/15 focus-visible:outline-offset-[3px] no-underline font-[var(--font-body)] font-[var(--fw-medium)] text-[var(--color-primary)] flex items-center justify-center min-h-[56px] sm:min-h-[64px] lg:min-h-[72px] cursor-pointer [&>*]:pointer-events-none"
             aria-label="Go to Vendors dashboard"
           >
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-16 h-16 bg-[#C3754C] rounded-full flex items-center justify-center text-white shadow-md">
@@ -34,8 +34,8 @@ function Landing() {
           </Link>
 
           <Link 
-            to="/accounts" 
-            className="relative rounded-xl border border-gray-200/90 bg-white p-3 pt-8 text-center shadow-sm transition-all duration-150 ease-in-out hover:shadow-md hover:-translate-y-1 focus:outline-none focus-visible:outline-[3px] focus-visible:outline-green-500/15 focus-visible:outline-offset-[3px] no-underline flex flex-col items-center justify-center min-h-[110px] w-full mx-auto cursor-pointer [&>*]:pointer-events-none"
+            to="/accounts/signin" 
+            className="rounded-xl border border-gray-200/90 bg-white p-4 sm:p-5 lg:p-6 text-center shadow-sm transition-all duration-150 ease-in-out hover:shadow-[0_6px_12px_-4px_rgba(0,0,0,0.12)] hover:border-[var(--color-accent)] hover:text-[var(--color-secondary)] hover:-translate-y-0.5 focus:outline-none focus-visible:outline-[3px] focus-visible:outline-green-500/15 focus-visible:outline-offset-[3px] no-underline font-[var(--font-body)] font-[var(--fw-medium)] text-[var(--color-primary)] flex items-center justify-center min-h-[56px] sm:min-h-[64px] lg:min-h-[72px] cursor-pointer [&>*]:pointer-events-none"
             aria-label="Go to Accounts dashboard"
           >
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-16 h-16 bg-[#C3754C] rounded-full flex items-center justify-center text-white shadow-md">
@@ -45,8 +45,8 @@ function Landing() {
           </Link>
 
           <Link 
-            to="/operations" 
-            className="relative rounded-xl border border-gray-200/90 bg-white p-3 pt-8 text-center shadow-sm transition-all duration-150 ease-in-out hover:shadow-md hover:-translate-y-1 focus:outline-none focus-visible:outline-[3px] focus-visible:outline-green-500/15 focus-visible:outline-offset-[3px] no-underline flex flex-col items-center justify-center min-h-[110px] w-full mx-auto cursor-pointer [&>*]:pointer-events-none"
+            to="/operations/signin" 
+            className="rounded-xl border border-gray-200/90 bg-white p-4 sm:p-5 lg:p-6 text-center shadow-sm transition-all duration-150 ease-in-out hover:shadow-[0_6px_12px_-4px_rgba(0,0,0,0.12)] hover:border-[var(--color-accent)] hover:text-[var(--color-secondary)] hover:-translate-y-0.5 focus:outline-none focus-visible:outline-[3px] focus-visible:outline-green-500/15 focus-visible:outline-offset-[3px] no-underline font-[var(--font-body)] font-[var(--fw-medium)] text-[var(--color-primary)] flex items-center justify-center min-h-[56px] sm:min-h-[64px] lg:min-h-[72px] cursor-pointer [&>*]:pointer-events-none"
             aria-label="Go to Operations dashboard"
           >
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-16 h-16 bg-[#C3754C] rounded-full flex items-center justify-center text-white shadow-md">

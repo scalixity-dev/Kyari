@@ -17,6 +17,11 @@ const envSchema = z.object({
   INIT_ADMIN_EMAIL: z.string().email().optional(),
   
   CORS_ORIGINS: z.string().transform((val: string) => val.split(',')).default('http://localhost:3000'),
+  
+  // Email (Resend)
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().optional().default('Kyaari OMS <onboarding@resend.dev>'),
+  FRONTEND_URL: z.string().url().optional().default('http://localhost:5173'),
 });
 
 const parsed = envSchema.safeParse(process.env);
