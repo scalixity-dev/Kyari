@@ -1,24 +1,42 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-// styles inlined below
 import { useAuth } from '../auth/AuthProvider'
 
 export default function AccountsSignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
   const { login } = useAuth()
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    
     if (!email || !password) {
       setError('Please enter email and password')
       return
     }
-    login(email, password)
-    navigate('/accounts')
+
+    if (!email.includes('@')) {
+      setError('Please enter a valid email address')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const success = await login({ email, password })
+      if (success) {
+        navigate('/accounts')
+      } else {
+        setError('Invalid credentials or insufficient permissions for accounts access')
+      }
+    } catch (error: any) {
+      setError(error.message || 'Login failed. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -66,8 +84,8 @@ export default function AccountsSignIn() {
 
           {error && <div className="admin-signin__error">{error}</div>}
 
-          <button type="submit" className="admin-signin__button">
-            Sign In
+          <button type="submit" className="admin-signin__button" disabled={isLoading}>
+            {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
       </div>

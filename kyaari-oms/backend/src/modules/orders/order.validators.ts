@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Order Item validation schema (without pricing)
+// Order Item validation schema (with mandatory pricing)
 export const createOrderItemSchema = z.object({
   productName: z.string()
     .min(1, 'Product name is required')
@@ -11,7 +11,14 @@ export const createOrderItemSchema = z.object({
   quantity: z.number()
     .int('Quantity must be an integer')
     .positive('Quantity must be positive')
-    .max(999999, 'Quantity cannot exceed 999,999')
+    .max(999999, 'Quantity cannot exceed 999,999'),
+  pricePerUnit: z.number()
+    .positive('Price per unit must be positive')
+    .max(999999.99, 'Price per unit cannot exceed 999,999.99')
+    .refine((val) => {
+      // Ensure price has at most 2 decimal places
+      return Number(val.toFixed(2)) === val;
+    }, 'Price per unit can have at most 2 decimal places')
 });
 
 // Order creation validation schema

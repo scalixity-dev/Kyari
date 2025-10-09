@@ -8,6 +8,7 @@ export interface CreateOrderItemDto {
   productName: string;
   sku?: string;
   quantity: number;
+  pricePerUnit: number;
 }
 
 export interface OrderDto {
@@ -30,7 +31,9 @@ export interface OrderItemDto {
   productName: string;
   sku?: string;
   quantity: number;
-  pricingStatus: 'not_set' | 'partial' | 'complete';
+  pricePerUnit: number;
+  totalPrice: number;
+  pricingStatus: 'complete';  // Always complete now since pricing is mandatory
   assignedItems: AssignedOrderItemDto[];
 }
 
@@ -61,7 +64,7 @@ export interface OrderListDto {
     companyName: string;
   };
   createdAt: Date;
-  pricingStatus: 'pending' | 'partial' | 'complete';
+  pricingStatus: 'complete'; // Always complete since pricing is mandatory
 }
 
 export interface OrderListResponseDto {
