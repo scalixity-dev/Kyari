@@ -155,13 +155,25 @@ export class OrderService {
   }
 
   private async validateOrderData(data: CreateOrderDto): Promise<void> {
-    // Check if order number already exists
-    const existingOrder = await prisma.order.findUnique({
+    // Check for duplicate order number
+    const existingOrder = await prisma.order.findFirst({
       where: { orderNumber: data.orderNumber }
     });
 
     if (existingOrder) {
       throw new Error(`Order number ${data.orderNumber} already exists`);
+    }
+
+    // Validate all items have complete pricing
+    for (const item of data.items) {
+      if (!item.pricePerUnit || item.pricePerUnit <= 0) {
+        throw new Error(`Item "${item.productName}" must have a valid price per unit`);
+      }
+      // Ensure calculated total is reasonable
+      const calculatedTotal = item.pricePerUnit * item.quantity;
+      if (calculatedTotal <= 0) {
+        throw new Error(`Item "${item.productName}" has invalid total price calculation`);
+      }
     }
 
     // Validate primary vendor exists and is active
@@ -185,6 +197,11 @@ export class OrderService {
 
   private async createOrderWithTransaction(data: CreateOrderDto, createdById: string): Promise<Order> {
     return await prisma.$transaction(async (tx) => {
+      // Calculate total order value from items
+      const totalOrderValue = data.items.reduce((sum, item) => {
+        return sum + (item.pricePerUnit * item.quantity);
+      }, 0);
+
       // Create order record
       const order = await tx.order.create({
         data: {
@@ -193,21 +210,23 @@ export class OrderService {
           primaryVendorId: data.primaryVendorId,
           status: 'RECEIVED',
           source: 'MANUAL_ENTRY',
-          totalValue: null, // No pricing initially
+          totalValue: totalOrderValue, // Calculated from item pricing
           createdById
         }
       });
 
-      // Create order items
+      // Create order items with mandatory pricing
       for (const itemData of data.items) {
+        const totalItemPrice = itemData.pricePerUnit * itemData.quantity;
+        
         const orderItem = await tx.orderItem.create({
           data: {
             orderId: order.id,
             productName: itemData.productName,
             sku: itemData.sku,
             quantity: itemData.quantity,
-            pricePerUnit: null, // No pricing initially
-            totalPrice: null    // No pricing initially
+            pricePerUnit: itemData.pricePerUnit, // Mandatory pricing
+            totalPrice: totalItemPrice           // Calculated total
           }
         });
 
@@ -260,14 +279,19 @@ export class OrderService {
   }
 
   private mapToOrderItemDto(item: any): OrderItemDto {
-    const pricingStatus = this.determinePricingStatus(item.pricePerUnit, item.totalPrice);
+    // Since pricing is now mandatory, we can ensure these values exist
+    if (!item.pricePerUnit || !item.totalPrice) {
+      throw new Error('Order item missing required pricing information');
+    }
     
     return {
       id: item.id,
       productName: item.productName,
       sku: item.sku,
       quantity: item.quantity,
-      pricingStatus,
+      pricePerUnit: parseFloat(item.pricePerUnit.toString()),
+      totalPrice: parseFloat(item.totalPrice.toString()),
+      pricingStatus: 'complete', // Always complete since pricing is mandatory
       assignedItems: item.assignedItems.map((assigned: any) => this.mapToAssignedOrderItemDto(assigned))
     };
   }
@@ -295,8 +319,7 @@ export class OrderService {
   }
 
   private mapToOrderListDto(order: any): OrderListDto {
-    const pricingStatus = this.determineOrderPricingStatus(order.items);
-    
+    // Since pricing is now mandatory, pricingStatus is always complete
     return {
       id: order.id,
       orderNumber: order.orderNumber,
@@ -306,24 +329,8 @@ export class OrderService {
         companyName: order.primaryVendor.companyName
       },
       createdAt: order.createdAt,
-      pricingStatus
+      pricingStatus: 'complete' // Always complete since pricing is mandatory
     };
-  }
-
-  private determinePricingStatus(pricePerUnit: number | null, totalPrice: number | null): 'not_set' | 'partial' | 'complete' {
-    if (!pricePerUnit && !totalPrice) return 'not_set';
-    if (pricePerUnit && totalPrice) return 'complete';
-    return 'partial';
-  }
-
-  private determineOrderPricingStatus(items: any[]): 'pending' | 'partial' | 'complete' {
-    if (items.length === 0) return 'pending';
-    
-    const itemsWithPricing = items.filter(item => item.pricePerUnit !== null);
-    
-    if (itemsWithPricing.length === 0) return 'pending';
-    if (itemsWithPricing.length === items.length) return 'complete';
-    return 'partial';
   }
 }
 
