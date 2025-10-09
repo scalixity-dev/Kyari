@@ -25,6 +25,7 @@ type OrderItem = {
   sku: string
   product: string
   qty: number | ''
+  amount: number | ''
 }
 
 type NewOrderDraft = {
@@ -119,7 +120,7 @@ export default function Orders() {
 
   const [draft, setDraft] = useState<NewOrderDraft>({
     id: '',
-    items: [{ sku: '', product: '', qty: '' }],
+    items: [{ sku: '', product: '', qty: '', amount: '' }],
     date: '',
     city: '',
     vendor: '',
@@ -141,8 +142,8 @@ export default function Orders() {
     
     // Validate all items
     for (const item of draft.items) {
-      if (!item.sku || !item.product || item.qty === '') {
-        alert('Please fill all item fields including quantity')
+      if (!item.sku || !item.product || item.qty === '' || item.amount === '') {
+        alert('Please fill all item fields including quantity and amount')
         return
       }
     }
@@ -161,7 +162,7 @@ export default function Orders() {
     
     setOrders(prev => [...newOrders, ...prev])
     setIsAddModalOpen(false)
-    setDraft({ id: '', items: [{ sku: '', product: '', qty: '' }], date: '', city: '', vendor: '' })
+    setDraft({ id: '', items: [{ sku: '', product: '', qty: '', amount: '' }], date: '', city: '', vendor: '' })
   }
 
   function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
@@ -597,7 +598,7 @@ export default function Orders() {
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-medium text-secondary">Order Items</h4>
                 <button
-                  onClick={() => setDraft({ ...draft, items: [...draft.items, { sku: '', product: '', qty: '' }] })}
+                  onClick={() => setDraft({ ...draft, items: [...draft.items, { sku: '', product: '', qty: '', amount: '' }] })}
                   className="bg-accent text-button-text rounded-full px-3 py-1.5 text-sm flex items-center gap-2"
                 >
                   <Plus size={14} />
@@ -607,7 +608,7 @@ export default function Orders() {
               
               {draft.items.map((item, index) => (
                 <div key={index} className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                     <div>
                       <label className="block text-sm font-medium mb-2">SKU</label>
                       <input 
@@ -648,19 +649,35 @@ export default function Orders() {
                         className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
                       />
                     </div>
-                    <div className="flex items-end">
-                      {draft.items.length > 1 && (
-                        <button
-                          onClick={() => {
-                            const newItems = draft.items.filter((_, i) => i !== index)
-                            setDraft({ ...draft, items: newItems })
-                          }}
-                          className="bg-red-500 text-white rounded-full px-3 py-2.5 text-sm w-full hover:bg-red-600 transition-colors"
-                        >
-                          Remove
-                        </button>
-                      )}
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Amount</label>
+                      <input 
+                        type="number" 
+                        value={item.amount} 
+                        onChange={e => {
+                          const newItems = [...draft.items]
+                          newItems[index] = { ...item, amount: e.target.value === '' ? '' : Number(e.target.value) }
+                          setDraft({ ...draft, items: newItems })
+                        }} 
+                        min={0} 
+                        step="0.01"
+                        placeholder="0.00"
+                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
+                      />
                     </div>
+                  </div>
+                  <div className="flex justify-end">
+                    {draft.items.length > 1 && (
+                      <button
+                        onClick={() => {
+                          const newItems = draft.items.filter((_, i) => i !== index)
+                          setDraft({ ...draft, items: newItems })
+                        }}
+                        className="bg-red-500 text-white rounded-full px-3 py-2.5 text-sm hover:bg-red-600 transition-colors"
+                      >
+                        Remove Item
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
