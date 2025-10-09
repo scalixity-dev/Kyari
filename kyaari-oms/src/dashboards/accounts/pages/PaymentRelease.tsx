@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { CheckSquare, Bell, X, AlertTriangle } from 'lucide-react'
+import { Bell, X, AlertTriangle, CheckSquare } from 'lucide-react'
+import { CustomDropdown } from '../../../components'
 
 type PaymentStatus = 'Pending' | 'Released' | 'Overdue'
 type DeliveryVerified = 'Yes' | 'No' | 'Partial'
@@ -184,37 +185,39 @@ function AccountsPaymentRelease() {
         {isFilterOpen && (
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
             <div className="flex-1 min-w-0">
-              <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Payment Status</label>
-              <select 
-                value={filterStatus} 
-                onChange={e => setFilterStatus(e.target.value as PaymentStatus | '')} 
-                className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm"
-              >
-                <option value="">All Statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="Overdue">Overdue</option>
-                <option value="Released">Released</option>
-              </select>
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-secondary">Payment Status</label>
+              <CustomDropdown
+                value={filterStatus}
+                onChange={(value) => setFilterStatus(value as PaymentStatus | '')}
+                options={[
+                  { value: '', label: 'All Statuses' },
+                  { value: 'Pending', label: 'Pending' },
+                  { value: 'Overdue', label: 'Overdue' },
+                  { value: 'Released', label: 'Released' }
+                ]}
+                placeholder="All Statuses"
+              />
             </div>
 
             <div className="flex-1 min-w-0">
-              <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Delivery Verified</label>
-              <select 
-                value={filterDeliveryVerified} 
-                onChange={e => setFilterDeliveryVerified(e.target.value as DeliveryVerified | '')} 
-                className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm"
-              >
-                <option value="">All</option>
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-                <option value="Partial">Partial</option>
-              </select>
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-secondary">Delivery Verified</label>
+              <CustomDropdown
+                value={filterDeliveryVerified}
+                onChange={(value) => setFilterDeliveryVerified(value as DeliveryVerified | '')}
+                options={[
+                  { value: '', label: 'All' },
+                  { value: 'Yes', label: 'Yes' },
+                  { value: 'No', label: 'No' },
+                  { value: 'Partial', label: 'Partial' }
+                ]}
+                placeholder="All"
+              />
             </div>
 
             <div className="flex justify-end sm:justify-start">
               <button 
                 onClick={resetFilters} 
-                className="bg-white text-secondary border border-secondary rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-50"
+                className="bg-white text-secondary border border-secondary rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-50 transition-colors duration-200"
               >
                 Reset
               </button>

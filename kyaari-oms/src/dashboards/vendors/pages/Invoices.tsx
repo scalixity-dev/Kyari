@@ -10,7 +10,7 @@ interface PurchaseOrder {
   quantity: number
   rate: number
   amount: number
-  status: 'Received' | 'Invoice Uploaded' | 'Validating' | 'Validated' | 'Approved' | 'Rejected' | 'Payment Processed'
+  status: 'Received' | 'Dispatched' | 'Validating' | 'Validated' | 'Approved' | 'Rejected' | 'Payment Received'
   invoiceFile?: string
   validationIssues?: string[]
   rejectionReason?: string
@@ -131,8 +131,8 @@ const getStatusBadge = (status: PurchaseOrder['status']) => {
   switch (status) {
     case 'Received':
       return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Received</span>
-    case 'Invoice Uploaded':
-      return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Uploaded</span>
+    case 'Dispatched':
+      return <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-medium">Dispatched</span>
     case 'Validating':
       return <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">Validating</span>
     case 'Validated':
@@ -141,8 +141,8 @@ const getStatusBadge = (status: PurchaseOrder['status']) => {
       return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Approved</span>
     case 'Rejected':
       return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">Rejected</span>
-    case 'Payment Processed':
-      return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">Paid</span>
+    case 'Payment Received':
+      return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">Payment Received</span>
     default:
       return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">{status}</span>
   }
@@ -206,7 +206,8 @@ export default function Invoices() {
       quantity: 50,
       rate: 120,
       amount: 6000,
-      status: 'Invoice Uploaded',
+  // Vendor uploaded invoice -> dispatch status becomes Validating
+  status: 'Validating',
       invoiceFile: 'invoice_PO-2025-002.pdf'
     },
     {
@@ -256,13 +257,21 @@ export default function Invoices() {
       quantity: 40,
       rate: 45,
       amount: 1800,
-      status: 'Payment Processed',
+      // Payment released to vendor -> Dispatch status = Payment Received
+      status: 'Payment Received',
       invoiceFile: 'invoice_PO-2025-006.pdf'
     }
   ])
 
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null)
+  const [statusFilter, setStatusFilter] = useState<'All' | PurchaseOrder['status']>('All')
+  const [poSearch, setPoSearch] = useState('')
+  const [linkedOrderSearch, setLinkedOrderSearch] = useState('')
+  const [dateFrom, setDateFrom] = useState('') // yyyy-mm-dd
+  const [dateTo, setDateTo] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize] = useState(10) // fixed to 10 rows per page
 
   const handleUploadInvoice = (poId: string) => {
     const po = purchaseOrders.find(p => p.id === poId)
@@ -303,10 +312,48 @@ export default function Invoices() {
   }
 
   const receivedPOs = purchaseOrders.filter(po => po.status === 'Received')
-  const pendingValidation = purchaseOrders.filter(po => ['Invoice Uploaded', 'Validating', 'Validated'].includes(po.status))
+  const pendingValidation = purchaseOrders.filter(po => ['Validating', 'Validated'].includes(po.status))
   const approvedPOs = purchaseOrders.filter(po => po.status === 'Approved')
   const rejectedPOs = purchaseOrders.filter(po => po.status === 'Rejected')
-  const paidPOs = purchaseOrders.filter(po => po.status === 'Payment Processed')
+  const paidPOs = purchaseOrders.filter(po => po.status === 'Payment Received')
+
+  const parsePoDate = (d: string) => {
+    // PO date stored as DD/MM/YYYY
+    const parts = d.split('/')
+    if (parts.length !== 3) return null
+    const [dd, mm, yyyy] = parts.map(Number)
+    return new Date(yyyy, mm - 1, dd)
+  }
+
+  const filteredPurchaseOrders = purchaseOrders.filter(po => {
+    // status filter
+    if (statusFilter !== 'All' && po.status !== statusFilter) return false
+
+    // PO number search
+    if (poSearch.trim() && !po.poNumber.toLowerCase().includes(poSearch.trim().toLowerCase())) return false
+
+    // linked order search
+    if (linkedOrderSearch.trim()) {
+      const q = linkedOrderSearch.trim().toLowerCase()
+      if (!po.linkedOrders.some(lo => lo.toLowerCase().includes(q))) return false
+    }
+
+    // date range filter
+    const poDate = parsePoDate(po.date)
+    if (dateFrom) {
+      const from = new Date(dateFrom + 'T00:00:00')
+      if (!poDate || poDate < from) return false
+    }
+    if (dateTo) {
+      const to = new Date(dateTo + 'T23:59:59')
+      if (!poDate || poDate > to) return false
+    }
+
+    return true
+  })
+
+  const totalPages = Math.max(1, Math.ceil(filteredPurchaseOrders.length / pageSize))
+  const paginatedPurchaseOrders = filteredPurchaseOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
@@ -364,6 +411,66 @@ export default function Invoices() {
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
           <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">Purchase Orders</h2>
         </div>
+        {/* Filters */}
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <label className="text-xs text-gray-600">Status</label>
+            <select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value as any); setCurrentPage(1) }}
+                className="text-sm p-2 border rounded bg-white"
+              >
+              <option value="All">All</option>
+              <option value="Received">Received</option>
+              <option value="Dispatched">Dispatched</option>
+              <option value="Validating">Validating</option>
+              <option value="Validated">Validated</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Payment Received">Payment Received</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <label className="text-xs text-gray-600">PO#</label>
+            <input
+              type="text"
+              value={poSearch}
+              onChange={(e) => { setPoSearch(e.target.value); setCurrentPage(1) }}
+              placeholder="Search PO number"
+              className="text-sm p-2 border rounded"
+            />
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <label className="text-xs text-gray-600">Linked Order</label>
+            <input
+              type="text"
+              value={linkedOrderSearch}
+              onChange={(e) => { setLinkedOrderSearch(e.target.value); setCurrentPage(1) }}
+              placeholder="Search linked order"
+              className="text-sm p-2 border rounded"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label className="text-xs text-gray-600">From</label>
+            <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1) }} className="text-sm p-2 border rounded" />
+            <label className="text-xs text-gray-600">To</label>
+            <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1) }} className="text-sm p-2 border rounded" />
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() => { setStatusFilter('All'); setPoSearch(''); setLinkedOrderSearch(''); setDateFrom(''); setDateTo(''); setCurrentPage(1) }}
+              className="text-sm px-3 py-2 border rounded bg-white"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+
+        
         
         {/* Desktop Table */}
         <div className="hidden lg:block overflow-x-auto">
@@ -376,13 +483,13 @@ export default function Invoices() {
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dispatch Status</th>
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {purchaseOrders.map((po) => (
+              {paginatedPurchaseOrders.map((po) => (
                 <tr key={po.id} className="hover:bg-gray-50">
                   <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--color-heading)]">
                     {po.poNumber}
@@ -403,33 +510,37 @@ export default function Invoices() {
                   <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     ₹{po.rate}
                   </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ₹{po.amount.toLocaleString()}
-                  </td>
+                  
                   <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(po.status)}
                   </td>
                   <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm">
-                    {po.status === 'Received' && (
-                      <button
-                        onClick={() => handleUploadInvoice(po.id)}
-                        className="px-3 py-1 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs font-medium flex items-center gap-1"
-                      >
-                        <FileText size={12} />
-                        Upload Invoice
-                      </button>
-                    )}
-                    {po.invoiceFile && (
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-gray-500" />
-                        <span className="text-xs text-gray-600">{po.invoiceFile}</span>
-                      </div>
-                    )}
-                    {po.status === 'Rejected' && po.rejectionReason && (
-                      <div className="text-xs text-red-600 mt-1 max-w-40">
-                        {po.rejectionReason}
-                      </div>
-                    )}
+                    <div className="flex flex-col items-start gap-2">
+                      {po.status === 'Rejected' && (
+                        <div>
+                          <button
+                            onClick={() => handleUploadInvoice(po.id)}
+                            className="px-3 py-1 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs font-medium flex items-center gap-1"
+                          >
+                            <FileText size={12} />
+                            Upload Invoice
+                          </button>
+                        </div>
+                      )}
+
+                      {po.invoiceFile && (
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                          <FileText className="w-4 h-4 text-gray-500" />
+                          <span className="truncate max-w-[12rem]">{po.invoiceFile}</span>
+                        </div>
+                      )}
+
+                      {po.status === 'Rejected' && po.rejectionReason && (
+                        <div className="text-xs text-red-600">
+                          {po.rejectionReason}
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -439,7 +550,7 @@ export default function Invoices() {
 
         {/* Mobile Cards */}
         <div className="lg:hidden divide-y divide-gray-200">
-          {purchaseOrders.map((po) => (
+          {paginatedPurchaseOrders.map((po) => (
             <div key={po.id} className="p-4 sm:p-6">
               <div className="flex justify-between items-start mb-3">
                 <div className="flex-1 min-w-0">
@@ -459,36 +570,47 @@ export default function Invoices() {
                 <p className="text-xs sm:text-sm text-gray-600">
                   <span className="font-medium">Quantity:</span> {po.quantity} @ ₹{po.rate}
                 </p>
-                <p className="text-xs sm:text-sm font-medium text-gray-900">
-                  <span className="font-medium">Amount:</span> ₹{po.amount.toLocaleString()}
-                </p>
+                
                 {getValidationDisplay(po)}
               </div>
 
-              {po.status === 'Received' && (
-                <button
-                  onClick={() => handleUploadInvoice(po.id)}
-                  className="w-full px-3 sm:px-4 py-2 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2"
-                >
-                  <FileText size={14} />
-                  Upload Invoice
-                </button>
-              )}
-              
-              {po.invoiceFile && (
-                <div className="flex items-center gap-2 mt-2 p-2 bg-gray-50 rounded">
-                  <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
-                  <span className="text-xs sm:text-sm text-gray-600 truncate">{po.invoiceFile}</span>
-                </div>
-              )}
-              
-              {po.status === 'Rejected' && po.rejectionReason && (
-                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
-                  <p className="text-xs sm:text-sm text-red-600">{po.rejectionReason}</p>
-                </div>
-              )}
+              <div className="flex flex-col gap-2">
+                {po.status === 'Rejected' && (
+                  <button
+                    onClick={() => handleUploadInvoice(po.id)}
+                    className="w-full px-3 sm:px-4 py-2 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2"
+                  >
+                    <FileText size={14} />
+                    Upload Invoice
+                  </button>
+                )}
+
+                {po.invoiceFile && (
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                    <span className="truncate">{po.invoiceFile}</span>
+                  </div>
+                )}
+
+                {po.status === 'Rejected' && po.rejectionReason && (
+                  <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+                    <p>{po.rejectionReason}</p>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
+        </div>
+        {/* Pagination controls (below table/cards) */}
+        <div className="px-4 sm:px-6 py-2 flex items-center justify-between text-sm text-gray-600">
+          <div>
+            Showing {Math.min((currentPage - 1) * pageSize + 1, Math.max(1, filteredPurchaseOrders.length))} - {Math.min(currentPage * pageSize, filteredPurchaseOrders.length)} of {filteredPurchaseOrders.length}
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-2 py-1 border rounded bg-white disabled:opacity-50">Prev</button>
+            <span>Page {currentPage} / {totalPages}</span>
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="px-2 py-1 border rounded bg-white disabled:opacity-50">Next</button>
+          </div>
         </div>
       </div>
 

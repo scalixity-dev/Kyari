@@ -48,18 +48,18 @@ export const NotificationSection: React.FC<NotificationSectionProps> = ({
   if (!hasNotifications) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-        <div className={`flex items-center justify-between p-4 border-b ${getHeaderStyle()}`}>
-          <div className="flex items-center gap-3">
+        <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border-b gap-3 ${getHeaderStyle()}`}>
+          <div className="flex items-center gap-2 sm:gap-3">
             {getIcon()}
-            <h3 className="text-lg font-semibold text-[var(--color-heading)]">{title}</h3>
-            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
+            <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">{title}</h3>
+            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs sm:text-sm rounded-full">
               0
             </span>
           </div>
         </div>
-        <div className="p-8 text-center text-gray-500">
-          <div className="mb-2">No {type} notifications</div>
-          <div className="text-sm">You're all caught up! 🎉</div>
+        <div className="p-6 sm:p-8 text-center text-gray-500">
+          <div className="mb-2 text-sm sm:text-base">No {type} notifications</div>
+          <div className="text-xs sm:text-sm">You're all caught up! 🎉</div>
         </div>
       </div>
     );
@@ -68,15 +68,15 @@ export const NotificationSection: React.FC<NotificationSectionProps> = ({
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
       {/* Section Header */}
-      <div className={`flex items-center justify-between p-4 border-b ${getHeaderStyle()}`}>
-        <div className="flex items-center gap-3">
+      <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border-b gap-3 ${getHeaderStyle()}`}>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {getIcon()}
-          <h3 className="text-lg font-semibold text-[var(--color-heading)]">{title}</h3>
-          <span className="px-2 py-1 bg-white text-gray-600 text-sm rounded-full border">
+          <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">{title}</h3>
+          <span className="px-2 py-1 bg-white text-gray-600 text-xs sm:text-sm rounded-full border">
             {notifications.length}
           </span>
           {unreadCount > 0 && (
-            <span className="px-2 py-1 bg-red-100 text-red-800 text-sm rounded-full">
+            <span className="px-2 py-1 bg-red-100 text-red-800 text-xs sm:text-sm rounded-full whitespace-nowrap">
               {unreadCount} new
             </span>
           )}
@@ -85,7 +85,7 @@ export const NotificationSection: React.FC<NotificationSectionProps> = ({
         {unreadCount > 0 && (
           <button
             onClick={() => onMarkAllAsRead(type)}
-            className="px-3 py-1.5 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+            className="px-3 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium w-full sm:w-auto"
           >
             Mark all as read
           </button>
@@ -93,7 +93,7 @@ export const NotificationSection: React.FC<NotificationSectionProps> = ({
       </div>
 
       {/* Notifications List */}
-      <div className="p-4 space-y-3">
+      <div className="p-3 sm:p-4 space-y-3">
         {notifications.map((notification) => (
           <NotificationItem
             key={notification.id}

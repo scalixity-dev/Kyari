@@ -15,6 +15,7 @@ import Button from '../../../components/Button/Button'
 import { FileText } from 'lucide-react'
 import jsPDF from 'jspdf'
 import * as XLSX from 'xlsx'
+import { CustomDropdown } from '../../../components'
 
 // Sample data for charts
 const orderFulfillmentData = {
@@ -223,8 +224,6 @@ type FilterType = {
   vendor: string
   status: string
 }
-
-
 
 export default function Analytics() {
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('Orders')
@@ -538,25 +537,25 @@ export default function Analytics() {
   }
 
   return (
-    <div className="p-6 min-h-screen" style={{ backgroundColor: '#ECDDC9' }}>
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen overflow-x-auto" style={{ backgroundColor: '#ECDDC9' }}>
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-heading mb-2">Analytics & Reports</h1>
-        <p className="text-gray-600">Monitor performance and generate custom reports</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Analytics & Reports</h1>
+        <p className="text-sm sm:text-base text-gray-600">Monitor performance and generate custom reports</p>
       </div>
 
       {/* Prebuilt Reports Section */}
-      <div className="mb-12">
-        <h2 className="text-2xl font-semibold text-heading mb-6">Prebuilt Reports</h2>
+      <div className="mb-8 sm:mb-12">
+        <h2 className="text-xl sm:text-2xl font-semibold text-heading mb-4 sm:mb-6">Prebuilt Reports</h2>
         {/* Order Fulfillment Rate - Full Width */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-semibold text-heading">Order Fulfillment Rate</h3>
-            <div className="flex items-center space-x-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:justify-between lg:items-center mb-4 sm:mb-6">
+            <h3 className="text-lg sm:text-xl font-semibold text-heading">Order Fulfillment Rate</h3>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
               <div className="flex bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setFulfillmentView('monthly')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`px-3 sm:px-4 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] sm:min-h-auto ${
                     fulfillmentView === 'monthly'
                       ? 'bg-white text-gray-900 shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
@@ -566,7 +565,7 @@ export default function Analytics() {
                 </button>
                 <button
                   onClick={() => setFulfillmentView('weekly')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`px-3 sm:px-4 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] sm:min-h-auto ${
                     fulfillmentView === 'weekly'
                       ? 'bg-white text-gray-900 shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
@@ -578,50 +577,52 @@ export default function Analytics() {
               
               {/* Month and Year Selectors for Weekly View */}
               {fulfillmentView === 'weekly' && (
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
                     <label className="text-sm font-medium text-gray-700">Month:</label>
-                    <select
+                    <CustomDropdown
                       value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
-                    >
-                      <option value="Jan">January</option>
-                      <option value="Feb">February</option>
-                      <option value="Mar">March</option>
-                      <option value="Apr">April</option>
-                      <option value="May">May</option>
-                      <option value="Jun">June</option>
-                      <option value="Jul">July</option>
-                      <option value="Aug">August</option>
-                      <option value="Sep">September</option>
-                      <option value="Oct">October</option>
-                      <option value="Nov">November</option>
-                      <option value="Dec">December</option>
-                    </select>
+                      onChange={(value) => setSelectedMonth(value)}
+                      options={[
+                        { value: 'Jan', label: 'January' },
+                        { value: 'Feb', label: 'February' },
+                        { value: 'Mar', label: 'March' },
+                        { value: 'Apr', label: 'April' },
+                        { value: 'May', label: 'May' },
+                        { value: 'Jun', label: 'June' },
+                        { value: 'Jul', label: 'July' },
+                        { value: 'Aug', label: 'August' },
+                        { value: 'Sep', label: 'September' },
+                        { value: 'Oct', label: 'October' },
+                        { value: 'Nov', label: 'November' },
+                        { value: 'Dec', label: 'December' }
+                      ]}
+                      className="w-full sm:w-auto"
+                    />
                   </div>
                   
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
                     <label className="text-sm font-medium text-gray-700">Year:</label>
-                    <select
+                    <CustomDropdown
                       value={selectedYear}
-                      onChange={(e) => setSelectedYear(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
-                    >
-                      <option value="2023">2023</option>
-                      <option value="2024">2024</option>
-                      <option value="2025">2025</option>
-                    </select>
+                      onChange={(value) => setSelectedYear(value)}
+                      options={[
+                        { value: '2023', label: '2023' },
+                        { value: '2024', label: '2024' },
+                        { value: '2025', label: '2025' }
+                      ]}
+                      className="w-full sm:w-auto"
+                    />
                   </div>
                 </div>
               )}
             </div>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Chart Section */}
             <div className="lg:col-span-2">
-              <div className="h-64">
+              <div className="h-48 sm:h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={fulfillmentView === 'weekly' ? orderFulfillmentData.weekly[selectedMonth as keyof typeof orderFulfillmentData.weekly] : orderFulfillmentData.monthly}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -635,16 +636,16 @@ export default function Analytics() {
             </div>
             
             {/* Metrics Section */}
-            <div className="flex flex-col justify-center space-y-6">
+            <div className="flex flex-col justify-center space-y-4 sm:space-y-6">
               <div className="text-center">
-                <div className="text-4xl font-bold text-green-600 mb-2">
+                <div className="text-3xl sm:text-4xl font-bold text-green-600 mb-2">
                   {getCurrentMetrics().fulfillmentRate}%
                 </div>
-                <p className="text-sm text-gray-600 mb-1">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">
                   Average {fulfillmentView} fulfillment rate
                   {fulfillmentView === 'weekly' && ` (${selectedMonth} ${selectedYear})`}
                 </p>
-                <div className="w-16 h-1 bg-green-200 rounded-full mx-auto">
+                <div className="w-12 sm:w-16 h-1 bg-green-200 rounded-full mx-auto">
                   <div 
                     className="h-1 bg-green-600 rounded-full" 
                     style={{ width: `${getCurrentMetrics().fulfillmentRate}%` }}
@@ -652,22 +653,22 @@ export default function Analytics() {
                 </div>
               </div>
               
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-600">Total Orders</span>
-                  <span className="font-semibold">
+              <div className="space-y-2 sm:space-y-3">
+                <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+                  <span className="text-xs sm:text-sm text-gray-600">Total Orders</span>
+                  <span className="font-semibold text-sm sm:text-base">
                     {getCurrentMetrics().totalOrders}
                   </span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-600">Fulfilled</span>
-                  <span className="font-semibold text-green-600">
+                <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+                  <span className="text-xs sm:text-sm text-gray-600">Fulfilled</span>
+                  <span className="font-semibold text-green-600 text-sm sm:text-base">
                     {getCurrentMetrics().fulfilledOrders}
                   </span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-600">Pending</span>
-                  <span className="font-semibold text-orange-600">
+                <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+                  <span className="text-xs sm:text-sm text-gray-600">Pending</span>
+                  <span className="font-semibold text-orange-600 text-sm sm:text-base">
                     {getCurrentMetrics().pendingOrders}
                   </span>
                 </div>
@@ -677,12 +678,12 @@ export default function Analytics() {
         </div>
 
         {/* Other Charts Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
 
           {/* Vendor SLA Breaches */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-heading">Vendor SLA Breaches</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-heading">Vendor SLA Breaches</h3>
               <div className="flex items-center space-x-3">
                 <div className="relative" ref={vendorDropdownRef}>
                   <div className="flex items-center space-x-2">
@@ -692,7 +693,7 @@ export default function Analytics() {
                       value={vendorSearchTerm}
                       onChange={(e) => handleVendorSearchChange(e.target.value)}
                       onFocus={() => setShowVendorDropdown(vendorSearchTerm.length > 0)}
-                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent w-48"
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent w-full sm:w-48 min-h-[44px] sm:min-h-auto"
                     />
                     {selectedVendorSla && (
                       <button
@@ -701,7 +702,7 @@ export default function Analytics() {
                           setVendorSearchTerm('')
                           setShowVendorDropdown(false)
                         }}
-                        className="text-gray-400 hover:text-gray-600 text-sm"
+                        className="text-gray-400 hover:text-gray-600 text-sm min-h-[44px] sm:min-h-auto px-2"
                       >
                         Clear
                       </button>
@@ -718,9 +719,9 @@ export default function Analytics() {
                         <div
                           key={index}
                           onClick={() => handleVendorSelect(vendor.vendor)}
-                          className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                          className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 min-h-[44px] sm:min-h-auto flex items-center"
                         >
-                          <div className="flex justify-between items-center">
+                          <div className="flex justify-between items-center w-full">
                             <span className="text-sm font-medium text-gray-900">{vendor.vendor}</span>
                             <div className="flex items-center space-x-2">
                               <span className="text-xs text-gray-500">{vendor.breaches}/{vendor.totalOrders}</span>
@@ -766,29 +767,29 @@ export default function Analytics() {
                 if (!vendor) return null
                 
                 return (
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     {/* Vendor Specific Metrics */}
-                    <div className="grid grid-cols-4 gap-4">
-                      <div className="text-center p-3 bg-gray-50 rounded-lg">
-                        <div className="text-xl font-bold text-gray-900">{vendor.totalOrders}</div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+                      <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <div className="text-lg sm:text-xl font-bold text-gray-900">{vendor.totalOrders}</div>
                         <p className="text-xs text-gray-600">Total Orders</p>
                       </div>
-                      <div className="text-center p-3 bg-red-50 rounded-lg">
-                        <div className="text-xl font-bold text-red-600">{vendor.breaches}</div>
+                      <div className="text-center p-2 sm:p-3 bg-red-50 rounded-lg">
+                        <div className="text-lg sm:text-xl font-bold text-red-600">{vendor.breaches}</div>
                         <p className="text-xs text-gray-600">Breaches</p>
                       </div>
-                      <div className="text-center p-3 bg-orange-50 rounded-lg">
-                        <div className="text-xl font-bold text-orange-600">{vendor.breachRate}%</div>
+                      <div className="text-center p-2 sm:p-3 bg-orange-50 rounded-lg">
+                        <div className="text-lg sm:text-xl font-bold text-orange-600">{vendor.breachRate}%</div>
                         <p className="text-xs text-gray-600">Breach Rate</p>
                       </div>
-                      <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <div className="text-xl font-bold text-blue-600">{vendor.avgDelay}</div>
+                      <div className="text-center p-2 sm:p-3 bg-blue-50 rounded-lg">
+                        <div className="text-lg sm:text-xl font-bold text-blue-600">{vendor.avgDelay}</div>
                         <p className="text-xs text-gray-600">Avg Delay</p>
                       </div>
                     </div>
 
                     {/* Vendor Performance Chart */}
-                    <div className="h-32">
+                    <div className="h-24 sm:h-32">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
@@ -798,8 +799,8 @@ export default function Analytics() {
                             ]}
                             cx="50%"
                             cy="50%"
-                            innerRadius={25}
-                            outerRadius={50}
+                            innerRadius={20}
+                            outerRadius={35}
                             dataKey="value"
                           >
                             <Cell fill="#10B981" />
@@ -814,12 +815,17 @@ export default function Analytics() {
                     <div className="border-t pt-4">
                       <h4 className="text-sm font-medium text-gray-700 mb-3">Recent SLA Breaches</h4>
                       <div className="space-y-2">
-                        {vendor.recentBreaches.map((breach, index) => (
+                        {vendor.recentBreaches.slice(0, 3).map((breach, index) => (
                           <div key={index} className="flex justify-between items-center p-2 bg-red-50 rounded-lg">
                             <span className="text-sm font-medium text-gray-900">{breach}</span>
                             <span className="text-xs text-red-600 font-medium">SLA Breach</span>
                           </div>
                         ))}
+                        {vendor.recentBreaches.length > 3 && (
+                          <div className="text-center">
+                            <span className="text-xs text-gray-500">+{vendor.recentBreaches.length - 3} more</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -837,31 +843,31 @@ export default function Analytics() {
               // All Vendors Overview
               <>
                 {/* Key Metrics */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">12</div>
-                    <p className="text-sm text-gray-600">Total Breaches</p>
+                    <div className="text-xl sm:text-2xl font-bold text-red-600">12</div>
+                    <p className="text-xs sm:text-sm text-gray-600">Total Breaches</p>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">13.3%</div>
-                    <p className="text-sm text-gray-600">Breach Rate</p>
+                    <div className="text-xl sm:text-2xl font-bold text-orange-600">13.3%</div>
+                    <p className="text-xs sm:text-sm text-gray-600">Breach Rate</p>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">3.6 hrs</div>
-                    <p className="text-sm text-gray-600">Avg Delay</p>
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600">3.6 hrs</div>
+                    <p className="text-xs sm:text-sm text-gray-600">Avg Delay</p>
                   </div>
                 </div>
 
                 {/* Chart */}
-                <div className="h-32 mb-4">
+                <div className="h-24 sm:h-32 mb-4">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={slaBreachesData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={25}
-                        outerRadius={50}
+                        innerRadius={20}
+                        outerRadius={35}
                         dataKey="value"
                       >
                         {slaBreachesData.map((entry, index) => (
@@ -874,14 +880,14 @@ export default function Analytics() {
                 </div>
 
                 {/* Legend */}
-                <div className="flex justify-center space-x-4 mb-4">
+                <div className="flex flex-col sm:flex-row sm:justify-center sm:space-x-4 space-y-2 sm:space-y-0 mb-4">
                   {slaBreachesData.map((item, index) => (
                     <div key={index} className="flex items-center">
                       <div 
                         className="w-3 h-3 rounded-full mr-2" 
                         style={{ backgroundColor: item.color }}
                       />
-                      <span className="text-sm text-gray-600">{item.name}: {item.value}%</span>
+                      <span className="text-xs sm:text-sm text-gray-600">{item.name}: {item.value}%</span>
                     </div>
                   ))}
                 </div>
@@ -895,9 +901,9 @@ export default function Analytics() {
                       .slice(0, 3)
                       .map((vendor, index) => (
                         <div key={index} className="flex justify-between items-center text-sm">
-                          <span className="font-medium text-gray-900">{vendor.vendor}</span>
-                          <div className="flex items-center space-x-3">
-                            <span className="text-gray-600">{vendor.breaches}/{vendor.totalOrders}</span>
+                          <span className="font-medium text-gray-900 truncate pr-2">{vendor.vendor}</span>
+                          <div className="flex items-center space-x-2 sm:space-x-3">
+                            <span className="text-gray-600 text-xs sm:text-sm">{vendor.breaches}/{vendor.totalOrders}</span>
                             <span 
                               className={`px-2 py-1 rounded-full text-xs font-medium ${
                                 vendor.breachRate > 20 
@@ -919,35 +925,35 @@ export default function Analytics() {
           </div>
 
           {/* Ticket Resolution Stats */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-heading mb-4">Ticket Resolution Stats</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-semibold text-heading mb-4">Ticket Resolution Stats</h3>
             
             {/* Key Metrics */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">100</div>
-                <p className="text-sm text-gray-600">Total Tickets</p>
+                <div className="text-xl sm:text-2xl font-bold text-blue-600">100</div>
+                <p className="text-xs sm:text-sm text-gray-600">Total Tickets</p>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">75</div>
-                <p className="text-sm text-gray-600">Resolved</p>
+                <div className="text-xl sm:text-2xl font-bold text-green-600">75</div>
+                <p className="text-xs sm:text-sm text-gray-600">Resolved</p>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">4.2 hrs</div>
-                <p className="text-sm text-gray-600">Avg Resolution</p>
+                <div className="text-xl sm:text-2xl font-bold text-orange-600">4.2 hrs</div>
+                <p className="text-xs sm:text-sm text-gray-600">Avg Resolution</p>
               </div>
             </div>
 
             {/* Chart */}
-            <div className="h-32 mb-4">
+            <div className="h-24 sm:h-32 mb-4">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={ticketResolutionData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={25}
-                    outerRadius={50}
+                    innerRadius={20}
+                    outerRadius={35}
                     dataKey="value"
                   >
                     {ticketResolutionData.map((entry, index) => (
@@ -960,14 +966,14 @@ export default function Analytics() {
             </div>
 
             {/* Legend */}
-            <div className="flex justify-center space-x-4 mb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-center sm:space-x-4 space-y-2 sm:space-y-0 mb-4">
               {ticketResolutionData.map((item, index) => (
                 <div key={index} className="flex items-center">
                   <div 
                     className="w-3 h-3 rounded-full mr-2" 
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-sm text-gray-600">{item.name}: {item.value}%</span>
+                  <span className="text-xs sm:text-sm text-gray-600">{item.name}: {item.value}%</span>
                 </div>
               ))}
             </div>
@@ -990,8 +996,8 @@ export default function Analytics() {
                       />
                       <span className="font-medium text-gray-900">{priority.priority}</span>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <span className="text-gray-600">{priority.resolved}/{priority.total}</span>
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <span className="text-gray-600 text-xs sm:text-sm">{priority.resolved}/{priority.total}</span>
                       <span 
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
                           priority.priority === 'High' 
@@ -1011,28 +1017,31 @@ export default function Analytics() {
           </div>
 
           {/* Payment Aging Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:col-span-2">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:col-span-2">
             <div className="mb-4">
-              <h3 className="text-lg font-semibold mb-1" style={{ fontFamily: 'Fraunces', color: '#1D4D43' }}>
+              <h3 className="text-base sm:text-lg font-semibold mb-1" style={{ fontFamily: 'Fraunces', color: '#1D4D43' }}>
                 Payment Aging
               </h3>
-              <p className="text-sm text-gray-600" style={{ fontFamily: 'Quicksand' }}>
+              <p className="text-xs sm:text-sm text-gray-600" style={{ fontFamily: 'Quicksand' }}>
                 Outstanding invoices grouped by days pending
               </p>
             </div>
             
-            <div className="h-48 mb-4">
+            <div className="h-36 sm:h-48 mb-4">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={paymentAgingData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                   <XAxis 
                     dataKey="bucket" 
-                    tick={{ fontSize: 12, fontFamily: 'Quicksand' }}
+                    tick={{ fontSize: 10, fontFamily: 'Quicksand' }}
                     axisLine={{ stroke: '#D1D5DB' }}
                     tickLine={{ stroke: '#D1D5DB' }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
                   />
                   <YAxis 
-                    tick={{ fontSize: 12, fontFamily: 'Quicksand' }}
+                    tick={{ fontSize: 10, fontFamily: 'Quicksand' }}
                     axisLine={{ stroke: '#D1D5DB' }}
                     tickLine={{ stroke: '#D1D5DB' }}
                     tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
@@ -1063,7 +1072,7 @@ export default function Analytics() {
               </ResponsiveContainer>
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
               {paymentAgingData.map((item, index) => {
                 const colors = ['#1D4D43', '#C3754C', '#E57373', '#B71C1C']
                 const bgColors = ['#E8F5E8', '#FDF2E9', '#FEE2E2', '#FEE2E2']
@@ -1071,14 +1080,14 @@ export default function Analytics() {
                 return (
                   <div 
                     key={index} 
-                    className="p-3 rounded-lg text-center"
+                    className="p-2 sm:p-3 rounded-lg text-center"
                     style={{ backgroundColor: bgColors[index] }}
                   >
                     <div 
-                      className="text-lg font-semibold mb-1"
+                      className="text-sm sm:text-lg font-semibold mb-1"
                       style={{ color: colors[index], fontFamily: 'Quicksand' }}
                     >
-                      ₹{item.amount.toLocaleString()}
+                      ₹{(item.amount / 1000).toFixed(0)}k
                     </div>
                     <div 
                       className="text-xs text-gray-600 mb-1"
@@ -1099,7 +1108,7 @@ export default function Analytics() {
             
             <div className="flex justify-end">
               <button 
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                className="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px] sm:min-h-auto"
                 style={{ 
                   backgroundColor: '#C3754C', 
                   color: '#F5F3E7',
@@ -1120,102 +1129,106 @@ export default function Analytics() {
       </div>
 
       {/* Custom Report Builder Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-2xl font-semibold text-heading mb-6">Custom Report </h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+        <h2 className="text-xl sm:text-2xl font-semibold text-heading mb-4 sm:mb-6">Custom Report </h2>
         
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Metric</label>
-            <select
+            <CustomDropdown
               value={selectedMetric}
-              onChange={(e) => setSelectedMetric(e.target.value as MetricType)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
-            >
-              <option value="Orders">Orders</option>
-              <option value="Vendors">Vendors</option>
-              <option value="Payments">Payments</option>
-              <option value="Tickets">Tickets</option>
-            </select>
+              onChange={(value) => setSelectedMetric(value as MetricType)}
+              options={[
+                { value: 'Orders', label: 'Orders' },
+                { value: 'Vendors', label: 'Vendors' },
+                { value: 'Payments', label: 'Payments' },
+                { value: 'Tickets', label: 'Tickets' }
+              ]}
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
-            <select
+            <CustomDropdown
               value={filters.dateRange}
-              onChange={(e) => setFilters({...filters, dateRange: e.target.value})}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
-            >
-              <option value="">All Time</option>
-              <option value="last7days">Last 7 Days</option>
-              <option value="last30days">Last 30 Days</option>
-              <option value="last90days">Last 90 Days</option>
-            </select>
+              onChange={(value) => setFilters({...filters, dateRange: value})}
+              options={[
+                { value: '', label: 'All Time' },
+                { value: 'last7days', label: 'Last 7 Days' },
+                { value: 'last30days', label: 'Last 30 Days' },
+                { value: 'last90days', label: 'Last 90 Days' }
+              ]}
+              placeholder="All Time"
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-            <select
+            <CustomDropdown
               value={filters.city}
-              onChange={(e) => setFilters({...filters, city: e.target.value})}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
-            >
-              <option value="">All Cities</option>
-              <option value="Mumbai">Mumbai</option>
-              <option value="Delhi">Delhi</option>
-              <option value="Bengaluru">Bengaluru</option>
-              <option value="Pune">Pune</option>
-              <option value="Hyderabad">Hyderabad</option>
-            </select>
+              onChange={(value) => setFilters({...filters, city: value})}
+              options={[
+                { value: '', label: 'All Cities' },
+                { value: 'Mumbai', label: 'Mumbai' },
+                { value: 'Delhi', label: 'Delhi' },
+                { value: 'Bengaluru', label: 'Bengaluru' },
+                { value: 'Pune', label: 'Pune' },
+                { value: 'Hyderabad', label: 'Hyderabad' }
+              ]}
+              placeholder="All Cities"
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Vendor</label>
-            <select
+            <CustomDropdown
               value={filters.vendor}
-              onChange={(e) => setFilters({...filters, vendor: e.target.value})}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
-            >
-              <option value="">All Vendors</option>
-              <option value="GreenLeaf Co">GreenLeaf Co</option>
-              <option value="Urban Roots">Urban Roots</option>
-              <option value="Plantify">Plantify</option>
-              <option value="Clay Works">Clay Works</option>
-            </select>
+              onChange={(value) => setFilters({...filters, vendor: value})}
+              options={[
+                { value: '', label: 'All Vendors' },
+                { value: 'GreenLeaf Co', label: 'GreenLeaf Co' },
+                { value: 'Urban Roots', label: 'Urban Roots' },
+                { value: 'Plantify', label: 'Plantify' },
+                { value: 'Clay Works', label: 'Clay Works' }
+              ]}
+              placeholder="All Vendors"
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select
+            <CustomDropdown
               value={filters.status}
-              onChange={(e) => setFilters({...filters, status: e.target.value})}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
-            >
-              <option value="">All Status</option>
-              <option value="ACTIVE">Active</option>
-              <option value="PENDING">Pending</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="DISPATCHED">Dispatched</option>
-              <option value="PAID">Paid</option>
-              <option value="RESOLVED">Resolved</option>
-            </select>
+              onChange={(value) => setFilters({...filters, status: value})}
+              options={[
+                { value: '', label: 'All Status' },
+                { value: 'ACTIVE', label: 'Active' },
+                { value: 'PENDING', label: 'Pending' },
+                { value: 'CONFIRMED', label: 'Confirmed' },
+                { value: 'DISPATCHED', label: 'Dispatched' },
+                { value: 'PAID', label: 'Paid' },
+                { value: 'RESOLVED', label: 'Resolved' }
+              ]}
+              placeholder="All Status"
+            />
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-4 mb-6">
-          <Button onClick={handleGenerateReport}>
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <Button onClick={handleGenerateReport} className="min-h-[44px] sm:min-h-auto">
             Generate Report
           </Button>
-          <Button onClick={handleClearFilters} className="bg-gray-500 hover:bg-gray-600">
+          <Button onClick={handleClearFilters} className="bg-gray-500 hover:bg-gray-600 min-h-[44px] sm:min-h-auto">
             Clear Filters
           </Button>
           {showReport && (
             <>
-              <Button onClick={handleExportPDF} className="bg-gray-600 hover:bg-gray-700">
+              <Button onClick={handleExportPDF} className="bg-gray-600 hover:bg-gray-700 min-h-[44px] sm:min-h-auto">
                 Export PDF
               </Button>
-              <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700">
+              <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 min-h-[44px] sm:min-h-auto">
                 Export Excel
               </Button>
             </>
@@ -1224,21 +1237,21 @@ export default function Analytics() {
 
         {/* Report Table */}
         {showReport && (
-          <div id="report-content" className="mt-6">
-            <h3 className="text-lg font-semibold text-heading mb-4">
+          <div id="report-content" className="mt-4 sm:mt-6">
+            <h3 className="text-base sm:text-lg font-semibold text-heading mb-4">
               Report: {selectedMetric} ({reportData.length} records)
             </h3>
             
             {reportData.length === 0 ? (
-              <div className="text-center py-12 bg-white border border-gray-200 rounded-lg">
+              <div className="text-center py-8 sm:py-12 bg-white border border-gray-200 rounded-lg">
                 <div className="flex justify-center mb-2">
-                  <FileText size={48} className="text-gray-400" />
+                  <FileText size={40} className="text-gray-400 sm:w-12 sm:h-12" />
                 </div>
-                <h4 className="text-lg font-medium text-gray-900 mb-2">No Records Found</h4>
-                <p className="text-gray-600 mb-4">
+                <h4 className="text-base sm:text-lg font-medium text-gray-900 mb-2">No Records Found</h4>
+                <p className="text-sm sm:text-base text-gray-600 mb-4 px-4">
                   No data matches your current filter criteria. Try adjusting your filters to see more results.
                 </p>
-                <div className="text-sm text-gray-500">
+                <div className="text-xs sm:text-sm text-gray-500 px-4">
                   <p>Current filters:</p>
                   <ul className="mt-2 space-y-1">
                     {filters.city && <li>• City: {filters.city}</li>}
@@ -1249,43 +1262,90 @@ export default function Analytics() {
                 </div>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      {getReportColumns(selectedMetric).map((column, index) => (
-                        <th key={index} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          {column}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {reportData.map((row, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        {Object.values(row as Record<string, unknown>).map((value: unknown, cellIndex) => (
-                          <td key={cellIndex} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {typeof value === 'string' && (value.includes('CONFIRMED') || value.includes('PAID') || value.includes('PAYMENT_DONE') || value.includes('ACTIVE') || value.includes('RESOLVED') || value.includes('DISPATCHED') || value.includes('PENDING') || value.includes('OVERDUE') || value.includes('OPEN') || value.includes('IN_PROGRESS')) ? (
-                              <span 
-                                className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full border"
-                                style={{
-                                  backgroundColor: getStatusColor(value).bg,
-                                  color: getStatusColor(value).color,
-                                  borderColor: getStatusColor(value).border,
-                                }}
-                              >
-                                {value === 'PAYMENT_DONE' ? 'Paid' : value.replace('_', ' ')}
-                              </span>
-                            ) : (
-                              String(value)
-                            )}
-                          </td>
+              <>
+                {/* Mobile Card View */}
+                <div className="lg:hidden space-y-3">
+                  {reportData.map((row, index) => {
+                    const rowObj = row as Record<string, unknown>
+                    const columns = getReportColumns(selectedMetric)
+                    return (
+                      <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div className="space-y-2">
+                          {columns.map((column, colIndex) => {
+                            const key = Object.keys(rowObj).find(k => 
+                              k.toLowerCase().includes(column.toLowerCase().replace(' ', '').replace('id', ''))
+                            )
+                            const value = key ? rowObj[key] : ''
+                            
+                            return (
+                              <div key={colIndex} className="flex justify-between items-start">
+                                <span className="text-sm font-medium text-gray-600 flex-shrink-0 mr-3">
+                                  {column}:
+                                </span>
+                                <span className="text-sm text-gray-900 text-right">
+                                  {typeof value === 'string' && (value.includes('CONFIRMED') || value.includes('PAID') || value.includes('PAYMENT_DONE') || value.includes('ACTIVE') || value.includes('RESOLVED') || value.includes('DISPATCHED') || value.includes('PENDING') || value.includes('OVERDUE') || value.includes('OPEN') || value.includes('IN_PROGRESS')) ? (
+                                    <span 
+                                      className="inline-flex px-2 py-1 text-xs font-semibold rounded-full border"
+                                      style={{
+                                        backgroundColor: getStatusColor(value).bg,
+                                        color: getStatusColor(value).color,
+                                        borderColor: getStatusColor(value).border,
+                                      }}
+                                    >
+                                      {value === 'PAYMENT_DONE' ? 'Paid' : value.replace('_', ' ')}
+                                    </span>
+                                  ) : (
+                                    String(value)
+                                  )}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        {getReportColumns(selectedMetric).map((column, index) => (
+                          <th key={index} className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {column}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {reportData.map((row, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          {Object.values(row as Record<string, unknown>).map((value: unknown, cellIndex) => (
+                            <td key={cellIndex} className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {typeof value === 'string' && (value.includes('CONFIRMED') || value.includes('PAID') || value.includes('PAYMENT_DONE') || value.includes('ACTIVE') || value.includes('RESOLVED') || value.includes('DISPATCHED') || value.includes('PENDING') || value.includes('OVERDUE') || value.includes('OPEN') || value.includes('IN_PROGRESS')) ? (
+                                <span 
+                                  className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full border"
+                                  style={{
+                                    backgroundColor: getStatusColor(value).bg,
+                                    color: getStatusColor(value).color,
+                                    borderColor: getStatusColor(value).border,
+                                  }}
+                                >
+                                  {value === 'PAYMENT_DONE' ? 'Paid' : value.replace('_', ' ')}
+                                </span>
+                              ) : (
+                                String(value)
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         )}
