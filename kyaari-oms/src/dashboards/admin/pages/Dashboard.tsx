@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom'
+ 
 import { Package, BarChart3, Wallet, FileText } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -29,7 +29,16 @@ interface KPICardProps {
 /* styles migrated to Tailwind classes */
 
 const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, subtitle, onClick }) => {
-  const iconBgClass = color === 'blue' ? 'bg-blue-600' : color === 'orange' ? 'bg-orange-600' : color === 'green' ? 'bg-green-600' : color === 'red' ? 'bg-red-600' : 'bg-gray-600'
+  const iconBgClass =
+    color === 'blue'
+      ? 'bg-blue-600'
+      : color === 'orange'
+      ? 'bg-[#C3754C]'
+      : color === 'green'
+      ? 'bg-green-600'
+      : color === 'red'
+      ? 'bg-red-600'
+      : 'bg-gray-600'
   
   return (
     <div
@@ -37,15 +46,20 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, subtitle, 
       tabIndex={onClick ? 0 : -1}
       onKeyDown={(e) => { if (onClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() } }}
       onClick={onClick}
-      className={`bg-[#f5f0e8] p-6 rounded-xl shadow-sm flex flex-col items-center gap-3 border border-gray-200 relative overflow-hidden ${onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all' : ''}`}
+      className={`bg-[#ECDDC9] pt-16 pb-6 px-6 rounded-xl shadow-sm flex flex-col items-center gap-3 border border-gray-200 relative overflow-visible ${onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all' : ''}`}
     >
-      <div className={`w-14 h-14 flex items-center justify-center rounded-full ${iconBgClass} text-white`}>
-        {React.isValidElement(icon) ? React.cloneElement(icon as any, { color: 'white', size: 28 } as any) : icon}
+      <div className={`absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 sm:w-20 sm:h-20 flex items-center justify-center rounded-full ${iconBgClass} text-white shadow-md`}>
+        {React.isValidElement(icon)
+          ? React.cloneElement(
+              icon as React.ReactElement<{ color?: string; size?: number }>,
+              { color: 'white', size: 36 }
+            )
+          : icon}
       </div>
       <div className="flex flex-col items-center text-center w-full">
-        <h3 className="text-sm font-bold text-[#2d3748] mb-2">{title}</h3>
+        <h3 className="font-['Fraunces'] font-bold text-[18px] leading-[100%] tracking-[0] text-center text-[#2d3748] mb-2">{title}</h3>
         <div className="text-3xl font-bold text-[#2d3748] mb-2">{value}</div>
-        {subtitle && <div className="text-xs text-orange-600 font-medium leading-tight">{subtitle}</div>}
+        {subtitle && <div className="text-sm text-orange-600 font-semibold leading-tight">{subtitle}</div>}
       </div>
     </div>
   )
@@ -54,43 +68,36 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, subtitle, 
 // TaskItem removed; tasks are now rendered as a table with an Actions column
 
 export default function Dashboard() {
-  const navigate = useNavigate()
-  const today = new Date().toLocaleDateString('en-GB', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
 
   // Mock data - in a real app, this would come from API calls
   const kpiData = [
     {
-      title: 'Orders Today',
+      title: 'Order Today',
       value: '47',
       icon: <Package size={32} />,
-      color: 'blue',
+      color: 'orange',
       subtitle: 'Pending: 12 | Confirmed: 20 | Dispatched: 15'
     },
     {
-      title: 'Vendor Confirmations',
+      title: 'Vendor Confirmation',
       value: '8',
       icon: <BarChart3 size={32} />,
       color: 'orange',
       subtitle: 'Pending Approval'
     },
     {
-      title: 'Payments Pending',
+      title: 'Payment Pending',
       value: '₹2,34,500',
       icon: <Wallet size={32} />,
-      color: 'green',
-      subtitle: '15 invoices'
+      color: 'orange',
+      subtitle: '15 Invoices'
     },
     {
       title: 'Tickets Open',
       value: '6',
       icon: <FileText size={32} />,
-      color: 'red',
-      subtitle: '2 high priority'
+      color: 'orange',
+      subtitle: '2 High Priority'
     }
   ];
 
@@ -103,15 +110,12 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
+    <div className="py-4 px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header Section */}
-      <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg mb-6 lg:mb-8 border border-gray-200">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Welcome, Admin..!</h1>
-        <p className="text-base sm:text-lg text-[var(--color-primary)] font-medium">{today}</p>
-      </div>
+     
 
       {/* Task Center */}
-      <div className="mb-6 lg:mb-8">
+      <div className="mb-6 lg:mb-8 py-10">
         <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Actions Required Today</h2>
         
         {/* Mobile Card Layout */}
@@ -172,9 +176,9 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="mb-6 lg:mb-8">
+      <div className="mb-6 lg:mb-8 ">
         <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Today's Overview</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 py-10 gap-6">
           {kpiData.map((kpi, index) => (
             <KPICard
               key={index}
@@ -183,11 +187,6 @@ export default function Dashboard() {
               icon={kpi.icon}
               color={kpi.color}
               subtitle={kpi.subtitle}
-              onClick={
-                kpi.title === 'Orders Today' ? () => navigate('/admin/tracking/orders') :
-                kpi.title === 'Vendor Confirmations' ? () => navigate('/admin/tracking/vendors') :
-                kpi.title === 'Payments Pending' ? () => navigate('/admin/money-flow') : undefined
-              }
             />
           ))}
         </div>
@@ -216,7 +215,7 @@ export default function Dashboard() {
                 <YAxis />
                 <Tooltip />
                 <Bar dataKey="value" fill="#38a169" radius={[6, 6, 0, 0]}>
-                  <LabelList dataKey="value" position="top" formatter={(val: any) => `${val}%`} />
+                  <LabelList dataKey="value" position="top" />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -233,7 +232,7 @@ export default function Dashboard() {
                     <Cell key="cell-overdue" fill="#e53e3e" />
                   </Pie>
                   <Legend verticalAlign="bottom" />
-                  <Tooltip formatter={(value: any) => `${value}%`} />
+                  <Tooltip formatter={(value: number | string) => `${value}%`} />
                 </PieChart>
               </ResponsiveContainer>
               {/* Enhanced payment figures: mock totals and per-status breakdown */}
