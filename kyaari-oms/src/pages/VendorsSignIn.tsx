@@ -1,24 +1,53 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 
 export default function VendorsSignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
 
-  function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    // Check if we came from registration with a success message
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message)
+      // Clear the state so message doesn't persist on refresh
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    
     if (!email || !password) {
       setError('Please enter email and password')
       return
     }
-    // placeholder auth — accepts any credentials for now
-    login(email, password)
-    navigate('/vendors')
+
+    if (!email.includes('@')) {
+      setError('Please enter a valid email address')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const success = await login({ email, password })
+      if (success) {
+        navigate('/vendors')
+      } else {
+        setError('Invalid credentials or insufficient permissions for vendor access')
+      }
+    } catch (error: any) {
+      setError(error.message || 'Login failed. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -67,9 +96,17 @@ export default function VendorsSignIn() {
             />
           </label>
 
+          {successMessage && (
+            <div className="text-green-700 text-sm text-left bg-green-50 border border-green-200 rounded-md p-3 mb-2">
+              {successMessage}
+            </div>
+          )}
+          
           {error && <div className="admin-signin__error">{error}</div>}
 
-          <button type="submit" className="admin-signin__button">Sign In</button>
+          <button type="submit" className="admin-signin__button" disabled={isLoading}>
+            {isLoading ? 'Signing In...' : 'Sign In'}
+          </button>
 
           <div className="admin-signin__signup">
             <span>Don't have an account?</span>

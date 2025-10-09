@@ -42,7 +42,7 @@ export const refreshTokenSchema = z.object({
 
 // Admin schemas
 export const createUserSchema = z.object({
-  role: z.enum(['ADMIN', 'OPS', 'ACCOUNTS'], { 
+  role: z.enum(['ADMIN', 'OPS', 'ACCOUNTS', 'VENDOR'], { 
     required_error: 'Role is required',
     invalid_type_error: 'Invalid role'
   }),

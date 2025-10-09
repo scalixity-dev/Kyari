@@ -6,6 +6,9 @@ import { env } from './config/env';
 import { authRoutes } from './modules/auth/auth.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
 import { orderRoutes } from './modules/orders/order.routes';
+import { assignmentRoutes } from './modules/assignments/assignment.routes';
+import dispatchRoutes from './routes/dispatch.routes';
+import grnRoutes from './routes/grn.routes';
 import { errorHandler, notFoundHandler, rateLimiter } from './middlewares/error.middleware';
 import { logger } from './utils/logger';
 
@@ -78,6 +81,9 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/assignments', assignmentRoutes);
+app.use('/api/dispatches', dispatchRoutes);
+app.use('/api/grn', grnRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
