@@ -56,8 +56,12 @@ export class AuthController {
 
       ResponseHelper.success(res, result, result.message, 201);
     } catch (error) {
-      logger.error('Vendor registration controller error', { error });
-      ResponseHelper.error(res, error instanceof Error ? error.message : 'Registration failed', 400);
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+      logger.error('Vendor registration controller error', { 
+        error: error instanceof Error ? { message: error.message, stack: error.stack } : error,
+        body: req.body 
+      });
+      ResponseHelper.error(res, errorMessage, 400);
     }
   }
 

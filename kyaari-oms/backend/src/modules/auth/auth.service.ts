@@ -82,6 +82,11 @@ export class AuthService {
 
   async registerVendor(registrationData: VendorRegistrationDto, ipAddress?: string, userAgent?: string): Promise<{ message: string }> {
     try {
+      logger.info('Starting vendor registration', { 
+        email: registrationData.email, 
+        phone: registrationData.contactPhone 
+      });
+
       // Check if email already exists
       const existingUser = await userService.findByEmail(registrationData.email);
       if (existingUser) {
@@ -104,7 +109,8 @@ export class AuthService {
       });
       
       if (!vendorRole) {
-        throw new Error('Vendor role not found');
+        logger.error('Vendor role not found in database');
+        throw new Error('Vendor role not found. Please run database seed.');
       }
 
       // Create user and vendor profile in transaction
@@ -130,9 +136,9 @@ export class AuthService {
             contactPhone: registrationData.contactPhone,
             warehouseLocation: registrationData.warehouseLocation,
             pincode: registrationData.pincode,
-            companyName: registrationData.companyName,
-            gstNumber: registrationData.gstNumber,
-            panNumber: registrationData.panNumber
+            companyName: registrationData.companyName || registrationData.contactPersonName, // Use contact name if company name not provided
+            gstNumber: registrationData.gstNumber || null,
+            panNumber: registrationData.panNumber || null
           }
         });
 
@@ -162,12 +168,21 @@ export class AuthService {
 
       return { message: 'Registration successful. Awaiting admin approval.' };
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      
       logger.error('Vendor registration failed', { 
-        error, 
+        error: errorMessage,
+        stack: errorStack,
         email: registrationData.email,
         phone: registrationData.contactPhone 
       });
-      throw error;
+      
+      // Re-throw with proper error message
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Registration failed. Please try again.');
     }
   }
 

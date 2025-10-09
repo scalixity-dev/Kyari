@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
+import { ResetPassword } from '../components'
 
 export default function AccountsSignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showResetPassword, setShowResetPassword] = useState(false)
   const navigate = useNavigate()
   const { login } = useAuth()
 
@@ -30,10 +32,11 @@ export default function AccountsSignIn() {
       if (success) {
         navigate('/accounts')
       } else {
-        setError('Invalid credentials or insufficient permissions for accounts access')
+        setError('Invalid credentials or you do not have Accounts role access')
       }
-    } catch (error: any) {
-      setError(error.message || 'Login failed. Please try again.')
+    } catch (error: unknown) {
+      const err = error as { message?: string }
+      setError(err.message || 'Login failed. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -53,8 +56,12 @@ export default function AccountsSignIn() {
         .admin-signin__label { font-size:0.9rem; text-align:left; color: var(--color-primary); }
         .admin-signin__input { width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid #e6e6e6; margin-top:0.25rem; box-sizing:border-box; }
         .admin-signin__error { color:#b00020; font-size:0.9rem; text-align:left; }
-        .admin-signin__button { margin-top:0.5rem; background-color: var(--color-accent); color: var(--color-button-text); padding:0.75rem 1rem; border-radius:8px; border:none; cursor:pointer; font-weight: var(--fw-bold); }
+        .admin-signin__button { margin-top:0.5rem; background-color: var(--color-accent); color: var(--color-button-text); padding:0.75rem 1rem; border-radius:8px; border:none; cursor:pointer; font-weight: var(--fw-bold); width:100%; }
         .admin-signin__button:hover { opacity:0.95; }
+        .admin-signin__button:disabled { opacity:0.6; cursor:not-allowed; }
+        .admin-signin__forgot-password { margin-top:1rem; text-align:center; }
+        .admin-signin__forgot-link { background:none; border:none; color: var(--color-accent); font-size:0.9rem; cursor:pointer; text-decoration:none; }
+        .admin-signin__forgot-link:hover { text-decoration:underline; }
       `}</style>
 
       <div className="admin-signin__card">
@@ -87,8 +94,28 @@ export default function AccountsSignIn() {
           <button type="submit" className="admin-signin__button" disabled={isLoading}>
             {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
+
+          <div className="admin-signin__forgot-password">
+            <button 
+              type="button"
+              onClick={() => setShowResetPassword(true)}
+              className="admin-signin__forgot-link"
+            >
+              Forgot Password?
+            </button>
+          </div>
         </form>
       </div>
+
+      {showResetPassword && (
+        <ResetPassword
+          onClose={() => setShowResetPassword(false)}
+          onSuccess={() => {
+            setEmail('')
+            setPassword('')
+          }}
+        />
+      )}
     </div>
   )
 }

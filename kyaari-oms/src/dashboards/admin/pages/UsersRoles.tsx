@@ -1,8 +1,10 @@
 import { useMemo, useState, useEffect } from 'react'
 import { Plus } from 'lucide-react'
-import { CustomDropdown } from '../../../components'
+import { CustomDropdown, ConfirmationModal } from '../../../components'
 import { userApi, type User as ApiUser } from '../../../services/userApi'
+import { vendorApi, type VendorListItem } from '../../../services/vendorApi'
 import toast from 'react-hot-toast'
+import { useAuth } from '../../../auth/AuthProvider'
 
 type TabKey = 'admin' | 'accounts' | 'ops' | 'vendors' | 'matrix'
 type UserRole = 'Admin' | 'Accounts' | 'Ops'
@@ -20,10 +22,15 @@ type UserRow = {
 
 type VendorRow = {
   id: string
+  userId: string
   name: string
+  email: string
+  contactPhone: string
   gstOrPan: string
-  status: VendorStatus
+  status: string
+  verified: boolean
   slaScore: number
+  createdAt: string
 }
 
 type Permission = 'Orders' | 'Vendors' | 'Accounts' | 'Ops'
@@ -97,6 +104,20 @@ function Modal({ open, onClose, title, children, showClose = true }: { open: boo
 export default function UsersRoles() {
   const [activeTab, setActiveTab] = useState<TabKey>('admin')
   const [loading, setLoading] = useState(false)
+  const { user: currentUser } = useAuth()
+  
+  // Delete confirmation modal state
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean
+    userId: string
+    userName: string
+    table: 'admin' | 'accounts' | 'ops'
+  }>({
+    isOpen: false,
+    userId: '',
+    userName: '',
+    table: 'admin'
+  })
 
   const tabs = useMemo(
     () => [
@@ -115,14 +136,12 @@ export default function UsersRoles() {
   const [opsUsers, setOpsUsers] = useState<UserRow[]>([])
 
   // Vendors
-  const [vendors, setVendors] = useState<VendorRow[]>([
-    { id: generateId('v'), name: 'GreenLeaf Supplies', gstOrPan: '27ABCDE1234F1Z5', status: 'Pending', slaScore: 92 },
-    { id: generateId('v'), name: 'Flora Logistics', gstOrPan: 'AAAPL1234C', status: 'Approved', slaScore: 88 }
-  ])
+  const [vendors, setVendors] = useState<VendorRow[]>([])
 
   // Load users on component mount
   useEffect(() => {
     loadUsers()
+    loadVendors()
   }, [])
 
   const loadUsers = async () => {
@@ -143,6 +162,34 @@ export default function UsersRoles() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadVendors = async () => {
+    setLoading(true)
+    try {
+      const vendorData = await vendorApi.getVendors()
+      setVendors(mapVendorApiToRows(vendorData.vendors))
+    } catch (error) {
+      console.error('Failed to load vendors:', error)
+      toast.error('Failed to load vendors')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const mapVendorApiToRows = (vendors: VendorListItem[]): VendorRow[] => {
+    return vendors.map(vendor => ({
+      id: vendor.id,
+      userId: vendor.userId,
+      name: vendor.companyName || vendor.contactPersonName,
+      email: vendor.email || '',
+      contactPhone: vendor.contactPhone,
+      gstOrPan: vendor.gstNumber || vendor.panNumber || 'N/A',
+      status: vendor.status,
+      verified: vendor.verified,
+      slaScore: vendor.slaComplianceRate || 0,
+      createdAt: new Date(vendor.createdAt).toLocaleDateString()
+    }))
   }
 
   const mapApiUsersToRows = (users: ApiUser[]): UserRow[] => {
@@ -275,26 +322,33 @@ export default function UsersRoles() {
     }
   }
 
-  async function handleDeleteUser(id: string, table: 'admin' | 'accounts' | 'ops', userName: string) {
-    // Confirm deletion
-    if (!window.confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
-      return
-    }
+  function openDeleteConfirmation(id: string, table: 'admin' | 'accounts' | 'ops', userName: string) {
+    setDeleteConfirmation({
+      isOpen: true,
+      userId: id,
+      userName,
+      table
+    })
+  }
 
+  async function handleConfirmDelete() {
+    const { userId, table } = deleteConfirmation
+    
     try {
       setLoading(true)
-      await userApi.deleteUser(id)
+      await userApi.deleteUser(userId)
       
       // Remove from appropriate list
       if (table === 'admin') {
-        setAdminUsers((rows) => rows.filter((r) => r.id !== id))
+        setAdminUsers((rows) => rows.filter((r) => r.id !== userId))
       } else if (table === 'accounts') {
-        setAccountsUsers((rows) => rows.filter((r) => r.id !== id))
+        setAccountsUsers((rows) => rows.filter((r) => r.id !== userId))
       } else {
-        setOpsUsers((rows) => rows.filter((r) => r.id !== id))
+        setOpsUsers((rows) => rows.filter((r) => r.id !== userId))
       }
       
       toast.success('User deleted successfully')
+      setDeleteConfirmation({ isOpen: false, userId: '', userName: '', table: 'admin' })
     } catch (error) {
       console.error('Failed to delete user:', error)
       toast.error('Failed to delete user')
@@ -362,9 +416,56 @@ export default function UsersRoles() {
   }
 
   // Vendors actions
-  const [showKycModal, setShowKycModal] = useState<{ open: boolean; vendorName: string }>({ open: false, vendorName: '' })
-  function approveVendor(id: string) {
-    setVendors((rows) => rows.map((r) => (r.id === id ? { ...r, status: 'Approved' } : r)))
+  const [showKycModal, setShowKycModal] = useState<{ open: boolean; vendorName: string; vendorData: VendorRow | null }>({ open: false, vendorName: '', vendorData: null })
+  
+  async function handleApproveVendor(userId: string, vendorName: string) {
+    try {
+      setLoading(true)
+      await vendorApi.approveVendor(userId)
+      
+      // Update local state
+      setVendors((rows) => rows.map((r) => 
+        r.userId === userId ? { ...r, status: 'ACTIVE', verified: true } : r
+      ))
+      
+      toast.success(`${vendorName} approved successfully`)
+    } catch (error) {
+      console.error('Failed to approve vendor:', error)
+      toast.error('Failed to approve vendor')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSuspendVendor(userId: string, vendorName: string) {
+    if (!window.confirm(`Are you sure you want to suspend ${vendorName}?`)) {
+      return
+    }
+
+    try {
+      setLoading(true)
+      await vendorApi.suspendVendor(userId)
+      
+      // Update local state
+      setVendors((rows) => rows.map((r) => 
+        r.userId === userId ? { ...r, status: 'SUSPENDED' } : r
+      ))
+      
+      toast.success(`${vendorName} suspended successfully`)
+    } catch (error) {
+      console.error('Failed to suspend vendor:', error)
+      toast.error('Failed to suspend vendor')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function openKycModal(vendor: VendorRow) {
+    setShowKycModal({ 
+      open: true, 
+      vendorName: vendor.name,
+      vendorData: vendor
+    })
   }
 
   // Role Matrix
@@ -466,12 +567,14 @@ export default function UsersRoles() {
                         >
                           {row.status === 'Active' ? 'Deactivate' : 'Activate'}
                         </PrimaryButton>
-                        <PrimaryButton
-                          className="bg-red-600 hover:bg-red-700"
-                          onClick={() => handleDeleteUser(row.id, 'admin', row.name)}
-                        >
-                          Delete
-                        </PrimaryButton>
+                        {currentUser?.id !== row.id && (
+                          <PrimaryButton
+                            className="bg-red-600 hover:bg-red-700"
+                            onClick={() => openDeleteConfirmation(row.id, 'admin', row.name)}
+                          >
+                            Delete
+                          </PrimaryButton>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -523,12 +626,14 @@ export default function UsersRoles() {
                         {row.status === 'Active' ? 'Deactivate' : 'Activate'}
                       </PrimaryButton>
                     </div>
-                    <PrimaryButton
-                      className="w-full justify-center text-sm bg-red-600 hover:bg-red-700"
-                      onClick={() => handleDeleteUser(row.id, 'admin', row.name)}
-                    >
-                      Delete User
-                    </PrimaryButton>
+                    {currentUser?.id !== row.id && (
+                      <PrimaryButton
+                        className="w-full justify-center text-sm bg-red-600 hover:bg-red-700"
+                        onClick={() => openDeleteConfirmation(row.id, 'admin', row.name)}
+                      >
+                        Delete User
+                      </PrimaryButton>
+                    )}
                   </div>
                 </div>
               ))}
@@ -641,7 +746,7 @@ export default function UsersRoles() {
                         </PrimaryButton>
                         <PrimaryButton
                           className="bg-red-600 hover:bg-red-700"
-                          onClick={() => handleDeleteUser(row.id, 'accounts', row.name)}
+                          onClick={() => openDeleteConfirmation(row.id, 'accounts', row.name)}
                         >
                           Delete
                         </PrimaryButton>
@@ -698,7 +803,7 @@ export default function UsersRoles() {
                     </div>
                     <PrimaryButton
                       className="w-full justify-center text-sm bg-red-600 hover:bg-red-700"
-                      onClick={() => handleDeleteUser(row.id, 'accounts', row.name)}
+                      onClick={() => openDeleteConfirmation(row.id, 'accounts', row.name)}
                     >
                       Delete User
                     </PrimaryButton>
@@ -812,7 +917,7 @@ export default function UsersRoles() {
                         </PrimaryButton>
                         <PrimaryButton
                           className="bg-red-600 hover:bg-red-700"
-                          onClick={() => handleDeleteUser(row.id, 'ops', row.name)}
+                          onClick={() => openDeleteConfirmation(row.id, 'ops', row.name)}
                         >
                           Delete
                         </PrimaryButton>
@@ -869,7 +974,7 @@ export default function UsersRoles() {
                     </div>
                     <PrimaryButton
                       className="w-full justify-center text-sm bg-red-600 hover:bg-red-700"
-                      onClick={() => handleDeleteUser(row.id, 'ops', row.name)}
+                      onClick={() => openDeleteConfirmation(row.id, 'ops', row.name)}
                     >
                       Delete User
                     </PrimaryButton>
@@ -942,88 +1047,179 @@ export default function UsersRoles() {
               <table className="w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-[var(--color-accent)]">
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Vendor Name</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Company Name</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Email</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Phone</th>
                     <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">GST/PAN</th>
                     <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Status</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">SLA Score (%)</th>
+                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">SLA Score</th>
                     <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {vendors.map((row) => (
-                    <tr key={row.id} className={'bg-white'}>
-                      <td className="p-3">{row.name}</td>
-                      <td className="p-3">{row.gstOrPan}</td>
-                      <td className="p-3">
-                        {row.status === 'Approved' ? (
-                          <Badge label="Approved" color="#16A34A" />
-                        ) : (
-                          <Badge label="Pending" color="#F59E0B" />
-                        )}
-                      </td>
-                      <td className="p-3">{row.slaScore}%</td>
-                      <td className="p-3 flex gap-2">
-                        <PrimaryButton
-                          disabled={row.status === 'Approved'}
-                          className={row.status === 'Approved' ? 'bg-green-500 text-white cursor-not-allowed' : 'bg-accent text-button-text'}
-                          onClick={() => approveVendor(row.id)}
-                        >
-                          {row.status === 'Approved' ? 'Approved' : 'Approve Vendor'}
-                        </PrimaryButton>
-                        <SecondaryButton onClick={() => setShowKycModal({ open: true, vendorName: row.name })}>View KYC Docs</SecondaryButton>
-                      </td>
-                    </tr>
-                  ))}
+                  {vendors.map((row) => {
+                    const isApproved = row.status === 'ACTIVE' && row.verified
+                    const isPending = row.status === 'PENDING' || !row.verified
+                    const isSuspended = row.status === 'SUSPENDED'
+                    
+                    return (
+                      <tr key={row.id} className={'bg-white'}>
+                        <td className="p-3">{row.name}</td>
+                        <td className="p-3 text-sm">{row.email}</td>
+                        <td className="p-3 text-sm">{row.contactPhone}</td>
+                        <td className="p-3 text-sm">{row.gstOrPan}</td>
+                        <td className="p-3">
+                          {isApproved ? (
+                            <Badge label="Approved" color="#16A34A" />
+                          ) : isSuspended ? (
+                            <Badge label="Suspended" color="#DC2626" />
+                          ) : (
+                            <Badge label="Pending" color="#F59E0B" />
+                          )}
+                        </td>
+                        <td className="p-3">{row.slaScore}%</td>
+                        <td className="p-3 flex gap-2">
+                          {isPending && (
+                            <PrimaryButton
+                              onClick={() => handleApproveVendor(row.userId, row.name)}
+                              className="bg-green-600 hover:bg-green-700"
+                              disabled={loading}
+                            >
+                              Approve
+                            </PrimaryButton>
+                          )}
+                          {isApproved && (
+                            <PrimaryButton
+                              onClick={() => handleSuspendVendor(row.userId, row.name)}
+                              className="bg-orange-500 hover:bg-orange-600"
+                              disabled={loading}
+                            >
+                              Suspend
+                            </PrimaryButton>
+                          )}
+                          <SecondaryButton onClick={() => openKycModal(row)}>View Details</SecondaryButton>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Mobile Card View */}
             <div className="lg:hidden space-y-4">
-              {vendors.map((row) => (
-                <div key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-secondary text-lg">{row.name}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{row.gstOrPan}</p>
+              {vendors.map((row) => {
+                const isApproved = row.status === 'ACTIVE' && row.verified
+                const isPending = row.status === 'PENDING' || !row.verified
+                const isSuspended = row.status === 'SUSPENDED'
+
+                return (
+                  <div key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold text-secondary text-lg">{row.name}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{row.email}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{row.contactPhone}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        {isApproved ? (
+                          <Badge label="Approved" color="#16A34A" />
+                        ) : isSuspended ? (
+                          <Badge label="Suspended" color="#DC2626" />
+                        ) : (
+                          <Badge label="Pending" color="#F59E0B" />
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                      {row.status === 'Approved' ? (
-                        <Badge label="Approved" color="#16A34A" />
-                      ) : (
-                        <Badge label="Pending" color="#F59E0B" />
+                    
+                    <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                      <div>
+                        <span className="text-gray-500 block">GST/PAN</span>
+                        <span className="font-medium text-xs">{row.gstOrPan}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block">SLA Score</span>
+                        <span className="font-bold text-lg text-secondary">{row.slaScore}%</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col gap-2">
+                      {isPending && (
+                        <PrimaryButton
+                          onClick={() => handleApproveVendor(row.userId, row.name)}
+                          className="w-full justify-center text-sm bg-green-600 hover:bg-green-700"
+                          disabled={loading}
+                        >
+                          Approve Vendor
+                        </PrimaryButton>
                       )}
+                      {isApproved && (
+                        <PrimaryButton
+                          onClick={() => handleSuspendVendor(row.userId, row.name)}
+                          className="w-full justify-center text-sm bg-orange-500 hover:bg-orange-600"
+                          disabled={loading}
+                        >
+                          Suspend Vendor
+                        </PrimaryButton>
+                      )}
+                      <SecondaryButton 
+                        onClick={() => openKycModal(row)} 
+                        className="w-full justify-center text-sm"
+                      >
+                        View Details
+                      </SecondaryButton>
                     </div>
                   </div>
-                  
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">SLA Score</span>
-                      <span className="font-bold text-xl text-secondary">{row.slaScore}%</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col gap-2">
-                    <PrimaryButton
-                      disabled={row.status === 'Approved'}
-                      className={`w-full justify-center text-sm ${row.status === 'Approved' ? 'bg-green-500 text-white cursor-not-allowed' : 'bg-accent text-button-text'}`}
-                      onClick={() => approveVendor(row.id)}
-                    >
-                      {row.status === 'Approved' ? 'Approved' : 'Approve Vendor'}
-                    </PrimaryButton>
-                    <SecondaryButton 
-                      onClick={() => setShowKycModal({ open: true, vendorName: row.name })} 
-                      className="w-full justify-center text-sm"
-                    >
-                      View KYC Docs
-                    </SecondaryButton>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
-            <Modal open={showKycModal.open} onClose={() => setShowKycModal({ open: false, vendorName: '' })} title={`KYC Documents - ${showKycModal.vendorName}`}>
-              <div className="text-gray-700">Vendor KYC Documents Placeholder</div>
+            <Modal 
+              open={showKycModal.open} 
+              onClose={() => setShowKycModal({ open: false, vendorName: '', vendorData: null })} 
+              title={`Vendor Details - ${showKycModal.vendorName}`}
+            >
+              {showKycModal.vendorData && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-semibold text-gray-500">Company Name</label>
+                      <p className="text-gray-900">{showKycModal.vendorData.name}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-500">Email</label>
+                      <p className="text-gray-900 text-sm">{showKycModal.vendorData.email}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-500">Contact Phone</label>
+                      <p className="text-gray-900">{showKycModal.vendorData.contactPhone}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-500">GST/PAN</label>
+                      <p className="text-gray-900 text-sm">{showKycModal.vendorData.gstOrPan}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-500">Status</label>
+                      <p className="text-gray-900">
+                        {showKycModal.vendorData.status === 'ACTIVE' && showKycModal.vendorData.verified ? 'Approved' : 
+                         showKycModal.vendorData.status === 'SUSPENDED' ? 'Suspended' : 'Pending Approval'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-500">SLA Score</label>
+                      <p className="text-gray-900 font-bold text-lg">{showKycModal.vendorData.slaScore}%</p>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-sm font-semibold text-gray-500">Created Date</label>
+                      <p className="text-gray-900">{showKycModal.vendorData.createdAt}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4 border-t border-gray-200">
+                    <p className="text-xs text-gray-500 italic">KYC documents and full vendor profile details will be available in a future update.</p>
+                  </div>
+                </div>
+              )}
             </Modal>
           </div>
         )}
@@ -1085,6 +1281,19 @@ export default function UsersRoles() {
             </div>
           </div>
         )}
+        {/* Delete Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={deleteConfirmation.isOpen}
+          onClose={() => setDeleteConfirmation({ isOpen: false, userId: '', userName: '', table: 'admin' })}
+          onConfirm={handleConfirmDelete}
+          title="Delete User"
+          message={`Are you sure you want to permanently delete ${deleteConfirmation.userName}? This action cannot be undone and will remove all their data from the system.`}
+          confirmText="Delete User"
+          cancelText="Cancel"
+          confirmButtonClass="bg-red-600 hover:bg-red-700"
+          isLoading={loading}
+        />
+
         {/* Edit User Modal */}
         <Modal
           open={showEditModal && !!editForm}

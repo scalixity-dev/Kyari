@@ -197,7 +197,7 @@ export class UserController {
   }
 
   /**
-   * Delete user (soft delete by setting deletedAt)
+   * Delete user (hard delete - permanently removes from database)
    */
   async deleteUser(req: Request, res: Response): Promise<void> {
     try {
@@ -217,9 +217,16 @@ export class UserController {
         return;
       }
 
+      // Check if user is a vendor (vendors should not be deleted directly)
+      const isVendor = existingUser.roles.some((ur: { role: { name: string } }) => ur.role.name === 'VENDOR');
+      if (isVendor) {
+        ResponseHelper.error(res, 'Vendor users cannot be deleted. Please deactivate instead.', 403);
+        return;
+      }
+
       await userService.deleteUser(id, deletedBy);
 
-      logger.info('User deleted', { userId: id, deletedBy });
+      logger.info('User hard deleted', { userId: id, deletedBy });
       ResponseHelper.success(res, null, 'User deleted successfully');
     } catch (error) {
       logger.error('Delete user error', { error });
