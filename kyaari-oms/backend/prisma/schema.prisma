@@ -61,15 +61,27 @@ enum PaymentStatus {
 }
 
 enum DispatchStatus {
+  PENDING
   PROCESSING
+  DISPATCHED
   IN_TRANSIT
   DELIVERED
   FAILED
 }
 
 enum GRNStatus {
+  PENDING_VERIFICATION
   VERIFIED_OK
   VERIFIED_MISMATCH
+  PARTIALLY_VERIFIED
+}
+
+enum GRNItemStatus {
+  VERIFIED_OK
+  QUANTITY_MISMATCH
+  DAMAGE_REPORTED
+  SHORTAGE_REPORTED
+  EXCESS_RECEIVED
 }
 
 enum TicketStatus {
@@ -230,6 +242,7 @@ model VendorProfile {
   primaryOrders     Order[]             @relation("PrimaryVendorForOrder")
   assignedItems     AssignedOrderItem[]
   purchaseOrders    PurchaseOrder[]
+  dispatches        Dispatch[]          @relation("VendorDispatches")
   @@index([contactPhone])
   @@index([gstNumber])
   @@map("vendor_profiles")
@@ -392,59 +405,82 @@ model Payment {
 // == 5. LOGISTICS & DISPATCH
 // =======================================
 model Dispatch {
-  id                String         @id @default(cuid())
-  dispatchNumber    String         @unique
-  awbNumber         String?
-  logisticsPartner  String?
-  status            DispatchStatus @default(PROCESSING)
-  dispatchedAt      DateTime?
-  items             DispatchItem[]
-  proofAttachmentId String?        @unique
-  proofAttachment   Attachment?    @relation(fields: [proofAttachmentId], references: [id], onDelete: SetNull)
-  goodsReceiptNote  GoodsReceiptNote?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  id                   String         @id @default(cuid())
+  dispatchNumber       String         @unique @default(cuid())
+  awbNumber            String
+  logisticsPartner     String
+  status               DispatchStatus @default(PENDING)
+  vendorId             String
+  vendor               VendorProfile  @relation("VendorDispatches", fields: [vendorId], references: [id], onDelete: Restrict)
+  dispatchDate         DateTime       @default(now())
+  estimatedDeliveryDate DateTime?
+  remarks              String?        @db.Text
+  items                DispatchItem[]
+  attachments          Attachment[]   @relation("DispatchAttachments")
+  goodsReceiptNote     GoodsReceiptNote?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  @@index([vendorId])
   @@index([awbNumber])
+  @@index([status])
   @@map("dispatches")
 }
 model DispatchItem {
   id                  String            @id @default(cuid())
   dispatchId          String
   dispatch            Dispatch          @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
-  assignedOrderItemId String
-  assignedOrderItem   AssignedOrderItem @relation(fields: [assignedOrderItemId], references: [id], onDelete: Restrict)
+  assignmentId        String
+  assignedOrderItem   AssignedOrderItem @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  orderItemId         String
   dispatchedQuantity  Int
+  goodsReceiptItems   GoodsReceiptItem[] @relation("DispatchItemGRNItems")
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
   @@index([dispatchId])
-  @@index([assignedOrderItemId])
+  @@index([assignmentId])
   @@map("dispatch_items")
 }
 model GoodsReceiptNote {
-  id           String     @id @default(cuid())
-  grnNumber    String     @unique
-  dispatchId   String     @unique
-  dispatch     Dispatch   @relation(fields: [dispatchId], references: [id], onDelete: Restrict)
-  status       GRNStatus
-  notes        String?
-  verifiedById String
-  verifiedBy   User       @relation("VerifiedByUser", fields: [verifiedById], references: [id], onDelete: Restrict)
-  receivedAt   DateTime   @default(now())
-  verifiedAt   DateTime?
-  items        GoodsReceiptItem[]
-  ticket       Ticket?
+  id                String             @id @default(cuid())
+  grnNumber         String             @unique
+  dispatchId        String             @unique
+  dispatch          Dispatch           @relation(fields: [dispatchId], references: [id], onDelete: Restrict)
+  status            GRNStatus          @default(PENDING_VERIFICATION)
+  operatorRemarks   String?            @db.Text
+  verifiedById      String
+  verifiedBy        User               @relation("VerifiedByUser", fields: [verifiedById], references: [id], onDelete: Restrict)
+  receivedAt        DateTime
+  verifiedAt        DateTime?
+  items             GoodsReceiptItem[]
+  ticket            Ticket?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   @@index([status])
+  @@index([verifiedById])
   @@map("goods_receipt_notes")
 }
 model GoodsReceiptItem {
   id                  String            @id @default(cuid())
   goodsReceiptNoteId  String
   goodsReceiptNote    GoodsReceiptNote  @relation(fields: [goodsReceiptNoteId], references: [id], onDelete: Cascade)
+  dispatchItemId      String
+  dispatchItem        DispatchItem      @relation("DispatchItemGRNItems", fields: [dispatchItemId], references: [id], onDelete: Restrict)
   assignedOrderItemId String
   assignedOrderItem   AssignedOrderItem @relation(fields: [assignedOrderItemId], references: [id], onDelete: Restrict)
-  expectedQuantity    Int
+  assignedQuantity    Int
+  confirmedQuantity   Int
   receivedQuantity    Int
-  discrepancyReason   String?
+  discrepancyQuantity Int               @default(0)
+  status              GRNItemStatus     @default(VERIFIED_OK)
+  itemRemarks         String?           @db.Text
+  damageReported      Boolean           @default(false)
+  damageDescription   String?           @db.Text
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
   @@index([goodsReceiptNoteId])
+  @@index([dispatchItemId])
   @@index([assignedOrderItemId])
+  @@index([status])
   @@map("goods_receipt_items")
 }
 // =======================================
@@ -490,16 +526,23 @@ model TicketComment {
 model Attachment {
   id            String         @id @default(cuid())
   fileName      String
+  originalName  String
   fileType      String         @db.VarChar(100)
+  mimeType      String         @db.VarChar(100)
   fileSize      Int
   s3Key         String         @unique
   s3Url         String         @unique
+  uploadedBy    String?
   ticketId      String?
   ticket        Ticket?        @relation(fields: [ticketId], references: [id], onDelete: SetNull)
-  dispatchProof Dispatch?      @relation
+  dispatchId    String?
+  dispatch      Dispatch?      @relation("DispatchAttachments", fields: [dispatchId], references: [id], onDelete: SetNull)
   vendorInvoice VendorInvoice? @relation
   createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   @@index([ticketId])
+  @@index([dispatchId])
+  @@index([uploadedBy])
   @@map("attachments")
 }
 

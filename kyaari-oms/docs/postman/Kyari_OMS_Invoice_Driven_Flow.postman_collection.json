@@ -1,0 +1,616 @@
+{
+  "info": {
+    "name": "Kyari OMS - Invoice-Driven Order Flow",
+    "description": "Complete API collection for the comprehensive invoice-driven order management system with mandatory pricing, invoice generation, file uploads, and GRN auto-ticketing.",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Login - Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.accessToken) {",
+                  "        pm.collectionVariables.set('access_token', response.data.accessToken);",
+                  "        console.log('Token set:', response.data.accessToken);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@kyari.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login - Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"vendor@example.com\",\n  \"password\": \"vendor123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login - Accounts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"accounts@kyari.com\",\n  \"password\": \"accounts123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Order Management (Enhanced with Mandatory Pricing)",
+      "item": [
+        {
+          "name": "Create Order with Mandatory Pricing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.id) {",
+                  "        pm.collectionVariables.set('order_id', response.data.id);",
+                  "        console.log('Order ID set:', response.data.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerInfo\": {\n    \"name\": \"Test Customer\",\n    \"email\": \"customer@test.com\",\n    \"phone\": \"+91-9876543210\"\n  },\n  \"deliveryAddress\": {\n    \"street\": \"123 Test Street\",\n    \"city\": \"Bangalore\",\n    \"state\": \"Karnataka\",\n    \"pincode\": \"560001\",\n    \"landmark\": \"Near Test Mall\"\n  },\n  \"items\": [\n    {\n      \"productName\": \"Organic Tomatoes\",\n      \"sku\": \"ORG-TOM-001\",\n      \"quantity\": 50,\n      \"pricePerUnit\": 45.00\n    },\n    {\n      \"productName\": \"Fresh Spinach\",\n      \"sku\": \"FRS-SPN-002\", \n      \"quantity\": 30,\n      \"pricePerUnit\": 25.00\n    }\n  ],\n  \"source\": \"API\",\n  \"notes\": \"Test order with mandatory pricing validation\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "Get Order Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}"]
+            }
+          }
+        },
+        {
+          "name": "List Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/orders?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Invoice Generation API",
+      "item": [
+        {
+          "name": "Generate Invoice for Purchase Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.id) {",
+                  "        pm.collectionVariables.set('invoice_id', response.data.id);",
+                  "        console.log('Invoice ID set:', response.data.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purchaseOrderId\": \"{{purchase_order_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/invoices/generate",
+              "host": ["{{base_url}}"],
+              "path": ["invoices", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Get Invoice by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/invoices/{{invoice_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["invoices", "{{invoice_id}}"]
+            }
+          }
+        },
+        {
+          "name": "List Invoices",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/invoices?page=1&limit=10&status=PENDING_VERIFICATION",
+              "host": ["{{base_url}}"],
+              "path": ["invoices"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit", 
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "PENDING_VERIFICATION"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download Invoice JSON",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/invoices/{{invoice_id}}/download",
+              "host": ["{{base_url}}"],
+              "path": ["invoices", "{{invoice_id}}", "download"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Invoice Upload System",
+      "item": [
+        {
+          "name": "Upload Invoice File to Existing Invoice",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "invoice",
+                  "type": "file",
+                  "src": "/path/to/invoice.pdf"
+                },
+                {
+                  "key": "invoiceType",
+                  "value": "VENDOR_UPLOAD",
+                  "type": "text"
+                },
+                {
+                  "key": "notes",
+                  "value": "Vendor invoice upload for verification",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/invoices/{{invoice_id}}/upload",
+              "host": ["{{base_url}}"],
+              "path": ["invoices", "{{invoice_id}}", "upload"]
+            }
+          }
+        },
+        {
+          "name": "Upload and Link Invoice to Purchase Order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "invoice",
+                  "type": "file",
+                  "src": "/path/to/vendor-invoice.pdf"
+                },
+                {
+                  "key": "invoiceType",
+                  "value": "VENDOR_UPLOAD",
+                  "type": "text"
+                },
+                {
+                  "key": "invoiceNumber",
+                  "value": "VEN-INV-001",
+                  "type": "text"
+                },
+                {
+                  "key": "purchaseOrderId",
+                  "value": "{{purchase_order_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "notes",
+                  "value": "New vendor invoice linked to PO",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/invoices/upload-and-link",
+              "host": ["{{base_url}}"],
+              "path": ["invoices", "upload-and-link"]
+            }
+          }
+        },
+        {
+          "name": "Accounts Team Upload Invoice",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "invoice",
+                  "type": "file",
+                  "src": "/path/to/accounts-invoice.pdf"
+                },
+                {
+                  "key": "invoiceType",
+                  "value": "ACCOUNTS_UPLOAD",
+                  "type": "text"
+                },
+                {
+                  "key": "invoiceNumber",
+                  "value": "ACC-INV-001",
+                  "type": "text"
+                },
+                {
+                  "key": "purchaseOrderId",
+                  "value": "{{purchase_order_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "notes",
+                  "value": "Accounts team processed invoice",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/invoices/upload-and-link",
+              "host": ["{{base_url}}"],
+              "path": ["invoices", "upload-and-link"]
+            }
+          }
+        },
+        {
+          "name": "Get Uploaded Invoices",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/invoices/uploads?page=1&limit=20&status=PENDING_VERIFICATION",
+              "host": ["{{base_url}}"],
+              "path": ["invoices", "uploads"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "PENDING_VERIFICATION"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. GRN Auto-Ticketing System",
+      "item": [
+        {
+          "name": "Get Pending GRNs for Verification",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/grn/pending?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["grn", "pending"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Process GRN Verification with Auto-Ticketing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.ticket && response.data.ticket.id) {",
+                  "        pm.collectionVariables.set('ticket_id', response.data.ticket.id);",
+                  "        console.log('Ticket ID set:', response.data.ticket.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"goodsReceiptNoteId\": \"{{grn_id}}\",\n  \"grnNumber\": \"GRN-2024-001\",\n  \"dispatchId\": \"{{dispatch_id}}\",\n  \"operatorRemarks\": \"Verification completed with identified discrepancies\",\n  \"mismatches\": [\n    {\n      \"grnItemId\": \"{{grn_item_id_1}}\",\n      \"assignedOrderItemId\": \"{{assigned_order_item_id_1}}\",\n      \"assignedQuantity\": 100,\n      \"confirmedQuantity\": 100,\n      \"receivedQuantity\": 95,\n      \"discrepancyQuantity\": -5,\n      \"status\": \"QUANTITY_MISMATCH\",\n      \"itemRemarks\": \"5 units missing from shipment\",\n      \"damageReported\": false\n    },\n    {\n      \"grnItemId\": \"{{grn_item_id_2}}\",\n      \"assignedOrderItemId\": \"{{assigned_order_item_id_2}}\",\n      \"assignedQuantity\": 50,\n      \"confirmedQuantity\": 50,\n      \"receivedQuantity\": 45,\n      \"discrepancyQuantity\": -5,\n      \"status\": \"DAMAGE_REPORTED\",\n      \"itemRemarks\": \"5 units damaged during transit\",\n      \"damageReported\": true,\n      \"damageDescription\": \"Crushed packaging, items unusable\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/grn/verify",
+              "host": ["{{base_url}}"],
+              "path": ["grn", "verify"]
+            }
+          }
+        },
+        {
+          "name": "Get GRN Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/grn/{{grn_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["grn", "{{grn_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Ticket by GRN ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/grn/{{grn_id}}/ticket",
+              "host": ["{{base_url}}"],
+              "path": ["grn", "{{grn_id}}", "ticket"]
+            }
+          }
+        },
+        {
+          "name": "Update Ticket Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"comment\": \"Started investigating the quantity mismatch with vendor\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/grn/tickets/{{ticket_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["grn", "tickets", "{{ticket_id}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Resolve Ticket",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"RESOLVED\",\n  \"comment\": \"Vendor confirmed the shortage and will provide credit note for missing items. Damaged goods to be replaced in next shipment.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/grn/tickets/{{ticket_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["grn", "tickets", "{{ticket_id}}", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Testing Scenarios",
+      "item": [
+        {
+          "name": "Complete Order Flow Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario\": \"complete_flow\",\n  \"description\": \"Test complete order → PO → invoice → upload → GRN → ticket flow\",\n  \"steps\": [\n    \"Create order with mandatory pricing\",\n    \"Assign to vendor and create PO\",\n    \"Generate automated invoice\",\n    \"Vendor uploads invoice file\",\n    \"Process GRN with mismatches\",\n    \"Auto-create ticket for discrepancies\",\n    \"Resolve ticket with vendor coordination\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/test/complete-flow",
+              "host": ["{{base_url}}"],
+              "path": ["test", "complete-flow"]
+            }
+          }
+        },
+        {
+          "name": "Validation Error Test - Missing Price",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerInfo\": {\n    \"name\": \"Test Customer\",\n    \"email\": \"customer@test.com\"\n  },\n  \"items\": [\n    {\n      \"productName\": \"Test Product\",\n      \"quantity\": 10\n      // Missing pricePerUnit - should trigger validation error\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "Role Authorization Test - Vendor Access",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/invoices/uploads",
+              "host": ["{{base_url}}"],
+              "path": ["invoices", "uploads"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

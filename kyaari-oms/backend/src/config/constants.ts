@@ -43,6 +43,14 @@ export const APP_CONSTANTS = {
     ORDER_CREATE: 'order:create',
     ORDER_UPDATE: 'order:update',
     ORDER_DELETE: 'order:delete',
+    ASSIGNMENT_CONFIRMED: 'assignment:confirmed',
+    ASSIGNMENT_PARTIAL_CONFIRMED: 'assignment:partial_confirmed',
+    ASSIGNMENT_DECLINED: 'assignment:declined',
+    DISPATCH_CREATED: 'dispatch:created',
+    DISPATCH_PROOF_UPLOADED: 'dispatch:proof_uploaded',
+    GRN_CREATED: 'grn:created',
+    GRN_VERIFIED_OK: 'grn:verified_ok',
+    GRN_VERIFIED_MISMATCH: 'grn:verified_mismatch',
   } as const,
 } as const;
 
