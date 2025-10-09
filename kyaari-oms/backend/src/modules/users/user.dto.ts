@@ -23,7 +23,7 @@ export interface VendorProfileDto {
 }
 
 export interface CreateUserDto {
-  role: 'ADMIN' | 'OPS' | 'ACCOUNTS';
+  role: 'ADMIN' | 'OPS' | 'ACCOUNTS' | 'VENDOR';
   name: string;
   email?: string;
   password: string;
