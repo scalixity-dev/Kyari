@@ -11,8 +11,7 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
-  LabelList
+  
 } from 'recharts'
 
 interface KPICardProps {
@@ -28,25 +27,24 @@ interface KPICardProps {
 
 /* styles migrated to Tailwind classes */
 
-const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, subtitle, onClick }) => {
-  const iconBgClass = color === 'blue' ? 'bg-blue-600' : color === 'orange' ? 'bg-orange-600' : color === 'green' ? 'bg-green-600' : color === 'red' ? 'bg-red-600' : 'bg-gray-600'
-  
+const KPICard: React.FC<KPICardProps> = ({ title, value, icon, subtitle, onClick }) => {
   return (
     <div
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : -1}
       onKeyDown={(e) => { if (onClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() } }}
       onClick={onClick}
-      className={`bg-[#f5f0e8] p-6 rounded-xl shadow-sm flex flex-col items-center gap-3 border border-gray-200 relative overflow-hidden ${onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all' : ''}`}
+      className={`bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative ${onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all' : ''}`}
     >
-      <div className={`w-14 h-14 flex items-center justify-center rounded-full ${iconBgClass} text-white`}>
-        {React.isValidElement(icon) ? React.cloneElement(icon as any, { color: 'white', size: 28 } as any) : icon}
+      {/* Circular icon at top center, overlapping the card edge */}
+      <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-[var(--color-accent)] rounded-full p-3 flex items-center justify-center text-white shadow-md">
+        {React.isValidElement(icon) ? React.cloneElement(icon as any, { color: 'white', size: 32, strokeWidth: 2 } as any) : icon}
       </div>
-      <div className="flex flex-col items-center text-center w-full">
-        <h3 className="text-sm font-bold text-[#2d3748] mb-2">{title}</h3>
-        <div className="text-3xl font-bold text-[#2d3748] mb-2">{value}</div>
-        {subtitle && <div className="text-xs text-orange-600 font-medium leading-tight">{subtitle}</div>}
-      </div>
+      
+      {/* Card content */}
+      <h3 className="text-lg font-semibold text-gray-800 mb-1">{title}</h3>
+      <div className="text-2xl font-bold text-gray-900 mt-1">{value}</div>
+      {subtitle && <div className="text-sm text-gray-600 mt-1">{subtitle}</div>}
     </div>
   )
 }
@@ -55,6 +53,47 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, subtitle, 
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [fulfillmentPeriod, setFulfillmentPeriod] = React.useState<'daily'|'weekly'|'monthly'|'yearly'>('weekly')
+
+  const fulfillmentDataSets = {
+    daily: [
+      { name: '00:00', value: 78 },
+      { name: '04:00', value: 82 },
+      { name: '08:00', value: 88 },
+      { name: '12:00', value: 90 },
+      { name: '16:00', value: 85 },
+      { name: '20:00', value: 80 }
+    ],
+    weekly: [
+      { name: 'Mon', value: 85 },
+      { name: 'Tue', value: 92 },
+      { name: 'Wed', value: 75 },
+      { name: 'Thu', value: 88 },
+      { name: 'Fri', value: 95 },
+      { name: 'Sat', value: 82 },
+      { name: 'Sun', value: 78 }
+    ],
+    monthly: [
+      { name: 'Wk 1', value: 84 },
+      { name: 'Wk 2', value: 88 },
+      { name: 'Wk 3', value: 90 },
+      { name: 'Wk 4', value: 86 }
+    ],
+    yearly: [
+      { name: 'Jan', value: 80 },
+      { name: 'Feb', value: 82 },
+      { name: 'Mar', value: 85 },
+      { name: 'Apr', value: 88 },
+      { name: 'May', value: 90 },
+      { name: 'Jun', value: 87 },
+      { name: 'Jul', value: 89 },
+      { name: 'Aug', value: 91 },
+      { name: 'Sep', value: 90 },
+      { name: 'Oct', value: 92 },
+      { name: 'Nov', value: 88 },
+      { name: 'Dec', value: 86 }
+    ]
+  }
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long',
     year: 'numeric',
@@ -174,7 +213,7 @@ export default function Dashboard() {
       {/* KPI Cards */}
       <div className="mb-6 lg:mb-8">
         <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Today's Overview</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
           {kpiData.map((kpi, index) => (
             <KPICard
               key={index}
@@ -193,86 +232,129 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Quick Graphs */}
+      {/* Quick Insights */}
       <div>
         <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Quick Insights</h2>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
-          {/* Order Fulfillment Chart */}
-          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-            <h3 className="text-center text-base sm:text-lg font-semibold text-[#2d3748] mb-4">Order Fulfillment Rate</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={
-                [
-                  { name: 'Mon', value: 85 },
-                  { name: 'Tue', value: 92 },
-                  { name: 'Wed', value: 75 },
-                  { name: 'Thu', value: 88 },
-                  { name: 'Fri', value: 95 },
-                  { name: 'Sat', value: 82 },
-                  { name: 'Sun', value: 78 }
-                ]
-              }>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#38a169" radius={[6, 6, 0, 0]}>
-                  <LabelList dataKey="value" position="top" formatter={(val: any) => `${val}%`} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+  <div className="grid grid-cols-1 gap-6">
+          {/* Payment Status Card */}
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+            {/* Title */}
+            <h3 className="text-xl font-semibold text-[#1D4D43] mb-6">Payment Status</h3>
+            
+            {/* Main content: Summary stats on left, Chart on right */}
+            <div className="flex flex-col lg:flex-row gap-8 items-start lg:items-center">
+              {/* Left side: Summary Stats and Legend (now stacked) */}
+              <div className="flex-1 w-full">
+                <div className="grid grid-cols-2 gap-8 w-full">
+                  <div>
+                    <div className="text-base text-gray-500 mb-2 font-medium">Total Payments</div>
+                    <div className="text-5xl font-extrabold text-gray-900 mb-1">1,200</div>
+                    <div className="text-sm text-gray-400">Period: Last 30 days</div>
+                  </div>
+                  <div>
+                    <div className="text-base text-gray-500 mb-2 font-medium">Total Amount</div>
+                    <div className="text-5xl font-extrabold text-gray-900 mb-1">₹12,45,600</div>
+                    <div className="text-sm text-gray-400">Net received: ₹10,98,400</div>
+                  </div>
+                </div>
+
+                {/* Legend moved directly under totals */}
+                <div className="flex flex-wrap gap-10 mt-8 lg:mt-10">
+                  <div className="flex items-start gap-3 min-w-[160px] sm:min-w-[200px]">
+                    <span className="w-4 h-4 rounded-full bg-[#1D4D43] block flex-shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-700 mb-0.5">Completed</div>
+                      <div className="text-xs text-gray-500">720 payments • ₹8,50,000</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 min-w-[160px] sm:min-w-[200px]">
+                    <span className="w-4 h-4 rounded-full bg-[#C3754C] block flex-shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-700 mb-0.5">Pending</div>
+                      <div className="text-xs text-gray-500">300 payments • ₹2,34,500</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 min-w-[160px] sm:min-w-[200px]">
+                    <span className="w-4 h-4 rounded-full bg-[#E05B4C] block flex-shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-700 mb-0.5">Overdue</div>
+                      <div className="text-xs text-gray-500">180 payments • ₹1,61,100</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right side: Enlarged Donut Chart */}
+              <div className="flex-shrink-0">
+                <ResponsiveContainer width={320} height={320}>
+                  <PieChart>
+                    <Pie 
+                      dataKey="value" 
+                      data={[
+                        { name: 'Completed', value: 60 }, 
+                        { name: 'Overdue', value: 15 },
+                        { name: 'Pending', value: 25 }
+                      ]} 
+                      cx="50%" 
+                      cy="50%" 
+                      innerRadius={90} 
+                      outerRadius={140} 
+                      paddingAngle={2}
+                      strokeWidth={0}
+                    >
+                      <Cell key="cell-completed" fill="#1D4D43" />
+                      <Cell key="cell-overdue" fill="#E05B4C" />
+                      <Cell key="cell-pending" fill="#C3754C" />
+                    </Pie>
+                    <Tooltip formatter={(value: any) => `${value}%`} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
 
-          {/* Payment Status Pie Chart */}
-          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-            <h3 className="text-center text-base sm:text-lg font-semibold text-[#2d3748] mb-4">Payment Status</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie dataKey="value" data={[{ name: 'Completed', value: 60 }, { name: 'Pending', value: 25 }, { name: 'Overdue', value: 15 }]} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2}>
-                    <Cell key="cell-completed" fill="#38a169" />
-                    <Cell key="cell-pending" fill="#dd6b20" />
-                    <Cell key="cell-overdue" fill="#e53e3e" />
-                  </Pie>
-                  <Legend verticalAlign="bottom" />
-                  <Tooltip formatter={(value: any) => `${value}%`} />
-                </PieChart>
-              </ResponsiveContainer>
-              {/* Enhanced payment figures: mock totals and per-status breakdown */}
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
-                  <div className="text-xs sm:text-sm text-gray-500 font-medium">Total Payments</div>
-                  <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">1,200</div>
-                  <div className="text-xs sm:text-sm text-gray-400">Period: Last 30 days</div>
-                </div>
-                <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
-                  <div className="text-xs sm:text-sm text-gray-500 font-medium">Total Amount</div>
-                  <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">₹12,45,600</div>
-                  <div className="text-xs sm:text-sm text-gray-400">Net received: ₹10,98,400</div>
-                </div>
+          {/* Order Fulfillment Rate Card */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-[var(--color-secondary)]">Order Fulfillment Rate</h3>
+              <div className="flex items-center gap-2 bg-gray-100 rounded-md p-1">
+                {(['daily','weekly','monthly','yearly'] as const).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setFulfillmentPeriod(p)}
+                    className={`px-3 py-1 text-sm rounded-md ${fulfillmentPeriod === p ? 'bg-[var(--color-accent)] text-[var(--color-button-text)]' : 'text-gray-600'}`}
+                  >
+                    {p[0].toUpperCase() + p.slice(1)}
+                  </button>
+                ))}
               </div>
-
-              <div className="mt-4 space-y-3 sm:space-y-0 sm:grid sm:grid-cols-1 lg:grid-cols-3 sm:gap-3">
-                <div className="flex items-center gap-3 text-sm text-gray-700 font-medium">
-                  <span className="w-3 h-3 rounded-sm bg-[var(--color-success)] block flex-shrink-0" />
-                  <div className="min-w-0">
-                    <div className="font-semibold">Completed</div>
-                    <div className="text-xs sm:text-sm text-gray-400 truncate">720 payments • ₹8,50,000</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-700 font-medium">
-                  <span className="w-3 h-3 rounded-sm bg-[var(--color-warning)] block flex-shrink-0" />
-                  <div className="min-w-0">
-                    <div className="font-semibold">Pending</div>
-                    <div className="text-xs sm:text-sm text-gray-400 truncate">300 payments • ₹2,34,500</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-700 font-medium">
-                  <span className="w-3 h-3 rounded-sm bg-[var(--color-danger)] block flex-shrink-0" />
-                  <div className="min-w-0">
-                    <div className="font-semibold">Overdue</div>
-                    <div className="text-xs sm:text-sm text-gray-400 truncate">180 payments • ₹1,61,100</div>
-                  </div>
-                </div>
-              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart 
+                data={fulfillmentDataSets[fulfillmentPeriod]}
+                margin={{ top: 20, right: 10, left: -20, bottom: 5 }}
+              >
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#6b7280', fontSize: 12 }}
+                />
+                <YAxis 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#6b7280', fontSize: 12 }}
+                  domain={[0, 100]}
+                />
+                <Tooltip />
+                <Bar 
+                  dataKey="value" 
+                  fill="var(--color-secondary)" 
+                  radius={[4, 4, 0, 0]}
+                  barSize={40}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
