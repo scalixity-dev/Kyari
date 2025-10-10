@@ -198,6 +198,20 @@ model RefreshToken {
   @@index([family])
   @@map("refresh_tokens")
 }
+model PasswordResetCode {
+  id        String   @id @default(cuid())
+  email     String   @db.VarChar(255)
+  code      String   @db.VarChar(6)
+  expiresAt DateTime
+  usedAt    DateTime?
+  ipAddress String?  @db.VarChar(50)
+  userAgent String?  @db.Text
+  createdAt DateTime @default(now())
+  @@index([email])
+  @@index([code])
+  @@index([expiresAt])
+  @@map("password_reset_codes")
+}
 model AuditLog {
   id          String   @id @default(cuid())
   actorUserId String?
