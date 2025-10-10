@@ -34,6 +34,8 @@ export interface VendorListItem {
   companyName: string;
   contactPersonName: string;
   contactPhone: string;
+  warehouseLocation: string;
+  pincode: string;
   email?: string;
   status: string;
   verified: boolean;

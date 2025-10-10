@@ -332,6 +332,179 @@ export class OrderService {
       pricingStatus: 'complete' // Always complete since pricing is mandatory
     };
   }
+
+  async deleteOrder(orderId: string, deletedById: string): Promise<void> {
+    try {
+      // Check if order exists
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          items: {
+            include: {
+              assignedItems: true
+            }
+          }
+        }
+      });
+
+      if (!order) {
+        throw new Error('Order not found');
+      }
+
+      // Only allow deletion if order is in RECEIVED status (not assigned/processed yet)
+      if (order.status !== 'RECEIVED') {
+        throw new Error(`Order with status ${order.status} cannot be deleted. Only orders with RECEIVED status can be deleted.`);
+      }
+
+      // Check if any items have assignments with vendor confirmations
+      const hasConfirmedAssignments = order.items.some(item => 
+        item.assignedItems.some(assigned => assigned.confirmedQuantity !== null)
+      );
+
+      if (hasConfirmedAssignments) {
+        throw new Error('Order cannot be deleted as it has confirmed vendor assignments');
+      }
+
+      // Delete order and related records in transaction
+      await prisma.$transaction(async (tx) => {
+        // Delete assigned order items first
+        for (const item of order.items) {
+          await tx.assignedOrderItem.deleteMany({
+            where: { orderItemId: item.id }
+          });
+        }
+
+        // Delete order items
+        await tx.orderItem.deleteMany({
+          where: { orderId }
+        });
+
+        // Delete the order
+        await tx.order.delete({
+          where: { id: orderId }
+        });
+
+        // Create audit log
+        await tx.auditLog.create({
+          data: {
+            actorUserId: deletedById,
+            action: 'ORDER_DELETE',
+            entityType: 'Order',
+            entityId: orderId,
+            metadata: {
+              orderNumber: order.orderNumber,
+              status: order.status
+            }
+          }
+        });
+      });
+
+      logger.info('Order deleted successfully', { 
+        orderId, 
+        orderNumber: order.orderNumber,
+        deletedById 
+      });
+    } catch (error) {
+      logger.error('Failed to delete order', { error, orderId, deletedById });
+      throw error;
+    }
+  }
+
+  async assignVendorToOrder(orderId: string, vendorId: string, assignedById: string): Promise<OrderDto> {
+    try {
+      // Validate vendor exists and is active
+      const vendor = await prisma.vendorProfile.findUnique({
+        where: { id: vendorId },
+        include: { user: true }
+      });
+
+      if (!vendor) {
+        throw new Error('Vendor not found');
+      }
+
+      if (vendor.user.status !== 'ACTIVE') {
+        throw new Error('Vendor is not active');
+      }
+
+      if (!vendor.verified) {
+        throw new Error('Vendor is not verified');
+      }
+
+      // Get order with items
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          items: {
+            include: {
+              assignedItems: true
+            }
+          }
+        }
+      });
+
+      if (!order) {
+        throw new Error('Order not found');
+      }
+
+      // Update order in transaction
+      await prisma.$transaction(async (tx) => {
+        // Update primary vendor
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            primaryVendorId: vendorId,
+            status: 'ASSIGNED' // Update status to ASSIGNED
+          }
+        });
+
+        // Delete existing assigned items for primary vendor and create new ones
+        for (const item of order.items) {
+          // Delete old assignments
+          await tx.assignedOrderItem.deleteMany({
+            where: { orderItemId: item.id }
+          });
+
+          // Create new assignment for the new vendor
+          await tx.assignedOrderItem.create({
+            data: {
+              orderItemId: item.id,
+              vendorId: vendorId,
+              assignedQuantity: item.quantity,
+              status: 'PENDING_CONFIRMATION',
+              assignedById: assignedById
+            }
+          });
+        }
+
+        // Create audit log
+        await tx.auditLog.create({
+          data: {
+            actorUserId: assignedById,
+            action: 'ORDER_VENDOR_ASSIGN',
+            entityType: 'Order',
+            entityId: orderId,
+            metadata: {
+              orderNumber: order.orderNumber,
+              vendorId: vendorId,
+              vendorName: vendor.companyName
+            }
+          }
+        });
+      });
+
+      logger.info('Vendor assigned to order successfully', { 
+        orderId, 
+        vendorId,
+        assignedById 
+      });
+
+      // Return updated order
+      return await this.getOrderById(orderId);
+    } catch (error) {
+      logger.error('Failed to assign vendor to order', { error, orderId, vendorId });
+      throw error;
+    }
+  }
 }
 
 export const orderService = new OrderService();
