@@ -113,11 +113,8 @@ export class UserService {
   }
 
   async findById(id: string): Promise<UserWithRolesAndProfile | null> {
-    const user = await prisma.user.findFirst({
-      where: { 
-        id,
-        deletedAt: null // Only return non-deleted users
-      },
+    const user = await prisma.user.findUnique({
+      where: { id },
       include: {
         roles: {
           include: {
@@ -157,16 +154,26 @@ export class UserService {
 
   async deleteUser(userId: string, deletedBy?: string): Promise<void> {
     try {
-      // Soft delete by setting deletedAt timestamp
-      await prisma.user.update({
-        where: { id: userId },
-        data: { 
-          deletedAt: new Date(),
-          status: UserStatus.INACTIVE // Also set to inactive
-        }
+      // Hard delete - permanently remove from database
+      // First delete related records due to foreign key constraints
+      await prisma.$transaction(async (tx) => {
+        // Delete user roles
+        await tx.userRole.deleteMany({
+          where: { userId }
+        });
+
+        // Delete refresh tokens
+        await tx.refreshToken.deleteMany({
+          where: { userId }
+        });
+
+        // Finally delete the user
+        await tx.user.delete({
+          where: { id: userId }
+        });
       });
 
-      logger.info('User soft deleted', { userId, deletedBy });
+      logger.info('User hard deleted', { userId, deletedBy });
     } catch (error) {
       logger.error('Failed to delete user', { error, userId });
       throw error;
@@ -179,9 +186,7 @@ export class UserService {
     limit?: number;
     offset?: number;
   }): Promise<{ users: UserDto[], total: number }> {
-    const where: Prisma.UserWhereInput = {
-      deletedAt: null // Only show non-deleted users
-    };
+    const where: Prisma.UserWhereInput = {};
     
     if (filters?.status) {
       where.status = filters.status;

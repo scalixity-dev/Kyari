@@ -18,9 +18,9 @@ const envSchema = z.object({
   
   CORS_ORIGINS: z.string().transform((val: string) => val.split(',')).default('http://localhost:3000'),
   
-  // Email (Resend)
-  RESEND_API_KEY: z.string().optional(),
-  RESEND_FROM_EMAIL: z.string().optional().default('Kyaari OMS <onboarding@resend.dev>'),
+  // Email (SMTP)
+  SMTP_USER: z.string().email().optional(),
+  SMTP_PASS: z.string().optional(),
   FRONTEND_URL: z.string().url().optional().default('http://localhost:5173'),
 });
 

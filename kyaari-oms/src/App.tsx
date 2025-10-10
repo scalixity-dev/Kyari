@@ -6,6 +6,7 @@ import AccountsSignIn from './pages/AccountsSignIn'
 import OperationsSignIn from './pages/OperationsSignIn'
 import VendorsSignIn from './pages/VendorsSignIn'
 import VendorSignUp from './pages/VendorSignUp'
+import Unauthorized from './pages/Unauthorized'
 import AdminLayout from './dashboards/admin/AdminLayout'
 import Dashboard from './dashboards/admin/pages/Dashboard'
 import Orders from './dashboards/admin/pages/Orders'
@@ -91,7 +92,7 @@ function App() {
         />
         <Routes>
           <Route path="/" element={<Landing />} />
-          <Route path="/admin" element={<ProtectedRoute redirectTo="/admin/signin"><AdminLayout /></ProtectedRoute>}>
+          <Route path="/admin" element={<ProtectedRoute redirectTo="/admin/signin" requiredRole="ADMIN"><AdminLayout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="orders" element={<Orders />} />
             <Route path="users" element={<UsersRoles />} />
@@ -113,7 +114,8 @@ function App() {
           <Route path="/operations/signin" element={<OperationsSignIn />} />
           <Route path="/vendors/signin" element={<VendorsSignIn />} />
           <Route path="/vendors/signup" element={<VendorSignUp />} />
-          <Route path="/vendors" element={<ProtectedRoute redirectTo={'/vendors/signin'}><VendorsLayout /></ProtectedRoute>}>
+          <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="/vendors" element={<ProtectedRoute redirectTo="/vendors/signin" requiredRole="VENDOR"><VendorsLayout /></ProtectedRoute>}>
             <Route index element={<VendorDashboard />} />
             <Route path="orders" element={<VendorOrders />} />
             <Route path="invoices" element={<VendorInvoices />} />
@@ -122,7 +124,7 @@ function App() {
             <Route path="support" element={<VendorSupport />} />
             <Route path="profile-settings" element={<VendorProfileSettings />} />
           </Route>
-          <Route path="/accounts" element={<ProtectedRoute redirectTo={'/accounts/signin'}><AccountsLayout /></ProtectedRoute>}>
+          <Route path="/accounts" element={<ProtectedRoute redirectTo="/accounts/signin" requiredRole="ACCOUNTS"><AccountsLayout /></ProtectedRoute>}>
             <Route index element={<AccountsDashboard />} />
             <Route path="vendor-orders" element={<AccountsVendorOrders />} />
             <Route path="po-invoices" element={<AccountsInvoices />} />
@@ -131,7 +133,7 @@ function App() {
             <Route path="support" element={<AccountsSupport />} />
             <Route path="profile-settings" element={<AccountsProfileSettings />} />
           </Route>
-          <Route path="/operations" element={<ProtectedRoute redirectTo={'/operations/signin'}><OperationsLayout /></ProtectedRoute>}>
+          <Route path="/operations" element={<ProtectedRoute redirectTo="/operations/signin" requiredRole="OPS"><OperationsLayout /></ProtectedRoute>}>
             <Route index element={<OperationsDashboard />} />
             <Route path="received-orders" element={<OperationsReceivedOrders />} />
             <Route path="support" element={<OperationsSupport />} />
