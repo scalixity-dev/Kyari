@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function AccountsSignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
@@ -52,6 +54,9 @@ export default function AccountsSignIn() {
         .admin-signin__form { display:flex; flex-direction:column; gap:0.75rem; }
         .admin-signin__label { font-size:0.9rem; text-align:left; color: var(--color-primary); }
         .admin-signin__input { width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid #e6e6e6; margin-top:0.25rem; box-sizing:border-box; }
+        .admin-signin__password-wrapper { position: relative; }
+        .admin-signin__password-toggle { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0.25rem; display: flex; align-items: center; color: #666; }
+        .admin-signin__password-toggle:hover { color: var(--color-accent); }
         .admin-signin__error { color:#b00020; font-size:0.9rem; text-align:left; }
         .admin-signin__button { margin-top:0.5rem; background-color: var(--color-accent); color: var(--color-button-text); padding:0.75rem 1rem; border-radius:8px; border:none; cursor:pointer; font-weight: var(--fw-bold); }
         .admin-signin__button:hover { opacity:0.95; }
@@ -73,13 +78,23 @@ export default function AccountsSignIn() {
 
           <label className="admin-signin__label">
             Password
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="admin-signin__input"
-              placeholder="••••••••"
-            />
+            <div className="admin-signin__password-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="admin-signin__input"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="admin-signin__password-toggle"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </label>
 
           {error && <div className="admin-signin__error">{error}</div>}

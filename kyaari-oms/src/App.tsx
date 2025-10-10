@@ -91,7 +91,7 @@ function App() {
         />
         <Routes>
           <Route path="/" element={<Landing />} />
-          <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+          <Route path="/admin" element={<ProtectedRoute redirectTo="/admin/signin"><AdminLayout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="orders" element={<Orders />} />
             <Route path="users" element={<UsersRoles />} />

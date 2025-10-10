@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 // NotificationSection removed — rendering unified list below
-import { Search, Filter } from 'lucide-react';
+import { Search } from 'lucide-react';
 import type { 
   Notification, 
   NotificationActions, 
@@ -95,26 +95,44 @@ const generateMockNotifications = (): Notification[] => [
 export default function Notifications() {
   const [notifications, setNotifications] = useState<Notification[]>(generateMockNotifications());
   const [mutedVendors, setMutedVendors] = useState<MutedVendor[]>([]);
-  const [filters, setFilters] = useState<{
-    type?: NotificationType[];
-    showRead?: boolean;
-  }>({
-    showRead: false
-  });
+  const [showRead] = useState<boolean>(false); // Always show only unread
   const [selectedType, setSelectedType] = useState<'all' | NotificationType>('all')
+  const [selectedDate, setSelectedDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
 
   // Filter notifications based on current filters
   const filteredNotifications = useMemo(() => {
     let filtered = [...notifications];
 
     // Filter by read status
-    if (!filters.showRead) {
+    if (!showRead) {
       filtered = filtered.filter(n => n.status === 'unread');
     }
 
-    // Filter by type
-    if (filters.type && filters.type.length > 0) {
-      filtered = filtered.filter(n => filters.type!.includes(n.type));
+    // Filter by type (handled by selectedType below, not here)
+    // if (filters.type && filters.type.length > 0) {
+    //   filtered = filtered.filter(n => filters.type!.includes(n.type));
+    // }
+
+    // Filter by date (on or after selected date)
+    if (selectedDate) {
+      const filterDate = new Date(selectedDate);
+      filterDate.setHours(0, 0, 0, 0); // Start of day
+      filtered = filtered.filter(n => {
+        const notifDate = new Date(n.timestamp);
+        notifDate.setHours(0, 0, 0, 0);
+        return notifDate >= filterDate;
+      });
+    }
+
+    // Filter by end date (on or before end date)
+    if (endDate) {
+      const filterEndDate = new Date(endDate);
+      filterEndDate.setHours(23, 59, 59, 999); // End of day
+      filtered = filtered.filter(n => {
+        const notifDate = new Date(n.timestamp);
+        return notifDate <= filterEndDate;
+      });
     }
 
     // Sort by timestamp (newest first) and then by priority
@@ -138,7 +156,7 @@ export default function Notifications() {
     });
 
     return filtered;
-  }, [notifications, filters]);
+  }, [notifications, showRead, selectedDate, endDate]);
 
   // (grouping removed — unified list used)
 
@@ -227,10 +245,22 @@ export default function Notifications() {
             <Search className="w-4 h-4 text-gray-400" />
             <input placeholder="Search notifications..." className="flex-1 text-sm placeholder-gray-400 focus:outline-none bg-transparent" />
           </div>
-          <button onClick={() => setFilters(s => ({ ...s, showRead: !s.showRead }))} className="inline-flex items-center gap-2 bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-lg px-4 py-2">
-            <Filter className="w-4 h-4" />
-            Filter
-          </button>
+          <input 
+            type="date" 
+            value={selectedDate} 
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="bg-white rounded-lg px-3 py-2 border border-gray-200 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200"
+            title="Start date"
+            placeholder="Start date"
+          />
+          <input 
+            type="date" 
+            value={endDate} 
+            onChange={(e) => setEndDate(e.target.value)}
+            className="bg-white rounded-lg px-3 py-2 border border-gray-200 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200"
+            title="End date"
+            placeholder="End date"
+          />
         </div>
       </div>
 
@@ -287,8 +317,8 @@ export default function Notifications() {
           <div className="text-gray-400 text-2xl sm:text-3xl lg:text-4xl mb-4">🔔</div>
           <h3 className="text-lg sm:text-xl font-semibold text-gray-600 mb-2">No notifications found</h3>
           <p className="text-sm sm:text-base text-gray-500 max-w-md mx-auto leading-relaxed">
-            {filters.type?.length ? 
-              `No ${filters.type.join(', ')} notifications match your current filters.` :
+            {selectedType !== 'all' ? 
+              `No ${selectedType} notifications match your current filters.` :
               'All caught up! No new notifications at this time.'
             }
           </p>
