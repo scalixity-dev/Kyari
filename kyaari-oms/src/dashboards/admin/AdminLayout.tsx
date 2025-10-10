@@ -96,7 +96,7 @@ const sampleNotifications: Notification[] = [
 ]
 
 function AdminLayout() {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [search, setSearch] = useState('')
@@ -405,10 +405,10 @@ function AdminLayout() {
       </aside>
 
   {/* Main area */}
-  <main className={`transition-all duration-300 ease-in-out ${isMobile ? 'ml-0' : 'ml-[230px]'}`} style={{ marginTop: 0, paddingTop: 0, overflowX: 'hidden', height: '100vh', overflowY: 'auto' }}>
-  {/* Top bar (scrollable) */}
-  <div className={`flex items-center justify-between bg-[var(--color-sharktank-bg)] border-l border-white/20 transition-all duration-300 ease-in-out ${
-    isMobile ? 'py-2 px-3 h-16 flex-wrap' : 'py-2 pr-6 pl-0 h-28'
+  <main className={`transition-all duration-300 ease-in-out ${isMobile ? 'ml-0' : 'ml-[230px]'}`} style={{ marginTop: 0, paddingTop: 0, overflowX: 'hidden', height: '100vh' }}>
+  {/* Top bar (fixed) */}
+  <div className={`flex items-center justify-between bg-[var(--color-sharktank-bg)] py-2 pr-6 pl-0 fixed top-0 right-0 h-28 z-40 border-l border-white/20 transition-all duration-300 ease-in-out ${
+    isMobile ? 'left-0' : 'left-[230px]'
   }`}>
           {/* Mobile Menu Button */}
           {isMobile && (
@@ -423,40 +423,39 @@ function AdminLayout() {
           )}
 
           {/* Left welcome text (visible on md+) */}
-          <div className="hidden md:block lg:block ml-9 mr-6 text-xl lg:text-3xl font-medium" style={{ color: 'var(--color-secondary)' }}>
+          <div className="hidden md:block ml-9 mr-6 text-3xl font-medium" style={{ color: 'var(--color-secondary)' }}>
             <div className="font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Admin Dashboard</div>
-            <div className="text-base lg:text-xl mt-1">Welcome Admin</div>
+            <div className="text-xl mt-1">Welcome Admin</div>
           </div>
           {/* Spacer on desktop to push right-group to the edge */}
           {!isMobile && <div className="flex-1" />}
 
-          <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-4 md:gap-8 lg:gap-20'}`}>
-            <form onSubmit={handleSearchSubmit} className={`flex items-center gap-3 ${isMobile ? 'flex-1' : ''}`} style={!isMobile ? { width: '324px' } : {}}>
+          <div className="flex items-center gap-4">
+            <form onSubmit={handleSearchSubmit} className={`flex items-center gap-3 ${isMobile ? 'flex-1 mx-3' : 'w-80'}`}>
               <div className={`relative ${isMobile ? 'w-full' : 'w-full'}`}>
-                <div className="absolute top-1/2 -translate-y-1/2" style={{ color: 'var(--color-secondary)', left: '12px', opacity: 1 }}>
-                  <Search size={isMobile ? 16 : 30} />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-secondary)' }}>
+                  <Search size={18} />
                 </div>
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={isMobile ? "Search..." : "Mega Search"}
-                  className={`rounded-md text-[var(--color-secondary)] placeholder-[var(--color-secondary)] outline-none transition-all ${
-                    isMobile ? 'w-full h-9 bg-white pl-10 pr-3 text-sm' : 'w-full pl-14 pr-3'
+                  className={`pl-11 pr-3 h-9 rounded-md bg-white text-[var(--color-secondary)] placeholder-[var(--color-secondary)] outline-none transition-all ${
+                    isMobile ? 'w-full' : 'w-full'
                   }`}
-                  style={!isMobile ? { height: '55px', backgroundColor: '#F9F9F9', borderRadius: '8px', opacity: 1 } : {}}
                 />
               </div>
             </form>
 
-            <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-4 md:gap-8'}`}>
+            <div className="flex items-center gap-4">
             <div className="relative" ref={notificationsRef}>
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
                 aria-label="Notifications" 
-                className="relative rounded-md text-[var(--color-secondary)] hover:bg-white/10 p-1 md:p-2 transition-colors" 
-                style={{ background: 'transparent', opacity: 1 }}
+                className="relative rounded-md text-[var(--color-secondary)] hover:bg-white/10 p-2 transition-colors" 
+                style={{ background: 'transparent' }}
               >
-                <Bell size={isMobile ? 20 : 40} />
+                <Bell size={18} />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center" style={{ background: 'var(--color-accent)', color: 'var(--color-button-text)' }}>
                     {unreadCount > 99 ? '99+' : unreadCount}
@@ -564,18 +563,12 @@ function AdminLayout() {
             </div>
 
             <div className="relative">
-              <button onClick={() => setShowProfile((s) => !s)} className="flex items-center gap-2 md:gap-3 p-1 rounded-md" style={{ background: 'transparent' }}>
-                <div className="rounded-full flex items-center justify-center overflow-hidden" style={{ 
-                  width: isMobile ? '36px' : '56px', 
-                  height: isMobile ? '36px' : '57px', 
-                  opacity: 1 
-                }}>
-                  <img 
-                    src="https://i.pravatar.cc/150?img=12" 
-                    alt="Admin Profile"
-                    className="w-full h-full object-cover"
-                  />
+              <button onClick={() => setShowProfile((s) => !s)} className="flex items-center gap-3 p-1 rounded-md" style={{ background: 'transparent' }}>
+                <div className={`${isMobile ? 'hidden' : 'block'}`} style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--color-secondary)' }}>{user?.email ? user.email.split('@')[0] : 'Admin'}</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-secondary)' }}>Admin</div>
                 </div>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'var(--color-accent)', color: 'var(--color-button-text)', fontSize: 13 }}>A</div>
               </button>
 
               {showProfile && (
@@ -592,9 +585,12 @@ function AdminLayout() {
         </div>
 
         {/* Main content area - Outlet renders module content */}
-        <div style={{ minHeight: 'calc(100vh - 112px)', width: '100%', boxSizing: 'border-box', padding: 0, background: 'transparent' }}>
-          <div style={{ width: '100%', padding: 0 }}>
-            <Outlet />
+        <div style={{ marginTop: 90, height: 'calc(100vh - 90px)', overflow: 'auto' }}>
+          {/* Module area - transparent background, modules should use full width */}
+          <div style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box', padding: 0, background: 'transparent' }}>
+            <div style={{ width: '100%', padding: 0 }}>
+              <Outlet />
+            </div>
           </div>
         </div>
 

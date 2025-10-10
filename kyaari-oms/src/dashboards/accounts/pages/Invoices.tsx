@@ -575,30 +575,35 @@ function AccountsInvoices() {
 
       {/* Invoice Viewer Modal */}
       {viewingInvoice && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-[95vw] sm:max-w-5xl max-h-[95vh] flex flex-col shadow-2xl">
+            {/* Header - Fixed */}
+            <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-200 flex-shrink-0">
               <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">
                 {viewingInvoice.type} Invoice
               </h3>
               <button
                 onClick={handleCloseInvoice}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
               >
                 <X size={24} />
               </button>
             </div>
-            <div className="flex-1 overflow-auto">
-              <img 
-                src={viewingInvoice.url} 
-                alt={`${viewingInvoice.type} Invoice`}
-                className="w-full h-auto rounded-lg"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  target.parentElement!.innerHTML += '<div class="text-center p-8 text-gray-500">Unable to load invoice preview. <a href="' + viewingInvoice.url + '" target="_blank" class="text-accent hover:underline">Click here to download</a></div>';
-                }}
-              />
+            
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-auto p-4 sm:p-6 bg-gray-50">
+              <div className="flex items-start justify-center min-h-full">
+                <img 
+                  src={viewingInvoice.url} 
+                  alt={`${viewingInvoice.type} Invoice`}
+                  className="max-w-full h-auto rounded-lg shadow-lg bg-white"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    target.parentElement!.innerHTML += '<div class="text-center p-8 text-gray-500">Unable to load invoice preview. <a href="' + viewingInvoice.url + '" target="_blank" class="text-accent hover:underline">Click here to download</a></div>';
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 // React import removed - using automatic JSX runtime
-import { Wallet, FileText, Users } from 'lucide-react'
+import React from 'react'
+import { Wallet, FileText, Users, Search, ChevronDown } from 'lucide-react'
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
@@ -12,43 +13,87 @@ import {
   Pie,
   Cell,
   Legend
-  , BarChart, Bar
 } from 'recharts'
 
-function KPI({ title, value, subtitle }: { title: string; value: string | number; subtitle?: string }) {
-  // determine an icon by title (simple mapping) for the top-level KPIs
-  const icon = title.toLowerCase().includes('pending') ? <Wallet size={24} /> : title.toLowerCase().includes('released') ? <FileText size={24} /> : <Users size={24} />
+interface KPICardProps {
+  title: string;
+  value: number | string;
+  icon: React.ReactNode;
+  color: string;
+  subtitle?: string;
+}
+
+function KPICard({ title, value, icon, color, subtitle }: KPICardProps) {
+  const iconBgClass =
+    color === 'blue'
+      ? 'bg-blue-600'
+      : color === 'orange'
+      ? 'bg-[#C3754C]'
+      : color === 'green'
+      ? 'bg-green-600'
+      : color === 'red'
+      ? 'bg-red-600'
+      : 'bg-gray-600'
+  
   return (
-    <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20 flex flex-col sm:flex-row items-center sm:items-center gap-3 sm:gap-4 relative overflow-hidden">
-      <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded-lg text-[var(--color-heading)] flex-shrink-0">
-        {icon}
+    <div className={`bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible`}>
+      <div className={`absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full ${iconBgClass} text-white shadow-md`}>
+        {React.isValidElement(icon)
+          ? React.cloneElement(
+              icon as React.ReactElement<{ color?: string; size?: number }>,
+              { color: 'white', size: 32 }
+            )
+          : icon}
       </div>
-      <div className="flex-1 text-center sm:text-left min-w-0">
-        <div className="text-xs font-semibold text-[color:var(--color-primary)] uppercase tracking-wide mb-1 leading-tight">{title}</div>
-        <div className="text-xl sm:text-2xl font-bold text-[color:var(--color-heading)] mb-1">{value}</div>
-        {subtitle && <div className="text-xs sm:text-sm text-gray-400 leading-tight">{subtitle}</div>}
+      <div className="flex flex-col items-center text-center w-full">
+        <h3 className="font-['Fraunces'] font-bold text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2">{title}</h3>
+        <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{value}</div>
+        {subtitle && <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">{subtitle}</div>}
       </div>
     </div>
   )
 }
 
-function LineChart({ data }: { data: number[] }) {
-  // Convert numeric series into objects for Recharts
-  const chartData = data.map((v, i) => ({
-    name: new Date(2025, i, 1).toLocaleString('en-US', { month: 'short' }),
-    value: v
+type TrendRange = 'Weekly' | 'Monthly' | 'Yearly'
+
+interface LineChartData {
+  labels: string[]
+  pending: number[]
+  cleared: number[]
+}
+
+function LineChart({ data, range, onChangeRange }: { data: LineChartData; range: TrendRange; onChangeRange: (r: TrendRange) => void }) {
+  const chartData = data.labels.map((label, i) => ({
+    name: label,
+    pending: data.pending[i] ?? 0,
+    cleared: data.cleared[i] ?? 0
   }))
 
   return (
-    <div className="bg-white p-4 sm:p-5 rounded-lg shadow-md border border-white/10">
-      <div className="text-sm sm:text-base font-semibold text-[color:var(--color-heading)] mb-3">Monthly payout trend</div>
-      <ResponsiveContainer width="100%" height={200}>
-        <RechartsLineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+    <div className="bg-white p-3 sm:p-4 md:p-5 rounded-lg shadow-md border border-white/10">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-3">
+        <div className="text-base sm:text-lg md:text-xl font-semibold text-[color:var(--color-heading)]">Payout trend</div>
+        <div className="flex items-center gap-2 bg-gray-100 rounded-md p-1">
+          {(['Weekly', 'Monthly', 'Yearly'] as const).map(period => (
+            <button
+              key={period}
+              onClick={() => onChangeRange(period)}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${range === period ? 'bg-[var(--color-accent)] text-[var(--color-button-text)]' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              {period}
+            </button>
+          ))}
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={300} className="sm:!h-[360px]">
+        <RechartsLineChart data={chartData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
-          <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} />
-          <YAxis tickFormatter={(val) => `₹${Number(val / 1000).toLocaleString()}k`} tick={{ fontSize: 12 }} />
-          <Tooltip formatter={(value: any) => `₹${Number(value).toLocaleString()}`} />
-          <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
+          <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} />
+          <YAxis tickFormatter={(val) => `₹${Number(val / 1000).toLocaleString()}k`} tick={{ fontSize: 10 }} />
+          <Tooltip formatter={(value: number | string) => `₹${Number(value).toLocaleString()}`} />
+          <Legend wrapperStyle={{ fontSize: '14px', paddingTop: 8 }} />
+          <Line type="monotone" dataKey="cleared" name="Cleared" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
+          <Line type="monotone" dataKey="pending" name="Pending" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
         </RechartsLineChart>
       </ResponsiveContainer>
     </div>
@@ -63,22 +108,22 @@ function PieChart({ pending, cleared }: { pending: number; cleared: number }) {
   const colors = ['#dd6b20', '#48bb78']
 
   return (
-    <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-      <div className="text-center text-base sm:text-lg font-semibold text-[color:var(--color-heading)] mb-4">Pending vs Cleared</div>
-      <ResponsiveContainer width="100%" height={220}>
+    <div className="bg-white p-3 sm:p-4 md:p-6 rounded-xl shadow-md border border-white/20">
+      <div className="text-center text-base sm:text-lg font-semibold text-[color:var(--color-heading)] mb-3 sm:mb-4">Pending vs Cleared</div>
+      <ResponsiveContainer width="100%" height={200} className="sm:!h-[220px]">
         <RechartsPieChart>
-          <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} label={false}>
+          <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={2} label={false} className="sm:!innerRadius-[50] sm:!outerRadius-[80]">
             {data.map((_, index) => (
               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
             ))}
           </Pie>
-          <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '12px' }} />
-          <Tooltip formatter={(value: any) => `${value}`} />
+          <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '11px' }} />
+          <Tooltip formatter={(value: number | string) => `${value}`} />
         </RechartsPieChart>
       </ResponsiveContainer>
       
       {/* Enhanced invoice breakdown similar to Dashboard */}
-      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+      <div className="mt-3 sm:mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
           <div className="text-xs sm:text-sm text-gray-500 font-medium">Total Invoices</div>
           <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{pending + cleared}</div>
@@ -91,18 +136,18 @@ function PieChart({ pending, cleared }: { pending: number; cleared: number }) {
         </div>
       </div>
 
-      <div className="mt-4 space-y-3 sm:space-y-0 sm:grid sm:grid-cols-1 lg:grid-cols-2 sm:gap-3">
+      <div className="mt-3 sm:mt-4 space-y-3 sm:space-y-0 sm:grid sm:grid-cols-1 lg:grid-cols-2 sm:gap-3">
         <div className="flex items-center gap-3 text-sm text-gray-700 font-medium">
           <span className="w-3 h-3 rounded-sm bg-[var(--color-warning)] block flex-shrink-0" />
           <div className="min-w-0">
-            <div className="font-semibold">Pending</div>
+            <div className="font-semibold text-sm">Pending</div>
             <div className="text-xs sm:text-sm text-gray-400 truncate">{pending} invoices</div>
           </div>
         </div>
         <div className="flex items-center gap-3 text-sm text-gray-700 font-medium">
           <span className="w-3 h-3 rounded-sm bg-[var(--color-success)] block flex-shrink-0" />
           <div className="min-w-0">
-            <div className="font-semibold">Cleared</div>
+            <div className="font-semibold text-sm">Cleared</div>
             <div className="text-xs sm:text-sm text-gray-400 truncate">{cleared} invoices</div>
           </div>
         </div>
@@ -114,9 +159,27 @@ function PieChart({ pending, cleared }: { pending: number; cleared: number }) {
 export default function MoneyFlow() {
   // mock data
   const kpis = [
-    { title: 'Total Payments Pending', value: '₹2,34,500', subtitle: '23 invoices' },
-    { title: 'Payments Released This Month', value: '₹5,60,000', subtitle: '42 payouts' },
-    { title: 'Vendor with Highest Outstanding', value: 'GreenLeaf Farms', subtitle: '₹75,000' }
+    { 
+      title: 'Total Payments Pending', 
+      value: '₹2,34,500', 
+      subtitle: '23 invoices',
+      icon: <Wallet size={32} />,
+      color: 'orange'
+    },
+    { 
+      title: 'Payments Released This Month', 
+      value: '₹5,60,000', 
+      subtitle: '42 payouts',
+      icon: <FileText size={32} />,
+      color: 'orange'
+    },
+    { 
+      title: 'Vendor with Highest Outstanding', 
+      value: 'GreenLeaf Farms', 
+      subtitle: '₹75,000',
+      icon: <Users size={32} />,
+      color: 'orange'
+    }
   ]
 
   const transactions = [
@@ -131,159 +194,284 @@ export default function MoneyFlow() {
     { id: 'INV-1001', vendor: 'GreenLeaf Farms', amount: '₹12,500', status: 'Pending', date: '2025-09-02' }
   ]
 
-  const monthly = [120000, 95000, 130000, 110000, 150000, 125000, 140000, 135000, 160000, 155000, 170000, 180000]
+  // Trend datasets (mock)
+  const [trendRange, setTrendRange] = React.useState<TrendRange>('Monthly')
+  const weeklyData: LineChartData = {
+    labels: ['W1', 'W2', 'W3', 'W4'],
+    pending: [80000, 60000, 50000, 70000],
+    cleared: [320000, 280000, 350000, 300000]
+  }
+  const monthlyData: LineChartData = {
+    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    pending: [50000, 40000, 45000, 52000, 47000, 43000, 48000, 46000, 49000, 51000, 53000, 55000],
+    cleared: [120000, 95000, 130000, 110000, 150000, 125000, 140000, 135000, 160000, 155000, 170000, 180000]
+  }
+  const yearlyData: LineChartData = {
+    labels: ['2022','2023','2024','2025'],
+    pending: [520000, 480000, 510000, 495000],
+    cleared: [1350000, 1480000, 1620000, 1750000]
+  }
+  const trendData = trendRange === 'Weekly' ? weeklyData : trendRange === 'Yearly' ? yearlyData : monthlyData
 
   const pending = transactions.filter((t) => t.status.toLowerCase() === 'pending').length
   const cleared = transactions.filter((t) => t.status.toLowerCase() === 'released' || t.status.toLowerCase() === 'approved').length
 
-  return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-[color:var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
-      <div className="bg-[var(--color-header-bg)] p-4 sm:p-6 lg:p-8 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] mb-4 sm:mb-6 border border-[rgba(0,0,0,0.03)]">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Money Flow</h1>
-        <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium">Payments, reconciliation and transaction insights</p>
-      </div>
+  // Filters and search state
+  const [statusFilter, setStatusFilter] = React.useState<'All' | 'Pending' | 'Released' | 'Approved'>('All')
+  const [sortOrder, setSortOrder] = React.useState<'Latest' | 'Oldest'>('Latest')
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [statusOpen, setStatusOpen] = React.useState(false)
+  const [sortOpen, setSortOpen] = React.useState(false)
+  const [page, setPage] = React.useState(1)
+  const pageSize = 5
 
-      <div className="mb-6 lg:mb-8">
-        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Today's Overview</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+  const filteredTransactions = transactions
+    .filter((t) => {
+      if (statusFilter !== 'All' && t.status !== statusFilter) return false
+      if (!searchQuery.trim()) return true
+      const q = searchQuery.toLowerCase()
+      return t.id.toLowerCase().includes(q) || t.vendor.toLowerCase().includes(q)
+    })
+    .sort((a, b) => {
+      const diff = new Date(b.date).getTime() - new Date(a.date).getTime()
+      return sortOrder === 'Latest' ? diff : -diff
+    })
+
+  // Reset to first page when filters change
+  React.useEffect(() => {
+    setPage(1)
+  }, [statusFilter, sortOrder, searchQuery])
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize))
+  const startIndex = (page - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, filteredTransactions.length)
+  const pageTransactions = filteredTransactions.slice(startIndex, endIndex)
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+     
+
+      <div className="mb-4 sm:mb-6 lg:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6">Money Flow</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 py-8 sm:py-10 gap-6 sm:gap-8 xl:gap-6">
           {kpis.map((k, i) => (
-            <KPI key={i} title={k.title} value={k.value} subtitle={k.subtitle} />
+            <KPICard 
+              key={i} 
+              title={k.title} 
+              value={k.value} 
+              subtitle={k.subtitle}
+              icon={k.icon}
+              color={k.color}
+            />
           ))}
         </div>
       </div>
 
-          {/* Charts row: Monthly, Weekly and Pending vs Cleared */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <div className="md:col-span-2 lg:col-span-1">
-              <LineChart data={monthly} />
-            </div>
-            <div className="md:col-span-2 lg:col-span-1">
-              <div className="bg-white p-4 sm:p-5 rounded-lg shadow-md border border-white/10 h-full">
-                <div className="text-sm sm:text-base font-semibold text-[color:var(--color-heading)] mb-3">Weekly payout trend (4 weeks)</div>
-                <div style={{ width: '100%', height: 200 }}>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={[{ week: 'W1', cleared: 320000, pending: 80000 }, { week: 'W2', cleared: 280000, pending: 60000 }, { week: 'W3', cleared: 350000, pending: 50000 }, { week: 'W4', cleared: 300000, pending: 70000 }]} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                      <CartesianGrid stroke="#eef2f7" />
-                      <XAxis dataKey="week" tick={{ fill: '#64748b', fontSize: 12 }} />
-                      <YAxis tickFormatter={(val) => `₹${Number(val / 1000).toLocaleString()}k`} tick={{ fontSize: 12 }} />
-                      <Tooltip formatter={(value: any) => `₹${Number(value).toLocaleString()}`} />
-                      <Legend wrapperStyle={{ fontSize: '12px' }} />
-                      <Bar dataKey="cleared" stackId="a" fill="#48bb78" />
-                      <Bar dataKey="pending" stackId="a" fill="#dd6b20" />
-                    </BarChart>
-                  </ResponsiveContainer>
+          {/* Graph section - full width line chart with pending vs cleared and range filter */}
+          <div className="mb-4 sm:mb-6">
+            <LineChart data={trendData} range={trendRange} onChangeRange={setTrendRange} />
+          </div>
+
+          {/* Pending vs Cleared - Full Width */}
+          <div className="mb-4 sm:mb-6">
+            <PieChart pending={pending} cleared={cleared} />
+          </div>
+
+          <div className="py-4 sm:py-6">
+            {/* Header controls row */}
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <div className="text-2xl sm:text-3xl md:text-[28px] font-extrabold text-[color:var(--color-secondary)]">Transactions</div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 lg:gap-6 w-full lg:w-auto">
+                <div className="relative w-full sm:flex-1 lg:w-[320px]">
+                  <Search size={18} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 sm:w-5 sm:h-5 text-[#424242]" />
+                  <input
+                    placeholder="Search by ID or vendor"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-10 rounded-md pl-9 sm:pl-10 pr-3 bg-white shadow-sm border border-gray-200 text-sm outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="relative flex-1 sm:flex-none">
+                    <button type="button" onClick={() => { setStatusOpen((s) => !s); setSortOpen(false) }} className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-['Quicksand'] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap">
+                      <span className="truncate">{statusFilter === 'All' ? 'All Status' : statusFilter}</span>
+                      <ChevronDown size={20} className={`${statusOpen ? 'rotate-180' : ''} transition-transform flex-shrink-0 sm:w-6 sm:h-6`} />
+                    </button>
+                    {statusOpen && (
+                      <div className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 mt-1 w-36 bg-white border border-gray-200 rounded-md shadow-sm z-10">
+                        {(['All','Pending','Released','Approved'] as const).map((s) => (
+                          <button key={s} onClick={() => { setStatusFilter(s === 'All' ? 'All' : s); setStatusOpen(false) }} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${statusFilter === s ? 'text-[color:var(--color-secondary)] font-medium' : 'text-gray-700'}`}>{s === 'All' ? 'All Status' : s}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="relative flex-1 sm:flex-none">
+                    <button type="button" onClick={() => { setSortOpen((s) => !s); setStatusOpen(false) }} className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-['Quicksand'] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap">
+                      <span>{sortOrder}</span>
+                      <ChevronDown size={20} className={`${sortOpen ? 'rotate-180' : ''} transition-transform flex-shrink-0 sm:w-6 sm:h-6`} />
+                    </button>
+                    {sortOpen && (
+                      <div className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 mt-1 w-28 bg-white border border-gray-200 rounded-md shadow-sm z-10">
+                        {(['Latest','Oldest'] as const).map((s) => (
+                          <button key={s} onClick={() => { setSortOrder(s); setSortOpen(false) }} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${sortOrder === s ? 'text-[color:var(--color-secondary)] font-medium' : 'text-gray-700'}`}>{s}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="md:col-span-1 lg:col-span-1">
-              <PieChart pending={pending} cleared={cleared} />
+
+            {/* Table container styled to match screenshot - Hidden on mobile, visible on tablet+ */}
+            <div className="hidden md:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
+              {/* Table head bar */}
+              <div className="bg-[#C3754C] text-white">
+                <div className="grid grid-cols-[1.2fr_1.8fr_1.1fr_1.1fr_1.1fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-['Quicksand'] font-bold text-sm md:text-base lg:text-[18px] xl:text-[20px] leading-[100%] tracking-[0] text-center">
+                  <div>Invoice ID</div>
+                  <div>Vendor</div>
+                  <div>Amount</div>
+                  <div>Status</div>
+                  <div>Date</div>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="bg-white">
+                <div className="py-2">
+                  <div>
+                    {pageTransactions.length === 0 ? (
+                      <div className="px-6 py-8 text-center text-gray-500">No transactions found</div>
+                    ) : (
+                      pageTransactions.map((t) => (
+                        <div key={t.id} className="grid grid-cols-[1.2fr_1.8fr_1.1fr_1.1fr_1.1fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center text-center hover:bg-gray-50 font-bold">
+                          <div className="text-xs md:text-sm font-medium text-gray-800 truncate">{t.id}</div>
+                          <div className="text-xs md:text-sm text-gray-700 truncate">{t.vendor}</div>
+                          <div className="text-xs md:text-sm font-semibold text-gray-900">{t.amount}</div>
+                          <div className="flex items-center justify-center">
+                            <span className={`${t.status === 'Pending' ? 'bg-amber-50 text-amber-600' : t.status === 'Released' ? 'bg-green-50 text-green-600' : 'bg-sky-50 text-sky-600'} inline-block px-2 py-1 rounded-md text-xs font-semibold`}>
+                              {t.status}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500">{t.date}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* Pagination controls (desktop) */}
+              <div className="flex items-center justify-between px-3 md:px-4 lg:px-6 py-3 bg-white border-t border-gray-100">
+                <div className="text-xs text-gray-500">Showing {filteredTransactions.length === 0 ? 0 : startIndex + 1}-{endIndex} of {filteredTransactions.length}</div>
+                <div className="flex items-center gap-1 md:gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-700 disabled:opacity-40"
+                    aria-label="Previous page"
+                  >
+                    <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={`min-w-7 h-7 md:min-w-8 md:h-8 px-1.5 md:px-2 rounded-md border text-xs md:text-sm ${page === p ? 'bg-[var(--color-secondary)] text-white border-[var(--color-secondary)]' : 'border-gray-200 text-gray-700 bg-white'}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-700 disabled:opacity-40"
+                    aria-label="Next page"
+                  >
+                    <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="mb-4 sm:mb-6">
-            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-white/10">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
-                <div className="text-base sm:text-lg font-semibold text-[color:var(--color-heading)]">Transactions</div>
-                <div className="text-sm text-gray-500">Showing recent 10</div>
-              </div>
-
-              {/* Desktop Table */}
-              <div className="hidden md:block overflow-auto">
-                <table className="w-full table-auto border-collapse">
-                  <thead>
-                    <tr className="text-left border-b border-slate-100">
-                      <th className="py-3 text-sm font-semibold">Invoice ID</th>
-                      <th className="text-sm font-semibold">Vendor</th>
-                      <th className="text-sm font-semibold">Amount</th>
-                      <th className="text-sm font-semibold">Status</th>
-                      <th className="text-sm font-semibold">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transactions
-                      .slice()
-                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                      .slice(0, 10)
-                      .map((t) => (
-                      <tr key={t.id} className="border-b border-slate-50 hover:bg-gray-50">
-                        <td className="py-3 align-top font-medium text-sm">{t.id}</td>
-                        <td className="align-middle py-3 text-sm">{t.vendor}</td>
-                        <td className="align-middle py-3 font-medium text-sm">{t.amount}</td>
-                        <td className="align-middle py-3">
-                          <span className={`px-2 py-1 rounded-md font-semibold text-xs ${t.status === 'Pending' ? 'bg-amber-50 text-amber-600' : t.status === 'Released' ? 'bg-green-50 text-green-600' : 'bg-sky-50 text-sky-600'}`}>{t.status}</span>
-                        </td>
-                        <td className="align-middle text-xs text-gray-600">{t.date}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile Cards */}
-              <div className="md:hidden space-y-3">
-                {transactions
-                  .slice()
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                  .slice(0, 10)
-                  .map((t) => (
-                    <div key={t.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+            {/* Mobile cards keep parity */}
+            <div className="md:hidden mt-3 space-y-3">
+              {pageTransactions.length === 0 ? (
+                <div className="border border-gray-200 rounded-lg p-8 bg-white text-center text-gray-500">
+                  No transactions found
+                </div>
+              ) : (
+                <>
+                  {pageTransactions.map((t) => (
+                    <div key={t.id} className="border border-gray-200 rounded-lg p-3.5 sm:p-4 bg-white shadow-sm">
                       <div className="flex justify-between items-start mb-2">
                         <div className="font-semibold text-sm text-[color:var(--color-heading)]">{t.id}</div>
-                        <span className={`px-2 py-1 rounded-md font-semibold text-xs ${t.status === 'Pending' ? 'bg-amber-50 text-amber-600' : t.status === 'Released' ? 'bg-green-50 text-green-600' : 'bg-sky-50 text-sky-600'}`}>{t.status}</span>
+                        <span className={`${t.status === 'Pending' ? 'bg-amber-50 text-amber-600' : t.status === 'Released' ? 'bg-green-50 text-green-600' : 'bg-sky-50 text-sky-600'} px-2 py-1 rounded-md font-semibold text-xs`}>{t.status}</span>
                       </div>
-                      <div className="text-sm text-gray-700 mb-1">{t.vendor}</div>
+                      <div className="text-sm text-gray-700 mb-1 font-medium">{t.vendor}</div>
                       <div className="flex justify-between items-end">
-                        <div className="font-semibold text-base text-[color:var(--color-heading)]">{t.amount}</div>
+                        <div className="font-bold text-base text-[color:var(--color-heading)]">{t.amount}</div>
                         <div className="text-xs text-gray-500">{t.date}</div>
                       </div>
                     </div>
                   ))}
+                </>
+              )}
+              {/* Pagination controls (mobile) */}
+              <div className="flex items-center justify-between px-1 py-2">
+                <div className="text-xs text-gray-500">{filteredTransactions.length === 0 ? 'No results' : `Showing ${startIndex + 1}-${endIndex} of ${filteredTransactions.length}`}</div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="h-8 px-3 rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 text-sm font-medium">Prev</button>
+                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-8 px-3 rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 text-sm font-medium">Next</button>
+                </div>
               </div>
             </div>
           </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-        <div className="bg-white p-4 sm:p-5 rounded-lg shadow-md border border-white/10">
-          <h3 className="mt-0 mb-3 text-base sm:text-lg font-semibold text-[color:var(--color-heading)]">Reconciliation Summary</h3>
-          <div className="grid grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-6">
+        <div className="bg-white p-3 sm:p-4 md:p-5 rounded-lg shadow-md border border-white/10">
+          <h3 className="mt-0 mb-3 sm:mb-4 text-base sm:text-lg font-semibold text-[color:var(--color-heading)]">Reconciliation Summary</h3>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">
             <div className="text-center sm:text-left">
-              <div className="text-xs text-gray-500 mb-1">Cleared invoices</div>
+              <div className="text-xs sm:text-sm text-gray-500 mb-1">Cleared invoices</div>
               <div className="text-xl sm:text-2xl font-bold text-[color:var(--color-heading)]">{cleared}</div>
             </div>
             <div className="text-center sm:text-left">
-              <div className="text-xs text-gray-500 mb-1">Mismatched invoices</div>
+              <div className="text-xs sm:text-sm text-gray-500 mb-1">Mismatched invoices</div>
               <div className="text-xl sm:text-2xl font-bold text-amber-600">2</div>
             </div>
           </div>
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-            <div className="text-sm text-blue-700 leading-relaxed">
+          <div className="mt-3 sm:mt-4 p-3 bg-blue-50 rounded-lg">
+            <div className="text-xs sm:text-sm text-blue-700 leading-relaxed">
               <strong>Quick notes:</strong> Review mismatched invoices and update payment statuses accordingly.
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-lg shadow-md border border-white/10">
-          <h3 className="mt-0 mb-3 text-base sm:text-lg font-semibold text-[color:var(--color-heading)]">Recent Activity</h3>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 p-2 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <div className="text-sm font-medium">Released payment INV-1005</div>
-                <div className="text-xs text-gray-500">to HappyPlant Co • 09/12</div>
+        <div className="bg-white p-3 sm:p-4 md:p-5 rounded-lg shadow-md border border-white/10">
+          <h3 className="mt-0 mb-3 sm:mb-4 text-base sm:text-lg font-semibold text-[color:var(--color-heading)]">Recent Activity</h3>
+          <div className="space-y-2.5 sm:space-y-3">
+            <div className="flex items-start gap-2.5 sm:gap-3 p-2 sm:p-2.5 bg-gray-50 rounded-lg">
+              <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></div>
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-medium leading-tight">Released payment INV-1005</div>
+                <div className="text-xs text-gray-500 mt-0.5">to HappyPlant Co • 09/12</div>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-2 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-amber-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <div className="text-sm font-medium">Validation flagged mismatch</div>
-                <div className="text-xs text-gray-500">on INV-1004 • 09/11</div>
+            <div className="flex items-start gap-2.5 sm:gap-3 p-2 sm:p-2.5 bg-gray-50 rounded-lg">
+              <div className="w-2 h-2 bg-amber-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></div>
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-medium leading-tight">Validation flagged mismatch</div>
+                <div className="text-xs text-gray-500 mt-0.5">on INV-1004 • 09/11</div>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-2 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <div className="text-sm font-medium">Approved INV-1003</div>
-                <div className="text-xs text-gray-500">for SharkTank Ltd • 09/08</div>
+            <div className="flex items-start gap-2.5 sm:gap-3 p-2 sm:p-2.5 bg-gray-50 rounded-lg">
+              <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></div>
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-medium leading-tight">Approved INV-1003</div>
+                <div className="text-xs text-gray-500 mt-0.5">for SharkTank Ltd • 09/08</div>
               </div>
             </div>
           </div>
