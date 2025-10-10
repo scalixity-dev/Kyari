@@ -270,7 +270,205 @@ Order Management System
   }
 
   /**
-   * Send password reset email
+   * Send password reset email with 6-digit code
+   */
+  async sendPasswordResetCode(to: string, name: string, resetCode: string): Promise<void> {
+    try {
+      if (!this.transporter) {
+        logger.warn('Password reset code email not sent (SMTP not configured)', { to, resetCode });
+        console.log('\n==============================================');
+        console.log('📧 PASSWORD RESET CODE - SMTP NOT CONFIGURED');
+        console.log('==============================================');
+        console.log(`To: ${to}`);
+        console.log(`Name: ${name}`);
+        console.log(`Reset Code: ${resetCode}`);
+        console.log(`Expires in: 15 minutes`);
+        console.log('==============================================\n');
+        return;
+      }
+
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      background-color: #ffffff;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .logo {
+      font-size: 28px;
+      font-weight: bold;
+      color: #10B981;
+      margin-bottom: 10px;
+    }
+    h1 {
+      color: #1a202c;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .code-box {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      border-radius: 12px;
+      padding: 30px;
+      margin: 30px 0;
+      text-align: center;
+    }
+    .code {
+      font-size: 42px;
+      font-weight: bold;
+      color: white;
+      letter-spacing: 8px;
+      font-family: 'Courier New', monospace;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .code-label {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+      margin-bottom: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .warning {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .info-box {
+      background-color: #f7fafc;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .info-item {
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+    }
+    .info-icon {
+      color: #10B981;
+      margin-right: 10px;
+      font-size: 18px;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 14px;
+      color: #718096;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🌱 Kyaari OMS</div>
+    </div>
+
+    <h1>Password Reset Request</h1>
+    
+    <p>Hello ${name},</p>
+    <p>We received a request to reset your password for your Kyaari OMS account. Use the verification code below to complete your password reset:</p>
+
+    <div class="code-box">
+      <div class="code-label">Your Verification Code</div>
+      <div class="code">${resetCode}</div>
+    </div>
+
+    <div class="warning">
+      <strong>⏱️ Time Sensitive:</strong>
+      <br>
+      This code will expire in <strong>15 minutes</strong>. If you didn't request this password reset, please ignore this email or contact your administrator immediately.
+    </div>
+
+    <div class="info-box">
+      <div class="info-item">
+        <span class="info-icon">✓</span>
+        <span>Enter this code in the password reset form</span>
+      </div>
+      <div class="info-item">
+        <span class="info-icon">✓</span>
+        <span>Create a new strong password</span>
+      </div>
+      <div class="info-item">
+        <span class="info-icon">✓</span>
+        <span>Login with your new credentials</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>This is an automated message. Please do not reply to this email.</p>
+      <p style="margin-top: 15px;">
+        <strong>Kyaari OMS</strong><br>
+        Order Management System
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+      `;
+
+      const textContent = `
+Password Reset Request - Kyaari OMS
+
+Hello ${name},
+
+We received a request to reset your password for your Kyaari OMS account.
+
+Your Verification Code: ${resetCode}
+
+This code will expire in 15 minutes.
+
+Steps to reset your password:
+1. Enter this code in the password reset form
+2. Create a new strong password
+3. Login with your new credentials
+
+If you didn't request this password reset, please ignore this email or contact your administrator immediately.
+
+---
+Kyaari OMS
+Order Management System
+      `;
+
+      await this.transporter.sendMail({
+        from: `"Kyaari OMS" <${process.env.SMTP_USER}>`,
+        to,
+        subject: 'Password Reset Code - Kyaari OMS',
+        html: htmlContent,
+        text: textContent,
+      });
+
+      logger.info('Password reset code email sent successfully', { to });
+    } catch (error) {
+      logger.error('Failed to send password reset code email', { error, to });
+      throw new Error('Failed to send password reset code email');
+    }
+  }
+
+  /**
+   * Send password reset email with link (legacy method - kept for backwards compatibility)
    */
   async sendPasswordResetEmail(to: string, name: string, resetToken: string): Promise<void> {
     try {
