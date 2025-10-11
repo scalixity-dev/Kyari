@@ -1,24 +1,21 @@
-import { useMemo, useState, useEffect } from 'react'
-import { Edit, Trash2, Plus, Upload, Search, FileText } from 'lucide-react'
-import { CustomDropdown } from '../../../components'
+import { useState, useEffect } from 'react'
+import { Plus, Upload, Search, FileText, ChevronDown, ChevronRight, Edit, Trash2 } from 'lucide-react'
+import { CustomDropdown, ConfirmationModal } from '../../../components'
+import { orderApi, type OrderListItem, type CreateOrderRequest, type Order } from '../../../services/orderApi'
+import { vendorApi, type VendorListItem } from '../../../services/vendorApi'
+import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
 
-type OrderStatus =
-  | 'RECEIVED'
-  | 'ASSIGNED'
-  | 'CONFIRMED'
-  | 'DISPATCHED'
-  | 'PAYMENT_PENDING'
-  | 'PAYMENT_DONE'
+type OrderStatus = 'RECEIVED' | 'ASSIGNED' | 'PROCESSING' | 'FULFILLED' | 'PARTIALLY_FULFILLED' | 'CLOSED' | 'CANCELLED'
 
-type Order = {
-  id: string
-  sku: string
-  product: string
-  qty: number
-  vendor: string
-  status: OrderStatus
-  date: string
-  city: string
+const STATUS_STYLES: Record<OrderStatus, { label: string; bg: string; color: string; border: string }> = {
+  RECEIVED: { label: 'Received', bg: '#E5E7EB', color: '#111827', border: '#D1D5DB' },
+  ASSIGNED: { label: 'Assigned', bg: '#DBEAFE', color: '#1E3A8A', border: '#BFDBFE' },
+  PROCESSING: { label: 'Processing', bg: '#FEF08A', color: '#92400E', border: '#FDE047' },
+  FULFILLED: { label: 'Fulfilled', bg: '#D1FAE5', color: '#065F46', border: '#A7F3D0' },
+  PARTIALLY_FULFILLED: { label: 'Partial', bg: '#FFEDD5', color: '#9A3412', border: '#FED7AA' },
+  CLOSED: { label: 'Closed', bg: '#E0ECE8', color: '#1D4D43', border: '#B7CEC6' },
+  CANCELLED: { label: 'Cancelled', bg: '#FEE2E2', color: '#991B1B', border: '#FECACA' },
 }
 
 type OrderItem = {
@@ -29,140 +26,187 @@ type OrderItem = {
 }
 
 type NewOrderDraft = {
-  id: string
+  orderNumber: string
   items: OrderItem[]
-  date: string
-  city: string
-  vendor: string
+  vendorId: string
 }
-
-const STATUS_STYLES: Record<OrderStatus, { label: string; bg: string; color: string; border: string }> = {
-  RECEIVED: { label: 'RECEIVED', bg: '#E5E7EB', color: '#111827', border: '#D1D5DB' }, // gray
-  ASSIGNED: { label: 'ASSIGNED', bg: '#DBEAFE', color: '#1E3A8A', border: '#BFDBFE' }, // blue
-  CONFIRMED: { label: 'CONFIRMED', bg: '#D1FAE5', color: '#065F46', border: '#A7F3D0' }, // green
-  DISPATCHED: { label: 'DISPATCHED', bg: '#FFEDD5', color: '#9A3412', border: '#FED7AA' }, // orange
-  PAYMENT_PENDING: { label: 'PAYMENT PENDING', bg: '#FEF9C3', color: '#92400E', border: '#FEF08A' }, // yellow
-  PAYMENT_DONE: { label: 'Paid', bg: '#E0ECE8', color: '#1D4D43', border: '#B7CEC6' }, // deep green tint
-}
-
-
-const initialOrders: Order[] = [
-  // Multiple orders with same ID (ORD-1001)
-  { id: 'ORD-1001', sku: 'KY-ROSE-01', product: 'Rose', qty: 100, vendor: 'Flower Garden', status: 'RECEIVED', date: '2025-01-15', city: 'Mumbai' },
-  { id: 'ORD-1001', sku: 'KY-SUN-01', product: 'Sunflower', qty: 100, vendor: 'Flower Garden', status: 'RECEIVED', date: '2025-01-15', city: 'Mumbai' },
-  
-  // Single order
-  { id: 'ORD-1002', sku: 'KY-PLNT-05', product: 'Snake Plant', qty: 1, vendor: 'Urban Roots', status: 'ASSIGNED', date: '2025-01-16', city: 'Delhi' },
-  
-  // Multiple orders with same ID (ORD-1003)
-  { id: 'ORD-1003', sku: 'KY-PLNT-12', product: 'Monstera', qty: 3, vendor: 'Plantify', status: 'CONFIRMED', date: '2025-01-17', city: 'Bengaluru' },
-  { id: 'ORD-1003', sku: 'KY-PLNT-15', product: 'Fiddle Leaf Fig', qty: 2, vendor: 'Plantify', status: 'CONFIRMED', date: '2025-01-17', city: 'Bengaluru' },
-  { id: 'ORD-1003', sku: 'KY-PLNT-18', product: 'Rubber Plant', qty: 1, vendor: 'Plantify', status: 'CONFIRMED', date: '2025-01-17', city: 'Bengaluru' },
-  
-  // Single order
-  { id: 'ORD-1004', sku: 'KY-PT-002', product: 'Terracotta Pot', qty: 4, vendor: 'Clay Works', status: 'DISPATCHED', date: '2025-01-18', city: 'Pune' },
-  
-  // Multiple orders with same ID (ORD-1005)
-  { id: 'ORD-1005', sku: 'KY-ACC-21', product: 'Watering Can', qty: 1, vendor: 'Urban Roots', status: 'PAYMENT_PENDING', date: '2025-01-19', city: 'Mumbai' },
-  { id: 'ORD-1005', sku: 'KY-ACC-22', product: 'Plant Fertilizer', qty: 2, vendor: 'Urban Roots', status: 'PAYMENT_PENDING', date: '2025-01-19', city: 'Mumbai' },
-  
-  // Single order
-  { id: 'ORD-1006', sku: 'KY-PLNT-08', product: 'ZZ Plant', qty: 2, vendor: 'GreenLeaf Co', status: 'PAYMENT_DONE', date: '2025-01-20', city: 'Hyderabad' },
-]
 
 export default function Orders() {
-  const [orders, setOrders] = useState<Order[]>(initialOrders)
+  const navigate = useNavigate()
+  const [orders, setOrders] = useState<OrderListItem[]>([])
+  const [vendors, setVendors] = useState<VendorListItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingVendors, setIsLoadingVendors] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
-  const [isSplitModalOpen, setIsSplitModalOpen] = useState(false)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
+  const [expandedOrderDetails, setExpandedOrderDetails] = useState<Order | null>(null)
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false)
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null)
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
+  const [selectedOrderForAssign, setSelectedOrderForAssign] = useState<OrderListItem | null>(null)
+  const [assignVendorId, setAssignVendorId] = useState('')
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [orderToDelete, setOrderToDelete] = useState<OrderListItem | null>(null)
 
-  const [filterCity, setFilterCity] = useState('')
-  const [filterVendor, setFilterVendor] = useState('')
+  const [filterVendorId, setFilterVendorId] = useState('')
   const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('')
-  const [filterDate, setFilterDate] = useState('')
+  const [filterSearch, setFilterSearch] = useState('')
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
   const itemsPerPage = 10
 
-  const vendors = useMemo(() => Array.from(new Set(orders.map(o => o.vendor))).sort(), [orders])
-  const cities = useMemo(() => Array.from(new Set(orders.map(o => o.city))).sort(), [orders])
+  const [draft, setDraft] = useState<NewOrderDraft>({
+    orderNumber: '',
+    items: [{ sku: '', product: '', qty: '', amount: '' }],
+    vendorId: '',
+  })
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter(o => {
-      if (filterCity && o.city !== filterCity) return false
-      if (filterVendor && o.vendor !== filterVendor) return false
-      if (filterStatus && o.status !== filterStatus) return false
-      if (filterDate && o.date !== filterDate) return false
-      return true
-    })
-  }, [orders, filterCity, filterVendor, filterStatus, filterDate])
-
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
-
-  // Reset to first page when filters change
-  const resetPagination = () => {
-    setCurrentPage(1)
+  // Generate automatic order number with timestamp
+  const generateOrderNumber = () => {
+    const now = new Date()
+    const year = now.getFullYear().toString().slice(-2)
+    const month = (now.getMonth() + 1).toString().padStart(2, '0')
+    const day = now.getDate().toString().padStart(2, '0')
+    const time = Date.now().toString().slice(-6)
+    return `ORD-${year}${month}${day}-${time}`
   }
+
+  // Fetch vendors for the dropdown
+  const fetchVendors = async () => {
+    try {
+      setIsLoadingVendors(true)
+      const response = await vendorApi.getVendors({ status: 'ACTIVE', verified: true, limit: 100 })
+      setVendors(response.vendors)
+    } catch (error) {
+      console.error('Error fetching vendors:', error)
+    } finally {
+      setIsLoadingVendors(false)
+    }
+  }
+
+  // Fetch vendors and generate order number when Add Modal opens
+  useEffect(() => {
+    if (isAddModalOpen) {
+      if (vendors.length === 0) {
+        fetchVendors()
+      }
+      // Generate new order number when modal opens
+      if (!draft.orderNumber) {
+        setDraft(prev => ({ ...prev, orderNumber: generateOrderNumber() }))
+      }
+    }
+  }, [isAddModalOpen])
+
+  // Fetch orders from backend
+  const fetchOrders = async () => {
+    try {
+      setIsLoading(true)
+      const response = await orderApi.getOrders({
+        page: currentPage,
+        limit: itemsPerPage,
+        status: filterStatus || undefined,
+        vendorId: filterVendorId || undefined,
+        search: filterSearch || undefined,
+      })
+      
+      setOrders(response.orders)
+      setTotalPages(response.pagination.pages)
+      setTotal(response.pagination.total)
+    } catch (error) {
+      toast.error('Failed to load orders')
+      console.error('Error fetching orders:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Fetch orders on mount and when filters/pagination change
+  useEffect(() => {
+    fetchOrders()
+  }, [currentPage, filterStatus, filterVendorId, filterSearch])
 
   // Reset pagination when filters change
   useEffect(() => {
-    resetPagination()
-  }, [filterCity, filterVendor, filterStatus, filterDate])
-
-  const [draft, setDraft] = useState<NewOrderDraft>({
-    id: '',
-    items: [{ sku: '', product: '', qty: '', amount: '' }],
-    date: '',
-    city: '',
-    vendor: '',
-  })
+    if (currentPage !== 1) {
+      setCurrentPage(1)
+    }
+  }, [filterStatus, filterVendorId, filterSearch])
 
   function resetFilters() {
-    setFilterCity('')
-    setFilterVendor('')
+    setFilterVendorId('')
     setFilterStatus('')
-    setFilterDate('')
-    resetPagination()
+    setFilterSearch('')
+    setCurrentPage(1)
   }
 
-  function handleAddOrder() {
-    if (!draft.id || !draft.date || !draft.city || !draft.vendor || draft.items.length === 0) {
-      alert('Please fill all required fields')
+  async function handleAddOrder() {
+    if (!draft.orderNumber || draft.items.length === 0) {
+      toast.error('Please fill all required fields')
+      return
+    }
+
+    // If editing, vendorId is required
+    if (editingOrderId && !draft.vendorId) {
+      toast.error('Vendor is required when editing an order')
+      return
+    }
+
+    // For new orders, vendorId is still required by backend (for now)
+    if (!editingOrderId && !draft.vendorId) {
+      toast.error('Please select a vendor for this order')
       return
     }
     
     // Validate all items
     for (const item of draft.items) {
-      if (!item.sku || !item.product || item.qty === '' || item.amount === '') {
-        alert('Please fill all item fields including quantity and amount')
+      if (!item.product || item.qty === '' || item.amount === '') {
+        toast.error('Please fill all item fields including product name, quantity and amount')
+        return
+      }
+      if (Number(item.qty) <= 0 || Number(item.amount) <= 0) {
+        toast.error('Quantity and amount must be greater than 0')
         return
       }
     }
     
-    // Create multiple orders for each item
-    const newOrders: Order[] = draft.items.map(item => ({
-      id: draft.id,
-      sku: item.sku,
-      product: item.product,
-      qty: Number(item.qty),
-      vendor: draft.vendor,
-      status: 'RECEIVED' as OrderStatus,
-      date: draft.date,
-      city: draft.city,
-    }))
-    
-    setOrders(prev => [...newOrders, ...prev])
-    setIsAddModalOpen(false)
-    setDraft({ id: '', items: [{ sku: '', product: '', qty: '', amount: '' }], date: '', city: '', vendor: '' })
+    try {
+      setIsLoading(true)
+      const orderData: CreateOrderRequest = {
+        orderNumber: draft.orderNumber,
+        primaryVendorId: draft.vendorId,
+        items: draft.items.map(item => ({
+          productName: item.product,
+          sku: item.sku || undefined,
+          quantity: Number(item.qty),
+          pricePerUnit: Number(item.amount)
+        }))
+      }
+      
+      if (editingOrderId) {
+        await orderApi.updateOrder(editingOrderId, orderData)
+        toast.success('Order updated successfully!')
+      } else {
+        // Create new order
+        await orderApi.createOrder(orderData)
+        toast.success('Order created successfully! Use "Assign" button to assign vendor.')
+      }
+      
+      setIsAddModalOpen(false)
+      setEditingOrderId(null)
+      // Reset draft with new auto-generated order number
+      setDraft({ orderNumber: generateOrderNumber(), items: [{ sku: '', product: '', qty: '', amount: '' }], vendorId: '' })
+      fetchOrders() // Refresh the list
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : `Failed to ${editingOrderId ? 'update' : 'create'} order`)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
@@ -202,50 +246,120 @@ export default function Orders() {
     setSelectedFile(null)
   }
 
-  function handleSplitOrder(order: Order) {
-    setSelectedOrder(order)
-    setIsSplitModalOpen(true)
+  function handleViewOrder(orderId: string) {
+    navigate(`/admin/tracking/orders/${orderId}`)
   }
 
-  function handleEditOrder(order: Order) {
-    setSelectedOrder(order)
-    setIsEditModalOpen(true)
+  async function handleToggleExpand(orderId: string) {
+    if (expandedOrderId === orderId) {
+      // Collapse
+      setExpandedOrderId(null)
+      setExpandedOrderDetails(null)
+    } else {
+      // Expand
+      setExpandedOrderId(orderId)
+      setIsLoadingDetails(true)
+      try {
+        const details = await orderApi.getOrderById(orderId)
+        setExpandedOrderDetails(details)
+      } catch (error) {
+        toast.error('Failed to load order details')
+        console.error('Error fetching order details:', error)
+        setExpandedOrderId(null)
+      } finally {
+        setIsLoadingDetails(false)
+      }
+    }
   }
 
-  function handleSplitSubmit(splitQuantities: number[]) {
-    if (!selectedOrder) return
+  async function handleEditOrder(orderId: string) {
+    try {
+      setIsLoading(true)
+      // Fetch full order details
+      const orderDetails = await orderApi.getOrderById(orderId)
+      
+      // Populate the modal with existing data
+      setDraft({
+        orderNumber: orderDetails.orderNumber,
+        vendorId: orderDetails.primaryVendor.id,
+        items: orderDetails.items.map(item => ({
+          sku: item.sku || '',
+          product: item.productName,
+          qty: item.quantity,
+          amount: item.pricePerUnit
+        }))
+      })
+      
+      setEditingOrderId(orderId)
+      setIsAddModalOpen(true)
+      
+      // Fetch vendors if not already loaded
+      if (vendors.length === 0) {
+        await fetchVendors()
+      }
+    } catch (error) {
+      toast.error('Failed to load order details for editing')
+      console.error('Error fetching order for edit:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  function handleOpenAssignModal(order: OrderListItem) {
+    setSelectedOrderForAssign(order)
+    setAssignVendorId('')
+    setIsAssignModalOpen(true)
     
-    const totalSplitQty = splitQuantities.reduce((sum, qty) => sum + qty, 0)
-    if (totalSplitQty !== selectedOrder.qty) {
-      alert(`Total split quantity (${totalSplitQty}) must equal original quantity (${selectedOrder.qty})`)
+    // Fetch vendors if not already loaded
+    if (vendors.length === 0) {
+      fetchVendors()
+    }
+  }
+
+  async function handleAssignVendor() {
+    if (!selectedOrderForAssign || !assignVendorId) {
+      toast.error('Please select a vendor')
       return
     }
 
-    // Remove original order
-    setOrders(prev => prev.filter(o => !(o.id === selectedOrder.id && o.sku === selectedOrder.sku)))
-    
-    // Create new split orders
-    const newSplitOrders: Order[] = splitQuantities.map((qty, index) => ({
-      ...selectedOrder,
-      id: `${selectedOrder.id}-${index + 1}`,
-      qty: qty,
-      status: 'RECEIVED' as OrderStatus
-    }))
-    
-    setOrders(prev => [...newSplitOrders, ...prev])
-    setIsSplitModalOpen(false)
-    setSelectedOrder(null)
+    try {
+      setIsLoading(true)
+      await orderApi.assignVendor(selectedOrderForAssign.id, assignVendorId)
+      
+      toast.success('Vendor assigned successfully!')
+      setIsAssignModalOpen(false)
+      setSelectedOrderForAssign(null)
+      setAssignVendorId('')
+      fetchOrders() // Refresh the list
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to assign vendor')
+      console.error('Error assigning vendor:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  function handleEditSubmit(updatedOrder: Order) {
-    if (!selectedOrder) return
-    
-    setOrders(prev => prev.map(o => 
-      o.id === selectedOrder.id && o.sku === selectedOrder.sku ? updatedOrder : o
-    ))
-    
-    setIsEditModalOpen(false)
-    setSelectedOrder(null)
+  function handleDeleteClick(order: OrderListItem) {
+    setOrderToDelete(order)
+    setDeleteConfirmOpen(true)
+  }
+
+  async function handleConfirmDelete() {
+    if (!orderToDelete) return
+
+    try {
+      setIsLoading(true)
+      await orderApi.deleteOrder(orderToDelete.id)
+      toast.success('Order deleted successfully!')
+      setDeleteConfirmOpen(false)
+      setOrderToDelete(null)
+      fetchOrders() // Refresh the list
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete order')
+      console.error('Error deleting order:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -279,38 +393,28 @@ export default function Orders() {
 
       {isFilterOpen && (
         <div className="mb-6 bg-white border border-secondary/20 rounded-xl p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-            <CustomDropdown
-              value={filterCity}
-              onChange={(value) => setFilterCity(value)}
-              options={[
-                { value: '', label: 'All Cities' },
-                ...cities.map(city => ({ value: city, label: city }))
-              ]}
-              placeholder="All Cities"
-            />
-            <CustomDropdown
-              value={filterVendor}
-              onChange={(value) => setFilterVendor(value)}
-              options={[
-                { value: '', label: 'All Vendors' },
-                ...vendors.map(vendor => ({ value: vendor, label: vendor }))
-              ]}
-              placeholder="All Vendors"
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+            <input
+              type="text"
+              value={filterSearch}
+              onChange={(e) => setFilterSearch(e.target.value)}
+              placeholder="Search by order number..."
+              className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200"
             />
             <CustomDropdown
               value={filterStatus}
               onChange={(value) => setFilterStatus(value as OrderStatus | '')}
               options={[
                 { value: '', label: 'All Status' },
-                ...Object.keys(STATUS_STYLES).map(status => ({ value: status, label: status }))
+                ...Object.keys(STATUS_STYLES).map(status => ({ value: status, label: STATUS_STYLES[status as OrderStatus].label }))
               ]}
               placeholder="All Status"
             />
             <input 
-              type="date" 
-              value={filterDate} 
-              onChange={e => setFilterDate(e.target.value)} 
+              type="text" 
+              value={filterVendorId} 
+              onChange={e => setFilterVendorId(e.target.value)} 
+              placeholder="Vendor ID (optional)"
               className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" 
             />
           </div>
@@ -325,164 +429,299 @@ export default function Orders() {
         </div>
       )}
 
-      {/* Desktop Table View */}
-      <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
-        <table className="w-full border-separate border-spacing-0">
-          <thead>
-            <tr className="" style={{ background: 'var(--color-accent)' }}>
-              {['Order ID','SKU','Product','Qty','Vendor','Status','Date','Actions'].map(h => (
-                <th key={h} className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedOrders.map((o, idx) => {
-              const st = STATUS_STYLES[o.status]
-              return (
-                <tr key={`${o.id}-${o.sku}-${idx}`} className={'bg-white'}>
-                  <td className="p-3">{o.id}</td>
-                  <td className="p-3">{o.sku}</td>
-                  <td className="p-3">{o.product}</td>
-                  <td className="p-3">{o.qty}</td>
-                  <td className="p-3">{o.vendor}</td>
-                  <td className="p-3">
-                    <span 
-                      className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
-                      style={{
-                        backgroundColor: st.bg,
-                        color: st.color,
-                        borderColor: st.border,
-                      }}
-                    >
-                      {st.label}
-                    </span>
-                  </td>
-                  <td className="p-3">{o.date}</td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <button className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-3 py-1.5 text-sm">Assign</button>
-                      <button 
-                        onClick={() => handleSplitOrder(o)}
-                        className="bg-[var(--color-secondary)] text-white rounded-md px-3 py-1.5 text-sm hover:brightness-95"
-                      >
-                        Split
-                      </button>
-                      <button 
-                        onClick={() => handleEditOrder(o)}
-                        className="p-2 text-secondary hover:bg-gray-100 rounded-md flex items-center justify-center"
-                        title="Edit Order"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button 
-                        className="p-2 text-red-600 hover:bg-gray-100 rounded-md flex items-center justify-center"
-                        title="Delete Order"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="bg-white rounded-xl p-12 text-center">
+          <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading orders...</p>
+        </div>
+      ) : (
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
+            <table className="w-full border-separate border-spacing-0">
+              <thead>
+                <tr className="" style={{ background: 'var(--color-accent)' }}>
+                  {['','Order Number','Items','Vendor','Status','Created','Actions'].map(h => (
+                    <th key={h} className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>{h}</th>
+                  ))}
                 </tr>
-              )
-            })}
-            {paginatedOrders.length === 0 && (
-              <tr>
-                <td colSpan={8} className="p-6 text-center text-gray-500">No orders match current filters.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {orders.map((order) => {
+                  const st = STATUS_STYLES[order.status as OrderStatus]
+                  const isExpanded = expandedOrderId === order.id
+                  return (
+                    <>
+                      <tr key={order.id} className={'bg-white border-b border-gray-100 hover:bg-gray-50'}>
+                        <td className="p-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleToggleExpand(order.id)
+                            }}
+                            className="text-secondary hover:text-accent transition-colors"
+                          >
+                            {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                          </button>
+                        </td>
+                      <td className="p-3 font-semibold text-secondary">{order.orderNumber}</td>
+                      <td className="p-3">{order.itemCount} item{order.itemCount !== 1 ? 's' : ''}</td>
+                      <td className="p-3">{order.primaryVendor.companyName}</td>
+                      <td className="p-3">
+                        <span 
+                          className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
+                          style={{
+                            backgroundColor: st.bg,
+                            color: st.color,
+                            borderColor: st.border,
+                          }}
+                        >
+                          {st.label}
+                        </span>
+                      </td>
+                      <td className="p-3">{new Date(order.createdAt).toLocaleDateString('en-GB')}</td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1.5">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditOrder(order.id)
+                              }}
+                              className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 flex items-center gap-1"
+                              title="Edit Order"
+                            >
+                              <Edit size={12} />
+                              Edit
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleOpenAssignModal(order)
+                              }}
+                              className="bg-purple-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-purple-600"
+                              title="Assign Vendor"
+                            >
+                              Assign
+                            </button>
+                            {order.status === 'RECEIVED' && (
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteClick(order)
+                                }}
+                                className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 flex items-center gap-1"
+                                title="Delete Order"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleViewOrder(order.id)
+                              }}
+                              className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95"
+                              title="View Details"
+                            >
+                              View
+                            </button>
+                          </div>
+                        </td>
+                    </tr>
+                      {isExpanded && (
+                        <tr key={`${order.id}-details`} className="bg-gray-50">
+                          <td colSpan={7} className="p-0">
+                            <div className="px-6 py-4 border-t border-gray-200">
+                              {isLoadingDetails ? (
+                                <div className="text-center py-4">
+                                  <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                  <p className="text-gray-500 text-sm">Loading items...</p>
+                                </div>
+                              ) : expandedOrderDetails ? (
+                                <div className="bg-white rounded-lg overflow-hidden">
+                                  <table className="w-full">
+                                    <thead>
+                                      <tr className="bg-gray-100 border-b border-gray-200">
+                                        <th className="text-left p-3 text-sm font-semibold text-secondary">Product Name</th>
+                                        <th className="text-left p-3 text-sm font-semibold text-secondary">SKU</th>
+                                        <th className="text-right p-3 text-sm font-semibold text-secondary">Quantity</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {expandedOrderDetails.items.map((item, idx) => (
+                                        <tr key={item.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-100`}>
+                                          <td className="p-3 text-sm font-medium text-secondary">{item.productName}</td>
+                                          <td className="p-3 text-sm text-gray-600">{item.sku || '-'}</td>
+                                          <td className="p-3 text-sm text-right font-semibold text-gray-700">{item.quantity}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ) : (
+                                <p className="text-center text-gray-500 py-4">Failed to load items</p>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  )
+                })}
+                {orders.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="p-6 text-center text-gray-500">No orders found. Create your first order to get started!</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       {/* Mobile Card View */}
-      <div className="lg:hidden space-y-3">
-        {paginatedOrders.length === 0 ? (
-          <div className="bg-white rounded-xl p-6 text-center text-gray-500">
-            No orders match current filters.
-          </div>
-        ) : (
-          paginatedOrders.map((o, idx) => {
-            const st = STATUS_STYLES[o.status]
-            return (
-              <div key={`${o.id}-${o.sku}-${idx}`} className="bg-white rounded-xl p-4 border border-gray-200">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-semibold text-secondary text-lg">{o.id}</h3>
-                    <p className="text-sm text-gray-600">{o.date}</p>
+      {!isLoading && (
+        <div className="lg:hidden space-y-3">
+          {orders.length === 0 ? (
+            <div className="bg-white rounded-xl p-6 text-center text-gray-500">
+              No orders found. Create your first order to get started!
+            </div>
+          ) : (
+            orders.map((order) => {
+              const st = STATUS_STYLES[order.status as OrderStatus]
+              const isExpanded = expandedOrderId === order.id
+              return (
+                <div 
+                  key={order.id} 
+                  className="bg-white rounded-xl p-4 border border-gray-200"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-start gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleToggleExpand(order.id)
+                        }}
+                        className="text-secondary hover:text-accent transition-colors mt-1"
+                      >
+                        {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                      </button>
+                      <div>
+                        <h3 className="font-semibold text-secondary text-lg">{order.orderNumber}</h3>
+                        <p className="text-sm text-gray-600">{new Date(order.createdAt).toLocaleDateString('en-GB')}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span 
+                        className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap"
+                        style={{
+                          backgroundColor: st.bg,
+                          color: st.color,
+                          borderColor: st.border,
+                        }}
+                      >
+                        {st.label}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span 
-                      className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap"
-                      style={{
-                        backgroundColor: st.bg,
-                        color: st.color,
-                        borderColor: st.border,
+                  
+                  <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                    <div>
+                      <span className="text-gray-500 block">Items</span>
+                      <span className="font-medium">{order.itemCount}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-500 block">Vendor</span>
+                      <span className="font-medium">{order.primaryVendor.companyName}</span>
+                    </div>
+                  </div>
+                  
+                  {isExpanded && (
+                    <div className="mb-4 p-3 bg-white rounded-lg border border-gray-200">
+                      {isLoadingDetails ? (
+                        <div className="text-center py-4">
+                          <div className="w-6 h-6 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                          <p className="text-gray-500 text-xs">Loading items...</p>
+                        </div>
+                      ) : expandedOrderDetails ? (
+                        <div>
+                          <h4 className="font-semibold text-sm text-secondary mb-3 pb-2 border-b border-gray-200">
+                            Order Items ({expandedOrderDetails.items.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {expandedOrderDetails.items.map((item, idx) => (
+                              <div key={item.id} className={`flex justify-between items-center p-2 rounded ${idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
+                                <div className="flex-1">
+                                  <div className="font-medium text-xs text-secondary">{item.productName}</div>
+                                  {item.sku && <div className="text-xs text-gray-500">SKU: {item.sku}</div>}
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-semibold text-gray-700">Qty: {item.quantity}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleEditOrder(order.id)
                       }}
+                      className="bg-blue-500 text-white rounded-full px-3 py-1.5 text-xs flex items-center justify-center gap-1"
                     >
-                      {st.label}
-                    </span>
+                      <Edit size={12} />
+                      Edit
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleOpenAssignModal(order)
+                      }}
+                      className="bg-purple-500 text-white rounded-full px-3 py-1.5 text-xs"
+                    >
+                      Assign
+                    </button>
+                    {order.status === 'RECEIVED' && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteClick(order)
+                        }}
+                        className="bg-red-500 text-white rounded-full px-3 py-1.5 text-xs flex items-center justify-center gap-1"
+                      >
+                        <Trash2 size={12} />
+                        Delete
+                      </button>
+                    )}
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleViewOrder(order.id)
+                      }}
+                      className={`bg-accent text-button-text rounded-full px-3 py-1.5 text-xs ${order.status === 'RECEIVED' ? '' : 'col-span-2'}`}
+                    >
+                      View
+                    </button>
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-                  <div>
-                    <span className="text-gray-500 block">SKU</span>
-                    <span className="font-medium">{o.sku}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 block">Quantity</span>
-                    <span className="font-medium">{o.qty}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 block">Product</span>
-                    <span className="font-medium">{o.product}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 block">City</span>
-                    <span className="font-medium">{o.city}</span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-gray-500 block">Vendor</span>
-                    <span className="font-medium">{o.vendor}</span>
-                  </div>
-                </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  <button className="bg-white text-secondary border border-secondary rounded-full px-3 py-1.5 text-sm flex-1 min-w-0">
-                    Assign
-                  </button>
-                  <button 
-                    onClick={() => handleSplitOrder(o)}
-                    className="bg-white text-secondary border border-secondary rounded-full px-3 py-1.5 text-sm flex-1 min-w-0 hover:bg-gray-50"
-                  >
-                    Split
-                  </button>
-                  <button 
-                    onClick={() => handleEditOrder(o)}
-                    className="bg-white text-secondary border border-secondary rounded-full px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center justify-center min-w-[44px]"
-                    title="Edit Order"
-                  >
-                    <Edit size={16} />
-                  </button>
-                  <button 
-                    className="bg-white text-red-600 border border-red-600 rounded-full px-3 py-1.5 text-sm flex items-center justify-center min-w-[44px]"
-                    title="Delete Order"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            )
-          })
-        )}
-      </div>
+              )
+            })
+          )}
+        </div>
+      )}
 
       {/* Pagination Controls */}
-      {filteredOrders.length > 0 && (
+      {!isLoading && total > 0 && (
         <div className="mt-6 bg-white border border-secondary/20 rounded-xl p-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="text-sm text-gray-600 text-center sm:text-left">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, total)} of {total} orders
             </div>
             
             <div className="flex items-center justify-center gap-2">
@@ -547,49 +786,60 @@ export default function Orders() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-[600px] rounded-2xl p-4 sm:p-5 max-h-[90vh] overflow-y-auto">
             <div className="mb-4">
-              <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">Add New Order</h3>
+              <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">
+                {editingOrderId ? 'Edit Order' : 'Add New Order'}
+              </h3>
             </div>
             
             {/* Order Details */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Order ID</label>
-                <input 
-                  value={draft.id} 
-                  onChange={e => setDraft({ ...draft, id: e.target.value })} 
-                  placeholder="ORD-XXXX" 
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
-                />
+                <label className="block text-sm font-medium mb-2">Order Number *</label>
+                <div className="flex gap-2">
+                  <input 
+                    value={draft.orderNumber} 
+                    onChange={e => setDraft({ ...draft, orderNumber: e.target.value })} 
+                    placeholder="ORD-XXXX" 
+                    className="flex-1 px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none bg-gray-50" 
+                    required
+                    readOnly={!!editingOrderId}
+                  />
+                  {!editingOrderId && (
+                    <button
+                      type="button"
+                      onClick={() => setDraft({ ...draft, orderNumber: generateOrderNumber() })}
+                      className="px-3 py-2.5 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors whitespace-nowrap"
+                      title="Generate new order number"
+                    >
+                      🔄 New
+                    </button>
+                  )}
+                </div>
+                {!editingOrderId && <p className="text-xs text-gray-500 mt-1">Auto-generated (click 🔄 to regenerate)</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Date</label>
-                <input 
-                  type="date" 
-                  value={draft.date} 
-                  onChange={e => setDraft({ ...draft, date: e.target.value })} 
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">City/Address</label>
-                <input 
-                  value={draft.city} 
-                  onChange={e => setDraft({ ...draft, city: e.target.value })} 
-                  placeholder="Mumbai" 
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Vendor</label>
-                <CustomDropdown
-                  value={draft.vendor}
-                  onChange={(value) => setDraft({ ...draft, vendor: value })}
-                  options={[
-                    { value: '', label: 'Select Vendor' },
-                    ...vendors.map(vendor => ({ value: vendor, label: vendor }))
-                  ]}
-                  placeholder="Select Vendor"
-                />
+                <label className="block text-sm font-medium mb-2">
+                  Initial Vendor * 
+                  <span className="text-xs text-gray-500 font-normal ml-1">(can be changed via Assign)</span>
+                </label>
+                {isLoadingVendors ? (
+                  <div className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-500">
+                    Loading vendors...
+                  </div>
+                ) : (
+                  <CustomDropdown
+                    value={draft.vendorId}
+                    onChange={(value) => setDraft({ ...draft, vendorId: value })}
+                    options={[
+                      { value: '', label: 'Select Vendor' },
+                      ...vendors.map(vendor => ({ 
+                        value: vendor.id, 
+                        label: `${vendor.companyName} - ${vendor.warehouseLocation}` 
+                      }))
+                    ]}
+                    placeholder="Select Vendor"
+                  />
+                )}
               </div>
             </div>
 
@@ -606,24 +856,28 @@ export default function Orders() {
                 </button>
               </div>
               
-              {draft.items.map((item, index) => (
-                <div key={index} className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">SKU</label>
-                      <input 
-                        value={item.sku} 
-                        onChange={e => {
-                          const newItems = [...draft.items]
-                          newItems[index] = { ...item, sku: e.target.value }
+              {draft.items.map((item, index) => {
+                const totalAmount = item.qty && item.amount ? Number(item.qty) * Number(item.amount) : 0
+                return (
+                  <div key={index} className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-semibold text-secondary">Item #{index + 1}</span>
+                      {draft.items.length > 1 && (
+                        <button
+                          onClick={() => {
+                            const newItems = draft.items.filter((_, i) => i !== index)
                           setDraft({ ...draft, items: newItems })
                         }} 
-                        placeholder="KY-PLNT-01" 
-                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
-                      />
+                          className="bg-red-500 text-white rounded-lg px-3 py-1.5 text-xs hover:bg-red-600 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Product Name</label>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                      <div className="sm:col-span-2">
+                        <label className="block text-sm font-medium mb-2">Product Name *</label>
                       <input 
                         value={item.product} 
                         onChange={e => {
@@ -631,12 +885,25 @@ export default function Orders() {
                           newItems[index] = { ...item, product: e.target.value }
                           setDraft({ ...draft, items: newItems })
                         }} 
-                        placeholder="Rose" 
-                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
+                          placeholder="e.g., Rose, Lily, Tulip" 
+                          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">SKU (Optional)</label>
+                        <input 
+                          value={item.sku} 
+                          onChange={e => {
+                            const newItems = [...draft.items]
+                            newItems[index] = { ...item, sku: e.target.value }
+                            setDraft({ ...draft, items: newItems })
+                          }} 
+                          placeholder="e.g., KY-PLNT-01" 
+                          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none" 
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Quantity</label>
+                        <label className="block text-sm font-medium mb-2">Quantity *</label>
                       <input 
                         type="number" 
                         value={item.qty} 
@@ -646,11 +913,12 @@ export default function Orders() {
                           setDraft({ ...draft, items: newItems })
                         }} 
                         min={1} 
-                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
+                          placeholder="0"
+                          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none" 
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Amount</label>
+                        <label className="block text-sm font-medium mb-2">Price per Unit (₹) *</label>
                       <input 
                         type="number" 
                         value={item.amount} 
@@ -662,39 +930,48 @@ export default function Orders() {
                         min={0} 
                         step="0.01"
                         placeholder="0.00"
-                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none" 
-                      />
+                          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none" 
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <div className="bg-white rounded-lg p-3 border border-accent/30">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-600">Total Amount:</span>
+                            <span className="text-lg font-semibold text-accent">
+                              ₹{totalAmount.toFixed(2)}
+                            </span>
+                          </div>
+                          {item.qty && item.amount && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {item.qty} × ₹{Number(item.amount).toFixed(2)} = ₹{totalAmount.toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex justify-end">
-                    {draft.items.length > 1 && (
-                      <button
-                        onClick={() => {
-                          const newItems = draft.items.filter((_, i) => i !== index)
-                          setDraft({ ...draft, items: newItems })
-                        }}
-                        className="bg-red-500 text-white rounded-full px-3 py-2.5 text-sm hover:bg-red-600 transition-colors"
-                      >
-                        Remove Item
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
               <button 
-                onClick={() => setIsAddModalOpen(false)} 
+                onClick={() => {
+                  setIsAddModalOpen(false)
+                  setEditingOrderId(null)
+                  setDraft({ orderNumber: '', items: [{ sku: '', product: '', qty: '', amount: '' }], vendorId: '' })
+                }}
                 className="bg-white text-secondary border border-secondary rounded-lg px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
+                disabled={isLoading}
               >
                 Cancel
               </button>
               <button 
-                onClick={handleAddOrder} 
-                className="bg-accent text-button-text rounded-lg px-4 py-2.5 text-sm sm:text-base hover:bg-accent/90 transition-colors"
+                onClick={handleAddOrder}
+                disabled={isLoading}
+                className="bg-accent text-button-text rounded-lg px-4 py-2.5 text-sm sm:text-base hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Save Order
+                {isLoading ? (editingOrderId ? 'Updating...' : 'Creating...') : (editingOrderId ? 'Update Order' : 'Save Order')}
               </button>
             </div>
           </div>
@@ -761,270 +1038,80 @@ export default function Orders() {
         </div>
       )}
 
-      {/* Split Order Modal */}
-      {isSplitModalOpen && selectedOrder && (
-        <SplitOrderModal
-          order={selectedOrder}
-          onClose={() => {
-            setIsSplitModalOpen(false)
-            setSelectedOrder(null)
-          }}
-          onSubmit={handleSplitSubmit}
-        />
-      )}
-
-      {/* Edit Order Modal */}
-      {isEditModalOpen && selectedOrder && (
-        <EditOrderModal
-          order={selectedOrder}
-          onClose={() => {
-            setIsEditModalOpen(false)
-            setSelectedOrder(null)
-          }}
-          onSubmit={handleEditSubmit}
-          vendors={vendors}
-        />
-      )}
-    </div>
-  )
-}
-
-// Split Order Modal Component
-function SplitOrderModal({ order, onClose, onSubmit }: { 
-  order: Order; 
-  onClose: () => void; 
-  onSubmit: (quantities: number[]) => void;
-}) {
-  const [splitQuantities, setSplitQuantities] = useState<number[]>([])
-  const [newQuantity, setNewQuantity] = useState<number>(0)
-
-  const totalSplit = splitQuantities.reduce((sum, qty) => sum + qty, 0)
-  const isValid = totalSplit === order.qty && splitQuantities.every(qty => qty > 0)
-  const remainingQty = order.qty - totalSplit
-
-  function addSplit() {
-    if (newQuantity > 0 && newQuantity <= remainingQty) {
-      setSplitQuantities(prev => [...prev, newQuantity])
-      setNewQuantity(0)
-    }
-  }
-
-  function removeSplit(index: number) {
-    setSplitQuantities(prev => prev.filter((_, i) => i !== index))
-  }
-
-  function handleSubmit() {
-    if (isValid) {
-      onSubmit(splitQuantities)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-[500px] rounded-2xl p-4 sm:p-5">
-        <div className="mb-4">
-          <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">Split Order</h3>
-          <p className="text-sm text-gray-600 mt-1">
-            Split "{order.product}" (Qty: {order.qty}) into multiple orders
-          </p>
-        </div>
-
-        <div className="mb-4">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-3">
-            <input
-              type="number"
-              value={newQuantity}
-              onChange={e => setNewQuantity(Number(e.target.value))}
-              placeholder="Enter quantity"
-              min={1}
-              max={remainingQty}
-              className="flex-1 px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
-            />
-            <button
-              onClick={addSplit}
-              disabled={newQuantity <= 0 || newQuantity > remainingQty}
-              className="bg-accent text-button-text rounded-full px-4 py-2.5 text-sm disabled:bg-gray-300 hover:bg-accent/90 transition-colors whitespace-nowrap"
-            >
-              Add Split
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            {splitQuantities.length === 0 ? (
-              <div className="text-center text-gray-500 py-4">
-                No splits added yet. Enter a quantity and click "Add Split" to start.
-              </div>
-            ) : (
-              splitQuantities.map((qty, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                  <span className="flex-1">Split {index + 1}: {qty} units</span>
-                  <button
-                    onClick={() => removeSplit(index)}
-                    className="bg-red-500 text-white rounded-full px-3 py-1 text-sm"
-                  >
-                    Remove
-                  </button>
+      {/* Assign Vendor Modal */}
+      {isAssignModalOpen && selectedOrderForAssign && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-[500px] rounded-2xl p-4 sm:p-5">
+            <div className="mb-4">
+              <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">Assign Vendor</h3>
+              <p className="text-sm text-gray-600 mt-1">Order: {selectedOrderForAssign.orderNumber}</p>
+            </div>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Select Vendor *</label>
+              {isLoadingVendors ? (
+                <div className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-500">
+                  Loading vendors...
                 </div>
-              ))
-            )}
-          </div>
+              ) : (
+                <CustomDropdown
+                  value={assignVendorId}
+                  onChange={(value) => setAssignVendorId(value)}
+                  options={[
+                    { value: '', label: 'Select Vendor' },
+                    ...vendors.map(vendor => ({ 
+                      value: vendor.id, 
+                      label: `${vendor.companyName} - ${vendor.warehouseLocation}` 
+                    }))
+                  ]}
+                  placeholder="Select Vendor"
+                />
+              )}
+              <p className="text-xs text-gray-500 mt-2">
+                Current Vendor: {selectedOrderForAssign.primaryVendor.companyName}
+              </p>
+            </div>
 
-          <div className="mt-3 text-sm">
-            <span className={totalSplit === order.qty ? 'text-green-600' : 'text-red-600'}>
-              Total: {totalSplit} / {order.qty}
-            </span>
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <button 
+                onClick={() => {
+                  setIsAssignModalOpen(false)
+                  setSelectedOrderForAssign(null)
+                  setAssignVendorId('')
+                }}
+                className="bg-white text-secondary border border-secondary rounded-lg px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleAssignVendor}
+                disabled={isLoading || !assignVendorId}
+                className="bg-purple-500 text-white rounded-lg px-4 py-2.5 text-sm sm:text-base hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Assigning...' : 'Assign Vendor'}
+              </button>
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="flex flex-col sm:flex-row justify-end gap-3">
-          <button 
-            onClick={onClose} 
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!isValid}
-            className={`rounded-full px-4 py-2.5 text-sm sm:text-base transition-colors ${
-              isValid 
-                ? 'bg-accent text-button-text hover:bg-accent/90' 
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            Split Order
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmOpen && orderToDelete && (
+        <ConfirmationModal
+          isOpen={deleteConfirmOpen}
+          onClose={() => {
+            setDeleteConfirmOpen(false)
+            setOrderToDelete(null)
+          }}
+          onConfirm={handleConfirmDelete}
+          title="Delete Order"
+          message={`Are you sure you want to delete order "${orderToDelete.orderNumber}"? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+        />
+      )}
 
-// Edit Order Modal Component
-function EditOrderModal({ order, onClose, onSubmit, vendors }: { 
-  order: Order; 
-  onClose: () => void; 
-  onSubmit: (updatedOrder: Order) => void;
-  vendors: string[];
-}) {
-  const [editedOrder, setEditedOrder] = useState<Order>({ ...order })
-
-  function handleSubmit() {
-    if (!editedOrder.sku || !editedOrder.product || editedOrder.qty <= 0) {
-      alert('Please fill all required fields with valid values')
-      return
-    }
-    onSubmit(editedOrder)
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-[500px] rounded-2xl p-4 sm:p-5 max-h-[90vh] overflow-y-auto">
-        <div className="mb-4">
-          <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">Edit Order</h3>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Order ID</label>
-            <input
-              value={editedOrder.id}
-              onChange={e => setEditedOrder({ ...editedOrder, id: e.target.value })}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-2">SKU</label>
-              <input
-                value={editedOrder.sku}
-                onChange={e => setEditedOrder({ ...editedOrder, sku: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Product</label>
-              <input
-                value={editedOrder.product}
-                onChange={e => setEditedOrder({ ...editedOrder, product: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-2">Quantity</label>
-              <input
-                type="number"
-                value={editedOrder.qty}
-                onChange={e => setEditedOrder({ ...editedOrder, qty: Number(e.target.value) })}
-                min={1}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Status</label>
-              <CustomDropdown
-                value={editedOrder.status}
-                onChange={(value) => setEditedOrder({ ...editedOrder, status: value as OrderStatus })}
-                options={Object.keys(STATUS_STYLES).map(status => ({ 
-                  value: status, 
-                  label: status 
-                }))}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-2">Vendor</label>
-              <CustomDropdown
-                value={editedOrder.vendor}
-                onChange={(value) => setEditedOrder({ ...editedOrder, vendor: value })}
-                options={vendors.map(vendor => ({ 
-                  value: vendor, 
-                  label: vendor 
-                }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">City</label>
-              <input
-                value={editedOrder.city}
-                onChange={e => setEditedOrder({ ...editedOrder, city: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Date</label>
-            <input
-              type="date"
-              value={editedOrder.date}
-              onChange={e => setEditedOrder({ ...editedOrder, date: e.target.value })}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
-          <button 
-            onClick={onClose} 
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button 
-            onClick={handleSubmit} 
-            className="bg-accent text-button-text rounded-full px-4 py-2.5 text-sm sm:text-base hover:bg-accent/90 transition-colors"
-          >
-            Save Changes
-          </button>
-        </div>
-      </div>
     </div>
   )
 }

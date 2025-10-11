@@ -53,6 +53,8 @@ export class VendorService {
           companyName: v.companyName,
           contactPersonName: v.contactPersonName,
           contactPhone: v.contactPhone,
+          warehouseLocation: v.warehouseLocation,
+          pincode: v.pincode,
           email: v.user.email || undefined,
           status: v.user.status,
           verified: v.verified,
