@@ -208,10 +208,17 @@ export class OpsVerificationController {
         Number(invoice.invoiceAmount)
       );
 
+      if (!invoice.purchaseOrder.items.length) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invoice has no associated PO items'
+        });
+      }
+
       // Check vendor authorization
       const vendorAuth = await validationService.validateVendorAuthorization(
         invoice.purchaseOrder.vendorId,
-        invoice.purchaseOrder.items[0]?.assignedOrderItem.orderItem.orderId || ''
+        invoice.purchaseOrder.items[0].assignedOrderItem.orderItem.orderId
       );
 
       // Calculate summary metrics
