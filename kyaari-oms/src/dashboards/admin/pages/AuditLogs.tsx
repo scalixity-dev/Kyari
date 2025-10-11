@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react'
-import { FileText } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { FileText, Calendar as CalendarIcon } from 'lucide-react'
 import { CustomDropdown } from '../../../components'
+import { Calendar } from '../../../components/ui/calendar'
+import { format } from 'date-fns'
 
 interface AuditLog {
   id: string
@@ -132,10 +134,32 @@ export default function AuditLogs() {
     dateFrom: '',
     dateTo: ''
   })
+  const [dateFrom, setDateFrom] = useState<Date>()
+  const [dateTo, setDateTo] = useState<Date>()
+  const [showFromCalendar, setShowFromCalendar] = useState(false)
+  const [showToCalendar, setShowToCalendar] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
   const [sortBy] = useState<'timestamp'>('timestamp')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  
+  const fromCalendarRef = useRef<HTMLDivElement>(null)
+  const toCalendarRef = useRef<HTMLDivElement>(null)
+
+  // Close calendars when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fromCalendarRef.current && !fromCalendarRef.current.contains(event.target as Node)) {
+        setShowFromCalendar(false)
+      }
+      if (toCalendarRef.current && !toCalendarRef.current.contains(event.target as Node)) {
+        setShowToCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Filter and sort data
   const filteredAndSortedLogs = useMemo(() => {
@@ -145,8 +169,8 @@ export default function AuditLogs() {
         log.userEmail.toLowerCase().includes(filters.user.toLowerCase())
       const matchesRole = !filters.role || log.role === filters.role
       const matchesModule = !filters.module || log.module === filters.module
-      const matchesDateFrom = !filters.dateFrom || new Date(log.timestamp) >= new Date(filters.dateFrom)
-      const matchesDateTo = !filters.dateTo || new Date(log.timestamp) <= new Date(filters.dateTo)
+      const matchesDateFrom = !dateFrom || new Date(log.timestamp) >= dateFrom
+      const matchesDateTo = !dateTo || new Date(log.timestamp) <= dateTo
       
       return matchesUser && matchesRole && matchesModule && matchesDateFrom && matchesDateTo
     })
@@ -159,7 +183,7 @@ export default function AuditLogs() {
     })
 
     return filtered
-  }, [filters, sortBy, sortOrder])
+  }, [filters, dateFrom, dateTo, sortBy, sortOrder])
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedLogs.length / itemsPerPage)
@@ -179,6 +203,8 @@ export default function AuditLogs() {
       dateFrom: '',
       dateTo: ''
     })
+    setDateFrom(undefined)
+    setDateTo(undefined)
     setCurrentPage(1)
   }
 
@@ -238,7 +264,7 @@ export default function AuditLogs() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 min-h-screen overflow-x-auto">
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen overflow-x-auto bg-[var(--color-sharktank-bg)] font-sans w-full overflow-x-hidden">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2" style={{ fontFamily: 'var(--font-heading)', color: '#1D4D43' }}>
@@ -250,8 +276,8 @@ export default function AuditLogs() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 sm:mb-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 pb-4 mb-6 sm:mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">User</label>
             <input
@@ -259,8 +285,26 @@ export default function AuditLogs() {
               value={filters.user}
               onChange={(e) => handleFilterChange('user', e.target.value)}
               placeholder="Search by name or email"
-              className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
+              className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto mb-2"
             />
+            
+            {/* Filter action buttons (slimmer on sm+) */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(1)}
+                className="w-full sm:w-[140px] px-4 py-3 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
+                style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
+              >
+                Apply
+              </button>
+              <button
+                onClick={handleResetFilters}
+                className="w-full sm:w-[140px] px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
+                style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+              >
+                Reset
+              </button>
+            </div>
           </div>
           
           <div>
@@ -301,88 +345,99 @@ export default function AuditLogs() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
             <div className="flex flex-col gap-2">
-              <input
-                type="date"
-                value={filters.dateFrom}
-                onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
-                placeholder="From date"
-              />
-              <input
-                type="date"
-                value={filters.dateTo}
-                onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
-                placeholder="To date"
-              />
+              <div className="relative" ref={fromCalendarRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFromCalendar(!showFromCalendar)
+                    setShowToCalendar(false)
+                  }}
+                  className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
+                >
+                  <span className={dateFrom ? "text-gray-900" : "text-gray-500"}>
+                    {dateFrom ? format(dateFrom, "PPP") : "From date"}
+                  </span>
+                  <CalendarIcon className="h-4 w-4 text-gray-500" />
+                </button>
+                {showFromCalendar && (
+                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full">
+                    <Calendar
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={(date) => {
+                        setDateFrom(date)
+                        setShowFromCalendar(false)
+                      }}
+                      initialFocus
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="relative" ref={toCalendarRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowToCalendar(!showToCalendar)
+                    setShowFromCalendar(false)
+                  }}
+                  className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
+                >
+                  <span className={dateTo ? "text-gray-900" : "text-gray-500"}>
+                    {dateTo ? format(dateTo, "PPP") : "To date"}
+                  </span>
+                  <CalendarIcon className="h-4 w-4 text-gray-500" />
+                </button>
+                {showToCalendar && (
+                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full">
+                    <Calendar
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={(date) => {
+                        setDateTo(date)
+                        setShowToCalendar(false)
+                      }}
+                      initialFocus
+                      disabled={(date) => dateFrom ? date < dateFrom : false}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-        
-        <div className="flex flex-col sm:flex-row gap-3">
+      </div>
+
+      {/* Export Controls (separate) */}
+      <div className="flex justify-end gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
           <button
-            onClick={() => setCurrentPage(1)}
-            className="w-full sm:w-auto px-4 py-3 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
-            style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
+            onClick={handleExportCSV}
+            className="flex bg-white items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
           >
-            Apply Filters
+            <FileText size={16} className="flex-shrink-0" />
+            <span>Export CSV</span>
           </button>
           <button
-            onClick={handleResetFilters}
-            className="w-full sm:w-auto px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
-            style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+            onClick={handleExportPDF}
+            className="flex bg-white items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
           >
-            Reset
+            <FileText size={16} className="flex-shrink-0" />
+            <span>Export PDF</span>
           </button>
         </div>
       </div>
 
       {/* Table Container */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        {/* Export Controls */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 p-4 sm:p-6 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full lg:w-auto">
-            <span className="text-sm text-gray-600">
-              Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredAndSortedLogs.length)} of {filteredAndSortedLogs.length} logs
-            </span>
-            <select
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value))
-                setCurrentPage(1)
-              }}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm min-h-[44px] sm:min-h-auto"
-            >
-              <option value={10}>10 per page</option>
-              <option value={15}>15 per page</option>
-              <option value={20}>20 per page</option>
-            </select>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-            <button
-              onClick={handleExportCSV}
-              className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
-            >
-              <FileText size={16} className="flex-shrink-0" />
-              <span>Export CSV</span>
-            </button>
-            <button
-              onClick={handleExportPDF}
-              className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
-            >
-              <FileText size={16} className="flex-shrink-0" />
-              <span>Export PDF</span>
-            </button>
-          </div>
-        </div>
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
 
         {/* Desktop Table */}
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full min-w-[800px]">
-            <thead className="bg-gray-50">
+            <thead style={{ backgroundColor: 'var(--color-accent)', borderTopLeftRadius: '0.5rem', borderTopRightRadius: '0.5rem' }} className="rounded-t-lg">
               <tr>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   <button
                     onClick={handleSort}
                     className="flex items-center gap-1 hover:text-gray-700 min-h-[44px] lg:min-h-auto"
@@ -391,16 +446,16 @@ export default function AuditLogs() {
                     <span className="text-gray-400">↕</span>
                   </button>
                 </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Action
                 </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Module
                 </th>
               </tr>
@@ -498,9 +553,10 @@ export default function AuditLogs() {
                       onClick={() => setCurrentPage(pageNum)}
                       className={`px-3 sm:px-4 py-3 sm:py-2 text-sm rounded-md min-h-[44px] sm:min-h-auto ${
                         currentPage === pageNum
-                          ? 'bg-blue-500 text-white'
+                          ? 'text-white'
                           : 'text-gray-700 hover:bg-gray-50 border border-gray-300'
                       }`}
+                      style={currentPage === pageNum ? { backgroundColor: 'var(--color-accent)' } : undefined}
                     >
                       {pageNum}
                     </button>
@@ -513,9 +569,10 @@ export default function AuditLogs() {
                       onClick={() => setCurrentPage(totalPages)}
                       className={`px-3 sm:px-4 py-3 sm:py-2 text-sm rounded-md min-h-[44px] sm:min-h-auto ${
                         currentPage === totalPages
-                          ? 'bg-blue-500 text-white'
+                          ? 'text-white'
                           : 'text-gray-700 hover:bg-gray-50 border border-gray-300'
                       }`}
+                      style={currentPage === totalPages ? { backgroundColor: 'var(--color-accent)' } : undefined}
                     >
                       {totalPages}
                     </button>
