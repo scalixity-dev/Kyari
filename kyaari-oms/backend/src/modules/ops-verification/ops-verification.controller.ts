@@ -307,7 +307,12 @@ export class OpsVerificationController {
 
       await prisma.$transaction(async (tx) => {
         // Update invoice status
-        const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
+        const newStatus =
+          action === 'approve'
+            ? 'APPROVED'
+            : action === 'request_changes'
+              ? 'NEEDS_REVISION'
+              : 'REJECTED';
         
         updatedInvoice = await tx.vendorInvoice.update({
           where: { id: invoiceId },
@@ -317,7 +322,6 @@ export class OpsVerificationController {
             updatedAt: new Date()
           }
         });
-
         // Create audit log
         await tx.auditLog.create({
           data: {
