@@ -335,38 +335,34 @@ export class OrderService {
 
   async deleteOrder(orderId: string, deletedById: string): Promise<void> {
     try {
-      // Check if order exists
-      const order = await prisma.order.findUnique({
-        where: { id: orderId },
-        include: {
-          items: {
-            include: {
-              assignedItems: true
+      const orderMetadata = await prisma.$transaction(async (tx) => {
+        const order = await tx.order.findUnique({
+          where: { id: orderId },
+          include: {
+            items: {
+              include: {
+                assignedItems: true
+              }
             }
           }
+        });
+
+        if (!order) {
+          throw new Error('Order not found');
         }
-      });
 
-      if (!order) {
-        throw new Error('Order not found');
-      }
+        if (order.status !== 'RECEIVED') {
+          throw new Error(`Order with status ${order.status} cannot be deleted. Only orders with RECEIVED status can be deleted.`);
+        }
 
-      // Only allow deletion if order is in RECEIVED status (not assigned/processed yet)
-      if (order.status !== 'RECEIVED') {
-        throw new Error(`Order with status ${order.status} cannot be deleted. Only orders with RECEIVED status can be deleted.`);
-      }
+        const hasConfirmedAssignments = order.items.some(item =>
+          item.assignedItems.some(assigned => assigned.confirmedQuantity !== null)
+        );
 
-      // Check if any items have assignments with vendor confirmations
-      const hasConfirmedAssignments = order.items.some(item => 
-        item.assignedItems.some(assigned => assigned.confirmedQuantity !== null)
-      );
+        if (hasConfirmedAssignments) {
+          throw new Error('Order cannot be deleted as it has confirmed vendor assignments');
+        }
 
-      if (hasConfirmedAssignments) {
-        throw new Error('Order cannot be deleted as it has confirmed vendor assignments');
-      }
-
-      // Delete order and related records in transaction
-      await prisma.$transaction(async (tx) => {
         // Delete assigned order items first
         for (const item of order.items) {
           await tx.assignedOrderItem.deleteMany({
@@ -397,14 +393,17 @@ export class OrderService {
             }
           }
         });
-      });
 
-      logger.info('Order deleted successfully', { 
-        orderId, 
-        orderNumber: order.orderNumber,
-        deletedById 
+        return { orderNumber: order.orderNumber };
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+      logger.info('Order deleted successfully', {
+        orderId,
+        orderNumber: orderMetadata.orderNumber,
+        deletedById
       });
     } catch (error) {
+      // ... existing error handling ...
       logger.error('Failed to delete order', { error, orderId, deletedById });
       throw error;
     }
