@@ -52,7 +52,7 @@ export default function VendorTracking() {
                 onMouseLeave={() => setVendorHover(null)}
               >
                 <Tooltip formatter={(value: any) => `${value}%`} />
-                <Line dataKey="v" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                <Line dataKey="v" stroke="var(--color-secondary)" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>

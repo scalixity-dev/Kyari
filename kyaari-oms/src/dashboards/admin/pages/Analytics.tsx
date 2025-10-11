@@ -104,13 +104,13 @@ const orderFulfillmentData = {
 }
 
 const ticketResolutionData = [
-  { name: 'Resolved on Time', value: 70, color: '#10B981' },
+  { name: 'Resolved on Time', value: 70, color: 'var(--color-secondary)' },
   { name: 'Overdue', value: 20, color: '#F59E0B' },
   { name: 'Pending', value: 10, color: '#EF4444' }
 ]
 
 const slaBreachesData = [
-  { name: 'On Time', value: 88, color: '#10B981' },
+  { name: 'On Time', value: 88, color: 'var(--color-secondary)' },
   { name: 'Breaches', value: 12, color: '#EF4444' }
 ]
 
@@ -629,7 +629,7 @@ export default function Analytics() {
                     <XAxis dataKey="period" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="fulfilled" fill="#10B981" />
+                    <Bar dataKey="fulfilled" fill="var(--color-secondary)" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -638,7 +638,7 @@ export default function Analytics() {
             {/* Metrics Section */}
             <div className="flex flex-col justify-center space-y-4 sm:space-y-6">
               <div className="text-center">
-                <div className="text-3xl sm:text-4xl font-bold text-green-600 mb-2">
+                <div className="text-3xl sm:text-4xl font-bold text-[var(--color-secondary)] mb-2">
                   {getCurrentMetrics().fulfillmentRate}%
                 </div>
                 <p className="text-xs sm:text-sm text-gray-600 mb-1">
@@ -647,7 +647,7 @@ export default function Analytics() {
                 </p>
                 <div className="w-12 sm:w-16 h-1 bg-green-200 rounded-full mx-auto">
                   <div 
-                    className="h-1 bg-green-600 rounded-full" 
+                    className="h-1 bg-[var(--color-secondary)] rounded-full" 
                     style={{ width: `${getCurrentMetrics().fulfillmentRate}%` }}
                   ></div>
                 </div>
@@ -794,7 +794,7 @@ export default function Analytics() {
                         <PieChart>
                           <Pie
                             data={[
-                              { name: 'On Time', value: vendor.totalOrders - vendor.breaches, color: '#10B981' },
+                              { name: 'On Time', value: vendor.totalOrders - vendor.breaches, color: 'var(--color-secondary)' },
                               { name: 'Breaches', value: vendor.breaches, color: '#EF4444' }
                             ]}
                             cx="50%"
@@ -803,7 +803,7 @@ export default function Analytics() {
                             outerRadius={35}
                             dataKey="value"
                           >
-                            <Cell fill="#10B981" />
+                            <Cell fill={getComputedStyle(document.documentElement).getPropertyValue('--color-secondary') || 'var(--color-secondary)'} />
                             <Cell fill="#EF4444" />
                           </Pie>
                           <Tooltip />
@@ -1220,9 +1220,13 @@ export default function Analytics() {
           <Button onClick={handleGenerateReport} className="min-h-[44px] sm:min-h-auto">
             Generate Report
           </Button>
-          <Button onClick={handleClearFilters} className="bg-gray-500 hover:bg-gray-600 min-h-[44px] sm:min-h-auto">
-            Clear Filters
-          </Button>
+          <button
+            onClick={handleClearFilters}
+            className="px-4 py-3 sm:py-2 border rounded-md font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
+            style={{ borderColor: 'var(--color-secondary)', color: 'var(--color-secondary)' }}
+          >
+            Reset
+          </button>
           {showReport && (
             <>
               <Button onClick={handleExportPDF} className="bg-gray-600 hover:bg-gray-700 min-h-[44px] sm:min-h-auto">

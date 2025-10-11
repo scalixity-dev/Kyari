@@ -259,7 +259,7 @@ export default function VendorDetails() {
                 />
                 <Line 
                   dataKey="fillRate" 
-                  stroke="#10b981" 
+                  stroke="var(--color-secondary)" 
                   strokeWidth={2} 
                   dot={{ r: 3 }}
                   name="fillRate"

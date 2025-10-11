@@ -276,8 +276,8 @@ export default function AuditLogs() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 sm:mb-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 pb-4 mb-6 sm:mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">User</label>
             <input
@@ -414,14 +414,14 @@ export default function AuditLogs() {
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
           <button
             onClick={handleExportCSV}
-            className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
+            className="flex bg-white items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
           >
             <FileText size={16} className="flex-shrink-0" />
             <span>Export CSV</span>
           </button>
           <button
             onClick={handleExportPDF}
-            className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
+            className="flex bg-white items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
           >
             <FileText size={16} className="flex-shrink-0" />
             <span>Export PDF</span>
