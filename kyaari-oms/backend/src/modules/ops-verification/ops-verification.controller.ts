@@ -466,7 +466,8 @@ export class OpsVerificationController {
             continue;
           }
 
-          // inside your transaction callback...
+          // wrap the following in a transaction so `tx` is defined
+          await prisma.$transaction(async (tx) => {
             const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
             
             // merge existing metadata with any new bulkVerificationRemarks
@@ -500,7 +501,23 @@ export class OpsVerificationController {
               }
             });
 
-            // ...rest of your code
+            // If approved, initiate payment workflow
+            if (action === 'approve') {
+              await tx.payment.create({
+                data: {
+                  purchaseOrderId: invoice.purchaseOrderId,
+                  amount: invoice.invoiceAmount,
+                  status: 'PENDING',
+                  processedById: userId
+                }
+              });
+
+              // Update PO status
+              await tx.purchaseOrder.update({
+                where: { id: invoice.purchaseOrderId },
+                data: { status: 'PARTIALLY_PAID' }
+              });
+            }
           });
 
           results.push({
