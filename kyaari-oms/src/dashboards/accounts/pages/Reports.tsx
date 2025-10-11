@@ -249,71 +249,53 @@ function AccountsReports() {
           <div className="overflow-x-auto">
             {/* Table head bar */}
             <div className="bg-[#C3754C] text-white">
-              <div className="grid grid-cols-[1.5fr_1.5fr_1.2fr_1.2fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-['Quicksand'] font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0] text-center">
-                <div>Vendor</div>
-                <div>Outstanding Amount</div>
-                <div>Avg Days Pending</div>
-                <div>Oldest Invoice</div>
+              <div className="flex justify-between px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-heading font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0]">
+                <div className="flex-1 text-center">Vendor</div>
+                <div className="flex-1 text-center">Outstanding Amount</div>
+                <div className="flex-1 text-center">Avg Days Pending</div>
+                <div className="flex-1 text-center">Oldest Invoice</div>
               </div>
             </div>
             {/* Body */}
             <div className="bg-white">
               <div className="py-2">
-                <table className="w-full min-w-[600px]">
-              <thead className="hidden">
-                <tr>
-                  <th className="text-left p-3 sm:p-4">Vendor</th>
-                  <th className="text-left p-3 sm:p-4">Outstanding Amount</th>
-                  <th className="text-left p-3 sm:p-4">Avg Days Pending</th>
-                  <th className="text-left p-3 sm:p-4">Oldest Invoice</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPaymentAging.map((record) => {
-                  const isOverdue = record.oldestInvoiceDays > 30
-                  return (
-                    <tr
-                      key={record.vendor}
-                      className="bg-white"
-                    >
-                      <td className="p-3 sm:p-4 font-medium text-[var(--color-primary)] text-sm sm:text-base">{record.vendor}</td>
-                      <td className="p-3 sm:p-4 font-semibold text-[var(--color-primary)] text-sm sm:text-base">
-                        ₹{record.outstandingAmount.toLocaleString('en-IN')}
-                      </td>
-                      <td className="p-3 sm:p-4">
-                        <span
-                          className={`inline-block px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold ${
-                            record.avgDaysPending > 30
-                              ? 'bg-red-100 text-red-700 border border-red-300'
-                              : record.avgDaysPending > 15
-                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
-                              : 'bg-green-100 text-green-700 border border-green-300'
-                          }`}
-                        >
-                          {record.avgDaysPending} days
-                        </span>
-                      </td>
-                      <td className="p-3 sm:p-4">
-                        <div className={`text-xs sm:text-sm ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
-                          {record.oldestInvoiceDate}
+                {filteredPaymentAging.length === 0 ? (
+                  <div className="px-6 py-8 text-center text-gray-500">No records match the current filters</div>
+                ) : (
+                  filteredPaymentAging.map((record) => {
+                    const isOverdue = record.oldestInvoiceDays > 30
+                    return (
+                      <div key={record.vendor} className="flex justify-between px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center hover:bg-gray-50">
+                        <div className="flex-1 text-xs md:text-sm font-medium text-gray-800 text-center">{record.vendor}</div>
+                        <div className="flex-1 text-xs md:text-sm font-semibold text-[var(--color-primary)] text-center">
+                          ₹{record.outstandingAmount.toLocaleString('en-IN')}
                         </div>
-                        <div className={`text-xs sm:text-sm flex items-center gap-1 mt-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
-                          {isOverdue && <AlertTriangle size={12} className="sm:w-3.5 sm:h-3.5" />}
-                          <span>{record.oldestInvoiceDays} days old</span>
+                        <div className="flex-1 flex items-center justify-center">
+                          <span
+                            className={`inline-block px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap ${
+                              record.avgDaysPending > 30
+                                ? 'bg-red-100 text-red-700 border border-red-300'
+                                : record.avgDaysPending > 15
+                                ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                                : 'bg-green-100 text-green-700 border border-green-300'
+                            }`}
+                          >
+                            {record.avgDaysPending} days
+                          </span>
                         </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-                {filteredPaymentAging.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="p-6 text-center text-gray-500 text-sm">
-                      No records match the current filters
-                    </td>
-                  </tr>
+                        <div className="flex-1 text-center">
+                          <div className={`text-xs sm:text-sm ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                            {record.oldestInvoiceDate}
+                          </div>
+                          <div className={`text-xs flex items-center justify-center gap-1 mt-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
+                            {isOverdue && <AlertTriangle size={12} className="sm:w-3.5 sm:h-3.5" />}
+                            <span>{record.oldestInvoiceDays} days old</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
                 )}
-              </tbody>
-            </table>
               </div>
             </div>
           </div>
@@ -359,36 +341,25 @@ function AccountsReports() {
           <div className="overflow-x-auto">
             {/* Table head bar */}
             <div className="bg-[#C3754C] text-white">
-              <div className="grid grid-cols-[1.5fr_1.2fr_1.5fr_1.2fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-['Quicksand'] font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0] text-center">
-                <div>Vendor</div>
-                <div>Total Invoices</div>
-                <div>Compliant %</div>
-                <div>Issues Found</div>
+              <div className="flex justify-between px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-heading font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0]">
+                <div className="flex-1 text-center">Vendor</div>
+                <div className="flex-1 text-center">Total Invoices</div>
+                <div className="flex-1 text-center">Compliant %</div>
+                <div className="flex-1 text-center">Issues Found</div>
               </div>
             </div>
             {/* Body */}
             <div className="bg-white">
               <div className="py-2">
-                <table className="w-full min-w-[600px]">
-              <thead className="hidden">
-                <tr>
-                  <th className="text-left p-3 sm:p-4">Vendor</th>
-                  <th className="text-left p-3 sm:p-4">Total Invoices</th>
-                  <th className="text-left p-3 sm:p-4">Compliant %</th>
-                  <th className="text-left p-3 sm:p-4">Issues Found</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCompliance.map((record) => (
-                  <tr
-                    key={record.vendor}
-                    className="bg-white"
-                  >
-                    <td className="p-3 sm:p-4 font-medium text-[var(--color-primary)] text-sm sm:text-base">{record.vendor}</td>
-                    <td className="p-3 sm:p-4 text-[var(--color-primary)] text-sm sm:text-base">{record.totalInvoices}</td>
-                    <td className="p-3 sm:p-4">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[80px] sm:max-w-[120px]">
+                {filteredCompliance.length === 0 ? (
+                  <div className="px-6 py-8 text-center text-gray-500">No records match the current filters</div>
+                ) : (
+                  filteredCompliance.map((record) => (
+                    <div key={record.vendor} className="flex justify-between px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center hover:bg-gray-50">
+                      <div className="flex-1 text-xs md:text-sm font-medium text-gray-800 text-center">{record.vendor}</div>
+                      <div className="flex-1 text-xs md:text-sm text-gray-700 text-center">{record.totalInvoices}</div>
+                      <div className="flex-1 flex items-center justify-center gap-2 sm:gap-3">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[120px]">
                           <div
                             className={`h-2 rounded-full transition-all ${
                               record.compliantPercentage >= 95
@@ -412,31 +383,22 @@ function AccountsReports() {
                           {record.compliantPercentage}%
                         </span>
                       </div>
-                    </td>
-                    <td className="p-3 sm:p-4">
-                      <span
-                        className={`inline-block px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold ${
-                          record.issuesFound === 0
-                            ? 'bg-green-100 text-green-700 border border-green-300'
-                            : record.issuesFound <= 3
-                            ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
-                            : 'bg-red-100 text-red-700 border border-red-300'
-                        }`}
-                      >
-                        {record.issuesFound}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {filteredCompliance.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="p-6 text-center text-gray-500 text-sm">
-                      No records match the current filters
-                    </td>
-                  </tr>
+                      <div className="flex-1 flex items-center justify-center">
+                        <span
+                          className={`inline-block px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap ${
+                            record.issuesFound === 0
+                              ? 'bg-green-100 text-green-700 border border-green-300'
+                              : record.issuesFound <= 3
+                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                              : 'bg-red-100 text-red-700 border border-red-300'
+                          }`}
+                        >
+                          {record.issuesFound}
+                        </span>
+                      </div>
+                    </div>
+                  ))
                 )}
-              </tbody>
-            </table>
               </div>
             </div>
           </div>
@@ -454,47 +416,32 @@ function AccountsReports() {
           <div className="overflow-x-auto">
             {/* Table head bar */}
             <div className="bg-[#C3754C] text-white">
-              <div className="grid grid-cols-[1.5fr_1.2fr_1.2fr_1.5fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-['Quicksand'] font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0] text-center">
-                <div>SLA Type</div>
-                <div>Breaches Count</div>
-                <div>Avg Delay (Days)</div>
-                <div>Breach Visualization</div>
+              <div className="flex justify-between px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-heading font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0]">
+                <div className="flex-1 text-center">SLA Type</div>
+                <div className="flex-1 text-center">Breaches Count</div>
+                <div className="flex-1 text-center">Avg Delay (Days)</div>
+                <div className="flex-1 text-center">Breach Visualization</div>
               </div>
             </div>
             {/* Body */}
             <div className="bg-white">
               <div className="py-2">
-                <table className="w-full min-w-[600px]">
-              <thead className="hidden">
-                <tr>
-                  <th className="text-left p-3 sm:p-4">SLA Type</th>
-                  <th className="text-left p-3 sm:p-4">Breaches Count</th>
-                  <th className="text-left p-3 sm:p-4">Avg Delay (Days)</th>
-                  <th className="text-left p-3 sm:p-4">Breach Visualization</th>
-                </tr>
-              </thead>
-              <tbody>
                 {SLA_BREACH_DATA.map((record) => {
                   const maxBreaches = Math.max(...SLA_BREACH_DATA.map(r => r.breachCount))
                   const barWidth = (record.breachCount / maxBreaches) * 100
                   
                   return (
-                    <tr
-                      key={record.slaType}
-                      className="bg-white"
-                    >
-                      <td className="p-3 sm:p-4 font-medium text-[var(--color-primary)] text-sm sm:text-base">
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle size={16} className="sm:w-4.5 sm:h-4.5 text-red-600" />
-                          <span>{record.slaType}</span>
-                        </div>
-                      </td>
-                      <td className="p-3 sm:p-4">
-                        <span className="inline-block px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold bg-red-100 text-red-700 border border-red-300">
+                    <div key={record.slaType} className="flex justify-between px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center hover:bg-gray-50">
+                      <div className="flex-1 text-xs md:text-sm font-medium text-gray-800 text-center flex items-center justify-center gap-2">
+                        <AlertTriangle size={16} className="sm:w-4.5 sm:h-4.5 text-red-600 flex-shrink-0" />
+                        <span>{record.slaType}</span>
+                      </div>
+                      <div className="flex-1 flex items-center justify-center">
+                        <span className="inline-block px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold bg-red-100 text-red-700 border border-red-300 whitespace-nowrap">
                           {record.breachCount}
                         </span>
-                      </td>
-                      <td className="p-3 sm:p-4">
+                      </div>
+                      <div className="flex-1 text-center">
                         <span className={`font-semibold text-sm sm:text-base ${
                           record.avgDelayDays > 5 
                             ? 'text-red-600' 
@@ -504,10 +451,10 @@ function AccountsReports() {
                         }`}>
                           {record.avgDelayDays} days
                         </span>
-                      </td>
-                      <td className="p-3 sm:p-4">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-4 sm:h-6 max-w-[150px] sm:max-w-[200px]">
+                      </div>
+                      <div className="flex-1 flex items-center justify-center px-4">
+                        <div className="flex items-center gap-2 w-full max-w-[240px]">
+                          <div className="flex-1 bg-gray-200 rounded-full h-4 sm:h-6">
                             <div
                               className="bg-gradient-to-r from-red-500 to-red-600 h-4 sm:h-6 rounded-full flex items-center justify-end pr-1 sm:pr-2 transition-all"
                               style={{ width: `${barWidth}%` }}
@@ -518,12 +465,10 @@ function AccountsReports() {
                             </div>
                           </div>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   )
                 })}
-              </tbody>
-            </table>
               </div>
             </div>
           </div>

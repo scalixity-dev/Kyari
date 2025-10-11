@@ -113,7 +113,7 @@ function PieChart({ pending, cleared }: { pending: number; cleared: number }) {
       <div className="text-center text-base sm:text-lg font-semibold text-[color:var(--color-heading)] mb-3 sm:mb-4">Pending vs Cleared</div>
       <ResponsiveContainer width="100%" height={200} className="sm:!h-[220px]">
         <RechartsPieChart>
-          <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={2} label={false} className="sm:!innerRadius-[50] sm:!outerRadius-[80]">
+          <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="45%" outerRadius="70%" paddingAngle={2} label={false}>
             {data.map((_, index) => (
               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
             ))}
@@ -289,32 +289,47 @@ export default function MoneyFlow() {
                     placeholder="Search by ID or vendor"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="Search transactions by ID or vendor"
                     className="w-full h-10 rounded-md pl-9 sm:pl-10 pr-3 bg-white shadow-sm border border-gray-200 text-sm outline-none"
                   />
                 </div>
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="relative flex-1 sm:flex-none">
-                    <button type="button" onClick={() => { setStatusOpen((s) => !s); setSortOpen(false) }} className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-['Quicksand'] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => { setStatusOpen((s) => !s); setSortOpen(false) }}
+                      className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-['Quicksand'] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap"
+                      aria-haspopup="listbox"
+                      aria-expanded={statusOpen}
+                      aria-controls="status-menu"
+                    >
                       <span className="truncate">{statusFilter === 'All' ? 'All Status' : statusFilter}</span>
                       <ChevronDown size={20} className={`${statusOpen ? 'rotate-180' : ''} transition-transform flex-shrink-0 sm:w-6 sm:h-6`} />
                     </button>
                     {statusOpen && (
-                      <div className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 mt-1 w-36 bg-white border border-gray-200 rounded-md shadow-sm z-10">
+                      <div id="status-menu" role="listbox" className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 mt-1 w-36 bg-white border border-gray-200 rounded-md shadow-sm z-10">
                         {(['All','Pending','Released','Approved'] as const).map((s) => (
-                          <button key={s} onClick={() => { setStatusFilter(s === 'All' ? 'All' : s); setStatusOpen(false) }} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${statusFilter === s ? 'text-[color:var(--color-secondary)] font-medium' : 'text-gray-700'}`}>{s === 'All' ? 'All Status' : s}</button>
+                          <button key={s} role="option" aria-selected={statusFilter === s} onClick={() => { setStatusFilter(s === 'All' ? 'All' : s); setStatusOpen(false) }} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${statusFilter === s ? 'text-[color:var(--color-secondary)] font-medium' : 'text-gray-700'}`}>{s === 'All' ? 'All Status' : s}</button>
                         ))}
                       </div>
                     )}
                   </div>
                   <div className="relative flex-1 sm:flex-none">
-                    <button type="button" onClick={() => { setSortOpen((s) => !s); setStatusOpen(false) }} className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-['Quicksand'] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => { setSortOpen((s) => !s); setStatusOpen(false) }}
+                      className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-['Quicksand'] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap"
+                      aria-haspopup="listbox"
+                      aria-expanded={sortOpen}
+                      aria-controls="sort-menu"
+                    >
                       <span>{sortOrder}</span>
                       <ChevronDown size={20} className={`${sortOpen ? 'rotate-180' : ''} transition-transform flex-shrink-0 sm:w-6 sm:h-6`} />
                     </button>
                     {sortOpen && (
-                      <div className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 mt-1 w-28 bg-white border border-gray-200 rounded-md shadow-sm z-10">
+                      <div id="sort-menu" role="listbox" className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 mt-1 w-28 bg-white border border-gray-200 rounded-md shadow-sm z-10">
                         {(['Latest','Oldest'] as const).map((s) => (
-                          <button key={s} onClick={() => { setSortOrder(s); setSortOpen(false) }} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${sortOrder === s ? 'text-[color:var(--color-secondary)] font-medium' : 'text-gray-700'}`}>{s}</button>
+                          <button key={s} role="option" aria-selected={sortOrder === s} onClick={() => { setSortOrder(s); setSortOpen(false) }} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${sortOrder === s ? 'text-[color:var(--color-secondary)] font-medium' : 'text-gray-700'}`}>{s}</button>
                         ))}
                       </div>
                     )}

@@ -471,7 +471,10 @@ export default function AccountsSupport() {
               placeholder="Priority"
               className="w-full"
             />
+            <label className="sr-only" htmlFor="filterDate">Filter by date</label>
             <input 
+              id="filterDate"
+              aria-label="Filter by date"
               type="date" 
               value={filterDate} 
               onChange={e => setFilterDate(e.target.value)} 

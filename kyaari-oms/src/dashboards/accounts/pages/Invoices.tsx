@@ -394,8 +394,11 @@ function AccountsInvoices() {
                 </button>
               ))}
               <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => {
+                  if (filteredOrders.length === 0) return
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }}
+                disabled={filteredOrders.length === 0 || currentPage === totalPages}
                 className="h-7 w-7 xl:h-8 xl:w-8 2xl:h-9 2xl:w-9 flex items-center justify-center rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors"
                 aria-label="Next page"
               >
@@ -551,13 +554,16 @@ function AccountsInvoices() {
               >
                 Prev
               </button>
-              <button 
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} 
-                disabled={currentPage === totalPages} 
-                className="h-8 px-3 rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 text-sm font-medium"
-              >
-                Next
-              </button>
+            <button 
+              onClick={() => {
+                if (filteredOrders.length === 0) return
+                setCurrentPage((p) => Math.min(totalPages, p + 1))
+              }} 
+              disabled={filteredOrders.length === 0 || currentPage === totalPages} 
+              className="h-8 px-3 rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 text-sm font-medium"
+            >
+              Next
+            </button>
             </div>
           </div>
         </div>
