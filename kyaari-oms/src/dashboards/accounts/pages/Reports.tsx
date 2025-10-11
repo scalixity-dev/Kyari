@@ -81,27 +81,16 @@ interface KPICardProps {
   subtitle?: string
 }
 
-function KPICard({ title, value, icon, color, subtitle }: KPICardProps) {
-  const borderTopClass =
-    color === 'blue'
-      ? 'border-t-4 border-blue-600'
-      : color === 'orange'
-      ? 'border-t-4 border-orange-600'
-      : color === 'green'
-      ? 'border-t-4 border-green-600'
-      : 'border-t-4 border-red-600'
-
+function KPICard({ title, value, icon, subtitle }: KPICardProps) {
   return (
-    <div className={`bg-white p-4 sm:p-6 rounded-xl shadow-md flex items-center gap-3 sm:gap-4 border border-white/20 relative overflow-hidden ${borderTopClass}`}>
-      <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded-lg text-2xl sm:text-3xl text-[var(--color-heading)]">
+    <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
+      <div className="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-[#C3754C] text-white shadow-md">
         {icon}
       </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="text-xs font-semibold text-[var(--color-primary)] uppercase tracking-wide mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
-          {title}
-        </h3>
-        <div className="text-lg sm:text-xl lg:text-2xl font-bold text-[var(--color-heading)] mb-1 break-words">{value}</div>
-        {subtitle && <div className="text-xs sm:text-sm text-gray-500">{subtitle}</div>}
+      <div className="flex flex-col items-center text-center w-full">
+        <h3 className="font-['Fraunces'] font-bold text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2">{title}</h3>
+        <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{value}</div>
+        {subtitle && <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">{subtitle}</div>}
       </div>
     </div>
   )
@@ -146,48 +135,40 @@ function AccountsReports() {
   const paymentChartData = timeRange === 'weekly' ? PAYMENT_WEEKLY_DATA : PAYMENT_MONTHLY_DATA
 
   return (
-    <div className="p-3 sm:p-6 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Page Header */}
-      <div className="bg-white p-4 sm:p-8 rounded-xl shadow-lg mb-6 sm:mb-8 border border-gray-200">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
-          Accounts Reports & KPIs
-        </h1>
-        <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium">
-          Comprehensive overview of vendor payments, compliance, and performance metrics
-        </p>
+      <div className="mb-4 sm:mb-6 lg:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6">Accounts Reports & KPIs</h2>
       </div>
 
       {/* Top KPI Cards */}
       <div className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">
-          Key Metrics Overview
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 py-8 sm:py-10 gap-10 sm:gap-12 xl:gap-6">
           <KPICard
             title="Total Outstanding"
             value={`₹${summaryMetrics.totalOutstanding.toLocaleString('en-IN')}`}
-            icon={<Wallet size={32} color="var(--color-heading)" />}
+            icon={<Wallet size={32} color="white" />}
             color="blue"
             subtitle="Pending vendor payments"
           />
           <KPICard
             title="Avg Compliance"
             value={`${summaryMetrics.avgCompliance}%`}
-            icon={<CheckSquare size={32} color="var(--color-heading)" />}
+            icon={<CheckSquare size={32} color="white" />}
             color="green"
             subtitle="Invoice-PO compliance rate"
           />
           <KPICard
             title="SLA Breaches"
             value={summaryMetrics.totalBreaches}
-            icon={<AlertTriangle size={32} color="var(--color-heading)" />}
+            icon={<AlertTriangle size={32} color="white" />}
             color="red"
             subtitle="Requires attention"
           />
           <KPICard
             title="Payments This Period"
             value={`₹${summaryMetrics.paymentsReleased.toLocaleString('en-IN')}`}
-            icon={<BarChart3 size={32} color="var(--color-heading)" />}
+            icon={<BarChart3 size={32} color="white" />}
             color="orange"
             subtitle={`${timeRange === 'weekly' ? 'This week' : 'This month'}`}
           />
@@ -196,14 +177,14 @@ function AccountsReports() {
 
       {/* Section 1: Vendor Payment Aging */}
       <div className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4">
           Vendor Payment Aging
         </h2>
         
         {/* Filter Bar */}
         <div className="mb-4 bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-[var(--font-heading)] text-[var(--color-heading)] text-base sm:text-lg font-medium flex items-center gap-2">
+            <h3 className="text-[var(--color-heading)] text-base sm:text-lg font-medium flex items-center gap-2">
               <Clock size={18} className="sm:w-5 sm:h-5" />
               Filters
             </h3>
@@ -264,78 +245,66 @@ function AccountsReports() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
+        <div className="rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px]">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
-                    Vendor
-                  </th>
-                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
-                    Outstanding Amount
-                  </th>
-                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
-                    Avg Days Pending
-                  </th>
-                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
-                    Oldest Invoice
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredPaymentAging.map((record, idx) => {
-                  const isOverdue = record.oldestInvoiceDays > 30
-                  return (
-                    <tr
-                      key={record.vendor}
-                      className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
-                    >
-                      <td className="p-3 sm:p-4 font-medium text-[var(--color-primary)] text-sm sm:text-base">{record.vendor}</td>
-                      <td className="p-3 sm:p-4 font-semibold text-[var(--color-primary)] text-sm sm:text-base">
-                        ₹{record.outstandingAmount.toLocaleString('en-IN')}
-                      </td>
-                      <td className="p-3 sm:p-4">
-                        <span
-                          className={`inline-block px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold ${
-                            record.avgDaysPending > 30
-                              ? 'bg-red-100 text-red-700 border border-red-300'
-                              : record.avgDaysPending > 15
-                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
-                              : 'bg-green-100 text-green-700 border border-green-300'
-                          }`}
-                        >
-                          {record.avgDaysPending} days
-                        </span>
-                      </td>
-                      <td className="p-3 sm:p-4">
-                        <div className={`text-xs sm:text-sm ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
-                          {record.oldestInvoiceDate}
+            {/* Table head bar */}
+            <div className="bg-[#C3754C] text-white">
+              <div className="flex justify-between px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-heading font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0]">
+                <div className="flex-1 text-center">Vendor</div>
+                <div className="flex-1 text-center">Outstanding Amount</div>
+                <div className="flex-1 text-center">Avg Days Pending</div>
+                <div className="flex-1 text-center">Oldest Invoice</div>
+              </div>
+            </div>
+            {/* Body */}
+            <div className="bg-white">
+              <div className="py-2">
+                {filteredPaymentAging.length === 0 ? (
+                  <div className="px-6 py-8 text-center text-gray-500">No records match the current filters</div>
+                ) : (
+                  filteredPaymentAging.map((record) => {
+                    const isOverdue = record.oldestInvoiceDays > 30
+                    return (
+                      <div key={record.vendor} className="flex justify-between px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center hover:bg-gray-50">
+                        <div className="flex-1 text-xs md:text-sm font-medium text-gray-800 text-center">{record.vendor}</div>
+                        <div className="flex-1 text-xs md:text-sm font-semibold text-[var(--color-primary)] text-center">
+                          ₹{record.outstandingAmount.toLocaleString('en-IN')}
                         </div>
-                        <div className={`text-xs sm:text-sm flex items-center gap-1 mt-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
-                          {isOverdue && <AlertTriangle size={12} className="sm:w-3.5 sm:h-3.5" />}
-                          <span>{record.oldestInvoiceDays} days old</span>
+                        <div className="flex-1 flex items-center justify-center">
+                          <span
+                            className={`inline-block px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap ${
+                              record.avgDaysPending > 30
+                                ? 'bg-red-100 text-red-700 border border-red-300'
+                                : record.avgDaysPending > 15
+                                ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                                : 'bg-green-100 text-green-700 border border-green-300'
+                            }`}
+                          >
+                            {record.avgDaysPending} days
+                          </span>
                         </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-                {filteredPaymentAging.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="p-6 text-center text-gray-500 text-sm">
-                      No records match the current filters
-                    </td>
-                  </tr>
+                        <div className="flex-1 text-center">
+                          <div className={`text-xs sm:text-sm ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                            {record.oldestInvoiceDate}
+                          </div>
+                          <div className={`text-xs flex items-center justify-center gap-1 mt-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
+                            {isOverdue && <AlertTriangle size={12} className="sm:w-3.5 sm:h-3.5" />}
+                            <span>{record.oldestInvoiceDays} days old</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
                 )}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Section 2: Invoice vs PO Compliance */}
       <div className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4">
           Invoice vs PO Compliance
         </h2>
         
@@ -368,36 +337,29 @@ function AccountsReports() {
         </div>
 
         {/* Compliance Table */}
-        <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
+        <div className="rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px]">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
-                    Vendor
-                  </th>
-                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
-                    Total Invoices
-                  </th>
-                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
-                    Compliant %
-                  </th>
-                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
-                    Issues Found
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredCompliance.map((record, idx) => (
-                  <tr
-                    key={record.vendor}
-                    className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
-                  >
-                    <td className="p-3 sm:p-4 font-medium text-[var(--color-primary)] text-sm sm:text-base">{record.vendor}</td>
-                    <td className="p-3 sm:p-4 text-[var(--color-primary)] text-sm sm:text-base">{record.totalInvoices}</td>
-                    <td className="p-3 sm:p-4">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[80px] sm:max-w-[120px]">
+            {/* Table head bar */}
+            <div className="bg-[#C3754C] text-white">
+              <div className="flex justify-between px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-heading font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0]">
+                <div className="flex-1 text-center">Vendor</div>
+                <div className="flex-1 text-center">Total Invoices</div>
+                <div className="flex-1 text-center">Compliant %</div>
+                <div className="flex-1 text-center">Issues Found</div>
+              </div>
+            </div>
+            {/* Body */}
+            <div className="bg-white">
+              <div className="py-2">
+                {filteredCompliance.length === 0 ? (
+                  <div className="px-6 py-8 text-center text-gray-500">No records match the current filters</div>
+                ) : (
+                  filteredCompliance.map((record) => (
+                    <div key={record.vendor} className="flex justify-between px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center hover:bg-gray-50">
+                      <div className="flex-1 text-xs md:text-sm font-medium text-gray-800 text-center">{record.vendor}</div>
+                      <div className="flex-1 text-xs md:text-sm text-gray-700 text-center">{record.totalInvoices}</div>
+                      <div className="flex-1 flex items-center justify-center gap-2 sm:gap-3">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[120px]">
                           <div
                             className={`h-2 rounded-full transition-all ${
                               record.compliantPercentage >= 95
@@ -421,83 +383,65 @@ function AccountsReports() {
                           {record.compliantPercentage}%
                         </span>
                       </div>
-                    </td>
-                    <td className="p-3 sm:p-4">
-                      <span
-                        className={`inline-block px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold ${
-                          record.issuesFound === 0
-                            ? 'bg-green-100 text-green-700 border border-green-300'
-                            : record.issuesFound <= 3
-                            ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
-                            : 'bg-red-100 text-red-700 border border-red-300'
-                        }`}
-                      >
-                        {record.issuesFound}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {filteredCompliance.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="p-6 text-center text-gray-500 text-sm">
-                      No records match the current filters
-                    </td>
-                  </tr>
+                      <div className="flex-1 flex items-center justify-center">
+                        <span
+                          className={`inline-block px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap ${
+                            record.issuesFound === 0
+                              ? 'bg-green-100 text-green-700 border border-green-300'
+                              : record.issuesFound <= 3
+                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                              : 'bg-red-100 text-red-700 border border-red-300'
+                          }`}
+                        >
+                          {record.issuesFound}
+                        </span>
+                      </div>
+                    </div>
+                  ))
                 )}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Section 3: SLA Breaches */}
       <div className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4">
           SLA Breaches
         </h2>
         
         {/* Full-width table with visual bars */}
-        <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
+        <div className="rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px]">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
-                    SLA Type
-                  </th>
-                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
-                    Breaches Count
-                  </th>
-                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
-                    Avg Delay (Days)
-                  </th>
-                  <th className="text-left p-3 sm:p-4 font-[var(--font-heading)] text-[var(--color-secondary)] font-medium text-sm">
-                    Breach Visualization
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {SLA_BREACH_DATA.map((record, idx) => {
+            {/* Table head bar */}
+            <div className="bg-[#C3754C] text-white">
+              <div className="flex justify-between px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-heading font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0]">
+                <div className="flex-1 text-center">SLA Type</div>
+                <div className="flex-1 text-center">Breaches Count</div>
+                <div className="flex-1 text-center">Avg Delay (Days)</div>
+                <div className="flex-1 text-center">Breach Visualization</div>
+              </div>
+            </div>
+            {/* Body */}
+            <div className="bg-white">
+              <div className="py-2">
+                {SLA_BREACH_DATA.map((record) => {
                   const maxBreaches = Math.max(...SLA_BREACH_DATA.map(r => r.breachCount))
                   const barWidth = (record.breachCount / maxBreaches) * 100
                   
                   return (
-                    <tr
-                      key={record.slaType}
-                      className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
-                    >
-                      <td className="p-3 sm:p-4 font-medium text-[var(--color-primary)] text-sm sm:text-base">
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle size={16} className="sm:w-4.5 sm:h-4.5 text-red-600" />
-                          <span>{record.slaType}</span>
-                        </div>
-                      </td>
-                      <td className="p-3 sm:p-4">
-                        <span className="inline-block px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold bg-red-100 text-red-700 border border-red-300">
+                    <div key={record.slaType} className="flex justify-between px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center hover:bg-gray-50">
+                      <div className="flex-1 text-xs md:text-sm font-medium text-gray-800 text-center flex items-center justify-center gap-2">
+                        <AlertTriangle size={16} className="sm:w-4.5 sm:h-4.5 text-red-600 flex-shrink-0" />
+                        <span>{record.slaType}</span>
+                      </div>
+                      <div className="flex-1 flex items-center justify-center">
+                        <span className="inline-block px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold bg-red-100 text-red-700 border border-red-300 whitespace-nowrap">
                           {record.breachCount}
                         </span>
-                      </td>
-                      <td className="p-3 sm:p-4">
+                      </div>
+                      <div className="flex-1 text-center">
                         <span className={`font-semibold text-sm sm:text-base ${
                           record.avgDelayDays > 5 
                             ? 'text-red-600' 
@@ -507,10 +451,10 @@ function AccountsReports() {
                         }`}>
                           {record.avgDelayDays} days
                         </span>
-                      </td>
-                      <td className="p-3 sm:p-4">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-4 sm:h-6 max-w-[150px] sm:max-w-[200px]">
+                      </div>
+                      <div className="flex-1 flex items-center justify-center px-4">
+                        <div className="flex items-center gap-2 w-full max-w-[240px]">
+                          <div className="flex-1 bg-gray-200 rounded-full h-4 sm:h-6">
                             <div
                               className="bg-gradient-to-r from-red-500 to-red-600 h-4 sm:h-6 rounded-full flex items-center justify-end pr-1 sm:pr-2 transition-all"
                               style={{ width: `${barWidth}%` }}
@@ -521,12 +465,12 @@ function AccountsReports() {
                             </div>
                           </div>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   )
                 })}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
           
           {/* Summary footer */}
@@ -546,12 +490,12 @@ function AccountsReports() {
 
       {/* Section 4: Payment Summary */}
       <div className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4">
           Payment Summary
         </h2>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-6 mb-4 sm:mb-6">
           <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20 border-t-4 border-t-green-600">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded-lg bg-green-100">
