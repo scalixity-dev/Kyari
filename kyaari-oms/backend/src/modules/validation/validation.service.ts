@@ -239,15 +239,24 @@ export class EnhancedValidationService {
       let invoiceTotal = 0;
       let paymentTotal = 0;
 
+      const seenPOIds = new Set<string>();
+      const seenInvoiceIds = new Set<string>();
+      const seenPaymentIds = new Set<string>();
+
       for (const item of order.items) {
         for (const assignment of item.assignedItems) {
           const po = assignment.purchaseOrderItem?.purchaseOrder;
           if (po) {
-            poTotal += Number(po.totalAmount);
-            if (po.vendorInvoice) {
+            if (!seenPOIds.has(po.id)) {
+              seenPOIds.add(po.id);
+              poTotal += Number(po.totalAmount);
+            }
+            if (po.vendorInvoice && !seenInvoiceIds.has(po.vendorInvoice.id)) {
+              seenInvoiceIds.add(po.vendorInvoice.id);
               invoiceTotal += Number(po.vendorInvoice.invoiceAmount);
             }
-            if (po.payment) {
+            if (po.payment && !seenPaymentIds.has(po.payment.id)) {
+              seenPaymentIds.add(po.payment.id);
               paymentTotal += Number(po.payment.amount);
             }
           }
