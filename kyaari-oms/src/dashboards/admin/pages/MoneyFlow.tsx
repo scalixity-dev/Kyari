@@ -106,6 +106,7 @@ function PieChart({ pending, cleared }: { pending: number; cleared: number }) {
     { name: 'Cleared', value: cleared }
   ]
   const colors = ['#dd6b20', '#48bb78']
+  const total = pending + cleared
 
   return (
     <div className="bg-white p-3 sm:p-4 md:p-6 rounded-xl shadow-md border border-white/20">
@@ -126,12 +127,12 @@ function PieChart({ pending, cleared }: { pending: number; cleared: number }) {
       <div className="mt-3 sm:mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
           <div className="text-xs sm:text-sm text-gray-500 font-medium">Total Invoices</div>
-          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{pending + cleared}</div>
+          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{total}</div>
           <div className="text-xs sm:text-sm text-gray-400">This period</div>
         </div>
         <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
           <div className="text-xs sm:text-sm text-gray-500 font-medium">Processing Rate</div>
-          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{Math.round((cleared / (pending + cleared)) * 100)}%</div>
+          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{total ? Math.round((cleared / total) * 100) : 0}%</div>
           <div className="text-xs sm:text-sm text-gray-400">Completion rate</div>
         </div>
       </div>

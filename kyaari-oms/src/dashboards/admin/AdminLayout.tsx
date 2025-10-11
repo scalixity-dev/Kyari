@@ -585,7 +585,7 @@ function AdminLayout() {
         </div>
 
         {/* Main content area - Outlet renders module content */}
-        <div style={{ marginTop: 90, height: 'calc(100vh - 90px)', overflow: 'auto' }}>
+        <div style={{ marginTop: 112, height: 'calc(100vh - 112px)', overflow: 'auto' }}>
           {/* Module area - transparent background, modules should use full width */}
           <div style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box', padding: 0, background: 'transparent' }}>
             <div style={{ width: '100%', padding: 0 }}>
