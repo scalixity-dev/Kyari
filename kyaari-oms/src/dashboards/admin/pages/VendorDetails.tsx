@@ -161,7 +161,7 @@ export default function VendorDetails() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-screen font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
       {/* Back Button */}
       <button
         onClick={handleBackClick}
@@ -171,84 +171,70 @@ export default function VendorDetails() {
       </button>
 
       {/* Header */}
-      <div className="bg-[var(--color-header-bg)] p-4 sm:p-6 lg:p-8 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] mb-4 sm:mb-6 border border-[rgba(0,0,0,0.03)]">
+      <div className="py-4 sm:py-6 lg:py-8">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">{vendor.name}</h1>
         <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium">Detailed performance metrics and order history</p>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <div className="bg-white p-3 sm:p-4 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-2 mb-2">
-            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-            <span className="text-xs font-semibold text-gray-500 uppercase">Fill Rate</span>
+      {/* KPI Cards (status-card style) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-10">
+        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <BarChart3 className="w-5 h-5" />
           </div>
-          <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-primary)]">
-            {vendor.metrics.fillRate}%
-          </div>
+          <h4 className="text-sm font-semibold text-gray-800 mb-1">Fill Rate</h4>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{vendor.metrics.fillRate}%</div>
         </div>
 
-        <div className="bg-white p-3 sm:p-4 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
-            <span className="text-xs font-semibold text-gray-500 uppercase">SLA Compliance</span>
+        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <CheckSquare className="w-5 h-5" />
           </div>
-          <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-primary)]">
-            {vendor.metrics.slaCompliance}%
-          </div>
+          <h4 className="text-sm font-semibold text-gray-800 mb-1">SLA Compliance</h4>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{vendor.metrics.slaCompliance}%</div>
         </div>
 
-        <div className="bg-white p-3 sm:p-4 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-2 mb-2">
-            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
-            <span className="text-xs font-semibold text-gray-500 uppercase">Avg Invoice</span>
+        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <FileText className="w-5 h-5" />
           </div>
-          <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-primary)]">
-            {vendor.metrics.avgInvoiceDays}d
-          </div>
+          <h4 className="text-sm font-semibold text-gray-800 mb-1">Avg Invoice</h4>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{vendor.metrics.avgInvoiceDays}d</div>
         </div>
 
-        <div className="bg-white p-3 sm:p-4 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
-            <span className="text-xs font-semibold text-gray-500 uppercase">Avg Ticket</span>
+        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <Clock className="w-5 h-5" />
           </div>
-          <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-primary)]">
-            {vendor.metrics.avgTicketDays}d
-          </div>
+          <h4 className="text-sm font-semibold text-gray-800 mb-1">Avg Ticket</h4>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{vendor.metrics.avgTicketDays}d</div>
         </div>
       </div>
 
-      {/* Orders Summary Cards */}
+      {/* Orders Summary Cards (status-card style) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <div className="bg-white p-3 sm:p-4 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-2 mb-2">
-            <Package className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
-            <span className="text-xs font-semibold text-gray-500 uppercase">Total Orders</span>
+        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <Package className="w-5 h-5" />
           </div>
-          <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-primary)]">
-            {vendor.metrics.ordersCount}
-          </div>
+          <h4 className="text-sm font-semibold text-gray-800 mb-1">Total Orders</h4>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{vendor.metrics.ordersCount}</div>
         </div>
 
-        <div className="bg-white p-3 sm:p-4 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
-            <span className="text-xs font-semibold text-gray-500 uppercase">Pending</span>
+        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <AlertTriangle className="w-5 h-5" />
           </div>
-          <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-600">
-            {vendor.metrics.pendingOrders}
-          </div>
+          <h4 className="text-sm font-semibold text-gray-800 mb-1">Pending</h4>
+          <div className="text-2xl font-bold text-orange-600 mt-1">{vendor.metrics.pendingOrders}</div>
         </div>
 
-        <div className="bg-white p-3 sm:p-4 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-            <span className="text-xs font-semibold text-gray-500 uppercase">Completed</span>
+        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <CheckSquare className="w-5 h-5" />
           </div>
-          <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600">
-            {vendor.metrics.completedOrders}
-          </div>
+          <h4 className="text-sm font-semibold text-gray-800 mb-1">Completed</h4>
+          <div className="text-2xl font-bold text-green-600 mt-1">{vendor.metrics.completedOrders}</div>
         </div>
       </div>
 
@@ -316,33 +302,36 @@ export default function VendorDetails() {
       </div>
 
       {/* Recent Orders Table */}
-      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-        <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-3 sm:mb-4">Recent Orders</h3>
+      <div className="bg-transparent rounded-xl border border-white/20">
+        <div className="py-4 sm:py-5">
+          <h3 className="text-base sm:text-xl font-semibold text-[var(--color-heading)] mb-2 sm:mb-3">Recent Orders</h3>
+          <p className="text-sm text-gray-500 mb-4">Latest order activity and status</p>
+        </div>
         
         {/* Desktop Table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full table-auto">
-            <thead>
-              <tr className="text-left text-sm text-gray-500 border-b">
-                <th className="py-3 font-semibold">Order Number</th>
-                <th className="font-semibold">Date</th>
-                <th className="font-semibold">Status</th>
-                <th className="font-semibold">Items</th>
-                <th className="font-semibold">Amount</th>
+        <div className="hidden md:block bg-white rounded-xl overflow-hidden w-full shadow-md border border-gray-100">
+          <table className="w-full min-w-full table-fixed border-separate border-spacing-0">
+            <thead className="bg-[var(--color-accent)]">
+              <tr>
+                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Order Number</th>
+                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Date</th>
+                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Status</th>
+                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Items</th>
+                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Amount</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white divide-y divide-gray-200">
               {mockOrders.map((order) => (
-                <tr key={order.id} className="border-b hover:bg-gray-50 transition-colors">
-                  <td className="py-3 font-medium text-[var(--color-heading)]">{order.orderNumber}</td>
-                  <td className="text-gray-600 text-sm">{order.date}</td>
-                  <td>
+                <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 lg:px-6 py-4 font-medium text-[var(--color-heading)]">{order.orderNumber}</td>
+                  <td className="px-4 lg:px-6 py-4 text-gray-600 text-sm">{order.date}</td>
+                  <td className="px-4 lg:px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                       {order.status}
                     </span>
                   </td>
-                  <td className="text-gray-600 text-sm">{order.items}</td>
-                  <td className="font-medium text-sm">{formatINR(order.amount)}</td>
+                  <td className="px-4 lg:px-6 py-4 text-gray-600 text-sm">{order.items}</td>
+                  <td className="px-4 lg:px-6 py-4 font-medium text-sm">{formatINR(order.amount)}</td>
                 </tr>
               ))}
             </tbody>

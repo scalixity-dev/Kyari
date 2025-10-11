@@ -537,7 +537,7 @@ export default function Analytics() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 min-h-screen overflow-x-auto" style={{ backgroundColor: '#ECDDC9' }}>
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen overflow-x-auto bg-[var(--color-sharktank-bg)] ">
       {/* Page Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Analytics & Reports</h1>
@@ -556,8 +556,8 @@ export default function Analytics() {
                 <button
                   onClick={() => setFulfillmentView('monthly')}
                   className={`px-3 sm:px-4 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] sm:min-h-auto ${
-                    fulfillmentView === 'monthly'
-                      ? 'bg-white text-gray-900 shadow-sm'
+                      fulfillmentView === 'monthly'
+                      ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
@@ -567,7 +567,7 @@ export default function Analytics() {
                   onClick={() => setFulfillmentView('weekly')}
                   className={`px-3 sm:px-4 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] sm:min-h-auto ${
                     fulfillmentView === 'weekly'
-                      ? 'bg-white text-gray-900 shadow-sm'
+                      ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >

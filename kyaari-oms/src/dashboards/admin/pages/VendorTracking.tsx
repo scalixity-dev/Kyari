@@ -22,11 +22,11 @@ export default function VendorTracking() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-screen font-sans w-full overflow-x-hidden">
-      <div className="bg-[var(--color-header-bg)] p-4 sm:p-6 lg:p-8 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] mb-4 sm:mb-6 border border-[rgba(0,0,0,0.03)]">
+    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
+      
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Vendor Tracking</h1>
-        <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium">Performance, accounts and ops insights for vendors</p>
-      </div>
+        <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium mb-6">Performance, accounts and ops insights for vendors</p>
+     
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
         <div className="bg-white p-4 sm:p-5 rounded-xl shadow-md border border-white/20">
@@ -103,52 +103,54 @@ export default function VendorTracking() {
         </div>
       </div>
 
-      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-        <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-[var(--color-heading)]">Vendor health overview</h2>
-        <p className="text-sm text-gray-500 mb-4">Quick look at top vendors and their key metrics.</p>
+      <div className="bg-transparent rounded-xl border border-white/20">
+        <div>
+          <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-[var(--color-heading)]">Vendor health overview</h2>
+          <p className="text-sm text-gray-500 mb-4">Quick look at top vendors and their key metrics.</p>
+        </div>
         
-        {/* Desktop Table View */}
-        <div className="hidden md:block overflow-auto">
-          <table className="w-full table-auto">
-            <thead>
-              <tr className="text-left text-sm text-gray-500 border-b">
-                <th className="py-3 font-semibold">Vendor</th>
-                <th className="font-semibold">Fill rate</th>
-                <th className="font-semibold">SLA</th>
-                <th className="font-semibold">Avg invoice (days)</th>
-                <th className="font-semibold">Avg ticket (days)</th>
+  {/* Desktop Table View */}
+  <div className="hidden md:block bg-white rounded-xl overflow-hidden w-full shadow-md border border-gray-100">
+          <table className="w-full min-w-full table-fixed border-separate border-spacing-0">
+            <thead className="bg-[var(--color-accent)]">
+              <tr>
+                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Vendor</th>
+                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Fill rate</th>
+                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">SLA</th>
+                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Avg invoice (days)</th>
+                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Avg ticket (days)</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white divide-y divide-gray-200">
               <tr 
-                className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
+                className="hover:bg-gray-50 transition-colors cursor-pointer"
                 onClick={() => handleVendorClick('greenleaf-farms')}
               >
-                <td className="py-3 font-medium text-[var(--color-heading)]">GreenLeaf Farms</td>
-                <td className="text-green-600 font-semibold">94%</td>
-                <td className="text-green-600 font-semibold">90%</td>
-                <td>3.5</td>
-                <td>1.2</td>
+                <td className="px-4 lg:px-6 py-4 font-medium text-[var(--color-heading)]">GreenLeaf Farms</td>
+                <td className="px-4 lg:px-6 py-4 text-green-600 font-semibold">94%</td>
+                <td className="px-4 lg:px-6 py-4 text-green-600 font-semibold">90%</td>
+                <td className="px-4 lg:px-6 py-4">3.5</td>
+                <td className="px-4 lg:px-6 py-4">1.2</td>
               </tr>
               <tr 
-                className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
+                className="hover:bg-gray-50 transition-colors cursor-pointer"
                 onClick={() => handleVendorClick('happyplant-co')}
               >
-                <td className="py-3 font-medium text-[var(--color-heading)]">HappyPlant Co</td>
-                <td className="text-green-600 font-semibold">91%</td>
-                <td className="text-yellow-600 font-semibold">86%</td>
-                <td>4.2</td>
-                <td>1.6</td>
+                <td className="px-4 lg:px-6 py-4 font-medium text-[var(--color-heading)]">HappyPlant Co</td>
+                <td className="px-4 lg:px-6 py-4 text-green-600 font-semibold">91%</td>
+                <td className="px-4 lg:px-6 py-4 text-yellow-600 font-semibold">86%</td>
+                <td className="px-4 lg:px-6 py-4">4.2</td>
+                <td className="px-4 lg:px-6 py-4">1.6</td>
               </tr>
               <tr 
-                className="hover:bg-gray-50 cursor-pointer transition-colors"
+                className="hover:bg-gray-50 transition-colors cursor-pointer"
                 onClick={() => handleVendorClick('bloomworks')}
               >
-                <td className="py-3 font-medium text-[var(--color-heading)]">BloomWorks</td>
-                <td className="text-yellow-600 font-semibold">89%</td>
-                <td className="text-yellow-600 font-semibold">84%</td>
-                <td>3.9</td>
-                <td>2.0</td>
+                <td className="px-4 lg:px-6 py-4 font-medium text-[var(--color-heading)]">BloomWorks</td>
+                <td className="px-4 lg:px-6 py-4 text-yellow-600 font-semibold">89%</td>
+                <td className="px-4 lg:px-6 py-4 text-yellow-600 font-semibold">84%</td>
+                <td className="px-4 lg:px-6 py-4">3.9</td>
+                <td className="px-4 lg:px-6 py-4">2.0</td>
               </tr>
             </tbody>
           </table>
