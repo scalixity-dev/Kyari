@@ -33,6 +33,13 @@ export class EnhancedValidationService {
         };
       }
 
+      if (!invoice.purchaseOrder) {
+        return {
+          isValid: false,
+          errors: ['Invoice is not linked to any purchase order'],
+        };
+      }
+
       const poTotalAmount = Number(invoice.purchaseOrder.totalAmount);
       const tolerance = 0.05; // 5% tolerance
       const minAllowed = poTotalAmount * (1 - tolerance);
