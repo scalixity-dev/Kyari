@@ -189,9 +189,7 @@ export default function Orders() {
       }
       
       if (editingOrderId) {
-        // Update existing order
-        // TODO: Implement update API call
-        // await orderApi.updateOrder(editingOrderId, orderData)
+        await orderApi.updateOrder(editingOrderId, orderData)
         toast.success('Order updated successfully!')
       } else {
         // Create new order
