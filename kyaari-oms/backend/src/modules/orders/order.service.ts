@@ -384,7 +384,7 @@ export class OrderService {
         await tx.auditLog.create({
           data: {
             actorUserId: deletedById,
-            action: 'ORDER_DELETE',
+            action: APP_CONSTANTS.AUDIT_ACTIONS.ORDER_DELETE,
             entityType: 'Order',
             entityId: orderId,
             metadata: {
