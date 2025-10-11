@@ -54,11 +54,16 @@ export class OpsVerificationController {
 
       if (amountRange) {
         const [min, max] = amountRange.split('-').map(Number);
-        if (min && max) {
+        if (!isNaN(min) && !isNaN(max) && min >= 0 && max >= min) {
           where.invoiceAmount = {
             gte: min,
             lte: max
           };
+        } else {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid amount range format. Expected: "min-max"'
+          });
         }
       }
 
