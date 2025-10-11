@@ -585,10 +585,10 @@ function AdminLayout() {
         </div>
 
         {/* Main content area - Outlet renders module content */}
-        <div style={{ marginTop: 112, height: 'calc(100vh - 112px)', overflow: 'auto' }}>
+        <div className="mt-28 h-[calc(100vh-7rem)] overflow-auto">
           {/* Module area - transparent background, modules should use full width */}
-          <div style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box', padding: 0, background: 'transparent' }}>
-            <div style={{ width: '100%', padding: 0 }}>
+          <div className="min-h-full w-full box-border p-0 bg-transparent">
+            <div className="w-full p-0">
               <Outlet />
             </div>
           </div>
