@@ -100,6 +100,7 @@ function App() {
             <Route path="money-flow" element={<MoneyFlow />} />
             {/* <Route path="tracking" element={<Tracking />} /> */}
             <Route path="tracking/orders" element={<OrderTracking />} />
+            <Route path="tracking/orders/:id" element={<OrderDetails />} />
             <Route path="orders/:id" element={<OrderDetails />} />
             <Route path="tracking/vendors" element={<VendorTracking />} />
             <Route path="vendors/:id" element={<VendorDetails />} />

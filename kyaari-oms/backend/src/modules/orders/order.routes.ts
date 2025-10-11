@@ -37,4 +37,16 @@ router.put('/:id/cancel',
   orderController.cancelOrder.bind(orderController)
 );
 
+// Delete order - ADMIN only (only if not assigned)
+router.delete('/:id', 
+  requireRole([APP_CONSTANTS.ROLES.ADMIN]), 
+  orderController.deleteOrder.bind(orderController)
+);
+
+// Assign vendor to order - ADMIN only
+router.put('/:id/assign-vendor', 
+  requireRole([APP_CONSTANTS.ROLES.ADMIN]), 
+  orderController.assignVendor.bind(orderController)
+);
+
 export { router as orderRoutes };
