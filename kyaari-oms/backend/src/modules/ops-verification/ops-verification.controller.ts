@@ -64,11 +64,18 @@ export class OpsVerificationController {
 
       if (dateRange) {
         const [startDate, endDate] = dateRange.split(',');
-        if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        if (startDate && endDate && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
           where.invoiceDate = {
-            gte: new Date(startDate),
-            lte: new Date(endDate)
+            gte: start,
+            lte: end
           };
+        } else {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid date range format. Expected: "YYYY-MM-DD,YYYY-MM-DD"'
+          });
         }
       }
 
