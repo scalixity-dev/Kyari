@@ -1,6 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronUp, Package, MapPin, Clock, Wallet, Users } from 'lucide-react';
+import { getStatusClasses } from '../../../utils/statusColors';
 
 // Extended types for order details
 export interface OrderItem {
@@ -94,18 +95,8 @@ const mockOrderDetails: Record<string, OrderDetails> = {
   }
 };
 
-const getStatusColor = (status: Status): string => {
-  const statusColors: Record<Status, string> = {
-    "Received": "bg-gray-100 text-gray-800 border-gray-200",
-    "Assigned": "bg-blue-100 text-blue-800 border-blue-200",
-    "Confirmed": "bg-yellow-100 text-yellow-800 border-yellow-200",
-    "Invoiced": "bg-purple-100 text-purple-800 border-purple-200",
-    "Dispatched": "bg-orange-100 text-orange-800 border-orange-200",
-    "Verified": "bg-green-100 text-green-800 border-green-200",
-    "Paid": "bg-emerald-100 text-emerald-800 border-emerald-200",
-  };
-  return statusColors[status];
-};
+// use shared status color helper
+const getStatusColor = (status: Status) => getStatusClasses(status);
 
 const formatINR = (value: number) => {
   try {
@@ -124,8 +115,8 @@ const OrderDetails: React.FC = () => {
 
   if (!orderDetails) {
     return (
-      <div className="p-6 bg-[var(--color-happyplant-bg)] min-h-screen">
-        <div className="max-w-4xl mx-auto">
+      <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
+        <div>
           <button
             onClick={() => navigate('/admin/tracking/orders')}
             className="flex items-center gap-2 mb-6 text-[var(--color-heading)] hover:text-[var(--color-accent)] transition-colors"
@@ -145,8 +136,8 @@ const OrderDetails: React.FC = () => {
   }
 
   return (
-    <div className="p-6 bg-[var(--color-happyplant-bg)] min-h-screen">
-      <div className="max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
+      <div >
         {/* Header with Back Button */}
         <div className="mb-6">
           <button
