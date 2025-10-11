@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import NotificationControls from '../../../components/Notifications/NotificationControls';
-import NotificationSection from '../../../components/Notifications/NotificationSection';
+// NotificationSection removed — rendering unified list below
+import { Search } from 'lucide-react';
 import type { 
   Notification, 
   NotificationActions, 
@@ -95,25 +95,44 @@ const generateMockNotifications = (): Notification[] => [
 export default function Notifications() {
   const [notifications, setNotifications] = useState<Notification[]>(generateMockNotifications());
   const [mutedVendors, setMutedVendors] = useState<MutedVendor[]>([]);
-  const [filters, setFilters] = useState<{
-    type?: NotificationType[];
-    showRead?: boolean;
-  }>({
-    showRead: false
-  });
+  const [showRead] = useState<boolean>(false); // Always show only unread
+  const [selectedType, setSelectedType] = useState<'all' | NotificationType>('all')
+  const [selectedDate, setSelectedDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
 
   // Filter notifications based on current filters
   const filteredNotifications = useMemo(() => {
     let filtered = [...notifications];
 
     // Filter by read status
-    if (!filters.showRead) {
+    if (!showRead) {
       filtered = filtered.filter(n => n.status === 'unread');
     }
 
-    // Filter by type
-    if (filters.type && filters.type.length > 0) {
-      filtered = filtered.filter(n => filters.type!.includes(n.type));
+    // Filter by type (handled by selectedType below, not here)
+    // if (filters.type && filters.type.length > 0) {
+    //   filtered = filtered.filter(n => filters.type!.includes(n.type));
+    // }
+
+    // Filter by date (on or after selected date)
+    if (selectedDate) {
+      const filterDate = new Date(selectedDate);
+      filterDate.setHours(0, 0, 0, 0); // Start of day
+      filtered = filtered.filter(n => {
+        const notifDate = new Date(n.timestamp);
+        notifDate.setHours(0, 0, 0, 0);
+        return notifDate >= filterDate;
+      });
+    }
+
+    // Filter by end date (on or before end date)
+    if (endDate) {
+      const filterEndDate = new Date(endDate);
+      filterEndDate.setHours(23, 59, 59, 999); // End of day
+      filtered = filtered.filter(n => {
+        const notifDate = new Date(n.timestamp);
+        return notifDate <= filterEndDate;
+      });
     }
 
     // Sort by timestamp (newest first) and then by priority
@@ -137,28 +156,11 @@ export default function Notifications() {
     });
 
     return filtered;
-  }, [notifications, filters]);
+  }, [notifications, showRead, selectedDate, endDate]);
 
-  // Group notifications by type
-  const groupedNotifications = useMemo(() => {
-    const groups = {
-      critical: filteredNotifications.filter(n => n.type === 'critical'),
-      info: filteredNotifications.filter(n => n.type === 'info'),
-      reminder: filteredNotifications.filter(n => n.type === 'reminder')
-    };
-    return groups;
-  }, [filteredNotifications]);
+  // (grouping removed — unified list used)
 
-  // Calculate totals for unread notifications
-  const totalUnread = useMemo(() => {
-    const unread = notifications.filter(n => n.status === 'unread');
-    return {
-      critical: unread.filter(n => n.type === 'critical').length,
-      info: unread.filter(n => n.type === 'info').length,
-      reminder: unread.filter(n => n.type === 'reminder').length,
-      total: unread.length
-    };
-  }, [notifications]);
+  // (totals removed - not used by simplified controls)
 
   // Notification actions
   const actions: NotificationActions = {
@@ -216,61 +218,97 @@ export default function Notifications() {
     }
   };
 
-  const handleFilterChange = (newFilters: { type?: NotificationType[]; showRead?: boolean }) => {
-    setFilters(newFilters);
-  };
+  // simplified controls do not use external filter callback
 
-  const mutedVendorIds = mutedVendors.map(v => v.id);
+  // mutedVendorIds not used with simplified UI
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+  <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Page Header */}
-      <div className="bg-[var(--color-header-bg)] p-4 sm:p-6 lg:p-8 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] mb-6 sm:mb-8 border border-[rgba(0,0,0,0.03)]">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
-          Notifications
-        </h1>
-        <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium">
-          Stay updated with critical alerts, information, and reminders
-        </p>
+      <div className="mb-4 sm:mb-6">
+        <h2 className="font-heading text-secondary text-2xl sm:text-3xl lg:text-4xl font-semibold">Notifications</h2>
       </div>
 
-      {/* Notification Controls */}
-      <NotificationControls
-        actions={actions}
-        mutedVendors={mutedVendors}
-        totalUnread={totalUnread}
-        onFilterChange={handleFilterChange}
-        activeFilters={filters}
-      />
+      {/* Notification Controls (custom) */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setSelectedType('critical')} className="bg-[#FFEAEA] text-[#BE123C] px-4 py-2 rounded-lg shadow-sm text-sm font-medium">Critical</button>
+          <button onClick={() => setSelectedType('info')} className="bg-[#E6F5FF] text-[#0369A1] px-4 py-2 rounded-lg shadow-sm text-sm font-medium">Information</button>
+          <button onClick={() => setSelectedType('reminder')} className="bg-[#FFF6E6] text-[#C2410C] px-4 py-2 rounded-lg shadow-sm text-sm font-medium">Reminder</button>
+          {mutedVendors.length > 0 && (
+            <span className="ml-2 text-sm text-gray-500">Muted: {mutedVendors.length}</span>
+          )}
+        </div>
 
-      {/* Notification Sections */}
-      <div className="space-y-4 sm:space-y-6">
-        <NotificationSection
-          title="Critical Alerts"
-          type="critical"
-          notifications={groupedNotifications.critical}
-          actions={actions}
-          mutedVendorIds={mutedVendorIds}
-          onMarkAllAsRead={actions.onMarkAllAsRead}
-        />
-        
-        <NotificationSection
-          title="Information"
-          type="info"
-          notifications={groupedNotifications.info}
-          actions={actions}
-          mutedVendorIds={mutedVendorIds}
-          onMarkAllAsRead={actions.onMarkAllAsRead}
-        />
-        
-        <NotificationSection
-          title="Reminders"
-          type="reminder"
-          notifications={groupedNotifications.reminder}
-          actions={actions}
-          mutedVendorIds={mutedVendorIds}
-          onMarkAllAsRead={actions.onMarkAllAsRead}
-        />
+        <div className="flex items-center gap-3">
+          <div className="bg-white rounded-lg px-3 py-2 w-64 flex items-center gap-2 border border-gray-200">
+            <Search className="w-4 h-4 text-gray-400" />
+            <input placeholder="Search notifications..." className="flex-1 text-sm placeholder-gray-400 focus:outline-none bg-transparent" />
+          </div>
+          <input 
+            type="date" 
+            value={selectedDate} 
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="bg-white rounded-lg px-3 py-2 border border-gray-200 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200"
+            title="Start date"
+            placeholder="Start date"
+          />
+          <input 
+            type="date" 
+            value={endDate} 
+            onChange={(e) => setEndDate(e.target.value)}
+            className="bg-white rounded-lg px-3 py-2 border border-gray-200 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200"
+            title="End date"
+            placeholder="End date"
+          />
+        </div>
+      </div>
+
+      {/* Unified Notification List in a single white container */}
+      <div className="bg-white rounded-lg p-4 space-y-3">
+        {(() => {
+          const displayNotifications = selectedType === 'all'
+            ? filteredNotifications
+            : filteredNotifications.filter(n => n.type === selectedType)
+
+          const typeBg: Record<string, string> = {
+            critical: '#FFF1F2', // very light red
+            info: '#F0F9FF', // very light blue
+            reminder: '#FFFBEB' // very light yellow
+          }
+
+          const typeBorder: Record<string, string> = {
+            critical: '#FCA5A5',
+            info: '#93C5FD',
+            reminder: '#FBBF24'
+          }
+
+          return displayNotifications.map(n => (
+            <div key={n.id} className="p-3 rounded-md flex items-start justify-between gap-4" style={{ background: typeBg[n.type] || '#F3F4F6', borderLeft: `4px solid ${typeBorder[n.type] || '#E5E7EB'}` }}>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-secondary">{n.title}</h4>
+                  <span className="text-sm text-gray-500">{n.timestamp.toLocaleString()}</span>
+                </div>
+                <p className="text-sm text-gray-700 mt-2">{n.message}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                  {n.vendorName && <span>Vendor: {n.vendorName}</span>}
+                  {n.orderId && <span>Order: {n.orderId}</span>}
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end gap-2">
+                <button onClick={() => actions.onMarkAsRead(n.id)} className="text-sm bg-white px-3 py-1.5 rounded-md border border-gray-200">Mark read</button>
+                {n.canEscalate && (
+                  <button onClick={() => actions.onEscalate(n.id, (n.escalationTarget || 'ops') as EscalationTarget)} className="text-sm bg-[var(--color-accent)] text-[var(--color-button-text)] px-3 py-1.5 rounded-md">Escalate</button>
+                )}
+                {n.vendorId && (
+                  <button onClick={() => actions.onMuteVendor(n.vendorId!, n.vendorName || '')} className="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-md">Mute vendor</button>
+                )}
+              </div>
+            </div>
+          ))
+        })()}
       </div>
 
       {/* Empty State */}
@@ -279,8 +317,8 @@ export default function Notifications() {
           <div className="text-gray-400 text-2xl sm:text-3xl lg:text-4xl mb-4">🔔</div>
           <h3 className="text-lg sm:text-xl font-semibold text-gray-600 mb-2">No notifications found</h3>
           <p className="text-sm sm:text-base text-gray-500 max-w-md mx-auto leading-relaxed">
-            {filters.type?.length ? 
-              `No ${filters.type.join(', ')} notifications match your current filters.` :
+            {selectedType !== 'all' ? 
+              `No ${selectedType} notifications match your current filters.` :
               'All caught up! No new notifications at this time.'
             }
           </p>

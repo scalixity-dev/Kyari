@@ -3,7 +3,10 @@ import { Request, Response } from 'express';
 import { authService } from './auth.service';
 import { 
   loginSchema, 
-  vendorRegistrationSchema, 
+  vendorRegistrationSchema,
+  sendPasswordResetCodeSchema,
+  verifyPasswordResetCodeSchema,
+  resetPasswordWithCodeSchema,
   validateSchema 
 } from './auth.validators';
 import { ResponseHelper } from '../../utils/response';
@@ -56,8 +59,12 @@ export class AuthController {
 
       ResponseHelper.success(res, result, result.message, 201);
     } catch (error) {
-      logger.error('Vendor registration controller error', { error });
-      ResponseHelper.error(res, error instanceof Error ? error.message : 'Registration failed', 400);
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+      logger.error('Vendor registration controller error', { 
+        error: error instanceof Error ? { message: error.message, stack: error.stack } : error,
+        body: req.body 
+      });
+      ResponseHelper.error(res, errorMessage, 400);
     }
   }
 
@@ -167,7 +174,91 @@ export class AuthController {
     }
   }
 
-  private async extractRefreshTokenFromResult(result: any): Promise<string | null> {
+  /**
+   * Send password reset code to email
+   */
+  async sendPasswordResetCode(req: Request, res: Response): Promise<void> {
+    try {
+      const validation = validateSchema(sendPasswordResetCodeSchema, req.body);
+      if (!validation.success) {
+        ResponseHelper.validationError(res, validation.errors);
+        return;
+      }
+
+      const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+      const userAgent = req.get('User-Agent') || 'unknown';
+
+      const result = await authService.sendPasswordResetCode(
+        validation.data.email,
+        ipAddress,
+        userAgent
+      );
+
+      ResponseHelper.success(res, result, result.message);
+    } catch (error) {
+      logger.error('Send password reset code error', { error });
+      ResponseHelper.error(res, error instanceof Error ? error.message : 'Failed to send reset code', 400);
+    }
+  }
+
+  /**
+   * Verify password reset code
+   */
+  async verifyPasswordResetCode(req: Request, res: Response): Promise<void> {
+    try {
+      const validation = validateSchema(verifyPasswordResetCodeSchema, req.body);
+      if (!validation.success) {
+        ResponseHelper.validationError(res, validation.errors);
+        return;
+      }
+
+      const result = await authService.verifyPasswordResetCode(
+        validation.data.email,
+        validation.data.code
+      );
+
+      if (!result.valid) {
+        ResponseHelper.error(res, result.message, 400);
+        return;
+      }
+
+      ResponseHelper.success(res, result, result.message);
+    } catch (error) {
+      logger.error('Verify password reset code error', { error });
+      ResponseHelper.error(res, error instanceof Error ? error.message : 'Failed to verify code', 400);
+    }
+  }
+
+  /**
+   * Reset password using code
+   */
+  async resetPasswordWithCode(req: Request, res: Response): Promise<void> {
+    try {
+      const validation = validateSchema(resetPasswordWithCodeSchema, req.body);
+      if (!validation.success) {
+        ResponseHelper.validationError(res, validation.errors);
+        return;
+      }
+
+      const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+      const userAgent = req.get('User-Agent') || 'unknown';
+
+      const result = await authService.resetPasswordWithCode(
+        validation.data.email,
+        validation.data.code,
+        validation.data.newPassword,
+        ipAddress,
+        userAgent
+      );
+
+      ResponseHelper.success(res, result, result.message);
+    } catch (error) {
+      logger.error('Reset password with code error', { error });
+      ResponseHelper.error(res, error instanceof Error ? error.message : 'Failed to reset password', 400);
+    }
+  }
+
+  private async extractRefreshTokenFromResult(result: unknown): Promise<string | null> {
     // This is a placeholder - in the actual implementation,
     // the refresh token would be returned from the auth service
     // For now, we'll handle this in the service layer

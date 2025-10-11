@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiService } from '../services/api'
 import type { RegisterVendorRequest } from '../services/api'
+import { pincodeApi } from '../services/pincodeApi'
+import toast from 'react-hot-toast'
 
 export default function VendorSignUp() {
   const [contactPersonName, setContactPersonName] = useState('')
@@ -16,7 +18,45 @@ export default function VendorSignUp() {
   const [panNumber, setPanNumber] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isPincodeLoading, setIsPincodeLoading] = useState(false)
+  const [pincodeInfo, setPincodeInfo] = useState<string>('')
   const navigate = useNavigate()
+
+  async function handlePincodeChange(value: string) {
+    const digits = value.replace(/[^0-9]/g, '').slice(0, 6)
+    setPincode(digits)
+    
+    // Auto-fetch location when 6 digits are entered
+    if (digits.length === 6) {
+      setIsPincodeLoading(true)
+      setPincodeInfo('')
+      
+      try {
+        const details = await pincodeApi.getPincodeDetails(digits)
+        
+        if (details) {
+          // Auto-fill warehouse location if empty
+          if (!warehouseLocation.trim()) {
+            const location = `${details.area}, ${details.district}, ${details.state}`
+            setWarehouseLocation(location)
+          }
+          
+          setPincodeInfo(`${details.district}, ${details.state}`)
+          toast.success(`Location found: ${details.district}, ${details.state}`)
+        } else {
+          setPincodeInfo('Invalid pincode')
+          toast.error('Invalid pincode. Please check and try again.')
+        }
+      } catch (error) {
+        console.error('Pincode lookup error:', error)
+        setPincodeInfo('')
+      } finally {
+        setIsPincodeLoading(false)
+      }
+    } else {
+      setPincodeInfo('')
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -90,10 +130,12 @@ export default function VendorSignUp() {
         confirmPassword,
         warehouseLocation: warehouseLocation.trim(),
         pincode: pincode.trim(),
-        companyName: companyName.trim() || undefined,
-        gstNumber: gstNumber.trim() || undefined,
-        panNumber: panNumber.trim().toUpperCase()
+        companyName: companyName.trim() || contactPersonName.trim(), // Use contact name if company name is empty
+        gstNumber: gstNumber.trim() ? gstNumber.trim().toUpperCase() : undefined,
+        panNumber: panNumber.trim() ? panNumber.trim().toUpperCase() : undefined
       }
+
+      console.log('Submitting vendor registration:', { ...registrationData, password: '[REDACTED]' })
 
       await ApiService.registerVendor(registrationData)
       
@@ -103,8 +145,12 @@ export default function VendorSignUp() {
           message: 'Registration successful! Please wait for admin approval before signing in.' 
         } 
       })
-    } catch (error: any) {
-      setError(error.message || 'Registration failed. Please try again.')
+    } catch (error: unknown) {
+      const err = error as { message?: string }
+      const errorMsg = err.message || 'Registration failed. Please try again.'
+      console.error('Registration error:', error)
+      setError(errorMsg)
+      toast.error(errorMsg)
     } finally {
       setIsLoading(false)
     }
@@ -198,24 +244,36 @@ export default function VendorSignUp() {
               value={warehouseLocation} 
               onChange={(e) => setWarehouseLocation(e.target.value)} 
               className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200" 
-              placeholder="City, State or Full Address" 
+              placeholder="City, State or Full Address (auto-filled from pincode)" 
               required
             />
+            <div className="text-xs text-gray-500 mt-1">
+              💡 Enter pincode below to auto-fill this field
+            </div>
           </label>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <label className="text-sm text-left text-[color:var(--color-primary)]">
               <div>Pincode *</div>
-              <input
-                value={pincode}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^0-9]/g, '')
-                  setPincode(v.slice(0, 6))
-                }}
-                className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200"
-                placeholder="e.g. 560001"
-                required
-              />
+              <div className="relative">
+                <input
+                  value={pincode}
+                  onChange={(e) => handlePincodeChange(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 pr-10"
+                  placeholder="e.g. 560001"
+                  required
+                />
+                {isPincodeLoading && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-300 border-t-accent"></div>
+                  </div>
+                )}
+              </div>
+              {pincodeInfo && (
+                <div className={`text-xs mt-1 ${pincodeInfo === 'Invalid pincode' ? 'text-red-600' : 'text-green-600'}`}>
+                  {pincodeInfo === 'Invalid pincode' ? '❌ ' : '✓ '}{pincodeInfo}
+                </div>
+              )}
             </label>
 
             <label className="text-sm text-left text-[color:var(--color-primary)]">

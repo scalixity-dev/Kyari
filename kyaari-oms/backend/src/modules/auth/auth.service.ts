@@ -5,6 +5,7 @@ import { verifyPassword, hashPassword } from '../../utils/hashing';
 import { prisma } from '../../config/database';
 import { logger } from '../../utils/logger';
 import { APP_CONSTANTS } from '../../config/constants';
+import { emailService } from '../../services/email.service';
 import { 
   LoginDto, 
   VendorRegistrationDto, 
@@ -62,7 +63,7 @@ export class AuthService {
         APP_CONSTANTS.AUDIT_ACTIONS.USER_LOGIN,
         'User',
         user.id,
-        { email: user.email },
+        { email: user.email || '' },
         ipAddress,
         userAgent
       );
@@ -82,6 +83,11 @@ export class AuthService {
 
   async registerVendor(registrationData: VendorRegistrationDto, ipAddress?: string, userAgent?: string): Promise<{ message: string }> {
     try {
+      logger.info('Starting vendor registration', { 
+        email: registrationData.email, 
+        phone: registrationData.contactPhone 
+      });
+
       // Check if email already exists
       const existingUser = await userService.findByEmail(registrationData.email);
       if (existingUser) {
@@ -104,7 +110,8 @@ export class AuthService {
       });
       
       if (!vendorRole) {
-        throw new Error('Vendor role not found');
+        logger.error('Vendor role not found in database');
+        throw new Error('Vendor role not found. Please run database seed.');
       }
 
       // Create user and vendor profile in transaction
@@ -130,9 +137,9 @@ export class AuthService {
             contactPhone: registrationData.contactPhone,
             warehouseLocation: registrationData.warehouseLocation,
             pincode: registrationData.pincode,
-            companyName: registrationData.companyName,
-            gstNumber: registrationData.gstNumber,
-            panNumber: registrationData.panNumber
+            companyName: registrationData.companyName || registrationData.contactPersonName, // Use contact name if company name not provided
+            gstNumber: registrationData.gstNumber || null,
+            panNumber: registrationData.panNumber || null
           }
         });
 
@@ -146,8 +153,8 @@ export class AuthService {
         'User',
         result.id,
         { 
-          email: registrationData.email, 
-          phone: registrationData.contactPhone,
+          email: registrationData.email || '', 
+          phone: registrationData.contactPhone || '',
           type: 'vendor'
         },
         ipAddress,
@@ -162,12 +169,21 @@ export class AuthService {
 
       return { message: 'Registration successful. Awaiting admin approval.' };
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      
       logger.error('Vendor registration failed', { 
-        error, 
+        error: errorMessage,
+        stack: errorStack,
         email: registrationData.email,
         phone: registrationData.contactPhone 
       });
-      throw error;
+      
+      // Re-throw with proper error message
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Registration failed. Please try again.');
     }
   }
 
@@ -295,12 +311,189 @@ export class AuthService {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
+  /**
+   * Generate and send password reset code
+   */
+  async sendPasswordResetCode(email: string, ipAddress?: string, userAgent?: string): Promise<{ message: string }> {
+    try {
+      // Check if user exists
+      const user = await userService.findByEmail(email);
+      if (!user) {
+        // Don't reveal that user doesn't exist for security
+        logger.warn('Password reset requested for non-existent email', { email });
+        return { message: 'If the email exists, a password reset code has been sent.' };
+      }
+
+      // Check if user is active
+      if (user.status !== 'ACTIVE') {
+        throw new Error('Account is not active. Please contact administrator.');
+      }
+
+      // Invalidate any existing unused codes for this email
+      await prisma.passwordResetCode.updateMany({
+        where: {
+          email: email.toLowerCase(),
+          usedAt: null,
+          expiresAt: { gt: new Date() }
+        },
+        data: {
+          usedAt: new Date() // Mark as used to invalidate
+        }
+      });
+
+      // Generate 6-digit code
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Set expiry to 15 minutes from now
+      const expiresAt = new Date();
+      expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
+      // Store code in database
+      await prisma.passwordResetCode.create({
+        data: {
+          email: email.toLowerCase(),
+          code,
+          expiresAt,
+          ipAddress,
+          userAgent
+        }
+      });
+
+      // Send email with code
+      await emailService.sendPasswordResetCode(email, user.name, code);
+
+      // Audit log
+      await this.createAuditLog(
+        null, // No actor for password reset request
+        'PASSWORD_RESET_CODE_SENT',
+        'User',
+        user.id,
+        { email },
+        ipAddress,
+        userAgent
+      );
+
+      logger.info('Password reset code generated and sent', { email, userId: user.id });
+      return { message: 'If the email exists, a password reset code has been sent.' };
+    } catch (error) {
+      logger.error('Failed to send password reset code', { error, email });
+      throw error;
+    }
+  }
+
+  /**
+   * Verify password reset code
+   */
+  async verifyPasswordResetCode(email: string, code: string): Promise<{ valid: boolean; message: string }> {
+    try {
+      // Find the most recent unused, non-expired code
+      const resetCode = await prisma.passwordResetCode.findFirst({
+        where: {
+          email: email.toLowerCase(),
+          code,
+          usedAt: null,
+          expiresAt: { gt: new Date() }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (!resetCode) {
+        logger.warn('Invalid or expired password reset code', { email, code });
+        return { valid: false, message: 'Invalid or expired code. Please request a new one.' };
+      }
+
+      logger.info('Password reset code verified', { email });
+      return { valid: true, message: 'Code verified successfully.' };
+    } catch (error) {
+      logger.error('Failed to verify password reset code', { error, email });
+      throw error;
+    }
+  }
+
+  /**
+   * Reset password using code
+   */
+  async resetPasswordWithCode(
+    email: string, 
+    code: string, 
+    newPassword: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<{ message: string }> {
+    try {
+      // Verify code exists and is valid
+      const resetCode = await prisma.passwordResetCode.findFirst({
+        where: {
+          email: email.toLowerCase(),
+          code,
+          usedAt: null,
+          expiresAt: { gt: new Date() }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (!resetCode) {
+        throw new Error('Invalid or expired code. Please request a new one.');
+      }
+
+      // Get user
+      const user = await userService.findByEmail(email);
+      if (!user) {
+        throw new Error('User not found.');
+      }
+
+      // Hash new password
+      const passwordHash = await hashPassword(newPassword);
+
+      // Update password and increment password version
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash,
+          passwordVersion: { increment: 1 }
+        }
+      });
+
+      // Mark code as used
+      await prisma.passwordResetCode.update({
+        where: { id: resetCode.id },
+        data: { usedAt: new Date() }
+      });
+
+      // Revoke all existing refresh tokens for security
+      await prisma.refreshToken.updateMany({
+        where: { 
+          userId: user.id,
+          revokedAt: null
+        },
+        data: { revokedAt: new Date() }
+      });
+
+      // Audit log
+      await this.createAuditLog(
+        user.id,
+        'PASSWORD_RESET_SUCCESS',
+        'User',
+        user.id,
+        { email },
+        ipAddress,
+        userAgent
+      );
+
+      logger.info('Password reset successful', { email, userId: user.id });
+      return { message: 'Password reset successfully. Please login with your new password.' };
+    } catch (error) {
+      logger.error('Failed to reset password', { error, email });
+      throw error;
+    }
+  }
+
   private async createAuditLog(
     actorUserId: string | null,
     action: string,
     entityType: string,
     entityId: string,
-    metadata: any,
+    metadata: Record<string, string>,
     ipAddress?: string,
     userAgent?: string
   ): Promise<void> {
@@ -310,7 +503,7 @@ export class AuthService {
         action,
         entityType,
         entityId,
-        metadata,
+        metadata: metadata as Record<string, string>,
         ipAddress,
         userAgent
       }

@@ -17,6 +17,11 @@ const envSchema = z.object({
   INIT_ADMIN_EMAIL: z.string().email().optional(),
   
   CORS_ORIGINS: z.string().transform((val: string) => val.split(',')).default('http://localhost:3000'),
+  
+  // Email (SMTP)
+  SMTP_USER: z.string().email().optional(),
+  SMTP_PASS: z.string().optional(),
+  FRONTEND_URL: z.string().url().optional().default('http://localhost:5173'),
 });
 
 const parsed = envSchema.safeParse(process.env);

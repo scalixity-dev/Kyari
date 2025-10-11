@@ -4,6 +4,8 @@ import { hashPassword } from '../../utils/hashing';
 import { UserDto, VendorProfileDto, CreateUserDto } from './user.dto';
 import { APP_CONSTANTS } from '../../config/constants';
 import { logger } from '../../utils/logger';
+import { generateSecurePassword } from '../../utils/password-generator';
+import { emailService } from '../../services/email.service';
 
 type UserWithRolesAndProfile = User & {
   roles: Array<{ role: { name: string } }>;
@@ -11,9 +13,26 @@ type UserWithRolesAndProfile = User & {
 };
 
 export class UserService {
-  async createUser(data: CreateUserDto, createdBy?: string): Promise<UserDto> {
+  async createUser(data: CreateUserDto, createdBy?: string, sendEmail: boolean = true): Promise<{ user: UserDto; password: string }> {
     try {
-      const passwordHash = await hashPassword(data.password);
+      // Generate secure password if not provided
+      const plainPassword = data.password || generateSecurePassword();
+      const passwordHash = await hashPassword(plainPassword);
+      
+      // Validate email is provided for non-vendor users
+      if (!data.email && data.role !== 'VENDOR') {
+        throw new Error('Email is required for ADMIN, OPS, and ACCOUNTS users');
+      }
+
+      // Check if email already exists
+      if (data.email) {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: data.email }
+        });
+        if (existingUser) {
+          throw new Error('User with this email already exists');
+        }
+      }
       
       // Get role
       const role = await prisma.role.findUnique({
@@ -48,8 +67,31 @@ export class UserService {
         }
       });
 
+      // Send credentials email for ADMIN, OPS, and ACCOUNTS users
+      if (sendEmail && data.email && (data.role === 'ADMIN' || data.role === 'OPS' || data.role === 'ACCOUNTS')) {
+        try {
+          await emailService.sendCredentialsEmail({
+            to: data.email,
+            name: data.name,
+            email: data.email,
+            password: plainPassword,
+            role: data.role,
+          });
+          logger.info('Credentials email sent', { userId: user.id, email: data.email });
+        } catch (emailError) {
+          logger.error('Failed to send credentials email, but user was created', { 
+            error: emailError, 
+            userId: user.id 
+          });
+          // Don't fail user creation if email fails
+        }
+      }
+
       logger.info('User created', { userId: user.id, role: data.role, createdBy });
-      return this.mapToUserDto(user);
+      return {
+        user: this.mapToUserDto(user),
+        password: plainPassword
+      };
     } catch (error) {
       logger.error('Failed to create user', { error, data: { ...data, password: '[REDACTED]' } });
       throw error;
@@ -71,7 +113,7 @@ export class UserService {
   }
 
   async findById(id: string): Promise<UserWithRolesAndProfile | null> {
-    return await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id },
       include: {
         roles: {
@@ -82,6 +124,7 @@ export class UserService {
         vendorProfile: true
       }
     });
+    return user;
   }
 
   async updateLastLogin(userId: string): Promise<void> {
@@ -107,6 +150,34 @@ export class UserService {
 
     logger.info('User status updated', { userId, status, updatedBy });
     return this.mapToUserDto(user);
+  }
+
+  async deleteUser(userId: string, deletedBy?: string): Promise<void> {
+    try {
+      // Hard delete - permanently remove from database
+      // First delete related records due to foreign key constraints
+      await prisma.$transaction(async (tx) => {
+        // Delete user roles
+        await tx.userRole.deleteMany({
+          where: { userId }
+        });
+
+        // Delete refresh tokens
+        await tx.refreshToken.deleteMany({
+          where: { userId }
+        });
+
+        // Finally delete the user
+        await tx.user.delete({
+          where: { id: userId }
+        });
+      });
+
+      logger.info('User hard deleted', { userId, deletedBy });
+    } catch (error) {
+      logger.error('Failed to delete user', { error, userId });
+      throw error;
+    }
   }
 
   async listUsers(filters?: {

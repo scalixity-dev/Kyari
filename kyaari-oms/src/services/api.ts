@@ -289,6 +289,31 @@ export class ApiService {
     }
   }
 
+  // Password Reset endpoints
+  static async sendPasswordResetCode(email: string): Promise<{ message: string }> {
+    const response = await api.post<{
+      success: boolean
+      message: string
+    }>('/api/auth/forgot-password', { email })
+    return { message: response.data.message }
+  }
+
+  static async verifyPasswordResetCode(email: string, code: string): Promise<{ valid: boolean; message: string }> {
+    const response = await api.post<{
+      success: boolean
+      data: { valid: boolean; message: string }
+    }>('/api/auth/verify-reset-code', { email, code })
+    return response.data.data
+  }
+
+  static async resetPasswordWithCode(email: string, code: string, newPassword: string, confirmPassword: string): Promise<{ message: string }> {
+    const response = await api.post<{
+      success: boolean
+      message: string
+    }>('/api/auth/reset-password', { email, code, newPassword, confirmPassword })
+    return { message: response.data.message }
+  }
+
   // Helper methods
   static isAuthenticated(): boolean {
     return !!TokenManager.getAccessToken()

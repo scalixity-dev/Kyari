@@ -55,6 +55,30 @@ export const approveVendorSchema = z.object({
   userId: z.string().min(1, 'User ID is required'),
 });
 
+// Password reset schemas
+export const sendPasswordResetCodeSchema = z.object({
+  email: emailSchema,
+});
+
+export const verifyPasswordResetCodeSchema = z.object({
+  email: emailSchema,
+  code: z.string()
+    .length(6, 'Code must be exactly 6 digits')
+    .regex(/^\d{6}$/, 'Code must contain only digits'),
+});
+
+export const resetPasswordWithCodeSchema = z.object({
+  email: emailSchema,
+  code: z.string()
+    .length(6, 'Code must be exactly 6 digits')
+    .regex(/^\d{6}$/, 'Code must contain only digits'),
+  newPassword: passwordSchema,
+  confirmPassword: z.string(),
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 // Validation helper
 export const validateSchema = <T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; errors: Record<string, string[]> } => {
   const result = schema.safeParse(data);

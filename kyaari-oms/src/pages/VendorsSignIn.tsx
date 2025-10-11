@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
+import { Eye, EyeOff } from 'lucide-react'
+import { ResetPassword } from '../components'
 
 export default function VendorsSignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showResetPassword, setShowResetPassword] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
@@ -41,10 +45,18 @@ export default function VendorsSignIn() {
       if (success) {
         navigate('/vendors')
       } else {
-        setError('Invalid credentials or insufficient permissions for vendor access')
+        setError('Invalid credentials, account not approved, or you do not have vendor access. Please contact admin if your account is pending approval.')
       }
-    } catch (error: any) {
-      setError(error.message || 'Login failed. Please try again.')
+    } catch (error: unknown) {
+      const err = error as { message?: string }
+      const errorMsg = err.message || 'Login failed. Please try again.'
+      
+      // Handle specific vendor errors
+      if (errorMsg.includes('not active')) {
+        setError('Your vendor account is pending admin approval. Please wait for approval before signing in.')
+      } else {
+        setError(errorMsg)
+      }
     } finally {
       setIsLoading(false)
     }
@@ -63,12 +75,20 @@ export default function VendorsSignIn() {
         .admin-signin__form { display:flex; flex-direction:column; gap:0.75rem; }
         .admin-signin__label { font-size:0.9rem; text-align:left; color: var(--color-primary); }
         .admin-signin__input { width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid #e6e6e6; margin-top:0.25rem; box-sizing:border-box; }
+        .admin-signin__password-wrapper { position: relative; }
+        .admin-signin__password-toggle { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0.25rem; display: flex; align-items: center; color: #666; }
+        .admin-signin__password-toggle:hover { color: var(--color-accent); }
         .admin-signin__error { color:#b00020; font-size:0.9rem; text-align:left; }
-        .admin-signin__button { margin-top:0.5rem; background-color: var(--color-accent); color: var(--color-button-text); padding:0.75rem 1rem; border-radius:8px; border:none; cursor:pointer; font-weight: var(--fw-bold); }
+        .admin-signin__button { margin-top:0.5rem; background-color: var(--color-accent); color: var(--color-button-text); padding:0.75rem 1rem; border-radius:8px; border:none; cursor:pointer; font-weight: var(--fw-bold); width:100%; }
         .admin-signin__button:hover { opacity:0.95; }
-  .admin-signin__signup { margin-top:0.5rem; font-size:0.9rem; color:var(--color-primary); display:flex; justify-content:center; gap:0.5rem; }
-  .admin-signin__signup-link { background:transparent; border:none; color:var(--color-accent); cursor:pointer; font-weight:var(--fw-medium); text-decoration:none; padding:0; }
-  .admin-signin__signup-link:hover { text-decoration:underline; }
+        .admin-signin__button:disabled { opacity:0.6; cursor:not-allowed; }
+        .admin-signin__signup { margin-top:0.5rem; font-size:0.9rem; color:var(--color-primary); display:flex; justify-content:center; gap:0.5rem; }
+        .admin-signin__signup-link { background:transparent; border:none; color:var(--color-accent); cursor:pointer; font-weight:var(--fw-medium); text-decoration:none; padding:0; }
+        .admin-signin__signup-link:hover { text-decoration:underline; }
+        .admin-signin__forgot-password { margin-top:0.75rem; text-align:center; }
+        .admin-signin__forgot-link { background:none; border:none; color: var(--color-accent); font-size:0.9rem; cursor:pointer; text-decoration:none; }
+        .admin-signin__forgot-link:hover { text-decoration:underline; }
+        .admin-signin__success { background-color: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 0.75rem; border-radius: 8px; font-size: 0.9rem; text-align: left; margin-bottom: 0.5rem; }
       `}</style>
 
       <div className="admin-signin__card">
@@ -87,18 +107,28 @@ export default function VendorsSignIn() {
 
           <label className="admin-signin__label">
             Password
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="admin-signin__input"
-              placeholder="••••••••"
-            />
+            <div className="admin-signin__password-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="admin-signin__input"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="admin-signin__password-toggle"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </label>
 
           {successMessage && (
-            <div className="text-green-700 text-sm text-left bg-green-50 border border-green-200 rounded-md p-3 mb-2">
-              {successMessage}
+            <div className="admin-signin__success">
+              ✓ {successMessage}
             </div>
           )}
           
@@ -108,12 +138,32 @@ export default function VendorsSignIn() {
             {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
 
+          <div className="admin-signin__forgot-password">
+            <button 
+              type="button"
+              onClick={() => setShowResetPassword(true)}
+              className="admin-signin__forgot-link"
+            >
+              Forgot Password?
+            </button>
+          </div>
+
           <div className="admin-signin__signup">
             <span>Don't have an account?</span>
             <Link to="/vendors/signup" className="admin-signin__signup-link">Sign up</Link>
           </div>
         </form>
       </div>
+
+      {showResetPassword && (
+        <ResetPassword
+          onClose={() => setShowResetPassword(false)}
+          onSuccess={() => {
+            setEmail('')
+            setPassword('')
+          }}
+        />
+      )}
     </div>
   )
 }

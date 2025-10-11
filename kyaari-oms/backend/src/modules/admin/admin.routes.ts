@@ -14,7 +14,8 @@ router.post('/users', adminController.createUser.bind(adminController));
 router.get('/users', adminController.listUsers.bind(adminController));
 router.get('/users/:userId', adminController.getUserDetails.bind(adminController));
 
-// Vendor management
+// Note: Vendor management has been moved to /api/vendors routes
+// Keeping these routes for backward compatibility
 router.put('/vendors/:userId/approve', adminController.approveVendor.bind(adminController));
 router.put('/vendors/:userId/suspend', adminController.suspendVendor.bind(adminController));
 

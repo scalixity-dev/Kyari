@@ -5,8 +5,14 @@ import cookieParser from 'cookie-parser';
 import { env } from './config/env';
 import { authRoutes } from './modules/auth/auth.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
+import { userRoutes } from './modules/users/user.routes';
+import { vendorRoutes } from './modules/vendors/vendor.routes';
 import { orderRoutes } from './modules/orders/order.routes';
 import { assignmentRoutes } from './modules/assignments/assignment.routes';
+import { workflowRoutes } from './modules/workflow/workflow.routes';
+import { validationRoutes } from './modules/validation/validation.routes';
+import { opsVerificationRoutes } from './modules/ops-verification/ops-verification.routes';
+import { reportingRoutes } from './modules/reporting/reporting.routes';
 import dispatchRoutes from './routes/dispatch.routes';
 import grnRoutes from './routes/grn.routes';
 import { errorHandler, notFoundHandler, rateLimiter } from './middlewares/error.middleware';
@@ -80,8 +86,14 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/vendors', vendorRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/assignments', assignmentRoutes);
+app.use('/api/workflow', workflowRoutes);
+app.use('/api/validation', validationRoutes);
+app.use('/api/ops-verification', opsVerificationRoutes);
+app.use('/api/reporting', reportingRoutes);
 app.use('/api/dispatches', dispatchRoutes);
 app.use('/api/grn', grnRoutes);
 
