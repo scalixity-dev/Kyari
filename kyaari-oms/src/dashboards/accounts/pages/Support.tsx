@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { Plus, Send, Paperclip } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Plus, Send, Paperclip, FileText, AlertTriangle, CheckSquare, Clock } from 'lucide-react'
 import { CustomDropdown } from '../../../components'
 
 type IssueType = 'Invoice Mismatch' | 'Duplicate Entry' | 'Payment Pending' | 'Payment Delay' | 'Others'
@@ -38,6 +38,45 @@ const STATUS_STYLES: Record<TicketStatus, { bg: string; color: string; border: s
   Open: { bg: '#FEF9C3', color: '#92400E', border: '#FEF08A' },
   'In Progress': { bg: '#DBEAFE', color: '#1E3A8A', border: '#BFDBFE' },
   Resolved: { bg: '#D1FAE5', color: '#065F46', border: '#A7F3D0' },
+}
+
+interface KPICardProps {
+  title: string;
+  value: number | string;
+  icon: React.ReactNode;
+  color: string;
+  subtitle?: string;
+}
+
+function KPICard({ title, value, icon, color, subtitle }: KPICardProps) {
+  const iconBgClass =
+    color === 'blue'
+      ? 'bg-blue-600'
+      : color === 'orange'
+      ? 'bg-[#C3754C]'
+      : color === 'green'
+      ? 'bg-green-600'
+      : color === 'red'
+      ? 'bg-red-600'
+      : 'bg-gray-600'
+  
+  return (
+    <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
+      <div className={`absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full ${iconBgClass} text-white shadow-md`}>
+        {React.isValidElement(icon)
+          ? React.cloneElement(
+              icon as React.ReactElement<{ color?: string; size?: number }>,
+              { color: 'white', size: 32 }
+            )
+          : icon}
+      </div>
+      <div className="flex flex-col items-center text-center w-full">
+        <h3 className="font-heading text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2 font-semibold">{title}</h3>
+        <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{value}</div>
+        {subtitle && <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">{subtitle}</div>}
+      </div>
+    </div>
+  )
 }
 
 const INITIAL_TICKETS: Ticket[] = [
@@ -341,202 +380,247 @@ export default function AccountsSupport() {
   }, [drawerTicket?.messages])
 
   return (
-    <div className="p-3 sm:p-6 font-sans text-primary" style={{ background: 'transparent' }}>
+    <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
-        <h2 className="font-heading text-secondary text-xl sm:text-2xl font-semibold">Account Support</h2>
-        <button
-          onClick={() => setShowNewTicket(true)}
-          className="bg-accent text-button-text rounded-full px-4 py-2.5 border border-transparent flex items-center justify-center gap-2 w-full sm:w-auto"
-        >
-          <Plus size={16} />
-          <span>Raise New Ticket</span>
-        </button>
-      </div>
+      <div className="mb-4 sm:mb-6 lg:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-[var(--color-heading)]">Account Support</h2>
+          <button
+            onClick={() => setShowNewTicket(true)}
+            className="bg-accent text-button-text rounded-full px-4 sm:px-5 py-2.5 min-h-[44px] border border-transparent flex items-center justify-center gap-2 whitespace-nowrap flex-shrink-0 w-full sm:w-auto"
+          >
+            <Plus size={18} className="sm:w-4 sm:h-4" />
+            <span className="text-sm sm:text-base">Raise New Ticket</span>
+          </button>
+        </div>
 
-      {/* Analytics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
-        <div className="rounded-2xl p-3 sm:p-4 shadow-md bg-white">
-          <div className="text-xs sm:text-sm text-gray-600">Open Tickets</div>
-          <div className="text-2xl sm:text-3xl font-semibold text-secondary mt-1">{openTickets}</div>
-        </div>
-        <div className="rounded-2xl p-3 sm:p-4 shadow-md bg-amber-50">
-          <div className="text-xs sm:text-sm text-gray-700">In Progress</div>
-          <div className="text-2xl sm:text-3xl font-semibold text-amber-700 mt-1">{inProgressTickets}</div>
-        </div>
-        <div className="rounded-2xl p-3 sm:p-4 shadow-md bg-green-50">
-          <div className="text-xs sm:text-sm text-gray-700">Resolved This Week</div>
-          <div className="text-2xl sm:text-3xl font-semibold text-green-700 mt-1">{resolvedThisWeek}</div>
-        </div>
-        <div className="rounded-2xl p-3 sm:p-4 shadow-md bg-blue-50">
-          <div className="text-xs sm:text-sm text-gray-700">Avg Resolution Time</div>
-          <div className="text-2xl sm:text-3xl font-semibold text-blue-700 mt-1">{avgResolutionHours} hrs</div>
+        {/* Analytics Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 pt-12 sm:pt-12 pb-8 sm:pb-10 gap-6 sm:gap-8 xl:gap-6">
+          <KPICard 
+            title="Open Tickets" 
+            value={openTickets}
+            subtitle={`${openTickets} pending`}
+            icon={<FileText size={32} />}
+            color="orange"
+          />
+          <KPICard 
+            title="In Progress" 
+            value={inProgressTickets}
+            subtitle="Active tickets"
+            icon={<AlertTriangle size={32} />}
+            color="orange"
+          />
+          <KPICard 
+            title="Resolved This Week" 
+            value={resolvedThisWeek}
+            subtitle={`${resolvedThisWeek} completed`}
+            icon={<CheckSquare size={32} />}
+            color="orange"
+          />
+          <KPICard 
+            title="Avg Resolution Time" 
+            value={`${avgResolutionHours} hrs`}
+            subtitle="Response time"
+            icon={<Clock size={32} />}
+            color="orange"
+          />
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center mb-4 bg-white border border-secondary/20 rounded-xl p-3">
-        <div className="flex flex-col sm:flex-row gap-3 flex-1">
-          <CustomDropdown
-            value={filterIssue}
-            onChange={(value) => setFilterIssue(value as IssueType | '')}
-            options={[
-              { value: '', label: 'Issue Type' },
-              { value: 'Invoice Mismatch', label: 'Invoice Mismatch' },
-              { value: 'Duplicate Entry', label: 'Duplicate Entry' },
-              { value: 'Payment Pending', label: 'Payment Pending' },
-              { value: 'Payment Delay', label: 'Payment Delay' },
-              { value: 'Others', label: 'Others' }
-            ]}
-            placeholder="Issue Type"
-            className="min-w-0 flex-1 sm:flex-none"
-          />
-          <CustomDropdown
-            value={filterStatus}
-            onChange={(value) => setFilterStatus(value as TicketStatus | '')}
-            options={[
-              { value: '', label: 'Status' },
-              { value: 'Open', label: 'Open' },
-              { value: 'In Progress', label: 'In Progress' },
-              { value: 'Resolved', label: 'Resolved' }
-            ]}
-            placeholder="Status"
-            className="min-w-0 flex-1 sm:flex-none"
-          />
-          <CustomDropdown
-            value={filterPriority}
-            onChange={(value) => setFilterPriority(value as TicketPriority | '')}
-            options={[
-              { value: '', label: 'Priority' },
-              { value: 'Low', label: 'Low' },
-              { value: 'Medium', label: 'Medium' },
-              { value: 'High', label: 'High' },
-              { value: 'Urgent', label: 'Urgent' }
-            ]}
-            placeholder="Priority"
-            className="min-w-0 flex-1 sm:flex-none"
-          />
-          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300 text-sm min-w-0 flex-1 sm:flex-none hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" />
-        </div>
-        <div className="flex gap-3 flex-1 sm:flex-none">
-          <input placeholder="Search ticket / issue" value={search} onChange={e => setSearch(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300 text-sm flex-1 hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" />
-          <button onClick={resetFilters} className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 text-sm whitespace-nowrap hover:bg-secondary hover:text-white transition-colors duration-200">Reset</button>
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-col gap-3 sm:gap-4 bg-white border border-secondary/20 rounded-xl p-3 sm:p-4">
+          {/* First row: Dropdowns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            <CustomDropdown
+              value={filterIssue}
+              onChange={(value) => setFilterIssue(value as IssueType | '')}
+              options={[
+                { value: '', label: 'Issue Type' },
+                { value: 'Invoice Mismatch', label: 'Invoice Mismatch' },
+                { value: 'Duplicate Entry', label: 'Duplicate Entry' },
+                { value: 'Payment Pending', label: 'Payment Pending' },
+                { value: 'Payment Delay', label: 'Payment Delay' },
+                { value: 'Others', label: 'Others' }
+              ]}
+              placeholder="Issue Type"
+              className="w-full"
+            />
+            <CustomDropdown
+              value={filterStatus}
+              onChange={(value) => setFilterStatus(value as TicketStatus | '')}
+              options={[
+                { value: '', label: 'Status' },
+                { value: 'Open', label: 'Open' },
+                { value: 'In Progress', label: 'In Progress' },
+                { value: 'Resolved', label: 'Resolved' }
+              ]}
+              placeholder="Status"
+              className="w-full"
+            />
+            <CustomDropdown
+              value={filterPriority}
+              onChange={(value) => setFilterPriority(value as TicketPriority | '')}
+              options={[
+                { value: '', label: 'Priority' },
+                { value: 'Low', label: 'Low' },
+                { value: 'Medium', label: 'Medium' },
+                { value: 'High', label: 'High' },
+                { value: 'Urgent', label: 'Urgent' }
+              ]}
+              placeholder="Priority"
+              className="w-full"
+            />
+            <input 
+              type="date" 
+              value={filterDate} 
+              onChange={e => setFilterDate(e.target.value)} 
+              className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" 
+            />
+          </div>
+          {/* Second row: Search and Reset */}
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <input 
+              placeholder="Search ticket / issue" 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+              className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:flex-1 hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" 
+            />
+            <button 
+              onClick={resetFilters} 
+              className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 min-h-[44px] w-full sm:w-auto hover:bg-secondary hover:text-white transition-colors duration-200 whitespace-nowrap"
+            >
+              Reset Filters
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-header-bg rounded-xl">
-        {/* Desktop Table View */}
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full border-separate border-spacing-0 whitespace-nowrap">
-          <thead>
-            <tr className="bg-white">
-              {['Ticket ID','Issue Title','Issue Type','Priority','Status','Assigned To','Created / Updated','Actions'].map(h => (
-                <th key={h} className="text-left p-3 font-heading text-secondary font-normal whitespace-nowrap">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTickets.map((t, idx) => (
-              <tr key={t.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-header-bg'}>
-                <td className="p-3 whitespace-nowrap">{t.id}</td>
-                <td className="p-3 whitespace-nowrap">{t.issueTitle}</td>
-                <td className="p-3 whitespace-nowrap">{t.issueType}</td>
-                <td className="p-3 whitespace-nowrap">
-                  {(() => {
-                    const st = PRIORITY_STYLES[t.priority]
-                    return (
-                      <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
-                        {t.priority}
-                      </span>
-                    )
-                  })()}
-                </td>
-                <td className="p-3 whitespace-nowrap">
-                  {(() => {
-                    const st = STATUS_STYLES[t.status]
-                    return (
-                      <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
-                        {t.status}
-                      </span>
-                    )
-                  })()}
-                </td>
-                <td className="p-3 whitespace-nowrap">{t.assignedTo}</td>
-                <td className="p-3 whitespace-nowrap">{t.createdAt} / {t.updatedAt}</td>
-                <td className="p-3 whitespace-nowrap">
-                  <div className="flex gap-2">
-                    <button onClick={() => setDrawerTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2.5 py-1.5 text-sm">View</button>
-                    <button onClick={() => resolveTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2.5 py-1.5 text-sm">Resolve</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filteredTickets.length === 0 && (
-              <tr>
-                <td colSpan={8} className="p-6 text-center text-gray-500">No tickets match current filters.</td>
-              </tr>
-            )}
-          </tbody>
-          </table>
-        </div>
+      {/* Table - Desktop view */}
+      <div className="hidden md:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
+        <div className="overflow-x-auto">
+          {/* Table head bar */}
+          <div className="bg-[#C3754C] text-white min-w-max">
+            <div className="flex gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-heading font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0]">
+              <div className="w-24 text-center flex-shrink-0">Ticket ID</div>
+              <div className="w-64 text-center flex-shrink-0">Issue Title</div>
+              <div className="w-40 text-center flex-shrink-0">Issue Type</div>
+              <div className="w-24 text-center flex-shrink-0">Priority</div>
+              <div className="w-28 text-center flex-shrink-0">Status</div>
+              <div className="w-32 text-center flex-shrink-0">Assigned To</div>
+              <div className="w-40 text-center flex-shrink-0">Created / Updated</div>
+              <div className="flex-1 min-w-[200px] text-center">Actions</div>
+            </div>
+          </div>
 
-        {/* Mobile/Tablet Card View */}
-        <div className="lg:hidden">
-          {filteredTickets.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">No tickets match current filters.</div>
-          ) : (
-            <div className="p-3 space-y-3">
-              {filteredTickets.map((t) => (
-                <div key={t.id} className="bg-white rounded-lg p-4 shadow-sm border">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-secondary text-sm">{t.id}</h3>
-                      <p className="text-xs text-gray-600 mt-1">{t.issueTitle}</p>
-                    </div>
-                    <div className="flex gap-1">
-                      <button onClick={() => setDrawerTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 py-1 text-xs">View</button>
-                      <button onClick={() => resolveTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 py-1 text-xs">Resolve</button>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    <div>
-                      <div className="text-xs text-gray-500">Issue Type</div>
-                      <div className="text-sm font-medium">{t.issueType}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">Assigned To</div>
-                      <div className="text-sm font-medium">{t.assignedTo}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-2">
+          {/* Body */}
+          <div className="bg-white min-w-max">
+            <div className="py-2">
+              {filteredTickets.length === 0 ? (
+                <div className="px-6 py-8 text-center text-gray-500">No tickets match current filters.</div>
+              ) : (
+                filteredTickets.map((t) => (
+                  <div key={t.id} className="flex gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center hover:bg-gray-50">
+                    <div className="w-24 text-xs md:text-sm font-medium text-gray-800 text-center flex-shrink-0">{t.id}</div>
+                    <div className="w-64 text-xs md:text-sm text-gray-700 text-center truncate flex-shrink-0">{t.issueTitle}</div>
+                    <div className="w-40 text-xs md:text-sm text-gray-700 text-center truncate flex-shrink-0">{t.issueType}</div>
+                    <div className="w-24 flex items-center justify-center flex-shrink-0">
                       {(() => {
                         const st = PRIORITY_STYLES[t.priority]
                         return (
-                          <span className="inline-block px-2 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
+                          <span className="inline-block px-2 py-1 rounded-md text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
                             {t.priority}
                           </span>
                         )
                       })()}
+                    </div>
+                    <div className="w-28 flex items-center justify-center flex-shrink-0">
                       {(() => {
                         const st = STATUS_STYLES[t.status]
                         return (
-                          <span className="inline-block px-2 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
+                          <span className="inline-block px-2 py-1 rounded-md text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
                             {t.status}
                           </span>
                         )
                       })()}
                     </div>
-                    <div className="text-xs text-gray-500">{t.createdAt}</div>
+                    <div className="w-32 text-xs md:text-sm text-gray-700 text-center truncate flex-shrink-0">{t.assignedTo}</div>
+                    <div className="w-40 text-xs text-gray-500 text-center whitespace-nowrap flex-shrink-0">{t.createdAt} / {t.updatedAt}</div>
+                    <div className="flex-1 min-w-[200px] flex gap-1 justify-center">
+                      <button onClick={() => setDrawerTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 py-1 text-xs hover:bg-secondary hover:text-white transition-colors whitespace-nowrap">View</button>
+                      <button onClick={() => resolveTicket(t)} className="bg-white text-green-600 border border-green-600 rounded-full px-2 py-1 text-xs hover:bg-green-600 hover:text-white transition-colors whitespace-nowrap">Resolve</button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
-          )}
+          </div>
         </div>
+      </div>
+
+      {/* Card View - Mobile */}
+      <div className="md:hidden space-y-3 sm:space-y-4">
+        {filteredTickets.length > 0 ? (
+          filteredTickets.map(t => (
+            <div key={t.id} className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-200">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-secondary text-sm sm:text-base truncate">{t.id}</div>
+                  <div className="text-xs sm:text-sm text-gray-600 mt-0.5 truncate">{t.issueTitle}</div>
+                </div>
+                <div className="flex gap-1 flex-shrink-0">
+                  {(() => {
+                    const st = PRIORITY_STYLES[t.priority]
+                    return (
+                      <span className="inline-block px-1.5 sm:px-2 py-1 rounded-md text-[10px] sm:text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
+                        {t.priority}
+                      </span>
+                    )
+                  })()}
+                </div>
+              </div>
+
+              <div className="space-y-1.5 sm:space-y-2 mb-3">
+                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
+                  <span className="text-gray-500 flex-shrink-0">Issue Type:</span>
+                  <span className="font-medium truncate text-right">{t.issueType}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
+                  <span className="text-gray-500 flex-shrink-0">Status:</span>
+                  {(() => {
+                    const st = STATUS_STYLES[t.status]
+                    return (
+                      <span className="inline-block px-2 sm:px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
+                        {t.status}
+                      </span>
+                    )
+                  })()}
+                </div>
+                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
+                  <span className="text-gray-500 flex-shrink-0">Assigned To:</span>
+                  <span className="font-medium truncate">{t.assignedTo}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
+                  <span className="text-gray-500 flex-shrink-0">Created:</span>
+                  <span className="font-medium">{t.createdAt}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
+                  <span className="text-gray-500 flex-shrink-0">Updated:</span>
+                  <span className="font-medium">{t.updatedAt}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
+                <button onClick={() => setDrawerTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 sm:px-3 py-2 min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm font-medium hover:bg-secondary hover:text-white transition-colors">View</button>
+                <button onClick={() => resolveTicket(t)} className="bg-white text-green-600 border border-green-600 rounded-full px-2 sm:px-3 py-2 min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm font-medium hover:bg-green-600 hover:text-white transition-colors">Resolve</button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="bg-white rounded-xl p-6 text-center text-gray-500 text-sm sm:text-base">
+            No tickets match current filters.
+          </div>
+        )}
       </div>
 
       {/* Raise Ticket Modal */}
