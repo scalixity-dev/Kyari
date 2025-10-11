@@ -13,6 +13,7 @@ import { workflowRoutes } from './modules/workflow/workflow.routes';
 import { validationRoutes } from './modules/validation/validation.routes';
 import { opsVerificationRoutes } from './modules/ops-verification/ops-verification.routes';
 import { reportingRoutes } from './modules/reporting/reporting.routes';
+import { notificationRoutes } from './modules/notifications/notification.routes';
 import dispatchRoutes from './routes/dispatch.routes';
 import grnRoutes from './routes/grn.routes';
 import { errorHandler, notFoundHandler, rateLimiter } from './middlewares/error.middleware';
@@ -94,6 +95,7 @@ app.use('/api/workflow', workflowRoutes);
 app.use('/api/validation', validationRoutes);
 app.use('/api/ops-verification', opsVerificationRoutes);
 app.use('/api/reporting', reportingRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/dispatches', dispatchRoutes);
 app.use('/api/grn', grnRoutes);
 
