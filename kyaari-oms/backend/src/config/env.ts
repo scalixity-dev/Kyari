@@ -22,6 +22,14 @@ const envSchema = z.object({
   SMTP_USER: z.string().email().optional(),
   SMTP_PASS: z.string().optional(),
   FRONTEND_URL: z.string().url().optional().default('http://localhost:5173'),
+  
+  // Firebase Configuration
+  FIREBASE_SERVICE_ACCOUNT_KEY_PATH: z.string().optional(),
+  FIREBASE_PROJECT_ID: z.string().optional(),
+  NOTIFICATION_ENABLED: z.string().transform((val) => val === 'true').default('true'),
+  NOTIFICATION_BATCH_SIZE: z.string().transform(Number).default('500'),
+  NOTIFICATION_RETRY_ATTEMPTS: z.string().transform(Number).default('3'),
+  NOTIFICATION_TOKEN_EXPIRY_DAYS: z.string().transform(Number).default('30'),
 });
 
 const parsed = envSchema.safeParse(process.env);
