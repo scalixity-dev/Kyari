@@ -50,6 +50,8 @@ export class ReportingController {
         }),
 
         // Monthly trend (last 12 months)
+import { PrismaClient, Prisma } from '@prisma/client';
+...
         prisma.$queryRaw`
           SELECT 
             DATE_TRUNC('month', invoice_date) as month,
@@ -58,30 +60,12 @@ export class ReportingController {
             status
           FROM vendor_invoices 
           WHERE invoice_date >= NOW() - INTERVAL '12 months'
-          ${vendorId ? prisma.$queryRaw`AND purchase_order_id IN (
+          ${vendorId ? Prisma.sql`AND purchase_order_id IN (
             SELECT id FROM purchase_orders WHERE vendor_id = ${vendorId}
-          )` : prisma.$queryRaw``}
+          )` : Prisma.empty}
           GROUP BY DATE_TRUNC('month', invoice_date), status
           ORDER BY month DESC
         `,
-
-        // Vendor breakdown
-        prisma.$queryRaw`
-          SELECT 
-            vp.company_name,
-            vp.id as vendor_id,
-            COUNT(vi.*) as invoice_count,
-            SUM(vi.invoice_amount) as total_amount,
-            AVG(vi.invoice_amount) as avg_amount,
-            vi.status
-          FROM vendor_invoices vi
-          JOIN purchase_orders po ON vi.purchase_order_id = po.id
-          JOIN vendor_profiles vp ON po.vendor_id = vp.id
-          ${startDate && endDate ? prisma.$queryRaw`WHERE vi.invoice_date BETWEEN ${new Date(startDate)} AND ${new Date(endDate)}` : prisma.$queryRaw``}
-          GROUP BY vp.company_name, vp.id, vi.status
-          ORDER BY total_amount DESC
-          LIMIT 20
-        `
       ]);
 
       return res.json({
