@@ -736,6 +736,246 @@ export class NotificationService {
   }
 
   /**
+   * Get device token analytics
+   */
+  async getDeviceTokenAnalytics(): Promise<{
+    totalActiveTokens: number;
+    totalExpiredTokens: number;
+    tokensByPlatform: Record<string, number>;
+    tokensByUser: Array<{
+      userId: string;
+      tokenCount: number;
+    }>;
+    recentRegistrations: Array<{
+      date: string;
+      count: number;
+    }>;
+  }> {
+    try {
+      const now = new Date();
+
+      // Total active tokens
+      const totalActiveTokens = await prisma.deviceToken.count({
+        where: {
+          isActive: true,
+          expiresAt: {
+            gt: now
+          }
+        }
+      });
+
+      // Total expired tokens
+      const totalExpiredTokens = await prisma.deviceToken.count({
+        where: {
+          OR: [
+            { isActive: false },
+            { expiresAt: { lte: now } }
+          ]
+        }
+      });
+
+      // Tokens by platform
+      const platformStats = await prisma.deviceToken.groupBy({
+        by: ['deviceType'],
+        where: {
+          isActive: true,
+          expiresAt: {
+            gt: now
+          }
+        },
+        _count: true
+      });
+
+      const tokensByPlatform: Record<string, number> = {};
+      platformStats.forEach(stat => {
+        tokensByPlatform[stat.deviceType] = stat._count;
+      });
+
+      // Tokens by user (top 20)
+      const userStats = await prisma.deviceToken.groupBy({
+        by: ['userId'],
+        where: {
+          isActive: true,
+          expiresAt: {
+            gt: now
+          }
+        },
+        _count: true,
+        orderBy: {
+          _count: {
+            userId: 'desc'
+          }
+        },
+        take: 20
+      });
+
+      const tokensByUser = userStats.map(stat => ({
+        userId: stat.userId,
+        tokenCount: stat._count
+      }));
+
+      // Recent registrations (last 7 days)
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const recentRegistrations = await prisma.$queryRaw<Array<{
+        date: string;
+        count: bigint;
+      }>>`
+        SELECT 
+          DATE(created_at) as date,
+          COUNT(*) as count
+        FROM device_token 
+        WHERE created_at >= ${sevenDaysAgo}
+        GROUP BY DATE(created_at)
+        ORDER BY date DESC
+      `;
+
+      return {
+        totalActiveTokens,
+        totalExpiredTokens,
+        tokensByPlatform,
+        tokensByUser,
+        recentRegistrations: recentRegistrations.map(stat => ({
+          date: stat.date,
+          count: Number(stat.count)
+        }))
+      };
+    } catch (error) {
+      logger.error('Failed to get device token analytics', { error });
+      throw new Error('Failed to retrieve device token analytics');
+    }
+  }
+
+  /**
+   * Test notification system with various scenarios
+   */
+  async testNotificationSystem(userId: string, testType: 'basic' | 'priority' | 'role' | 'comprehensive' = 'basic'): Promise<{
+    success: boolean;
+    results: Array<{
+      test: string;
+      status: 'PASSED' | 'FAILED';
+      message: string;
+      details?: any;
+    }>;
+  }> {
+    const results: Array<{
+      test: string;
+      status: 'PASSED' | 'FAILED';
+      message: string;
+      details?: any;
+    }> = [];
+
+    try {
+      switch (testType) {
+        case 'basic':
+          // Test basic notification
+          const basicResult = await this.sendNotificationToUser(userId, {
+            title: 'Test Notification',
+            body: 'This is a test notification to verify the system is working.',
+            priority: 'LOW' as const,
+            data: {
+              type: 'SYSTEM_TEST',
+              testId: 'basic-' + Date.now()
+            }
+          });
+
+          results.push({
+            test: 'Basic Notification',
+            status: basicResult.success ? 'PASSED' : 'FAILED',
+            message: basicResult.success ? 'Basic notification sent successfully' : 'Failed to send basic notification',
+            details: basicResult
+          });
+          break;
+
+        case 'priority':
+          // Test all priority levels
+          const priorities: Array<'LOW' | 'NORMAL' | 'URGENT'> = ['LOW', 'NORMAL', 'URGENT'];
+          for (const priority of priorities) {
+            const priorityResult = await this.sendNotificationToUser(userId, {
+              title: `${priority} Priority Test`,
+              body: `Testing ${priority} priority notification delivery.`,
+              priority,
+              data: {
+                type: 'PRIORITY_TEST',
+                priority,
+                testId: 'priority-' + Date.now()
+              }
+            });
+
+            results.push({
+              test: `${priority} Priority Notification`,
+              status: priorityResult.success ? 'PASSED' : 'FAILED',
+              message: `${priority} priority notification ${priorityResult.success ? 'sent' : 'failed'}`,
+              details: priorityResult
+            });
+          }
+          break;
+
+        case 'role':
+          // Test role-based notifications
+          const roleResult = await this.sendNotificationToRole(
+            ['ADMIN'],
+            {
+              title: 'Role-Based Test',
+              body: 'Testing role-based notification targeting.',
+              priority: 'NORMAL' as const,
+              data: {
+                type: 'ROLE_TEST',
+                testId: 'role-' + Date.now()
+              }
+            }
+          );
+
+          results.push({
+            test: 'Role-Based Notification',
+            status: roleResult.success ? 'PASSED' : 'FAILED',
+            message: roleResult.success ? 'Role-based notification sent successfully' : 'Failed to send role-based notification',
+            details: roleResult
+          });
+          break;
+
+        case 'comprehensive':
+          // Run all tests
+          const comprehensiveResults = await Promise.all([
+            this.testNotificationSystem(userId, 'basic'),
+            this.testNotificationSystem(userId, 'priority'),
+            this.testNotificationSystem(userId, 'role')
+          ]);
+
+          comprehensiveResults.forEach((result, index) => {
+            const testNames = ['Basic Tests', 'Priority Tests', 'Role Tests'];
+            results.push({
+              test: testNames[index],
+              status: result.success ? 'PASSED' : 'FAILED',
+              message: `${testNames[index]} completed with ${result.results.filter(r => r.status === 'PASSED').length}/${result.results.length} passing`,
+              details: result.results
+            });
+          });
+          break;
+      }
+
+      const allPassed = results.every(result => result.status === 'PASSED');
+
+      return {
+        success: allPassed,
+        results
+      };
+    } catch (error) {
+      logger.error('Notification system test failed', { error, testType });
+      results.push({
+        test: 'System Test',
+        status: 'FAILED',
+        message: 'Test execution failed due to system error',
+        details: error
+      });
+
+      return {
+        success: false,
+        results
+      };
+    }
+  }
+
+  /**
    * Simulate notification for development (when Firebase is not available)
    */
   private async simulateNotification(userId: string, payload: NotificationPayload): Promise<NotificationResult> {
