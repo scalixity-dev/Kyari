@@ -2,6 +2,8 @@ import { Order, OrderItem, VendorProfile, Prisma } from '@prisma/client';
 import { prisma } from '../../config/database';
 import { logger } from '../../utils/logger';
 import { APP_CONSTANTS } from '../../config/constants';
+import { notificationService } from '../notifications/notification.service';
+import { NotificationPriority } from '@prisma/client';
 import { 
   CreateOrderDto, 
   OrderDto, 
@@ -46,6 +48,9 @@ export class OrderService {
         itemCount: data.items.length,
         createdById 
       });
+
+      // Send notification to primary vendor about new order assignment (URGENT priority)
+      await this.sendOrderAssignmentNotification(order, data);
       
       return await this.getOrderById(order.id);
     } catch (error) {
@@ -331,6 +336,82 @@ export class OrderService {
       createdAt: order.createdAt,
       pricingStatus: 'complete' // Always complete since pricing is mandatory
     };
+  }
+
+  /**
+   * Send notification to vendor about new order assignment
+   */
+  private async sendOrderAssignmentNotification(order: Order, orderData: CreateOrderDto): Promise<void> {
+    try {
+      // Get vendor information
+      const vendor = await prisma.vendorProfile.findUnique({
+        where: { id: orderData.primaryVendorId },
+        include: {
+          user: true
+        }
+      });
+
+      if (!vendor || !vendor.user) {
+        logger.warn('Cannot send order notification - vendor or user not found', {
+          vendorId: orderData.primaryVendorId,
+          orderId: order.id
+        });
+        return;
+      }
+
+      // Calculate total order value for notification
+      const totalValue = orderData.items.reduce((sum, item) => {
+        return sum + (item.pricePerUnit * item.quantity);
+      }, 0);
+
+      // Prepare notification payload
+      const notificationPayload = {
+        title: `New Order Assigned: ${order.orderNumber}`,
+        body: `You have received a new order with ${orderData.items.length} items worth $${totalValue.toFixed(2)}. Please confirm your availability.`,
+        priority: NotificationPriority.URGENT,
+        data: {
+          type: 'order_assignment',
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          itemCount: orderData.items.length.toString(),
+          totalValue: totalValue.toString(),
+          vendorId: vendor.id,
+          action: 'view_order'
+        },
+        clickAction: `/orders/${order.id}`, // Deep link to order details
+        badge: 1
+      };
+
+      // Send notification
+      const result = await notificationService.sendNotificationToUser(
+        vendor.user.id,
+        notificationPayload
+      );
+
+      if (result.success) {
+        logger.info('Order assignment notification sent successfully', {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          vendorId: vendor.id,
+          vendorName: vendor.companyName,
+          notificationId: result.notificationLogId,
+          sentCount: result.sentCount
+        });
+      } else {
+        logger.error('Failed to send order assignment notification', {
+          orderId: order.id,
+          vendorId: vendor.id,
+          errors: result.errors
+        });
+      }
+
+    } catch (error) {
+      logger.error('Error sending order assignment notification', {
+        orderId: order.id,
+        vendorId: orderData.primaryVendorId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   }
 }
 
