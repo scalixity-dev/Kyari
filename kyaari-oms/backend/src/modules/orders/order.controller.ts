@@ -35,6 +35,41 @@ export class OrderController {
     }
   }
 
+  async updateOrder(req: Request, res: Response): Promise<void> {
+    try {
+      const orderIdValidation = validateSchema(orderIdSchema, req.params);
+      if (!orderIdValidation.success) {
+        ResponseHelper.validationError(res, orderIdValidation.errors);
+        return;
+      }
+
+      const bodyValidation = validateSchema(createOrderSchema, req.body);
+      if (!bodyValidation.success) {
+        ResponseHelper.validationError(res, bodyValidation.errors);
+        return;
+      }
+
+      const userId = req.user?.userId;
+      if (!userId) {
+        ResponseHelper.unauthorized(res, 'Authentication required');
+        return;
+      }
+
+      const result = await orderService.updateOrder(orderIdValidation.data.id, bodyValidation.data, userId);
+
+      ResponseHelper.success(res, result, 'Order updated successfully');
+    } catch (error) {
+      logger.error('Order update controller error', { error, orderId: req.params.id });
+      
+      if (error instanceof Error && error.message.includes('cannot be updated')) {
+        ResponseHelper.error(res, error.message, 400);
+        return;
+      }
+      
+      ResponseHelper.error(res, error instanceof Error ? error.message : 'Failed to update order');
+    }
+  }
+
   async listOrders(req: Request, res: Response): Promise<void> {
     try {
       const validation = validateSchema(orderQuerySchema, req.query);

@@ -40,6 +40,12 @@ router.get('/:id',
   orderController.getOrderById.bind(orderController)
 );
 
+// Update order - ADMIN only (only if RECEIVED status)
+router.put('/:id', 
+  requireRole([APP_CONSTANTS.ROLES.ADMIN]), 
+  orderController.updateOrder.bind(orderController)
+);
+
 // Future endpoints for order management
 router.put('/:id/status', 
   requireRole([APP_CONSTANTS.ROLES.ADMIN, APP_CONSTANTS.ROLES.OPS]), 

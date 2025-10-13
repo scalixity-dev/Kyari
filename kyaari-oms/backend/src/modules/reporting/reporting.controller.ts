@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { logger } from '../../utils/logger';
 
 const prisma = new PrismaClient();
@@ -50,8 +50,6 @@ export class ReportingController {
         }),
 
         // Monthly trend (last 12 months)
-import { PrismaClient, Prisma } from '@prisma/client';
-...
         prisma.$queryRaw`
           SELECT 
             DATE_TRUNC('month', invoice_date) as month,
@@ -66,6 +64,24 @@ import { PrismaClient, Prisma } from '@prisma/client';
           GROUP BY DATE_TRUNC('month', invoice_date), status
           ORDER BY month DESC
         `,
+
+        // Vendor breakdown
+        prisma.$queryRaw`
+          SELECT 
+            vp.company_name,
+            vp.id as vendor_id,
+            COUNT(vi.*) as invoice_count,
+            SUM(vi.invoice_amount) as total_amount,
+            AVG(vi.invoice_amount) as avg_amount
+          FROM vendor_profiles vp
+          JOIN purchase_orders po ON vp.id = po.vendor_id
+          JOIN vendor_invoices vi ON po.id = vi.purchase_order_id
+          ${startDate && endDate ? Prisma.sql`WHERE vi.invoice_date BETWEEN ${new Date(startDate)} AND ${new Date(endDate)}` : Prisma.empty}
+          ${vendorId ? Prisma.sql`${startDate && endDate ? Prisma.sql`AND` : Prisma.sql`WHERE`} vp.id = ${vendorId}` : Prisma.empty}
+          GROUP BY vp.company_name, vp.id
+          ORDER BY total_amount DESC
+          LIMIT 10
+        `
       ]);
 
       return res.json({
@@ -165,7 +181,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
           FROM payments p
           JOIN purchase_orders po ON p.purchase_order_id = po.id
           JOIN vendor_profiles vp ON po.vendor_id = vp.id
-          ${startDate && endDate ? prisma.$queryRaw`WHERE p.created_at BETWEEN ${new Date(startDate)} AND ${new Date(endDate)}` : prisma.$queryRaw``}
+          ${startDate && endDate ? Prisma.sql`WHERE p.created_at BETWEEN ${new Date(startDate)} AND ${new Date(endDate)}` : Prisma.empty}
           GROUP BY vp.company_name, vp.id, p.status
           ORDER BY total_amount DESC
           LIMIT 20
@@ -284,9 +300,9 @@ import { PrismaClient, Prisma } from '@prisma/client';
             COUNT(CASE WHEN p.status = 'PENDING' THEN 1 END) as pending_payments
           FROM payments p
           WHERE p.created_at >= ${dateFilter}
-          ${vendorId ? prisma.$queryRaw`AND p.purchase_order_id IN (
+          ${vendorId ? Prisma.sql`AND p.purchase_order_id IN (
             SELECT id FROM purchase_orders WHERE vendor_id = ${vendorId}
-          )` : prisma.$queryRaw``}
+          )` : Prisma.empty}
           GROUP BY DATE_TRUNC('month', p.created_at)
           ORDER BY month DESC
         `,
@@ -312,7 +328,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
           LEFT JOIN order_items oi ON aoi.order_item_id = oi.id
           LEFT JOIN orders o ON oi.order_id = o.id
           WHERE o.created_at >= ${dateFilter}
-          ${vendorId ? prisma.$queryRaw`AND vp.id = ${vendorId}` : prisma.$queryRaw``}
+          ${vendorId ? Prisma.sql`AND vp.id = ${vendorId}` : Prisma.empty}
           GROUP BY vp.company_name, vp.id
           HAVING COUNT(DISTINCT o.id) > 0
           ORDER BY total_order_value DESC
@@ -551,7 +567,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
           JOIN goods_receipt_items gri ON grn.id = gri.goods_receipt_note_id
           LEFT JOIN tickets t ON grn.id = t.goods_receipt_note_id
           WHERE grn.received_at >= ${dateFilter.receivedAt?.gte || new Date('2024-01-01')}
-          ${vendorId ? prisma.$queryRaw`AND vp.id = ${vendorId}` : prisma.$queryRaw``}
+          ${vendorId ? Prisma.sql`AND vp.id = ${vendorId}` : Prisma.empty}
           GROUP BY vp.company_name, vp.id
           HAVING COUNT(grn.*) > 0
           ORDER BY grns_with_issues DESC

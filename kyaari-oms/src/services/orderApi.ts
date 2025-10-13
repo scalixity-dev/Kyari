@@ -127,6 +127,16 @@ class OrderApiService {
     return response.data.data;
   }
 
+  async updateOrder(id: string, data: CreateOrderRequest): Promise<Order> {
+    const response = await api.put<{
+      success: boolean;
+      data: Order;
+    }>(`/api/orders/${id}`, data, {
+      headers: this.getAuthHeader()
+    });
+    return response.data.data;
+  }
+
   async updateOrderStatus(id: string, status: string): Promise<Order> {
     const response = await api.put<{
       success: boolean;
