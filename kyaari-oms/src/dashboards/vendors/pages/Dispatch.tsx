@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FileText, CheckSquare, X, Clock, Package, MapPin } from 'lucide-react'
+import { FileText, CheckSquare, X, Clock, Package, MapPin, AlertTriangle } from 'lucide-react'
 
 interface DispatchOrder {
   id: string
@@ -56,20 +56,20 @@ const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, order, onClose, o
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-[var(--color-heading)]">Mark as Dispatched</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-xl p-4 sm:p-6 w-full max-w-lg mx-0 sm:mx-4 max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slide-up sm:animate-none">
+        <div className="flex items-center justify-between mb-3 sm:mb-4 sticky top-0 bg-white pb-3 sm:pb-0 sm:static">
+          <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Mark as Dispatched</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
             <X size={20} />
           </button>
         </div>
         
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-2">Order: <span className="font-medium">{order.orderNumber}</span></p>
-          <p className="text-sm text-gray-600 mb-2">PO: <span className="font-medium">{order.poNumber}</span></p>
-          <p className="text-sm text-gray-600 mb-2">Items: <span className="font-medium">{order.items}</span></p>
-          <p className="text-sm text-gray-600">Quantity: <span className="font-medium">{order.quantity}</span></p>
+        <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg space-y-1.5">
+          <p className="text-xs sm:text-sm text-gray-600">Order: <span className="font-medium text-gray-900">{order.orderNumber}</span></p>
+          <p className="text-xs sm:text-sm text-gray-600">PO: <span className="font-medium text-gray-900">{order.poNumber}</span></p>
+          <p className="text-xs sm:text-sm text-gray-600">Items: <span className="font-medium text-gray-900">{order.items}</span></p>
+          <p className="text-xs sm:text-sm text-gray-600">Quantity: <span className="font-medium text-gray-900">{order.quantity}</span></p>
         </div>
 
         <div className="mb-4">
@@ -77,7 +77,7 @@ const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, order, onClose, o
           <p className="text-xs text-gray-500 mb-3">Upload handover note, porter receipt, or delivery photo</p>
           
           <div 
-            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+            className={`border-2 border-dashed rounded-lg p-4 sm:p-6 text-center transition-colors ${
               dragOver ? 'border-[var(--color-accent)] bg-blue-50' : 'border-gray-300'
             }`}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
@@ -85,8 +85,8 @@ const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, order, onClose, o
             onDrop={handleDrop}
           >
             <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-600 mb-2">Drag & drop your proof file here, or</p>
-            <label className="inline-block px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg cursor-pointer hover:bg-[var(--color-accent)]/90">
+            <p className="text-xs sm:text-sm text-gray-600 mb-2">Drag & drop your proof file here, or</p>
+            <label className="inline-block px-3 sm:px-4 py-1.5 sm:py-2 bg-[var(--color-accent)] text-white text-sm rounded-lg cursor-pointer hover:bg-[var(--color-accent)]/90">
               Browse Files
               <input
                 type="file"
@@ -99,22 +99,22 @@ const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, order, onClose, o
           </div>
 
           {selectedFile && (
-            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="mt-3 p-2.5 sm:p-3 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium text-green-800">{selectedFile.name}</span>
-                <span className="text-xs text-green-600">({(selectedFile.size / 1024).toFixed(1)} KB)</span>
+                <FileText className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span className="text-xs sm:text-sm font-medium text-green-800 truncate flex-1">{selectedFile.name}</span>
+                <span className="text-xs text-green-600 flex-shrink-0">({(selectedFile.size / 1024).toFixed(1)} KB)</span>
               </div>
             </div>
           )}
         </div>
 
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2.5 sm:p-3 mb-4">
           <div className="flex items-start gap-2">
-            <Package className="w-4 h-4 text-yellow-600 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-yellow-800">Dispatch Confirmation</p>
-              <p className="text-xs text-yellow-700 mt-1">
+            <Package className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-yellow-800">Dispatch Confirmation</p>
+              <p className="text-xs text-yellow-700 mt-1 leading-relaxed">
                 By marking as dispatched, you confirm that the order has been handed over for delivery.
                 Store operator will verify receipt upon arrival.
               </p>
@@ -122,16 +122,16 @@ const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, order, onClose, o
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sticky bottom-0 bg-white pt-2 sm:pt-0 sm:static">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex-1 px-4 py-2 sm:py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            className="flex-1 px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:bg-[var(--color-accent)]/90 transition-colors"
+            className="flex-1 px-4 py-2 sm:py-2.5 bg-[var(--color-accent)] text-white text-sm font-medium rounded-lg hover:bg-[var(--color-accent)]/90 transition-colors order-1 sm:order-2"
           >
             Mark as Dispatched
           </button>
@@ -150,9 +150,19 @@ const getStatusBadge = (status: DispatchOrder['status']) => {
     case 'In Transit':
       return <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">In Transit</span>
     case 'Delivered - Verified':
-      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Verified ✓</span>
+      return (
+        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium inline-flex items-center gap-1">
+          <CheckSquare className="w-3 h-3 text-green-800" />
+          <span>Verified</span>
+        </span>
+      )
     case 'Delivered - Mismatch':
-      return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">Mismatch ⚠️</span>
+      return (
+        <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium inline-flex items-center gap-1">
+          <AlertTriangle className="w-3 h-3 text-red-800" />
+          <span>Mismatch</span>
+        </span>
+      )
     case 'Received by Store':
       return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Received</span>
     default:
@@ -163,11 +173,26 @@ const getStatusBadge = (status: DispatchOrder['status']) => {
 const getVerificationBadge = (verification: DispatchOrder['storeVerification']) => {
   switch (verification) {
     case 'OK':
-      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">✓ Verified</span>
+      return (
+        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium inline-flex items-center gap-1">
+          <CheckSquare className="w-3 h-3 text-green-800" />
+          <span>Verified</span>
+        </span>
+      )
     case 'Mismatch':
-      return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">⚠️ Mismatch</span>
+      return (
+        <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium inline-flex items-center gap-1">
+          <AlertTriangle className="w-3 h-3 text-red-800" />
+          <span>Mismatch</span>
+        </span>
+      )
     case 'Pending':
-      return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">⏳ Pending</span>
+      return (
+        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium inline-flex items-center gap-1">
+          <Clock className="w-3 h-3 text-yellow-800" />
+          <span>Pending</span>
+        </span>
+      )
     default:
       return null
   }
@@ -295,45 +320,48 @@ export default function Dispatch() {
   const delivered = dispatchOrders.filter(order => ['Delivered - Verified', 'Delivered - Mismatch', 'Received by Store'].includes(order.status))
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden bg-[var(--color-sharktank-bg)]">
       {/* Header */}
-      <div className="mb-4 sm:mb-6 lg:mb-8">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-1 sm:mb-2">Dispatch Management</h1>
-        <p className="text-sm sm:text-base text-[var(--color-primary)]">Manage order dispatch and track delivery status</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 sm:mb-0 font-[var(--font-heading)]">Dispatch Management</h1>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <Package className="w-5 h-5 text-blue-500" />
-            <span className="text-sm font-medium text-gray-600">Ready for Dispatch</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6">
+        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
+          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <Package size={24} color="white" className="sm:w-8 sm:h-8" />
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{readyForDispatch.length}</div>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Ready for Dispatch</h3>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{readyForDispatch.length}</div>
+          <div className="text-xs sm:text-sm text-gray-600 mt-1">Pending</div>
         </div>
-        
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <Clock className="w-5 h-5 text-yellow-500" />
-            <span className="text-sm font-medium text-gray-600">Dispatched</span>
+
+        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
+          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <Clock size={24} color="white" className="sm:w-8 sm:h-8" />
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{dispatched.length}</div>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Dispatched</h3>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{dispatched.length}</div>
+          <div className="text-xs sm:text-sm text-gray-600 mt-1">Marked</div>
         </div>
-        
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <MapPin className="w-5 h-5 text-orange-500" />
-            <span className="text-sm font-medium text-gray-600">In Transit</span>
+
+        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
+          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <MapPin size={24} color="white" className="sm:w-8 sm:h-8" />
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{inTransit.length}</div>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">In Transit</h3>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{inTransit.length}</div>
+          <div className="text-xs sm:text-sm text-gray-600 mt-1">En route</div>
         </div>
-        
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <CheckSquare className="w-5 h-5 text-green-500" />
-            <span className="text-sm font-medium text-gray-600">Delivered</span>
+
+        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
+          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <CheckSquare size={24} color="white" className="sm:w-8 sm:h-8" />
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{delivered.length}</div>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Delivered</h3>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{delivered.length}</div>
+          <div className="text-xs sm:text-sm text-gray-600 mt-1">Completed</div>
         </div>
       </div>
 
@@ -406,25 +434,27 @@ export default function Dispatch() {
         </div>
       </div>
 
+      {/* Dispatch Orders Heading */}
+      <div className="mb-3 sm:mb-4">
+        <h2 className="text-base sm:text-lg md:text-xl font-semibold text-[var(--color-heading)]">Dispatch Orders</h2>
+      </div>
+
       {/* Dispatch Orders Table */}
       <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">Dispatch Orders</h2>
-        </div>
         
         {/* Desktop Table */}
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-[var(--color-accent)]">
               <tr>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO Number</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Store Verification</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Order</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">PO Number</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Items</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Qty</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Amount</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Store Verification</th>
+                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -456,10 +486,10 @@ export default function Dispatch() {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 lg:px-6 py-4 max-w-[14rem] break-words align-top">
                     {getVerificationBadge(order.storeVerification)}
                     {order.verificationNotes && (
-                      <div className="text-xs text-gray-500 mt-1 max-w-40">
+                      <div className="text-xs text-gray-500 mt-1 max-w-[14rem] break-words">
                         {order.verificationNotes}
                       </div>
                     )}
@@ -495,34 +525,36 @@ export default function Dispatch() {
         {/* Mobile Cards */}
         <div className="lg:hidden divide-y divide-gray-200">
           {dispatchOrders.map((order) => (
-            <div key={order.id} className="p-4 sm:p-6">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-medium text-[var(--color-heading)]">{order.orderNumber}</h3>
+            <div key={order.id} className="p-3 sm:p-4 md:p-5">
+              <div className="flex justify-between items-start mb-3 gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-sm sm:text-base text-[var(--color-heading)] truncate">{order.orderNumber}</h3>
                   <p className="text-xs sm:text-sm text-gray-600 mb-1">{order.date}</p>
-                  <p className="text-[10px] sm:text-xs text-gray-500">PO: {order.poNumber}</p>
+                  <p className="text-xs text-gray-500 truncate">PO: {order.poNumber}</p>
                 </div>
-                {getStatusBadge(order.status)}
+                <div className="flex-shrink-0">
+                  {getStatusBadge(order.status)}
+                </div>
               </div>
               
-              <div className="mb-4">
-                <p className="text-xs sm:text-sm text-gray-600 mb-1">
-                  <span className="font-medium">Item:</span> {order.items}
+              <div className="mb-3 space-y-1.5">
+                <p className="text-xs sm:text-sm text-gray-600">
+                  <span className="font-medium text-gray-800">Item:</span> {order.items}
                 </p>
-                <p className="text-xs sm:text-sm text-gray-600 mb-1">
-                  <span className="font-medium">Quantity:</span> {order.quantity}
+                <p className="text-xs sm:text-sm text-gray-600">
+                  <span className="font-medium text-gray-800">Quantity:</span> {order.quantity}
                 </p>
-                <p className="text-xs sm:text-sm font-medium text-gray-900">
-                  <span className="font-medium">Amount:</span> ₹{order.amount.toLocaleString()}
+                <p className="text-xs sm:text-sm text-gray-900">
+                  <span className="font-medium text-gray-800">Amount:</span> <span className="font-semibold">₹{order.amount.toLocaleString()}</span>
                 </p>
                 {order.dispatchDate && (
-                  <p className="text-[10px] sm:text-xs text-gray-500 mt-1">
-                    Dispatched: {order.dispatchDate}
+                  <p className="text-xs text-gray-500">
+                    <span className="font-medium">Dispatched:</span> {order.dispatchDate}
                   </p>
                 )}
                 {order.estimatedDelivery && order.status !== 'Received by Store' && (
-                  <p className="text-[10px] sm:text-xs text-gray-500">
-                    ETA: {order.estimatedDelivery}
+                  <p className="text-xs text-gray-500">
+                    <span className="font-medium">ETA:</span> {order.estimatedDelivery}
                   </p>
                 )}
               </div>
@@ -531,7 +563,7 @@ export default function Dispatch() {
                 <div className="mb-3">
                   {getVerificationBadge(order.storeVerification)}
                   {order.verificationNotes && (
-                    <p className="text-xs text-gray-500 mt-1">{order.verificationNotes}</p>
+                    <p className="text-xs text-gray-600 mt-2 p-2 bg-gray-50 rounded border border-gray-100 break-words leading-relaxed">{order.verificationNotes}</p>
                   )}
                 </div>
               )}
@@ -539,17 +571,17 @@ export default function Dispatch() {
               {order.status === 'Ready for Dispatch' && (
                 <button
                   onClick={() => handleMarkDispatch(order.id)}
-                  className="w-full px-4 py-2 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[var(--color-accent)] text-white rounded-lg hover:bg-[var(--color-accent)]/90 transition-colors text-sm font-medium flex items-center justify-center gap-2"
                 >
                   <Package size={16} />
-                  Mark as Dispatched
+                  <span>Mark as Dispatched</span>
                 </button>
               )}
               
               {order.dispatchProof && (
-                <div className="flex items-center gap-2 mt-2 p-2 bg-gray-50 rounded">
-                  <FileText className="w-4 h-4 text-gray-500" />
-                  <span className="text-xs sm:text-sm text-gray-600">{order.dispatchProof}</span>
+                <div className="flex items-center gap-2 mt-2 p-2 bg-blue-50 border border-blue-100 rounded text-left">
+                  <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                  <span className="text-xs sm:text-sm text-blue-800 truncate">{order.dispatchProof}</span>
                 </div>
               )}
             </div>
