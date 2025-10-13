@@ -372,6 +372,129 @@ export class OrderService {
     };
   }
 
+  async updateOrder(orderId: string, data: CreateOrderDto, updatedById: string): Promise<OrderDto> {
+    try {
+      // Check if order exists
+      const existingOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          items: {
+            include: {
+              assignedItems: true
+            }
+          }
+        }
+      });
+
+      if (!existingOrder) {
+        throw new Error('Order not found');
+      }
+
+      // Only allow updates if order is in RECEIVED status
+      if (existingOrder.status !== 'RECEIVED') {
+        throw new Error(`Order with status ${existingOrder.status} cannot be updated. Only orders with RECEIVED status can be edited.`);
+      }
+
+      // Check if any items have been confirmed by vendor
+      const hasConfirmedAssignments = existingOrder.items.some(item =>
+        item.assignedItems.some(assigned => assigned.confirmedQuantity !== null)
+      );
+
+      if (hasConfirmedAssignments) {
+        throw new Error('Order cannot be updated as vendor has already confirmed some items');
+      }
+
+      // Validate new order data
+      await this.validateOrderData(data);
+
+      // Update order in transaction
+      await prisma.$transaction(async (tx) => {
+        // Delete existing assigned items
+        for (const item of existingOrder.items) {
+          await tx.assignedOrderItem.deleteMany({
+            where: { orderItemId: item.id }
+          });
+        }
+
+        // Delete existing order items
+        await tx.orderItem.deleteMany({
+          where: { orderId }
+        });
+
+        // Calculate total order value from new items
+        const totalOrderValue = data.items.reduce((sum, item) => {
+          return sum + (item.pricePerUnit * item.quantity);
+        }, 0);
+
+        // Update order
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            orderNumber: data.orderNumber,
+            ...(data.primaryVendorId && { primaryVendorId: data.primaryVendorId }),
+            totalValue: totalOrderValue,
+            updatedAt: new Date()
+          }
+        });
+
+        // Create new order items
+        for (const itemData of data.items) {
+          const totalItemPrice = itemData.pricePerUnit * itemData.quantity;
+          
+          const orderItem = await tx.orderItem.create({
+            data: {
+              orderId,
+              productName: itemData.productName,
+              sku: itemData.sku,
+              quantity: itemData.quantity,
+              pricePerUnit: itemData.pricePerUnit,
+              totalPrice: totalItemPrice
+            }
+          });
+
+          // Auto-create assigned order item for vendor (only if vendorId is provided)
+          if (data.primaryVendorId) {
+            await tx.assignedOrderItem.create({
+              data: {
+                orderItemId: orderItem.id,
+                vendorId: data.primaryVendorId,
+                assignedQuantity: itemData.quantity,
+                status: 'PENDING_CONFIRMATION',
+                assignedById: updatedById
+              }
+            });
+          }
+        }
+
+        // Create audit log
+        await tx.auditLog.create({
+          data: {
+            actorUserId: updatedById,
+            action: APP_CONSTANTS.AUDIT_ACTIONS.ORDER_UPDATE || 'ORDER_UPDATE',
+            entityType: 'Order',
+            entityId: orderId,
+            metadata: {
+              orderNumber: data.orderNumber,
+              primaryVendorId: data.primaryVendorId || undefined,
+              itemCount: data.items.length
+            }
+          }
+        });
+      });
+
+      logger.info('Order updated successfully', { 
+        orderId, 
+        orderNumber: data.orderNumber,
+        updatedById 
+      });
+
+      return await this.getOrderById(orderId);
+    } catch (error) {
+      logger.error('Failed to update order', { error, orderId });
+      throw error;
+    }
+  }
+
   async deleteOrder(orderId: string, deletedById: string): Promise<void> {
     try {
       const orderMetadata = await prisma.$transaction(async (tx) => {
@@ -541,6 +664,43 @@ export class OrderService {
     } catch (error) {
       logger.error('Failed to assign vendor to order', { error, orderId, vendorId });
       throw error;
+    }
+  }
+
+  private async sendOrderAssignmentNotification(order: Order, data: CreateOrderDto): Promise<void> {
+    if (!data.primaryVendorId) {
+      return; // Skip notification if no vendor assigned
+    }
+
+    try {
+      const vendor = await prisma.vendorProfile.findUnique({
+        where: { id: data.primaryVendorId }
+      });
+
+      if (!vendor) {
+        return;
+      }
+
+      await notificationService.sendNotificationToUser(
+        vendor.userId,
+        {
+          title: 'New Order Assigned',
+          body: `You have been assigned a new order: ${data.orderNumber}`,
+          priority: NotificationPriority.URGENT,
+          data: {
+            type: 'ORDER_ASSIGNMENT',
+            orderId: order.id,
+            orderNumber: data.orderNumber
+          }
+        }
+      );
+    } catch (error) {
+      logger.error('Failed to send order assignment notification', { 
+        orderId: order.id, 
+        vendorId: data.primaryVendorId,
+        error 
+      });
+      // Don't throw - notification failure shouldn't block order creation
     }
   }
 

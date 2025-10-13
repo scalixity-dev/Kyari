@@ -325,19 +325,13 @@ export class OpsVerificationController {
       let updatedInvoice;
 
       await prisma.$transaction(async (tx) => {
-        // Update invoice status
-        const newStatus =
-          action === 'approve'
-            ? 'APPROVED'
-            : action === 'request_changes'
-              ? 'NEEDS_REVISION'
-              : 'REJECTED';
+        // Update invoice status (both reject and request_changes map to REJECTED)
+        const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
         
         updatedInvoice = await tx.vendorInvoice.update({
           where: { id: invoiceId },
           data: {
             status: newStatus,
-            ...(remarks && { metadata: { verificationRemarks: remarks } }),
             updatedAt: new Date()
           }
         });
@@ -469,18 +463,11 @@ export class OpsVerificationController {
           // wrap the following in a transaction so `tx` is defined
           await prisma.$transaction(async (tx) => {
             const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
-            
-            // merge existing metadata with any new bulkVerificationRemarks
-            const nextMetadata = {
-              ...(invoice.metadata as Record<string, unknown> | null ?? {}),
-              ...(remarks ? { bulkVerificationRemarks: remarks } : {})
-            };
 
             await tx.vendorInvoice.update({
               where: { id: invoiceId },
               data: {
                 status: newStatus,
-                metadata: nextMetadata,
                 updatedAt: new Date()
               }
             });
