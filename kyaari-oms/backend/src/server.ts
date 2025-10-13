@@ -2,12 +2,17 @@ import { app } from './app';
 import { env } from './config/env';
 import { logger } from './utils/logger';
 import { prisma } from './config/database';
+import { SchedulerService } from './services/scheduler.service';
 
 const startServer = async () => {
   try {
     // Test database connection
     await prisma.$connect();
     logger.info('Database connected successfully');
+
+    // Initialize and start token cleanup scheduler
+    const scheduler = SchedulerService.getInstance();
+    scheduler.startTokenCleanup();
 
     // Start server
     const server = app.listen(env.PORT, () => {
@@ -19,6 +24,9 @@ const startServer = async () => {
     // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
       logger.info(`${signal} received, shutting down gracefully`);
+      
+      // Stop scheduler
+      scheduler.stopTokenCleanup();
       
       server.close(async () => {
         logger.info('HTTP server closed');
