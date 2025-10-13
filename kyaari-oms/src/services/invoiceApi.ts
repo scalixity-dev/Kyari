@@ -85,6 +85,8 @@ export class InvoiceApiService {
             orderDate: string
             confirmationDate: string
             totalAmount: number
+            accountInvoiceUrl?: string | null
+            vendorInvoiceUrl?: string | null
           }>
         }
       }>('/api/assignments/accounts/vendor-orders?limit=100')
@@ -104,8 +106,8 @@ export class InvoiceApiService {
           poStatus: order.poStatus,
           items: itemsStr,
           amount: order.totalAmount, // Use actual total amount from backend
-          accountInvoice: null, // Will be populated when invoice is generated
-          vendorInvoice: null  // Will be populated when vendor uploads
+          accountInvoice: order.accountInvoiceUrl ?? null, // Actual URL from backend
+          vendorInvoice: order.vendorInvoiceUrl ?? null  // Actual URL from backend
         }
       })
 
@@ -236,13 +238,18 @@ export class InvoiceApiService {
   static async uploadAndLinkInvoice(
     file: File,
     orderId: string,
-    vendorId: string
+    vendorId: string,
+    invoiceNumber?: string
   ): Promise<UploadInvoiceResponse> {
     try {
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('invoice', file) // Backend expects 'invoice', not 'file'
+      formData.append('invoiceType', 'ACCOUNTS_UPLOAD')
       formData.append('orderId', orderId)
       formData.append('vendorId', vendorId)
+      if (invoiceNumber) {
+        formData.append('invoiceNumber', invoiceNumber)
+      }
 
       const response = await api.post<UploadInvoiceResponse>(
         '/api/invoices/upload-and-link',

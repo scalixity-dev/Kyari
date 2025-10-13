@@ -99,20 +99,13 @@ function AccountsInvoices() {
         if (!order) return
 
         // Upload file to S3 and link to order
-        const response = await InvoiceApiService.uploadAndLinkInvoice(
+        await InvoiceApiService.uploadAndLinkInvoice(
           file,
           order.orderId,
           order.vendorId
         )
 
-        // Update local state with uploaded file URL
-        setPOOrders(prev => prev.map(o => 
-          o.id === orderId 
-            ? { ...o, poStatus: 'Generated', accountInvoice: response.data.fileUrl } 
-            : o
-        ))
-
-        // Refresh PO orders to get latest data
+        // Refresh PO orders to get latest data with updated status
         await fetchPOOrders()
       } catch (error) {
         console.error('Failed to upload invoice:', error)
@@ -161,19 +154,15 @@ function AccountsInvoices() {
           setCurrentJsonData(invoice.jsonContent as Record<string, unknown>)
           setCurrentInvoiceNumber((invoice.invoiceNumber as string) || (invoice.id as string) || 'invoice')
           setJsonViewerOpen(true)
-        } else {
-          // New invoice created, download it
-          if (invoice.id) {
-            await InvoiceApiService.downloadInvoice(invoice.id as string)
-          }
+        } else if (invoice.jsonContent) {
+          // New invoice created, show in viewer to download
+          toast.success('Invoice generated successfully!')
+          setCurrentJsonData(invoice.jsonContent as Record<string, unknown>)
+          setCurrentInvoiceNumber((invoice.invoiceNumber as string) || (invoice.id as string) || 'invoice')
+          setJsonViewerOpen(true)
         }
 
-        // Update local state
-        setPOOrders(prev => prev.map(o => 
-          o.id === order.id ? { ...o, poStatus: 'Generated' } : o
-        ))
-
-        // Refresh data
+        // Refresh data to update status
         await fetchPOOrders()
       }
     } catch (error) {

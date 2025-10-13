@@ -38,10 +38,17 @@ const uploadFileSchema = z.object({
 
 const uploadAndLinkSchema = z.object({
   invoiceType: z.enum(['VENDOR_UPLOAD', 'ACCOUNTS_UPLOAD']),
-  invoiceNumber: z.string().min(1, 'Invoice number is required'),
-  purchaseOrderId: z.string().min(1, 'Purchase order ID is required'),
+  invoiceNumber: z.string().optional(),
+  purchaseOrderId: z.string().optional(),
+  orderId: z.string().optional(),
+  vendorId: z.string().optional(),
   notes: z.string().optional(),
-});
+}).refine(
+  (data) => data.purchaseOrderId || (data.orderId && data.vendorId),
+  {
+    message: 'Either purchaseOrderId or both orderId and vendorId are required',
+  }
+);
 
 // Multer configuration for file uploads
 const upload = multer({
@@ -156,11 +163,15 @@ export class InvoiceUploadController {
           }
         });
 
-        // Update invoice with attachment
+        // Update invoice with appropriate attachment based on type
+        const updateData = invoiceType === 'ACCOUNTS_UPLOAD'
+          ? { accountsAttachmentId: attachment.id }
+          : { vendorAttachmentId: attachment.id };
+
         await prisma.vendorInvoice.update({
           where: { id: invoiceId },
           data: {
-            attachmentId: attachment.id,
+            ...updateData,
             updatedAt: new Date()
           }
         });
@@ -255,11 +266,45 @@ export class InvoiceUploadController {
           return ResponseHelper.validationError(res, validation.errors);
         }
 
-        const { invoiceType, invoiceNumber, purchaseOrderId, notes } = validation.data;
+        const { invoiceType, invoiceNumber, purchaseOrderId, orderId, vendorId, notes } = validation.data;
 
         // Check if file was uploaded
         if (!req.file) {
           return ResponseHelper.error(res, 'No file uploaded', 400);
+        }
+
+        // Find purchase order - either directly or via orderId/vendorId
+        let finalPurchaseOrderId = purchaseOrderId;
+        
+        if (!finalPurchaseOrderId && orderId && vendorId) {
+          // Find purchase order by orderId and vendorId
+          const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            select: { orderNumber: true }
+          });
+
+          if (!order) {
+            return ResponseHelper.error(res, 'Order not found', 400);
+          }
+
+          const existingPO = await prisma.purchaseOrder.findFirst({
+            where: {
+              vendorId,
+              poNumber: {
+                contains: order.orderNumber
+              }
+            }
+          });
+
+          if (existingPO) {
+            finalPurchaseOrderId = existingPO.id;
+          } else {
+            return ResponseHelper.error(res, 'Purchase order not found. Please generate invoice (JSON) first.', 400);
+          }
+        }
+
+        if (!finalPurchaseOrderId) {
+          return ResponseHelper.error(res, 'Purchase order ID is required. Please generate invoice first.', 400);
         }
 
         // Role-based access control
@@ -273,7 +318,7 @@ export class InvoiceUploadController {
           
           // Ensure vendor can only upload for their own POs
           const purchaseOrder = await prisma.purchaseOrder.findUnique({
-            where: { id: purchaseOrderId },
+            where: { id: finalPurchaseOrderId },
             include: { vendor: true }
           });
 
@@ -295,7 +340,7 @@ export class InvoiceUploadController {
         }
 
         // Upload file to S3 first
-        const fileName = `invoice-${purchaseOrderId}-${Date.now()}-${req.file.originalname}`;
+        const fileName = `invoice-${finalPurchaseOrderId}-${Date.now()}-${req.file.originalname}`;
         
         const uploadResult = await s3Service.uploadBuffer(
           req.file.buffer,
@@ -318,14 +363,41 @@ export class InvoiceUploadController {
           }
         });
 
-        // Create invoice record directly 
+        // Check if invoice already exists for this PO
+        const existingInvoice = await prisma.vendorInvoice.findUnique({
+          where: { purchaseOrderId: finalPurchaseOrderId }
+        });
+
+        if (existingInvoice) {
+          // Update existing invoice with appropriate attachment based on upload type
+          const updateData = invoiceType === 'ACCOUNTS_UPLOAD' 
+            ? { accountsAttachmentId: attachment.id }
+            : { vendorAttachmentId: attachment.id };
+
+          await prisma.vendorInvoice.update({
+            where: { id: existingInvoice.id },
+            data: updateData
+          });
+          
+          return ResponseHelper.success(res, {
+            message: `${invoiceType === 'ACCOUNTS_UPLOAD' ? 'Accounts' : 'Vendor'} invoice file uploaded successfully`,
+            fileUrl: uploadResult.url,
+            invoiceId: existingInvoice.id
+          });
+        }
+
+        // Create invoice record directly with appropriate attachment
+        const createData = invoiceType === 'ACCOUNTS_UPLOAD'
+          ? { accountsAttachmentId: attachment.id }
+          : { vendorAttachmentId: attachment.id };
+
         const newInvoice = await prisma.vendorInvoice.create({
           data: {
-            purchaseOrderId,
-            invoiceNumber: invoiceNumber,
+            purchaseOrderId: finalPurchaseOrderId,
+            invoiceNumber: invoiceNumber || `INV-${Date.now()}`,
             invoiceDate: new Date(),
             invoiceAmount: 0, // Will be updated when verified
-            attachmentId: attachment.id,
+            ...createData,
             status: 'PENDING_VERIFICATION'
           }
         });
@@ -362,7 +434,7 @@ export class InvoiceUploadController {
           try {
             // Get vendor information for notification
             const purchaseOrder = await prisma.purchaseOrder.findUnique({
-              where: { id: purchaseOrderId },
+              where: { id: finalPurchaseOrderId },
               include: { vendor: true }
             });
 
@@ -377,7 +449,7 @@ export class InvoiceUploadController {
                   invoiceId: newInvoice.id,
                   invoiceNumber: newInvoice.invoiceNumber,
                   vendorName: purchaseOrder?.vendor?.companyName || 'Unknown',
-                  purchaseOrderId,
+                  purchaseOrderId: finalPurchaseOrderId,
                   uploadedBy: req.user?.userId || 'unknown',
                   deepLink: `/admin/invoices/${newInvoice.id}/review`
                 }

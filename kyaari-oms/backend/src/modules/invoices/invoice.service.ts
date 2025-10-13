@@ -57,7 +57,8 @@ export class InvoiceService {
               vendor: true
             }
           },
-          attachment: true
+          accountsAttachment: true,
+          vendorAttachment: true
         }
       });
 
@@ -178,7 +179,8 @@ export class InvoiceService {
             vendor: true
           }
         },
-        attachment: true
+        accountsAttachment: true,
+        vendorAttachment: true
       }
     });
 
@@ -231,7 +233,8 @@ export class InvoiceService {
               vendor: true
             }
           },
-          attachment: true
+          accountsAttachment: true,
+          vendorAttachment: true
         }
       }),
       prisma.vendorInvoice.count({ where })
@@ -583,6 +586,16 @@ export class InvoiceService {
         id: invoice.attachment.id,
         fileName: invoice.attachment.fileName,
         s3Url: invoice.attachment.s3Url
+      } : null,
+      accountsAttachment: invoice.accountsAttachment ? {
+        id: invoice.accountsAttachment.id,
+        fileName: invoice.accountsAttachment.fileName,
+        s3Url: invoice.accountsAttachment.s3Url
+      } : null,
+      vendorAttachment: invoice.vendorAttachment ? {
+        id: invoice.vendorAttachment.id,
+        fileName: invoice.vendorAttachment.fileName,
+        s3Url: invoice.vendorAttachment.s3Url
       } : null,
       createdAt: invoice.createdAt,
       updatedAt: invoice.updatedAt

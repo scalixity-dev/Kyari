@@ -139,28 +139,71 @@ export class AccountsAssignmentService {
           orderStatus = 'Confirmed'
         }
 
-        // TODO: Check if PO has been generated for this order/vendor combination
-        // For now, defaulting to Pending
-        const poStatus: 'Pending' | 'Generated' = 'Pending'
-        
-        // TODO: Check invoice status from invoices table
-        // For now, defaulting to Not Created
-        const invoiceStatus: 'Not Created' | 'Awaiting Validation' | 'Approved' = 'Not Created'
-
         vendorOrders.push({
           id: key,
           vendorId: firstAssignment.vendorId,
           vendorName: firstAssignment.vendor.companyName || 'Unknown Vendor',
           items,
           orderStatus,
-          poStatus,
-          invoiceStatus,
+          poStatus: 'Pending', // Will be set later after batch check
+          invoiceStatus: 'Not Created', // Will be set later after batch check
           orderDate: firstAssignment.orderItem.order.createdAt.toISOString().split('T')[0],
           confirmationDate: firstAssignment.vendorActionAt?.toISOString().split('T')[0] || '',
           orderNumber: firstAssignment.orderItem.order.orderNumber,
           orderId: firstAssignment.orderItem.order.id,
-          totalAmount
+          totalAmount,
+          accountInvoiceUrl: null,
+          vendorInvoiceUrl: null
         })
+      })
+
+      // Batch check for PO and Invoice status
+      const uniqueVendorIds = vendorOrders.map(vo => vo.vendorId)
+
+      // Get all purchase orders for these orders and vendors
+      const purchaseOrders = await prisma.purchaseOrder.findMany({
+        where: {
+          vendorId: { in: uniqueVendorIds }
+        },
+        include: {
+          vendorInvoice: {
+            include: {
+              accountsAttachment: true,
+              vendorAttachment: true
+            }
+          }
+        }
+      })
+
+      // Update each vendor order with actual PO and invoice status
+      vendorOrders.forEach(vo => {
+        const matchingPO = purchaseOrders.find(po => 
+          po.vendorId === vo.vendorId && po.poNumber.includes(vo.orderNumber)
+        )
+
+        if (matchingPO) {
+          vo.poStatus = 'Generated'
+          
+          if (matchingPO.vendorInvoice) {
+            // Set invoice file URLs from separate attachment fields
+            if (matchingPO.vendorInvoice.accountsAttachment) {
+              vo.accountInvoiceUrl = matchingPO.vendorInvoice.accountsAttachment.s3Url
+            }
+            
+            if (matchingPO.vendorInvoice.vendorAttachment) {
+              vo.vendorInvoiceUrl = matchingPO.vendorInvoice.vendorAttachment.s3Url
+            }
+            
+            // Check invoice status based on attachments
+            if (matchingPO.vendorInvoice.status === 'APPROVED') {
+              vo.invoiceStatus = 'Approved'
+            } else if (matchingPO.vendorInvoice.accountsAttachmentId || matchingPO.vendorInvoice.vendorAttachmentId) {
+              vo.invoiceStatus = 'Awaiting Validation'
+            } else {
+              vo.invoiceStatus = 'Not Created'
+            }
+          }
+        }
       })
 
       // Apply additional filters
@@ -273,19 +316,68 @@ export class AccountsAssignmentService {
         return sum + (confirmedQty * pricePerUnit)
       }, 0)
 
+      // Check for actual PO and invoice status
+      const actualOrderNumber = firstAssignment.orderItem.order.orderNumber
+      const matchingPO = await prisma.purchaseOrder.findFirst({
+        where: {
+          vendorId,
+          poNumber: {
+            contains: actualOrderNumber
+          }
+        },
+        include: {
+          vendorInvoice: {
+            include: {
+              accountsAttachment: true,
+              vendorAttachment: true
+            }
+          }
+        }
+      })
+
+      let poStatus: 'Pending' | 'Generated' = 'Pending'
+      let invoiceStatus: 'Not Created' | 'Awaiting Validation' | 'Approved' = 'Not Created'
+      let accountInvoiceUrl: string | null = null
+      let vendorInvoiceUrl: string | null = null
+
+      if (matchingPO) {
+        poStatus = 'Generated'
+        
+        if (matchingPO.vendorInvoice) {
+          // Set invoice file URLs from separate attachment fields
+          if (matchingPO.vendorInvoice.accountsAttachment) {
+            accountInvoiceUrl = matchingPO.vendorInvoice.accountsAttachment.s3Url
+          }
+          
+          if (matchingPO.vendorInvoice.vendorAttachment) {
+            vendorInvoiceUrl = matchingPO.vendorInvoice.vendorAttachment.s3Url
+          }
+          
+          if (matchingPO.vendorInvoice.status === 'APPROVED') {
+            invoiceStatus = 'Approved'
+          } else if (matchingPO.vendorInvoice.accountsAttachmentId || matchingPO.vendorInvoice.vendorAttachmentId) {
+            invoiceStatus = 'Awaiting Validation'
+          } else {
+            invoiceStatus = 'Not Created'
+          }
+        }
+      }
+
       return {
         id,
         vendorId,
         vendorName: firstAssignment.vendor.companyName || 'Unknown Vendor',
         items,
         orderStatus: 'Confirmed',
-        poStatus: 'Pending',
-        invoiceStatus: 'Not Created',
+        poStatus,
+        invoiceStatus,
         orderDate: firstAssignment.orderItem.order.createdAt.toISOString().split('T')[0],
         confirmationDate: firstAssignment.vendorActionAt?.toISOString().split('T')[0] || '',
         orderNumber: firstAssignment.orderItem.order.orderNumber,
         orderId: firstAssignment.orderItem.order.id,
-        totalAmount
+        totalAmount,
+        accountInvoiceUrl,
+        vendorInvoiceUrl
       }
 
     } catch (error) {

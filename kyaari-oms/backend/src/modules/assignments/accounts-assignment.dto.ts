@@ -22,6 +22,8 @@ export interface AccountsVendorOrderDto {
   orderNumber: string
   orderId: string
   totalAmount: number
+  accountInvoiceUrl?: string | null
+  vendorInvoiceUrl?: string | null
 }
 
 export interface AccountsVendorOrderListResponseDto {
