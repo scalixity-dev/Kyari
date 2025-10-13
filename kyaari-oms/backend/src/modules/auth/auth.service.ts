@@ -202,6 +202,13 @@ export class AuthService {
       }
 
       if (storedToken.revokedAt) {
+        // Security: Token reuse detected - revoke entire token family
+        logger.warn('Token reuse detected, revoking entire token family', { 
+          tokenFamily: storedToken.family,
+          userId: storedToken.userId,
+          ipAddress
+        });
+        await this.revokeTokenFamily(storedToken.family, 'Token reuse detected', ipAddress);
         throw new Error('Invalid refresh token');
       }
 
@@ -375,6 +382,33 @@ export class AuthService {
 
   private async hashToken(token: string): Promise<string> {
     return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  /**
+   * Revoke entire token family - used when token reuse is detected
+   */
+  private async revokeTokenFamily(family: string, reason: string, ipAddress?: string): Promise<number> {
+    const result = await prisma.refreshToken.updateMany({
+      where: { 
+        family,
+        revokedAt: null // Only revoke active tokens in the family
+      },
+      data: { 
+        revokedAt: new Date()
+        // TODO: Add revokedReason and revokedByIp after schema migration
+        // revokedReason: reason,
+        // revokedByIp: ipAddress
+      }
+    });
+
+    logger.info('Token family revoked', { 
+      family, 
+      reason, 
+      revokedCount: result.count,
+      ipAddress 
+    });
+
+    return result.count;
   }
 
   /**

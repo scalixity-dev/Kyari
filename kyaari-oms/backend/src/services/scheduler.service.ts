@@ -5,6 +5,7 @@ export class SchedulerService {
   private static instance: SchedulerService
   private cleanupInterval: NodeJS.Timeout | null = null
   private authService: AuthService
+  private isCleanupRunning: boolean = false
 
   private constructor() {
     this.authService = new AuthService()
@@ -31,12 +32,21 @@ export class SchedulerService {
     const cleanupIntervalMs = 4 * 60 * 60 * 1000
 
     this.cleanupInterval = setInterval(async () => {
+      // Guard against overlapping cleanup operations
+      if (this.isCleanupRunning) {
+        logger.info('Token cleanup already in progress, skipping this interval')
+        return
+      }
+
+      this.isCleanupRunning = true
       try {
         logger.info('Starting scheduled token cleanup...')
         const result = await this.authService.cleanupExpiredTokens()
         logger.info(`Token cleanup completed. Deleted ${result.deletedCount} expired tokens`)
       } catch (error) {
         logger.error('Error during scheduled token cleanup:', error)
+      } finally {
+        this.isCleanupRunning = false
       }
     }, cleanupIntervalMs)
 
@@ -50,12 +60,21 @@ export class SchedulerService {
    * Run an initial cleanup when the scheduler starts
    */
   private async runInitialCleanup(): Promise<void> {
+    // Guard against overlapping with scheduled cleanup
+    if (this.isCleanupRunning) {
+      logger.info('Token cleanup already in progress, skipping initial cleanup')
+      return
+    }
+
+    this.isCleanupRunning = true
     try {
       logger.info('Running initial token cleanup...')
       const result = await this.authService.cleanupExpiredTokens()
       logger.info(`Initial token cleanup completed. Deleted ${result.deletedCount} expired tokens`)
     } catch (error) {
       logger.error('Error during initial token cleanup:', error)
+    } finally {
+      this.isCleanupRunning = false
     }
   }
 
@@ -74,6 +93,13 @@ export class SchedulerService {
    * Force run token cleanup immediately
    */
   async runTokenCleanup(): Promise<number> {
+    // Guard against overlapping with scheduled cleanup
+    if (this.isCleanupRunning) {
+      logger.warn('Token cleanup already in progress, cannot run manual cleanup')
+      throw new Error('Token cleanup already in progress')
+    }
+
+    this.isCleanupRunning = true
     try {
       logger.info('Running manual token cleanup...')
       const result = await this.authService.cleanupExpiredTokens()
@@ -82,6 +108,8 @@ export class SchedulerService {
     } catch (error) {
       logger.error('Error during manual token cleanup:', error)
       throw error
+    } finally {
+      this.isCleanupRunning = false
     }
   }
 
