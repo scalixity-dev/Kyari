@@ -1,28 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Eye, FileText, ChevronRight, X, ChevronDown } from 'lucide-react'
 import { CustomDropdown } from '../../../components'
-
-type OrderStatus = 'Confirmed' | 'Awaiting PO' | 'PO Generated' | 'Delivered' | 'Closed'
-type POStatus = 'Pending' | 'Generated'
-type InvoiceStatus = 'Not Created' | 'Awaiting Validation' | 'Approved'
-
-type VendorOrderItem = {
-  sku: string
-  product: string
-  qty: number
-  confirmedQty: number
-}
-
-type VendorOrder = {
-  id: string
-  vendorName: string
-  items: VendorOrderItem[]
-  orderStatus: OrderStatus
-  poStatus: POStatus
-  invoiceStatus: InvoiceStatus
-  orderDate: string
-  confirmationDate: string
-}
+import { AccountsAssignmentApiService } from '../../../services/accountsAssignmentApi'
+import type { VendorOrder, OrderStatus, POStatus, InvoiceStatus } from '../../../services/accountsAssignmentApi'
 
 const STATUS_STYLES: Record<OrderStatus, { label: string; bg: string; color: string; border: string }> = {
   Confirmed: { label: 'Confirmed', bg: '#D1FAE5', color: '#065F46', border: '#A7F3D0' },
@@ -43,61 +23,9 @@ const INVOICE_STATUS_STYLES: Record<InvoiceStatus, { label: string; bg: string; 
   'Approved': { label: 'Approved', bg: '#D1FAE5', color: '#065F46', border: '#A7F3D0' }
 }
 
-const initialVendorOrders: VendorOrder[] = [
-  {
-    id: 'VO-001',
-    vendorName: 'Flower Garden',
-    items: [
-      { sku: 'KY-ROSE-01', product: 'Red Roses', qty: 100, confirmedQty: 95 },
-      { sku: 'KY-SUN-01', product: 'Sunflowers', qty: 50, confirmedQty: 50 }
-    ],
-    orderStatus: 'Confirmed',
-    poStatus: 'Pending',
-    invoiceStatus: 'Not Created',
-    orderDate: '2025-01-15',
-    confirmationDate: '2025-01-16'
-  },
-  {
-    id: 'VO-002',
-    vendorName: 'GreenLeaf Co',
-    items: [
-      { sku: 'KY-PLNT-05', product: 'Snake Plant', qty: 20, confirmedQty: 20 }
-    ],
-    orderStatus: 'PO Generated',
-    poStatus: 'Generated',
-    invoiceStatus: 'Awaiting Validation',
-    orderDate: '2025-01-18',
-    confirmationDate: '2025-01-18'
-  },
-  {
-    id: 'VO-003',
-    vendorName: 'Urban Roots',
-    items: [
-      { sku: 'KY-PLNT-12', product: 'Monstera', qty: 15, confirmedQty: 15 },
-      { sku: 'KY-PLNT-15', product: 'Fiddle Leaf Fig', qty: 8, confirmedQty: 8 }
-    ],
-    orderStatus: 'Delivered',
-    poStatus: 'Generated',
-    invoiceStatus: 'Approved',
-    orderDate: '2025-01-20',
-    confirmationDate: '2025-01-20'
-  },
-  {
-    id: 'VO-004',
-    vendorName: 'Plantify',
-    items: [
-      { sku: 'KY-ACC-21', product: 'Watering Can', qty: 30, confirmedQty: 30 }
-    ],
-    orderStatus: 'Awaiting PO',
-    poStatus: 'Pending',
-    invoiceStatus: 'Not Created',
-    orderDate: '2025-01-22',
-    confirmationDate: '2025-01-22'
-  }
-]
-
 export default function VendorOrders() {
-  const [orders, setOrders] = useState<VendorOrder[]>(initialVendorOrders)
+  const [orders, setOrders] = useState<VendorOrder[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
   const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<VendorOrder | null>(null)
@@ -111,30 +39,50 @@ export default function VendorOrders() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
   const itemsPerPage = 10
 
   const vendors = useMemo(() => Array.from(new Set(orders.map(o => o.vendorName))).sort(), [orders])
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter(order => {
-      if (filterVendor && order.vendorName !== filterVendor) return false
-      if (filterStatus && order.orderStatus !== filterStatus) return false
-      if (filterDateFrom && order.orderDate < filterDateFrom) return false
-      if (filterDateTo && order.orderDate > filterDateTo) return false
-      return true
-    })
-  }, [orders, filterVendor, filterStatus, filterDateFrom, filterDateTo])
+  // Fetch vendor orders from API
+  const fetchVendorOrders = async () => {
+    try {
+      setLoading(true)
+      const response = await AccountsAssignmentApiService.getConfirmedVendorOrders({
+        page: currentPage,
+        limit: itemsPerPage,
+        vendorName: filterVendor || undefined,
+        orderStatus: filterStatus || undefined,
+        startDate: filterDateFrom || undefined,
+        endDate: filterDateTo || undefined
+      })
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
+      setOrders(response.orders)
+      setTotalPages(response.pagination.pages)
+      setTotalCount(response.pagination.total)
+    } catch (error) {
+      console.error('Failed to fetch vendor orders:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Fetch on mount and when filters/pagination change
+  useEffect(() => {
+    fetchVendorOrders()
+  }, [currentPage, filterVendor, filterStatus, filterDateFrom, filterDateTo])
 
   // Reset to first page when filters change
   useEffect(() => {
-    setCurrentPage(1)
+    if (currentPage !== 1) {
+      setCurrentPage(1)
+    }
   }, [filterVendor, filterStatus, filterDateFrom, filterDateTo])
+
+  const paginatedOrders = orders
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = Math.min(startIndex + itemsPerPage, totalCount)
 
   const handleSelectOrder = (orderId: string) => {
     const newSelected = new Set(selectedOrders)
@@ -147,10 +95,10 @@ export default function VendorOrders() {
   }
 
   const handleSelectAll = () => {
-    if (selectedOrders.size === filteredOrders.length) {
+    if (selectedOrders.size === orders.length) {
       setSelectedOrders(new Set())
     } else {
-      setSelectedOrders(new Set(filteredOrders.map(o => o.id)))
+      setSelectedOrders(new Set(orders.map(o => o.id)))
     }
   }
 
@@ -179,25 +127,35 @@ export default function VendorOrders() {
     return undefined
   }, [selectedOrder])
 
-  const handleGeneratePO = (orderId: string) => {
-    setOrders(prev => prev.map(order => 
-      order.id === orderId 
-        ? { ...order, poStatus: 'Generated' as POStatus, orderStatus: 'PO Generated' as OrderStatus }
-        : order
-    ))
-    // In a real app, this would generate and download the PO
-    alert(`PO generated for order ${orderId}. Download started.`)
+  const handleGeneratePO = async (vendorOrderId: string) => {
+    try {
+      const order = orders.find(o => o.id === vendorOrderId)
+      if (!order) return
+
+      // Pass actual orderId and vendorId separately
+      await AccountsAssignmentApiService.generatePO(order.orderId, order.vendorId)
+      
+      // Refresh the list
+      await fetchVendorOrders()
+    } catch (error) {
+      console.error('Failed to generate PO:', error)
+    }
   }
 
-  const handleBulkGeneratePO = () => {
-    const ordersToUpdate = Array.from(selectedOrders)
-    setOrders(prev => prev.map(order => 
-      ordersToUpdate.includes(order.id)
-        ? { ...order, poStatus: 'Generated' as POStatus, orderStatus: 'PO Generated' as OrderStatus }
-        : order
-    ))
-    alert(`POs generated for ${ordersToUpdate.length} orders. Downloads started.`)
-    setSelectedOrders(new Set())
+  const handleBulkGeneratePO = async () => {
+    try {
+      const orderIds = Array.from(selectedOrders)
+        .map(id => orders.find(o => o.id === id)?.orderId)
+        .filter(Boolean) as string[]
+
+      await AccountsAssignmentApiService.bulkGeneratePO(orderIds)
+      
+      // Refresh the list
+      await fetchVendorOrders()
+      setSelectedOrders(new Set())
+    } catch (error) {
+      console.error('Failed to bulk generate POs:', error)
+    }
   }
 
   const toggleRowExpansion = (orderId: string) => {
@@ -314,7 +272,24 @@ export default function VendorOrders() {
         </div>
       )}
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-accent)]"></div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && orders.length === 0 && (
+        <div className="bg-white rounded-xl shadow-md border border-white/20 p-12 text-center">
+          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">No Vendor Orders Found</h3>
+          <p className="text-gray-500">No confirmed vendor orders match your current filters.</p>
+        </div>
+      )}
+
       {/* Orders Table - Desktop View */}
+      {!loading && orders.length > 0 && (
       <div className="hidden lg:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
         {/* Table head bar */}
         <div className="bg-[#C3754C] text-white">
@@ -322,7 +297,7 @@ export default function VendorOrders() {
             <div className="flex items-center justify-center">
               <input
                 type="checkbox"
-                checked={selectedOrders.size === filteredOrders.length && filteredOrders.length > 0}
+                checked={selectedOrders.size === orders.length && orders.length > 0}
                 onChange={handleSelectAll}
                 className="rounded border-white w-4 h-4"
               />
@@ -344,9 +319,9 @@ export default function VendorOrders() {
               <div className="px-3 xl:px-4 2xl:px-6 py-6 xl:py-8 text-center text-gray-500 text-xs xl:text-sm 2xl:text-base">No orders match current filters.</div>
             ) : (
               paginatedOrders.map((order) => {
-                const orderStatusStyle = STATUS_STYLES[order.orderStatus]
-                const poStatusStyle = PO_STATUS_STYLES[order.poStatus]
-                const invoiceStatusStyle = INVOICE_STATUS_STYLES[order.invoiceStatus]
+                const orderStatusStyle = STATUS_STYLES[order.orderStatus] || STATUS_STYLES.Confirmed
+                const poStatusStyle = PO_STATUS_STYLES[order.poStatus] || PO_STATUS_STYLES.Pending
+                const invoiceStatusStyle = INVOICE_STATUS_STYLES[order.invoiceStatus] || INVOICE_STATUS_STYLES['Not Created']
                 
                 return (
                   <div key={order.id}>
@@ -456,7 +431,7 @@ export default function VendorOrders() {
         {/* Pagination controls (desktop) */}
         <div className="flex items-center justify-between px-3 xl:px-4 2xl:px-6 py-2.5 xl:py-3 bg-white border-t border-gray-100">
           <div className="text-[10px] xl:text-xs 2xl:text-sm text-gray-500">
-            Showing {filteredOrders.length === 0 ? 0 : startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length}
+            Showing {totalCount === 0 ? 0 : startIndex + 1}-{endIndex} of {totalCount}
           </div>
           <div className="flex items-center gap-1 xl:gap-1.5 2xl:gap-2">
             <button
@@ -491,8 +466,10 @@ export default function VendorOrders() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Mobile Card View */}
+      {!loading && orders.length > 0 && (
       <div className="lg:hidden space-y-4">
         {/* Mobile Select All */}
         {paginatedOrders.length > 0 && (
@@ -500,12 +477,12 @@ export default function VendorOrders() {
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
-                checked={selectedOrders.size === filteredOrders.length && filteredOrders.length > 0}
+                checked={selectedOrders.size === orders.length && orders.length > 0}
                 onChange={handleSelectAll}
                 className="rounded border-gray-300"
               />
               <span className="text-sm font-medium text-gray-700">
-                Select all ({filteredOrders.length} orders)
+                Select all ({orders.length} orders)
               </span>
             </div>
           </div>
@@ -513,9 +490,9 @@ export default function VendorOrders() {
 
         {paginatedOrders.map((order) => {
           const isExpanded = expandedRows.has(order.id)
-          const orderStatusStyle = STATUS_STYLES[order.orderStatus]
-          const poStatusStyle = PO_STATUS_STYLES[order.poStatus]
-          const invoiceStatusStyle = INVOICE_STATUS_STYLES[order.invoiceStatus]
+          const orderStatusStyle = STATUS_STYLES[order.orderStatus] || STATUS_STYLES.Confirmed
+          const poStatusStyle = PO_STATUS_STYLES[order.poStatus] || PO_STATUS_STYLES.Pending
+          const invoiceStatusStyle = INVOICE_STATUS_STYLES[order.invoiceStatus] || INVOICE_STATUS_STYLES['Not Created']
           
           return (
             <div key={order.id} className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
@@ -633,16 +610,10 @@ export default function VendorOrders() {
           )
         })}
 
-        {paginatedOrders.length === 0 && (
-          <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500 border border-gray-200">
-            No orders match current filters.
-          </div>
-        )}
-
         {/* Pagination controls (mobile) */}
         <div className="flex items-center justify-between px-1 py-2">
           <div className="text-xs text-gray-500">
-            {filteredOrders.length === 0 ? 'No results' : `Showing ${startIndex + 1}-${Math.min(endIndex, filteredOrders.length)} of ${filteredOrders.length}`}
+            {totalCount === 0 ? 'No results' : `Showing ${startIndex + 1}-${endIndex} of ${totalCount}`}
           </div>
           <div className="flex items-center gap-2">
             <button 
@@ -662,6 +633,7 @@ export default function VendorOrders() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Detail Panel - Responsive */}
       {selectedOrder && (

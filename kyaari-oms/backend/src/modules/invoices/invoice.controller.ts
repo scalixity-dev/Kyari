@@ -27,7 +27,8 @@ export const validateSchema = <T>(schema: z.ZodType<T, any, any>, data: unknown)
 
 // Validation schemas
 export const generateInvoiceSchema = z.object({
-  purchaseOrderId: z.string().min(1, 'Purchase order ID is required')
+  orderId: z.string().min(1, 'Order ID is required'),
+  vendorId: z.string().min(1, 'Vendor ID is required')
 });
 
 export const invoiceQuerySchema = z.object({
@@ -84,13 +85,16 @@ export class InvoiceController {
         return;
       }
 
-      const { purchaseOrderId } = validation.data;
+      const { orderId, vendorId } = validation.data;
 
-      const invoice = await invoiceService.generateInvoice(purchaseOrderId);
+      const invoice = await invoiceService.generateInvoice(orderId, vendorId);
 
       ResponseHelper.success(res, invoice, 'Invoice generated successfully', 201);
     } catch (error) {
-      logger.error('Invoice generation controller error', { error, body: req.body });
+      logger.error('Invoice generation controller error', { 
+        error: error instanceof Error ? { message: error.message, stack: error.stack } : error,
+        body: req.body 
+      });
       ResponseHelper.error(res, error instanceof Error ? error.message : 'Failed to generate invoice');
     }
   }

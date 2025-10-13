@@ -7,3 +7,4 @@ export { CustomDropdown, default as CustomDropdownDefault } from './CustomDropdo
 export type { CustomDropdownProps, DropdownOption } from './CustomDropdown'
 export { default as ResetPassword } from './ResetPassword/ResetPassword'
 export { default as ConfirmationModal } from './ConfirmationModal/ConfirmationModal'
+export { JsonViewerModal } from './JsonViewerModal'
