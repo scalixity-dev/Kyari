@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Send, Paperclip } from 'lucide-react'
+import { Plus, Send, Paperclip, Clock, AlertTriangle, CheckSquare } from 'lucide-react'
 import { CustomDropdown } from '../../../components'
 
 type IssueType = 'Invoice Mismatch' | 'Duplicate Entry' | 'Payment Pending' | 'Payment Delay' | 'Others'
@@ -250,13 +250,13 @@ export default function VendorSupport() {
   }, [drawerTicket?.messages])
 
   return (
-    <div className="p-3 sm:p-6 font-sans text-primary" style={{ background: 'transparent' }}>
+    <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
-        <h2 className="font-heading text-secondary text-xl sm:text-2xl font-semibold">Vendor Support</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 lg:mb-10 gap-3">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 font-[var(--font-heading)]">Vendor Support</h2>
         <button
           onClick={() => setShowNewTicket(true)}
-          className="bg-accent text-button-text rounded-full px-4 py-2.5 border border-transparent flex items-center justify-center gap-2 w-full sm:w-auto"
+          className="bg-accent text-button-text rounded-xl px-4 py-2.5 border border-transparent flex items-center justify-center gap-2 w-full sm:w-auto min-h-[44px] sm:min-h-auto"
         >
           <Plus size={16} />
           <span>Raise New Ticket</span>
@@ -264,28 +264,44 @@ export default function VendorSupport() {
       </div>
 
       {/* Analytics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
-        <div className="rounded-2xl p-3 sm:p-4 shadow-md bg-white">
-          <div className="text-xs sm:text-sm text-gray-600">Open Tickets</div>
-          <div className="text-2xl sm:text-3xl font-semibold text-secondary mt-1">{openTickets}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6">
+        <div className="bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
+          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <Clock size={24} color="white" className="sm:w-8 sm:h-8" />
+          </div>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Open Tickets</h3>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{openTickets}</div>
+          <div className="text-xs sm:text-sm text-gray-600 mt-1">Awaiting response</div>
         </div>
-        <div className="rounded-2xl p-3 sm:p-4 shadow-md bg-amber-50">
-          <div className="text-xs sm:text-sm text-gray-700">In Progress</div>
-          <div className="text-2xl sm:text-3xl font-semibold text-amber-700 mt-1">{inProgressTickets}</div>
+        <div className="bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
+          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <AlertTriangle size={24} color="white" className="sm:w-8 sm:h-8" />
+          </div>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">In Progress</h3>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{inProgressTickets}</div>
+          <div className="text-xs sm:text-sm text-gray-600 mt-1">Being resolved</div>
         </div>
-        <div className="rounded-2xl p-3 sm:p-4 shadow-md bg-green-50">
-          <div className="text-xs sm:text-sm text-gray-700">Resolved This Week</div>
-          <div className="text-2xl sm:text-3xl font-semibold text-green-700 mt-1">{resolvedThisWeek}</div>
+        <div className="bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
+          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <CheckSquare size={24} color="white" className="sm:w-8 sm:h-8" />
+          </div>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Resolved This Week</h3>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{resolvedThisWeek}</div>
+          <div className="text-xs sm:text-sm text-gray-600 mt-1">Completed tickets</div>
         </div>
-        <div className="rounded-2xl p-3 sm:p-4 shadow-md bg-blue-50">
-          <div className="text-xs sm:text-sm text-gray-700">Avg Resolution Time</div>
-          <div className="text-2xl sm:text-3xl font-semibold text-blue-700 mt-1">{avgResolutionHours} hrs</div>
+        <div className="bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
+          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <Clock size={24} color="white" className="sm:w-8 sm:h-8" />
+          </div>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Avg Resolution Time</h3>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{avgResolutionHours} hrs</div>
+          <div className="text-xs sm:text-sm text-gray-600 mt-1">Average time</div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center mb-4 bg-white border border-secondary/20 rounded-xl p-3">
-        <div className="flex flex-col sm:flex-row gap-3 flex-1">
+      <div className="flex flex-col gap-3 mb-6 bg-white border border-secondary/20 rounded-xl p-3 sm:p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <CustomDropdown
             value={filterIssue}
             onChange={(value) => setFilterIssue(value as IssueType | '')}
@@ -298,7 +314,7 @@ export default function VendorSupport() {
               { value: 'Others', label: 'Others' }
             ]}
             placeholder="Issue Type"
-            className="min-w-0 flex-1 sm:flex-none"
+            className="min-w-0"
           />
           <CustomDropdown
             value={filterStatus}
@@ -310,7 +326,7 @@ export default function VendorSupport() {
               { value: 'Resolved', label: 'Resolved' }
             ]}
             placeholder="Status"
-            className="min-w-0 flex-1 sm:flex-none"
+            className="min-w-0"
           />
           <CustomDropdown
             value={filterPriority}
@@ -323,25 +339,45 @@ export default function VendorSupport() {
               { value: 'Urgent', label: 'Urgent' }
             ]}
             placeholder="Priority"
-            className="min-w-0 flex-1 sm:flex-none"
+            className="min-w-0"
           />
-          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300 text-sm min-w-0 flex-1 sm:flex-none hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" />
+          <input 
+            type="date" 
+            value={filterDate} 
+            onChange={e => setFilterDate(e.target.value)} 
+            className="px-3 py-2.5 sm:py-2 rounded-xl border border-gray-300 text-xs sm:text-sm min-w-0 hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto" 
+          />
         </div>
-        <div className="flex gap-3 flex-1 sm:flex-none">
-          <input placeholder="Search ticket / issue" value={search} onChange={e => setSearch(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-300 text-sm flex-1 hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" />
-          <button onClick={resetFilters} className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 text-sm whitespace-nowrap hover:bg-secondary hover:text-white transition-colors duration-200">Reset</button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input 
+            placeholder="Search ticket / issue" 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+            className="px-3 py-2.5 sm:py-2 rounded-xl border border-gray-300 text-xs sm:text-sm flex-1 hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto" 
+          />
+          <button 
+            onClick={resetFilters} 
+            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 sm:py-2 text-xs sm:text-sm whitespace-nowrap hover:bg-secondary hover:text-white transition-colors duration-200 min-h-[44px] sm:min-h-auto"
+          >
+            Reset
+          </button>
         </div>
       </div>
 
+      {/* Vendor Support Tickets heading */}
+      <div className="mb-3 sm:mb-4">
+        <h2 className="text-base sm:text-lg md:text-xl font-semibold text-secondary">All Support Tickets</h2>
+      </div>
+
       {/* Table */}
-      <div className="bg-header-bg rounded-xl">
+      <div className="bg-header-bg rounded-xl overflow-hidden">
         {/* Desktop Table View */}
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full border-separate border-spacing-0 whitespace-nowrap">
           <thead>
-            <tr className="bg-white">
+            <tr style={{ background: 'var(--color-accent)' }}>
               {['Ticket ID','Issue Title','Issue Type','Priority','Status','Assigned To','Created / Updated','Actions'].map(h => (
-                <th key={h} className="text-left p-3 font-heading text-secondary font-normal whitespace-nowrap">{h}</th>
+                <th key={h} className="text-left p-3 font-heading font-normal whitespace-nowrap" style={{ color: 'var(--color-button-text)' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -393,35 +429,45 @@ export default function VendorSupport() {
         {/* Mobile/Tablet Card View */}
         <div className="lg:hidden">
           {filteredTickets.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">No tickets match current filters.</div>
+            <div className="p-6 text-center text-gray-500 text-sm">No tickets match current filters.</div>
           ) : (
-            <div className="p-3 space-y-3">
+            <div className="p-3 sm:p-4 space-y-3">
               {filteredTickets.map((t) => (
-                <div key={t.id} className="bg-white rounded-lg p-4 shadow-sm border">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
+                <div key={t.id} className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="flex items-start justify-between mb-3 gap-2">
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-secondary text-sm">{t.id}</h3>
-                      <p className="text-xs text-gray-600 mt-1">{t.issueTitle}</p>
+                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">{t.issueTitle}</p>
                     </div>
-                    <div className="flex gap-1">
-                      <button onClick={() => setDrawerTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 py-1 text-xs">View</button>
-                      <button onClick={() => resolveTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 py-1 text-xs">Resolve</button>
+                    <div className="flex flex-col sm:flex-row gap-1.5 flex-shrink-0">
+                      <button 
+                        onClick={() => setDrawerTicket(t)} 
+                        className="bg-white text-secondary border border-secondary rounded-full px-3 py-1.5 text-xs whitespace-nowrap min-h-[36px] sm:min-h-auto hover:bg-secondary hover:text-white transition-colors"
+                      >
+                        View
+                      </button>
+                      <button 
+                        onClick={() => resolveTicket(t)} 
+                        className="bg-white text-secondary border border-secondary rounded-full px-3 py-1.5 text-xs whitespace-nowrap min-h-[36px] sm:min-h-auto hover:bg-secondary hover:text-white transition-colors"
+                      >
+                        Resolve
+                      </button>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
                     <div>
-                      <div className="text-xs text-gray-500">Issue Type</div>
-                      <div className="text-sm font-medium">{t.issueType}</div>
+                      <div className="text-xs text-gray-500 mb-1">Issue Type</div>
+                      <div className="text-xs sm:text-sm font-medium truncate">{t.issueType}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500">Assigned To</div>
-                      <div className="text-sm font-medium">{t.assignedTo}</div>
+                      <div className="text-xs text-gray-500 mb-1">Assigned To</div>
+                      <div className="text-xs sm:text-sm font-medium truncate">{t.assignedTo}</div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       {(() => {
                         const st = PRIORITY_STYLES[t.priority]
                         return (
@@ -450,19 +496,24 @@ export default function VendorSupport() {
 
       {/* Raise Ticket Modal */}
       {showNewTicket && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-2xl rounded-2xl p-4 sm:p-5 max-h-[90vh] overflow-y-auto">
-            <div className="mb-3">
-              <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">Raise New Ticket</h3>
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white w-full max-w-2xl rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto animate-slide-up sm:animate-none">
+            <div className="mb-4 sm:mb-5">
+              <h3 className="font-heading text-secondary font-normal text-base sm:text-lg md:text-xl">Raise New Ticket</h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
               <div className="col-span-1 sm:col-span-2">
-                <label className="block text-sm font-medium mb-1 text-secondary">Issue Title</label>
-                <input value={draftIssueTitle} onChange={e => setDraftIssueTitle(e.target.value)} placeholder="Brief description of the issue" className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" />
+                <label className="block text-xs sm:text-sm font-medium mb-1.5 text-secondary">Issue Title</label>
+                <input 
+                  value={draftIssueTitle} 
+                  onChange={e => setDraftIssueTitle(e.target.value)} 
+                  placeholder="Brief description of the issue" 
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-lg border border-gray-300 text-xs sm:text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto" 
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1 text-secondary">Issue Type</label>
+                <label className="block text-xs sm:text-sm font-medium mb-1.5 text-secondary">Issue Type</label>
                 <CustomDropdown
                   value={draftIssue}
                   onChange={(value) => setDraftIssue(value as IssueType | '')}
@@ -478,7 +529,7 @@ export default function VendorSupport() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1 text-secondary">Priority</label>
+                <label className="block text-xs sm:text-sm font-medium mb-1.5 text-secondary">Priority</label>
                 <CustomDropdown
                   value={draftPriority}
                   onChange={(value) => setDraftPriority(value as TicketPriority | '')}
@@ -493,25 +544,41 @@ export default function VendorSupport() {
                 />
               </div>
               <div className="col-span-1 sm:col-span-2">
-                <label className="block text-sm font-medium mb-1 text-secondary">Attachments (Invoice/Screenshots)</label>
+                <label className="block text-xs sm:text-sm font-medium mb-1.5 text-secondary">Attachments (Invoice/Screenshots)</label>
                 <input 
                   type="file" 
                   onChange={e => setDraftFile(e.target.files?.[0] || null)} 
-                  className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" 
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-lg border border-gray-300 text-xs sm:text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto" 
                 />
                 {draftFile && (
-                  <div className="mt-1 text-xs text-gray-600">Selected: {draftFile.name}</div>
+                  <div className="mt-1.5 text-xs text-gray-600 truncate">Selected: {draftFile.name}</div>
                 )}
               </div>
               <div className="col-span-1 sm:col-span-2">
-                <label className="block text-sm font-medium mb-1 text-secondary">Description</label>
-                <textarea value={draftDescription} onChange={e => setDraftDescription(e.target.value)} rows={4} placeholder="Describe the issue in detail..." className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 resize-none" />
+                <label className="block text-xs sm:text-sm font-medium mb-1.5 text-secondary">Description</label>
+                <textarea 
+                  value={draftDescription} 
+                  onChange={e => setDraftDescription(e.target.value)} 
+                  rows={4} 
+                  placeholder="Describe the issue in detail..." 
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-lg border border-gray-300 text-xs sm:text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 resize-none" 
+                />
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-end gap-2 mt-4">
-              <button onClick={() => setShowNewTicket(false)} className="bg-white text-secondary border border-secondary rounded-full px-3.5 py-2 text-sm w-full sm:w-auto">Cancel</button>
-              <button onClick={addTicket} className="bg-accent text-button-text rounded-full px-3.5 py-2 text-sm w-full sm:w-auto">Submit</button>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 mt-4 sm:mt-5">
+              <button 
+                onClick={() => setShowNewTicket(false)} 
+                className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 sm:py-2 text-xs sm:text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto hover:bg-secondary hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={addTicket} 
+                className="bg-accent text-button-text rounded-full px-4 py-2.5 sm:py-2 text-xs sm:text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto hover:opacity-90 transition-opacity"
+              >
+                Submit
+              </button>
             </div>
           </div>
         </div>
@@ -528,27 +595,27 @@ export default function VendorSupport() {
             className={`absolute bottom-0 sm:top-0 sm:right-0 h-[90vh] sm:h-full w-full sm:w-[500px] bg-white shadow-xl flex flex-col transform transition-transform duration-300 ease-out ${isDrawerOpen ? 'translate-y-0 sm:translate-x-0' : 'translate-y-full sm:translate-y-0 sm:translate-x-full'} rounded-t-2xl sm:rounded-t-none`}
           >
             {/* Header */}
-            <div className="p-4 sm:p-5 border-b flex-shrink-0">
-              <div className="flex items-start justify-between mb-4">
+            <div className="p-4 sm:p-5 border-b flex-shrink-0 sticky top-0 bg-white z-10">
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
                 <div>
                   <div className="text-xs text-gray-500">Ticket</div>
-                  <div className="text-lg sm:text-xl font-semibold text-secondary">{drawerTicket.id}</div>
+                  <div className="text-base sm:text-lg md:text-xl font-semibold text-secondary">{drawerTicket.id}</div>
                 </div>
-                <button onClick={closeDrawer} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">✕</button>
+                <button onClick={closeDrawer} className="text-gray-500 hover:text-gray-700 text-2xl leading-none p-1 -mt-1 -mr-1">✕</button>
               </div>
 
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <div className="text-xs text-gray-500">Issue Title</div>
-                    <div className="font-medium text-sm">{drawerTicket.issueTitle}</div>
+                    <div className="text-xs text-gray-500 mb-1">Issue Title</div>
+                    <div className="font-medium text-xs sm:text-sm break-words">{drawerTicket.issueTitle}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Issue Type</div>
-                    <div className="font-medium text-sm">{drawerTicket.issueType}</div>
+                    <div className="text-xs text-gray-500 mb-1">Issue Type</div>
+                    <div className="font-medium text-xs sm:text-sm">{drawerTicket.issueType}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Priority</div>
+                    <div className="text-xs text-gray-500 mb-1">Priority</div>
                     <div>
                       {(() => {
                         const st = PRIORITY_STYLES[drawerTicket.priority]
@@ -557,7 +624,7 @@ export default function VendorSupport() {
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Status</div>
+                    <div className="text-xs text-gray-500 mb-1">Status</div>
                     <div>
                       {(() => {
                         const st = STATUS_STYLES[drawerTicket.status]
@@ -569,38 +636,43 @@ export default function VendorSupport() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <div className="text-xs text-gray-500">Assigned To</div>
-                    <div className="font-medium text-sm">{drawerTicket.assignedTo}</div>
+                    <div className="text-xs text-gray-500 mb-1">Assigned To</div>
+                    <div className="font-medium text-xs sm:text-sm">{drawerTicket.assignedTo}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Created / Updated</div>
-                    <div className="font-medium text-sm">{drawerTicket.createdAt} / {drawerTicket.updatedAt}</div>
+                    <div className="text-xs text-gray-500 mb-1">Created / Updated</div>
+                    <div className="font-medium text-xs sm:text-sm">{drawerTicket.createdAt} / {drawerTicket.updatedAt}</div>
                   </div>
                 </div>
               </div>
 
               <div className="flex gap-2 mt-4">
-                <button onClick={() => resolveTicket(drawerTicket)} className="bg-accent text-button-text rounded-full px-3 py-1.5 text-sm hover:opacity-90 transition-opacity">Mark as Resolved</button>
+                <button 
+                  onClick={() => resolveTicket(drawerTicket)} 
+                  className="bg-accent text-button-text rounded-full px-4 py-2 text-xs sm:text-sm hover:opacity-90 transition-opacity min-h-[40px] sm:min-h-auto"
+                >
+                  Mark as Resolved
+                </button>
               </div>
             </div>
 
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-gray-50">
-              <div className="text-sm font-medium text-gray-700 mb-3">Conversation</div>
+              <div className="text-xs sm:text-sm font-medium text-gray-700 mb-3">Conversation</div>
               <div className="space-y-3">
                 {drawerTicket.messages && drawerTicket.messages.length > 0 ? (
                   drawerTicket.messages.map(msg => (
                     <div key={msg.id} className={`flex ${msg.sender === 'vendor' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] sm:max-w-[75%] ${msg.sender === 'vendor' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'} rounded-2xl p-3 shadow-sm`}>
+                      <div className={`max-w-[85%] sm:max-w-[80%] md:max-w-[75%] ${msg.sender === 'vendor' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'} rounded-2xl p-3 shadow-sm`}>
                         <div className={`text-xs mb-1 ${msg.sender === 'vendor' ? 'text-blue-100' : 'text-gray-500'}`}>
                           {msg.senderName} • {msg.timestamp}
                         </div>
-                        <div className="text-sm leading-relaxed">{msg.text}</div>
+                        <div className="text-xs sm:text-sm leading-relaxed break-words">{msg.text}</div>
                         {msg.attachments && msg.attachments.length > 0 && (
                           <div className="mt-2 space-y-1">
                             {msg.attachments.map((att, idx) => (
                               <div key={idx} className={`text-xs flex items-center gap-1 ${msg.sender === 'vendor' ? 'text-blue-100' : 'text-blue-600'}`}>
-                                <Paperclip size={12} />
+                                <Paperclip size={12} className="flex-shrink-0" />
                                 <span className="truncate">{att.name}</span>
                               </div>
                             ))}
@@ -610,21 +682,21 @@ export default function VendorSupport() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center text-gray-400 text-sm py-8">No messages yet. Start the conversation!</div>
+                  <div className="text-center text-gray-400 text-xs sm:text-sm py-8">No messages yet. Start the conversation!</div>
                 )}
                 <div ref={chatEndRef} />
               </div>
             </div>
 
             {/* Chat Input */}
-            <div className="p-3 sm:p-4 border-t bg-white flex-shrink-0">
+            <div className="p-3 sm:p-4 border-t bg-white flex-shrink-0 sticky bottom-0">
               {chatAttachment && (
                 <div className="mb-2 px-3 py-2 bg-gray-100 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-gray-700 min-w-0">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 min-w-0">
                     <Paperclip size={14} className="flex-shrink-0" />
                     <span className="truncate">{chatAttachment.name}</span>
                   </div>
-                  <button onClick={() => setChatAttachment(null)} className="text-gray-500 hover:text-gray-700 ml-2 flex-shrink-0">✕</button>
+                  <button onClick={() => setChatAttachment(null)} className="text-gray-500 hover:text-gray-700 ml-2 flex-shrink-0 p-1">✕</button>
                 </div>
               )}
               <div className="flex items-end gap-2">
@@ -636,10 +708,10 @@ export default function VendorSupport() {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex-shrink-0 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="flex-shrink-0 p-2.5 sm:p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors min-h-[40px] sm:min-h-auto"
                   title="Attach file"
                 >
-                  <Paperclip size={16} />
+                  <Paperclip size={18} className="sm:w-4 sm:h-4" />
                 </button>
                 <textarea
                   value={messageText}
@@ -651,16 +723,16 @@ export default function VendorSupport() {
                     }
                   }}
                   placeholder="Type your message..."
-                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="flex-1 min-w-0 px-3 py-2.5 sm:py-2 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm"
                   rows={2}
                 />
                 <button
                   onClick={sendMessage}
                   disabled={!messageText.trim()}
-                  className="flex-shrink-0 p-2 bg-accent text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex-shrink-0 p-2.5 sm:p-2 bg-accent text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed min-h-[40px] sm:min-h-auto"
                   title="Send message"
                 >
-                  <Send size={16} />
+                  <Send size={18} className="sm:w-4 sm:h-4" />
                 </button>
               </div>
               <div className="text-xs text-gray-500 mt-2 hidden sm:block">Press Enter to send, Shift+Enter for new line</div>

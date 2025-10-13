@@ -56,20 +56,20 @@ const PartialConfirmModal: React.FC<PartialConfirmModalProps> = ({ isOpen, produ
   const backorderQty = product.requestedQty - availableQty
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-[var(--color-heading)]">Partial Confirmation</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-xl p-4 sm:p-6 w-full max-w-md mx-0 sm:mx-4 max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slide-up sm:animate-none">
+        <div className="flex items-center justify-between mb-3 sm:mb-4 sticky top-0 bg-white pb-3 sm:pb-0 sm:static z-10">
+          <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Partial Confirmation</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
             <X size={20} />
           </button>
         </div>
         
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-2">Order: <span className="font-medium">{orderNumber}</span></p>
-          <p className="text-sm text-gray-600 mb-2">Product: <span className="font-medium">{product.name}</span></p>
-          <p className="text-sm text-gray-600 mb-2">SKU: <span className="font-medium">{product.sku}</span></p>
-          <p className="text-sm text-gray-600">Requested Quantity: <span className="font-medium">{product.requestedQty}</span></p>
+        <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg space-y-1.5">
+          <p className="text-xs sm:text-sm text-gray-600">Order: <span className="font-medium text-gray-900">{orderNumber}</span></p>
+          <p className="text-xs sm:text-sm text-gray-600">Product: <span className="font-medium text-gray-900 break-words">{product.name}</span></p>
+          <p className="text-xs sm:text-sm text-gray-600">SKU: <span className="font-medium text-gray-900">{product.sku}</span></p>
+          <p className="text-xs sm:text-sm text-gray-600">Requested Quantity: <span className="font-medium text-gray-900">{product.requestedQty}</span></p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -83,37 +83,37 @@ const PartialConfirmModal: React.FC<PartialConfirmModalProps> = ({ isOpen, produ
               max={product.requestedQty}
               value={availableQty || ''}
               onChange={(e) => setAvailableQty(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+              className="w-full px-3 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent text-sm"
               placeholder="Enter available quantity"
               required
             />
           </div>
 
           {availableQty > 0 && (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="mb-4 p-2.5 sm:p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                <span className="font-medium text-yellow-800">Backorder will be created</span>
+                <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                <span className="font-medium text-yellow-800 text-xs sm:text-sm">Backorder will be created</span>
               </div>
-              <p className="text-sm text-yellow-700">
+              <p className="text-xs sm:text-sm text-yellow-700">
                 Available: <span className="font-medium">{availableQty}</span> | 
                 Backorder: <span className="font-medium">{backorderQty}</span>
               </p>
             </div>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sticky bottom-0 bg-white pt-2 sm:pt-0 sm:static">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 sm:py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={availableQty <= 0 || availableQty > product.requestedQty}
-              className="flex-1 px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:bg-[var(--color-accent)]/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 px-4 py-2 sm:py-2.5 bg-[var(--color-accent)] text-white text-sm font-medium rounded-lg hover:bg-[var(--color-accent)]/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors order-1 sm:order-2"
             >
               Confirm Partial
             </button>
@@ -145,19 +145,19 @@ const DeclineReasonModal: React.FC<DeclineReasonModalProps> = ({ isOpen, product
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-[var(--color-heading)]">Decline Product</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-xl p-4 sm:p-6 w-full max-w-md mx-0 sm:mx-4 max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slide-up sm:animate-none">
+        <div className="flex items-center justify-between mb-3 sm:mb-4 sticky top-0 bg-white pb-3 sm:pb-0 sm:static z-10">
+          <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Decline Product</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
             <X size={20} />
           </button>
         </div>
         
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-2">Order: <span className="font-medium">{orderNumber}</span></p>
-          <p className="text-sm text-gray-600 mb-2">Product: <span className="font-medium">{product.name}</span></p>
-          <p className="text-sm text-gray-600">SKU: <span className="font-medium">{product.sku}</span></p>
+        <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg space-y-1.5">
+          <p className="text-xs sm:text-sm text-gray-600">Order: <span className="font-medium text-gray-900">{orderNumber}</span></p>
+          <p className="text-xs sm:text-sm text-gray-600">Product: <span className="font-medium text-gray-900 break-words">{product.name}</span></p>
+          <p className="text-xs sm:text-sm text-gray-600">SKU: <span className="font-medium text-gray-900">{product.sku}</span></p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -165,35 +165,35 @@ const DeclineReasonModal: React.FC<DeclineReasonModalProps> = ({ isOpen, product
             <label className="block text-sm font-medium text-[var(--color-heading)] mb-3">
               Please select a reason for declining:
             </label>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {declineReasons.map((reason) => (
-                <label key={reason} className="flex items-center">
+                <label key={reason} className="flex items-center p-2.5 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">
                   <input
                     type="radio"
                     name="declineReason"
                     value={reason}
                     checked={selectedReason === reason}
                     onChange={(e) => setSelectedReason(e.target.value)}
-                    className="mr-3 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                    className="mr-3 text-[var(--color-accent)] focus:ring-[var(--color-accent)] flex-shrink-0"
                   />
-                  <span className="text-sm text-gray-700">{reason}</span>
+                  <span className="text-xs sm:text-sm text-gray-700">{reason}</span>
                 </label>
               ))}
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sticky bottom-0 bg-white pt-2 sm:pt-0 sm:static">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 sm:py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!selectedReason}
-              className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 px-4 py-2 sm:py-2.5 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors order-1 sm:order-2"
             >
               Decline Product
             </button>
@@ -429,64 +429,70 @@ export default function Orders() {
   const declinedOrders = orders.filter(order => order.overallStatus === 'Declined')
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header */}
-      <div className="mb-4 sm:mb-6 lg:mb-8">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-1 sm:mb-2">Orders Management</h1>
-        <p className="text-sm sm:text-base text-[var(--color-primary)]">Manage and respond to incoming orders</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 sm:mb-0 font-[var(--font-heading)]">Orders Management</h2>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <Clock className="w-5 h-5 text-yellow-500" />
-            <span className="text-sm font-medium text-gray-600">Pending Orders</span>
+      {/* Summary KPI Cards (admin-style) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6">
+        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
+          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <Clock size={24} color="white" className="sm:w-8 sm:h-8" />
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{pendingOrders.length}</div>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Pending Orders</h3>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{pendingOrders.length}</div>
+          <div className="text-xs sm:text-sm text-gray-600 mt-1">Awaiting confirmation</div>
         </div>
-        
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <FileText className="w-5 h-5 text-purple-500" />
-            <span className="text-sm font-medium text-gray-600">Awaiting PO</span>
+
+        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
+          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <FileText size={24} color="white" className="sm:w-8 sm:h-8" />
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{waitingForPOOrders.length}</div>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Awaiting PO</h3>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{waitingForPOOrders.length}</div>
+          <div className="text-xs sm:text-sm text-gray-600 mt-1">Pending purchase orders</div>
         </div>
-        
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <CheckSquare className="w-5 h-5 text-green-500" />
-            <span className="text-sm font-medium text-gray-600">Confirmed</span>
+
+        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
+          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <CheckSquare size={24} color="white" className="sm:w-8 sm:h-8" />
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{confirmedOrders.length}</div>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Confirmed</h3>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{confirmedOrders.length}</div>
+          <div className="text-xs sm:text-sm text-gray-600 mt-1">Ready for dispatch</div>
         </div>
-        
-        <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-3 mb-2">
-            <X className="w-5 h-5 text-red-500" />
-            <span className="text-sm font-medium text-gray-600">Declined</span>
+
+        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
+          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
+            <X size={24} color="white" className="sm:w-8 sm:h-8" />
           </div>
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{declinedOrders.length}</div>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Declined</h3>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{declinedOrders.length}</div>
+          <div className="text-xs sm:text-sm text-gray-600 mt-1">Requires attention</div>
         </div>
       </div>
 
-      {/* Orders Table */}
-      <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">All Orders</h2>
+      {/* Orders Header */}
+      <div className="mb-3 sm:mb-4">
+        <div>
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-secondary">All Orders</h2>
         </div>
-        
+      </div>
+
+      {/* Orders Table Container */}
+      <div className="bg-header-bg rounded-xl overflow-hidden">
         {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order Details</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          <table className="w-full border-separate border-spacing-0">
+            <thead>
+              <tr className="" style={{ background: 'var(--color-accent)' }}>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Order Details</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Customer</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Products</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Status</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -495,9 +501,9 @@ export default function Orders() {
                   <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleOrderExpansion(order.id)}>
                     <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        {expandedOrders.has(order.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        {expandedOrders.has(order.id) ? <ChevronUp size={16} className="text-secondary" /> : <ChevronDown size={16} className="text-secondary" />}
                         <div>
-                          <div className="text-sm font-medium text-[var(--color-heading)]">{order.orderNumber}</div>
+                          <div className="text-sm font-semibold text-secondary">{order.orderNumber}</div>
                           <div className="text-xs text-gray-500">{order.date}</div>
                         </div>
                       </div>
@@ -523,7 +529,7 @@ export default function Orders() {
                           e.stopPropagation()
                           toggleOrderExpansion(order.id)
                         }}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
+                        className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
                       >
                         {expandedOrders.has(order.id) ? 'Collapse' : 'Expand'}
                       </button>
@@ -539,7 +545,7 @@ export default function Orders() {
                       </td>
                       <td className="px-4 lg:px-6 py-3 text-sm">
                         <div>
-                          <div className="font-medium text-gray-900">{product.name}</div>
+                          <div className="font-medium text-secondary">{product.name}</div>
                           {product.backorderQty > 0 && (
                             <div className="text-xs text-yellow-600">
                               Backorder: {product.backorderQty} units
@@ -555,10 +561,10 @@ export default function Orders() {
                       </td>
                       <td className="px-6 py-3">
                         {product.status === 'Pending' && (
-                          <div className="flex gap-1">
+                          <div className="flex gap-1.5">
                             <button
                               onClick={() => handleProductConfirmFull(order.id, product.id)}
-                              className="px-2 py-1 bg-green-500 text-white rounded text-xs font-medium flex items-center gap-1"
+                              className="px-2.5 py-1.5 bg-green-500 text-white rounded-md text-xs font-medium flex items-center gap-1 hover:bg-green-600 transition-colors"
                               title="Confirm Full"
                             >
                               <CheckSquare size={12} />
@@ -566,7 +572,7 @@ export default function Orders() {
                             </button>
                             <button
                               onClick={() => handleProductConfirmPartial(order.id, product.id)}
-                              className="px-2 py-1 bg-blue-500 text-white rounded text-xs font-medium flex items-center gap-1"
+                              className="px-2.5 py-1.5 bg-blue-500 text-white rounded-md text-xs font-medium flex items-center gap-1 hover:bg-blue-600 transition-colors"
                               title="Confirm Partial"
                             >
                               <FileText size={12} />
@@ -574,7 +580,7 @@ export default function Orders() {
                             </button>
                             <button
                               onClick={() => handleProductDecline(order.id, product.id)}
-                              className="px-2 py-1 bg-red-500 text-white rounded text-xs font-medium flex items-center gap-1"
+                              className="px-2.5 py-1.5 bg-red-500 text-white rounded-md text-xs font-medium flex items-center gap-1 hover:bg-red-600 transition-colors"
                               title="Decline"
                             >
                               <X size={12} />
@@ -585,14 +591,14 @@ export default function Orders() {
                         {product.status !== 'Pending' && (
                           <div className="text-xs text-gray-500">
                             {product.status === 'Confirmed' && (
-                              <span className="text-green-600">✓ Confirmed</span>
+                              <span className="text-green-600 font-medium">✓ Confirmed</span>
                             )}
                             {product.status === 'Partially Confirmed' && (
-                              <span className="text-blue-600">~ Partial</span>
+                              <span className="text-blue-600 font-medium">~ Partial</span>
                             )}
                             {product.status === 'Declined' && (
                               <div>
-                                <span className="text-red-600">✗ Declined</span>
+                                <span className="text-red-600 font-medium">✗ Declined</span>
                                 {product.declineReason && (
                                   <div className="text-xs text-red-500 mt-1">
                                     Reason: {product.declineReason}
@@ -601,7 +607,7 @@ export default function Orders() {
                               </div>
                             )}
                             {product.status === 'Not Available' && (
-                              <span className="text-gray-600">− Not Available</span>
+                              <span className="text-gray-600 font-medium">− Not Available</span>
                             )}
                           </div>
                         )}
@@ -617,79 +623,83 @@ export default function Orders() {
         {/* Mobile Cards */}
         <div className="md:hidden divide-y divide-gray-200">
           {orders.map((order) => (
-            <div key={order.id} className="p-4 sm:p-6">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-medium text-[var(--color-heading)]">{order.orderNumber}</h3>
-                  <p className="text-xs sm:text-sm text-gray-600">{order.date}</p>
-                  <p className="text-xs sm:text-sm text-gray-600">{order.customerName}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {getStatusBadge(order.overallStatus)}
+            <div key={order.id} className="p-3 sm:p-4 md:p-5 bg-white">
+              <div className="flex justify-between items-start mb-3 gap-2">
+                <div className="flex items-start gap-2 flex-1 min-w-0">
                   <button
                     aria-label={expandedOrders.has(order.id) ? 'Collapse items' : 'Expand items'}
                     onClick={() => toggleOrderExpansion(order.id)}
-                    className="flex items-center text-[var(--color-accent)]"
+                    className="text-secondary hover:text-accent transition-colors mt-1 flex-shrink-0"
                   >
                     {expandedOrders.has(order.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-secondary text-sm sm:text-base truncate">{order.orderNumber}</h3>
+                    <p className="text-xs sm:text-sm text-gray-600">{order.date}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">{order.customerName}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {getStatusBadge(order.overallStatus)}
                 </div>
               </div>
               
-              <div className="mb-4">
+              <div className="mb-3">
                 <p className="text-xs sm:text-sm text-gray-600 mb-2">
-                  <span className="font-medium">Products:</span> {order.totalItems} items
+                  <span className="font-medium text-gray-800">Products:</span> {order.totalItems} items
                   {order.totalConfirmed > 0 && (
                     <span className="text-green-600 ml-2">({order.totalConfirmed} confirmed)</span>
                   )}
                 </p>
                 
                 {expandedOrders.has(order.id) && (
-                  <div className="space-y-3 mt-3">
+                  <div className="space-y-2.5 sm:space-y-3 mt-3">
                     {order.products.map((product) => (
-                      <div key={product.id} className="bg-gray-50 p-3 rounded-lg">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <p className="font-medium text-gray-900">{product.name}</p>
-                            <p className="text-[10px] sm:text-xs text-gray-500">SKU: {product.sku}</p>
-                            <p className="text-[10px] sm:text-xs text-gray-600">
-                              Qty: {product.confirmedQty > 0 ? `${product.confirmedQty}/${product.requestedQty}` : product.requestedQty}
+                      <div key={product.id} className="bg-gray-50 p-2.5 sm:p-3 rounded-lg border border-gray-200">
+                        <div className="flex justify-between items-start mb-2 gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-secondary text-xs sm:text-sm truncate">{product.name}</p>
+                            <p className="text-xs text-gray-500 truncate">SKU: {product.sku}</p>
+                            <p className="text-xs text-gray-600">
+                              <span className="font-medium">Qty:</span> {product.confirmedQty > 0 ? `${product.confirmedQty}/${product.requestedQty}` : product.requestedQty}
                             </p>
                             {product.backorderQty > 0 && (
-                              <p className="text-[10px] sm:text-xs text-yellow-600">
-                                Backorder: {product.backorderQty} units
+                              <p className="text-xs text-yellow-600 mt-0.5">
+                                <span className="font-medium">Backorder:</span> {product.backorderQty} units
                               </p>
                             )}
                             {product.status === 'Declined' && product.declineReason && (
-                              <p className="text-[10px] sm:text-xs text-red-500">
-                                Decline Reason: {product.declineReason}
+                              <p className="text-xs text-red-600 mt-1 p-1.5 bg-red-50 rounded border border-red-100">
+                                <span className="font-medium">Reason:</span> {product.declineReason}
                               </p>
                             )}
                           </div>
-                          {getStatusBadge(product.status)}
+                          <div className="flex-shrink-0">
+                            {getStatusBadge(product.status)}
+                          </div>
                         </div>
 
                         {product.status === 'Pending' && (
-                          <div className="flex gap-2 flex-wrap">
+                          <div className="flex gap-1.5 sm:gap-2 flex-wrap">
                             <button
                               onClick={() => handleProductConfirmFull(order.id, product.id)}
-                              className="px-2 py-1 bg-green-500 text-white rounded text-xs font-medium flex items-center gap-1"
+                              className="flex-1 min-w-[70px] px-2 sm:px-2.5 py-1.5 bg-green-500 text-white rounded-md text-xs font-medium flex items-center justify-center gap-1 hover:bg-green-600 transition-colors"
                             >
-                              <CheckSquare size={14} />
+                              <CheckSquare size={12} />
                               <span>Full</span>
                             </button>
                             <button
                               onClick={() => handleProductConfirmPartial(order.id, product.id)}
-                              className="px-2 py-1 bg-blue-500 text-white rounded text-xs font-medium flex items-center gap-1"
+                              className="flex-1 min-w-[70px] px-2 sm:px-2.5 py-1.5 bg-blue-500 text-white rounded-md text-xs font-medium flex items-center justify-center gap-1 hover:bg-blue-600 transition-colors"
                             >
-                              <FileText size={14} />
+                              <FileText size={12} />
                               <span>Partial</span>
                             </button>
                             <button
                               onClick={() => handleProductDecline(order.id, product.id)}
-                              className="px-2 py-1 bg-red-500 text-white rounded text-xs font-medium flex items-center gap-1"
+                              className="flex-1 min-w-[70px] px-2 sm:px-2.5 py-1.5 bg-red-500 text-white rounded-md text-xs font-medium flex items-center justify-center gap-1 hover:bg-red-600 transition-colors"
                             >
-                              <X size={14} />
+                              <X size={12} />
                               <span>Decline</span>
                             </button>
                           </div>
