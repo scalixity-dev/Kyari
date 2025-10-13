@@ -2,6 +2,8 @@ import { Order, OrderItem, VendorProfile, Prisma } from '@prisma/client';
 import { prisma } from '../../config/database';
 import { logger } from '../../utils/logger';
 import { APP_CONSTANTS } from '../../config/constants';
+import { notificationService } from '../notifications/notification.service';
+import { NotificationPriority } from '@prisma/client';
 import { 
   CreateOrderDto, 
   OrderDto, 
@@ -46,6 +48,9 @@ export class OrderService {
         itemCount: data.items.length,
         createdById 
       });
+
+      // Send notification to primary vendor about new order assignment (URGENT priority)
+      await this.sendOrderAssignmentNotification(order, data);
       
       return await this.getOrderById(order.id);
     } catch (error) {

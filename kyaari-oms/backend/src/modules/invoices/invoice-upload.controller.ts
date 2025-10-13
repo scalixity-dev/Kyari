@@ -6,6 +6,7 @@ import s3Service from '../../services/s3.service';
 import { invoiceService } from './invoice.service';
 import { prisma } from '../../config/database';
 import { z } from 'zod';
+import { notificationService } from '../notifications/notification.service';
 
 // Validation helper function
 export const validateSchema = <T>(schema: z.ZodType<T, any, any>, data: unknown): { success: true; data: T } | { success: false; errors: Record<string, string[]> } => {
@@ -189,6 +190,36 @@ export class InvoiceUploadController {
           userId: req.user?.userId
         });
 
+        // Send notification for vendor invoice uploads
+        if (invoiceType === 'VENDOR_UPLOAD') {
+          try {
+            await notificationService.sendNotificationToRole(
+              ['ADMIN', 'ACCOUNTS'],
+              {
+                title: 'Vendor Invoice Uploaded',
+                body: `${existingInvoice.purchaseOrder?.vendor?.companyName || 'Vendor'} has uploaded invoice ${existingInvoice.invoiceNumber}`,
+                priority: 'NORMAL' as const,
+                data: {
+                  type: 'VENDOR_INVOICE_UPLOADED',
+                  invoiceId: existingInvoice.id,
+                  invoiceNumber: existingInvoice.invoiceNumber,
+                  vendorName: existingInvoice.purchaseOrder?.vendor?.companyName || 'Unknown',
+                  purchaseOrderId: existingInvoice.purchaseOrderId || '',
+                  uploadedBy: req.user?.userId || 'unknown',
+                  deepLink: `/admin/invoices/${existingInvoice.id}/review`
+                }
+              }
+            );
+          } catch (notificationError) {
+            // Don't fail the upload if notification fails
+            logger.warn('Failed to send vendor invoice upload notification', { 
+              notificationError, 
+              invoiceId, 
+              uploadType: invoiceType 
+            });
+          }
+        }
+
         return ResponseHelper.success(res, {
           attachment: {
             id: attachment.id,
@@ -325,6 +356,42 @@ export class InvoiceUploadController {
           uploadType: invoiceType,
           userId: req.user?.userId
         });
+
+        // Send notification for vendor invoice uploads
+        if (invoiceType === 'VENDOR_UPLOAD') {
+          try {
+            // Get vendor information for notification
+            const purchaseOrder = await prisma.purchaseOrder.findUnique({
+              where: { id: purchaseOrderId },
+              include: { vendor: true }
+            });
+
+            await notificationService.sendNotificationToRole(
+              ['ADMIN', 'ACCOUNTS'],
+              {
+                title: 'New Vendor Invoice Submitted',
+                body: `${purchaseOrder?.vendor?.companyName || 'Vendor'} has submitted a new invoice ${invoiceNumber}`,
+                priority: 'NORMAL' as const,
+                data: {
+                  type: 'VENDOR_INVOICE_SUBMITTED',
+                  invoiceId: newInvoice.id,
+                  invoiceNumber: newInvoice.invoiceNumber,
+                  vendorName: purchaseOrder?.vendor?.companyName || 'Unknown',
+                  purchaseOrderId,
+                  uploadedBy: req.user?.userId || 'unknown',
+                  deepLink: `/admin/invoices/${newInvoice.id}/review`
+                }
+              }
+            );
+          } catch (notificationError) {
+            // Don't fail the upload if notification fails
+            logger.warn('Failed to send vendor invoice submission notification', { 
+              notificationError, 
+              invoiceId: newInvoice.id, 
+              uploadType: invoiceType 
+            });
+          }
+        }
 
         return ResponseHelper.success(res, {
           invoice: {
