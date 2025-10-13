@@ -280,8 +280,8 @@ model Order {
   totalValue      Decimal?    @db.Decimal(12, 2)
   createdById     String?
   createdBy       User?       @relation("CreatedByAdmin", fields: [createdById], references: [id], onDelete: SetNull)
-  primaryVendorId String
-  primaryVendor   VendorProfile @relation("PrimaryVendorForOrder", fields: [primaryVendorId], references: [id], onDelete: Restrict)
+  primaryVendorId String?
+  primaryVendor   VendorProfile? @relation("PrimaryVendorForOrder", fields: [primaryVendorId], references: [id], onDelete: Restrict)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   deletedAt       DateTime?

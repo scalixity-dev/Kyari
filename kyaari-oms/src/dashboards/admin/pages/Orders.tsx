@@ -50,6 +50,9 @@ export default function Orders() {
   const [assignVendorId, setAssignVendorId] = useState('')
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [orderToDelete, setOrderToDelete] = useState<OrderListItem | null>(null)
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
+  const [isBulkAssignModalOpen, setIsBulkAssignModalOpen] = useState(false)
+  const [bulkAssignVendorId, setBulkAssignVendorId] = useState('')
 
   const [filterVendorId, setFilterVendorId] = useState('')
   const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('')
@@ -157,11 +160,7 @@ export default function Orders() {
       return
     }
 
-    // For new orders, vendorId is still required by backend (for now)
-    if (!editingOrderId && !draft.vendorId) {
-      toast.error('Please select a vendor for this order')
-      return
-    }
+    // Vendor is optional for new orders (can be assigned later)
     
     // Validate all items
     for (const item of draft.items) {
@@ -195,7 +194,7 @@ export default function Orders() {
         toast.success('Order updated successfully!')
       } else {
         // Create new order
-        await orderApi.createOrder(orderData)
+      await orderApi.createOrder(orderData)
         toast.success('Order created successfully! Use "Assign" button to assign vendor.')
       }
       
@@ -227,7 +226,8 @@ export default function Orders() {
       )
       
       if (!isValidType) {
-        alert('Please select a valid Excel file (.xls or .xlsx)')
+        toast.error('Please select a valid Excel file (.xls or .xlsx)')
+        event.target.value = ''
         return
       }
       
@@ -235,17 +235,54 @@ export default function Orders() {
     }
   }
 
-  function handleFileUpload() {
+  async function handleFileUpload() {
     if (!selectedFile) {
-      alert('Please select a file first')
+      toast.error('Please select a file first')
       return
     }
     
-    // Here you would typically send the file to your backend
-    // For now, we'll just show a success message
-    alert(`File "${selectedFile.name}" selected successfully!`)
+    try {
+      setIsLoading(true)
+      const result = await orderApi.uploadExcel(selectedFile)
+      
+      if (result.failedCount > 0) {
+        // Show partial success with errors
+        const errorMessages = result.errors.map(e => `${e.orderNumber}: ${e.error}`).join('\n')
+        toast.error(
+          `Uploaded ${result.successCount} orders successfully, ${result.failedCount} failed.\n${errorMessages}`,
+          { duration: 10000 }
+        )
+      } else {
+        toast.success(`Successfully uploaded ${result.successCount} orders!`)
+      }
+      
     setIsUploadModalOpen(false)
     setSelectedFile(null)
+      fetchOrders() // Refresh the list
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to upload Excel file')
+      console.error('Error uploading Excel:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function handleDownloadTemplate() {
+    try {
+      const blob = await orderApi.downloadExcelTemplate()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'order_template.xlsx'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      toast.success('Template downloaded successfully!')
+    } catch (error) {
+      toast.error('Failed to download template')
+      console.error('Error downloading template:', error)
+    }
   }
 
   function handleViewOrder(orderId: string) {
@@ -364,9 +401,88 @@ export default function Orders() {
     }
   }
 
+  function handleSelectOrder(orderId: string) {
+    setSelectedOrders(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId)
+      } else {
+        newSet.add(orderId)
+      }
+      return newSet
+    })
+  }
+
+  function handleSelectAll() {
+    // Only select unassigned orders (RECEIVED status)
+    const unassignedOrders = orders.filter(o => o.status === 'RECEIVED')
+    if (selectedOrders.size === unassignedOrders.length && unassignedOrders.length > 0) {
+      setSelectedOrders(new Set())
+    } else {
+      setSelectedOrders(new Set(unassignedOrders.map(o => o.id)))
+    }
+  }
+
+  function handleOpenBulkAssignModal() {
+    if (selectedOrders.size === 0) {
+      toast.error('Please select at least one order')
+      return
+    }
+    setIsBulkAssignModalOpen(true)
+    if (vendors.length === 0) {
+      fetchVendors()
+    }
+  }
+
+  async function handleBulkAssignVendor() {
+    if (!bulkAssignVendorId) {
+      toast.error('Please select a vendor')
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      const orderIds = Array.from(selectedOrders)
+      let successCount = 0
+      let failedCount = 0
+      const errors: string[] = []
+
+      for (const orderId of orderIds) {
+        try {
+          await orderApi.assignVendor(orderId, bulkAssignVendorId)
+          successCount++
+        } catch (error) {
+          failedCount++
+          const orderNumber = orders.find(o => o.id === orderId)?.orderNumber || orderId
+          errors.push(`${orderNumber}: ${error instanceof Error ? error.message : 'Failed'}`)
+        }
+      }
+
+      if (failedCount > 0) {
+        toast.error(
+          `Assigned ${successCount} orders successfully, ${failedCount} failed.\n${errors.join('\n')}`,
+          { duration: 10000 }
+        )
+      } else {
+        toast.success(`Successfully assigned ${successCount} orders!`)
+      }
+
+      setIsBulkAssignModalOpen(false)
+      setBulkAssignVendorId('')
+      setSelectedOrders(new Set())
+      fetchOrders()
+    } catch (error) {
+      toast.error('Failed to bulk assign vendors')
+      console.error('Error bulk assigning vendors:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 font-sans text-primary min-h-[calc(100vh-4rem)] w-full" style={{ background: 'var(--color-sharktank-bg)' }}>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="font-heading text-secondary text-xl sm:text-2xl font-semibold">Orders</h2>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <button
@@ -391,6 +507,35 @@ export default function Orders() {
               <span>Filters</span>
             </button>
         </div>
+        </div>
+
+        {/* Bulk Actions Bar */}
+        {selectedOrders.size > 0 && (
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <span className="text-sm font-medium text-purple-900">
+                {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''} selected
+              </span>
+              <p className="text-xs text-purple-700 mt-1">
+                ✓ Only unassigned orders (RECEIVED status) can be selected
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelectedOrders(new Set())}
+                className="bg-white text-purple-700 border border-purple-300 rounded-lg px-3 py-1.5 text-sm hover:bg-purple-50 transition-colors"
+              >
+                Clear Selection
+              </button>
+              <button
+                onClick={handleOpenBulkAssignModal}
+                className="bg-purple-600 text-white rounded-lg px-4 py-1.5 text-sm hover:bg-purple-700 transition-colors"
+              >
+                Bulk Assign Vendor
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {isFilterOpen && (
@@ -444,6 +589,15 @@ export default function Orders() {
             <table className="w-full border-separate border-spacing-0">
               <thead>
                 <tr className="" style={{ background: 'var(--color-accent)' }}>
+                  <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedOrders.size > 0 && selectedOrders.size === orders.filter(o => o.status === 'RECEIVED').length}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 rounded border-gray-300 cursor-pointer"
+                      title="Select all unassigned orders"
+                    />
+                  </th>
                   {['','Order Number','Items','Vendor','Status','Created','Actions'].map(h => (
                     <th key={h} className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>{h}</th>
                   ))}
@@ -453,9 +607,25 @@ export default function Orders() {
                 {orders.map((order) => {
                   const st = STATUS_STYLES[order.status as OrderStatus]
                   const isExpanded = expandedOrderId === order.id
+                  const isSelected = selectedOrders.has(order.id)
                   return (
                     <>
-                      <tr key={order.id} className={'bg-white border-b border-gray-100 hover:bg-gray-50'}>
+                      <tr key={order.id} className={`border-b border-gray-100 hover:bg-gray-50 ${isSelected ? 'bg-purple-50' : 'bg-white'}`}>
+                        <td className="p-3">
+                          {order.status === 'RECEIVED' ? (
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleSelectOrder(order.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-4 h-4 rounded border-gray-300 cursor-pointer"
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500" title="Already assigned">
+                              <span className="text-white text-xs font-bold">✓</span>
+                            </div>
+                          )}
+                        </td>
                         <td className="p-3">
                           <button
                             onClick={(e) => {
@@ -483,9 +653,9 @@ export default function Orders() {
                         </span>
                       </td>
                       <td className="p-3">{new Date(order.createdAt).toLocaleDateString('en-GB')}</td>
-                        <td className="p-3">
+                      <td className="p-3">
                           <div className="flex items-center gap-1.5">
-                            <button 
+                          <button 
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleEditOrder(order.id)
@@ -527,13 +697,13 @@ export default function Orders() {
                               title="View Details"
                             >
                               View
-                            </button>
-                          </div>
-                        </td>
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                       {isExpanded && (
                         <tr key={`${order.id}-details`} className="bg-gray-50">
-                          <td colSpan={7} className="p-0">
+                          <td colSpan={8} className="p-0">
                             <div className="px-6 py-4 border-t border-gray-200">
                               {isLoadingDetails ? (
                                 <div className="text-center py-4">
@@ -573,7 +743,7 @@ export default function Orders() {
                 })}
                 {orders.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-6 text-center text-gray-500">No orders found. Create your first order to get started!</td>
+                    <td colSpan={8} className="p-6 text-center text-gray-500">No orders found. Create your first order to get started!</td>
                   </tr>
                 )}
               </tbody>
@@ -593,13 +763,27 @@ export default function Orders() {
             orders.map((order) => {
               const st = STATUS_STYLES[order.status as OrderStatus]
               const isExpanded = expandedOrderId === order.id
+              const isSelected = selectedOrders.has(order.id)
               return (
                 <div 
                   key={order.id} 
-                  className="bg-white rounded-xl p-4 border border-gray-200"
+                  className={`rounded-xl p-4 border border-gray-200 ${isSelected ? 'bg-purple-50 border-purple-300' : 'bg-white'}`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start gap-2">
+                      {order.status === 'RECEIVED' ? (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleSelectOrder(order.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 mt-1 rounded border-gray-300 cursor-pointer"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500 mt-1" title="Already assigned">
+                          <span className="text-white text-xs font-bold">✓</span>
+                        </div>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
@@ -609,9 +793,9 @@ export default function Orders() {
                       >
                         {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                       </button>
-                      <div>
-                        <h3 className="font-semibold text-secondary text-lg">{order.orderNumber}</h3>
-                        <p className="text-sm text-gray-600">{new Date(order.createdAt).toLocaleDateString('en-GB')}</p>
+                    <div>
+                      <h3 className="font-semibold text-secondary text-lg">{order.orderNumber}</h3>
+                      <p className="text-sm text-gray-600">{new Date(order.createdAt).toLocaleDateString('en-GB')}</p>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
@@ -807,14 +991,14 @@ export default function Orders() {
                     readOnly={!!editingOrderId}
                   />
                   {!editingOrderId && (
-                    <button
-                      type="button"
-                      onClick={() => setDraft({ ...draft, orderNumber: generateOrderNumber() })}
-                      className="px-3 py-2.5 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors whitespace-nowrap"
-                      title="Generate new order number"
-                    >
-                      🔄 New
-                    </button>
+                  <button
+                    type="button"
+                    onClick={() => setDraft({ ...draft, orderNumber: generateOrderNumber() })}
+                    className="px-3 py-2.5 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors whitespace-nowrap"
+                    title="Generate new order number"
+                  >
+                    🔄 New
+                  </button>
                   )}
                 </div>
                 {!editingOrderId && <p className="text-xs text-gray-500 mt-1">Auto-generated (click 🔄 to regenerate)</p>}
@@ -889,17 +1073,17 @@ export default function Orders() {
                         }} 
                           placeholder="e.g., Rose, Lily, Tulip" 
                           className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none" 
-                        />
-                      </div>
-                      <div>
+                      />
+                    </div>
+                    <div>
                         <label className="block text-sm font-medium mb-2">SKU (Optional)</label>
-                        <input 
+                      <input 
                           value={item.sku} 
-                          onChange={e => {
-                            const newItems = [...draft.items]
+                        onChange={e => {
+                          const newItems = [...draft.items]
                             newItems[index] = { ...item, sku: e.target.value }
-                            setDraft({ ...draft, items: newItems })
-                          }} 
+                          setDraft({ ...draft, items: newItems })
+                        }} 
                           placeholder="e.g., KY-PLNT-01" 
                           className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none" 
                       />
@@ -933,8 +1117,8 @@ export default function Orders() {
                         step="0.01"
                         placeholder="0.00"
                           className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none" 
-                        />
-                      </div>
+                      />
+                    </div>
                       <div className="sm:col-span-2">
                         <div className="bg-white rounded-lg p-3 border border-accent/30">
                           <div className="flex items-center justify-between">
@@ -942,14 +1126,14 @@ export default function Orders() {
                             <span className="text-lg font-semibold text-accent">
                               ₹{totalAmount.toFixed(2)}
                             </span>
-                          </div>
+                  </div>
                           {item.qty && item.amount && (
                             <p className="text-xs text-gray-500 mt-1">
                               {item.qty} × ₹{Number(item.amount).toFixed(2)} = ₹{totalAmount.toFixed(2)}
                             </p>
-                          )}
-                        </div>
-                      </div>
+                    )}
+                  </div>
+                </div>
                     </div>
                   </div>
                 )
@@ -982,26 +1166,88 @@ export default function Orders() {
 
       {isUploadModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-[520px] rounded-2xl p-4 sm:p-5">
+          <div className="bg-white w-full max-w-[700px] rounded-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
             <div className="mb-4">
               <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">Upload Orders (Excel)</h3>
             </div>
             
+            {/* Excel Format Instructions */}
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                <FileText size={18} />
+                Excel File Format
+              </h4>
+              <p className="text-sm text-blue-800 mb-3">
+                Your Excel file must contain the following columns:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <div className="bg-white rounded p-2">
+                  <span className="font-semibold text-blue-900">Order Number</span>
+                  <span className="text-red-500 ml-1">*</span>
+                  <p className="text-xs text-gray-600">e.g., ORD-250110-001</p>
+                </div>
+                <div className="bg-white rounded p-2">
+                  <span className="font-semibold text-blue-900">SKU</span>
+                  <span className="text-gray-500 text-xs ml-1">(optional)</span>
+                  <p className="text-xs text-gray-600">e.g., KY-ROSE-001</p>
+                </div>
+                <div className="bg-white rounded p-2">
+                  <span className="font-semibold text-blue-900">Product Name</span>
+                  <span className="text-red-500 ml-1">*</span>
+                  <p className="text-xs text-gray-600">e.g., Red Rose</p>
+                </div>
+                <div className="bg-white rounded p-2">
+                  <span className="font-semibold text-blue-900">Quantity</span>
+                  <span className="text-red-500 ml-1">*</span>
+                  <p className="text-xs text-gray-600">e.g., 100</p>
+                </div>
+                <div className="bg-white rounded p-2">
+                  <span className="font-semibold text-blue-900">Price Per Unit</span>
+                  <span className="text-red-500 ml-1">*</span>
+                  <p className="text-xs text-gray-600">e.g., 25.50</p>
+                </div>
+                <div className="bg-white rounded p-2">
+                  <span className="font-semibold text-blue-900">Vendor ID</span>
+                  <span className="text-gray-500 text-xs ml-1">(optional)</span>
+                  <p className="text-xs text-gray-600">Leave blank to assign later</p>
+                </div>
+              </div>
+              <div className="mt-4 bg-white rounded-lg p-3 border border-blue-300">
+                <p className="text-xs text-blue-800 mb-2">
+                  <span className="text-red-500 font-bold">*</span> = Required columns
+                </p>
+                <p className="text-xs text-blue-700">
+                  💡 Download the sample template below to see the exact format with examples
+                </p>
+              </div>
+
+              <button
+                onClick={handleDownloadTemplate}
+                className="mt-3 bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm hover:bg-blue-700 transition-colors flex items-center gap-2 w-full justify-center shadow-sm"
+              >
+                <FileText size={16} />
+                Download Sample Excel Template
+              </button>
+            </div>
+            
             <div 
-              className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center text-gray-500 bg-header-bg relative cursor-pointer"
+              className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center text-gray-500 bg-gray-50 relative cursor-pointer hover:border-accent hover:bg-accent/5 transition-colors"
               onClick={() => document.getElementById('file-input')?.click()}
             >
               {selectedFile ? (
                 <div>
-                  <div className="text-lg mb-2 flex items-center justify-center"><FileText size={24} /></div>
+                  <div className="text-lg mb-2 flex items-center justify-center text-green-600"><FileText size={32} /></div>
                   <div className="font-semibold text-secondary mb-1">{selectedFile.name}</div>
-                  <div className="text-sm">Click to select a different file</div>
+                  <div className="text-sm text-gray-600">
+                    Size: {(selectedFile.size / 1024).toFixed(2)} KB
+                  </div>
+                  <div className="text-sm text-blue-600 mt-2">Click to select a different file</div>
                 </div>
               ) : (
                 <div>
-                  <div className="text-2xl mb-2 flex items-center justify-center"><Upload size={24} /></div>
-                  <div className="mb-1">Drag & drop your Excel file here, or click to browse</div>
-                  <div className="text-xs">Supports .xls and .xlsx files</div>
+                  <div className="text-2xl mb-2 flex items-center justify-center"><Upload size={32} /></div>
+                  <div className="mb-1 font-medium text-gray-700">Drag & drop your Excel file here, or click to browse</div>
+                  <div className="text-xs text-gray-500">Supports .xls and .xlsx files only</div>
                 </div>
               )}
               
@@ -1013,6 +1259,17 @@ export default function Orders() {
                 className="hidden"
               />
             </div>
+
+            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-xs text-yellow-800 mb-2">
+                <strong>📌 Important Notes:</strong>
+              </p>
+              <ul className="text-xs text-yellow-800 space-y-1 ml-4 list-disc">
+                <li><strong>Multiple Items Per Order:</strong> You can add multiple rows with the same Order Number. They will automatically be grouped as one order with multiple items.</li>
+                <li><strong>Vendor ID (Optional):</strong> You can leave Vendor ID blank and assign vendors later using the "Assign" button. If provided, all rows with the same Order Number MUST have the same Vendor ID.</li>
+                <li><strong>Example:</strong> ORD-001 with 3 items = 3 rows in Excel, all with "ORD-001" (Vendor ID can be blank).</li>
+              </ul>
+            </div>
             
             <div className="flex flex-col sm:flex-row justify-end gap-3 mt-4">
               <button 
@@ -1021,19 +1278,20 @@ export default function Orders() {
                   setSelectedFile(null)
                 }} 
                 className="bg-white text-secondary border border-secondary rounded-lg px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
+                disabled={isLoading}
               >
                 Cancel
               </button>
               <button 
                 onClick={handleFileUpload}
-                disabled={!selectedFile}
+                disabled={!selectedFile || isLoading}
                 className={`rounded-lg px-4 py-2.5 text-sm sm:text-base border-none transition-colors ${
-                  selectedFile 
+                  selectedFile && !isLoading
                     ? 'bg-accent text-button-text cursor-pointer hover:bg-accent/90' 
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                Upload
+                {isLoading ? 'Uploading...' : 'Upload'}
               </button>
             </div>
           </div>
@@ -1112,6 +1370,76 @@ export default function Orders() {
           confirmText="Delete"
           cancelText="Cancel"
         />
+      )}
+
+      {/* Bulk Assign Vendor Modal */}
+      {isBulkAssignModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-[500px] rounded-2xl p-4 sm:p-5">
+            <div className="mb-4">
+              <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">Bulk Assign Vendor</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Assigning vendor to {selectedOrders.size} selected order{selectedOrders.size !== 1 ? 's' : ''}
+              </p>
+            </div>
+            
+            <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg p-3 max-h-32 overflow-y-auto">
+              <p className="text-xs font-semibold text-purple-900 mb-2">Selected Orders:</p>
+              <div className="space-y-1">
+                {Array.from(selectedOrders).map(orderId => {
+                  const order = orders.find(o => o.id === orderId)
+                  return order ? (
+                    <div key={orderId} className="text-xs text-purple-800">
+                      • {order.orderNumber} - {order.primaryVendor.companyName}
+                    </div>
+                  ) : null
+                })}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Select Vendor *</label>
+              {isLoadingVendors ? (
+                <div className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-500">
+                  Loading vendors...
+                </div>
+              ) : (
+                <CustomDropdown
+                  value={bulkAssignVendorId}
+                  onChange={(value) => setBulkAssignVendorId(value)}
+                  options={[
+                    { value: '', label: 'Select Vendor' },
+                    ...vendors.map(vendor => ({ 
+                      value: vendor.id, 
+                      label: `${vendor.companyName} - ${vendor.warehouseLocation}` 
+                    }))
+                  ]}
+                  placeholder="Select Vendor"
+                />
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <button 
+                onClick={() => {
+                  setIsBulkAssignModalOpen(false)
+                  setBulkAssignVendorId('')
+                }}
+                className="bg-white text-secondary border border-secondary rounded-lg px-4 py-2.5 text-sm sm:text-base hover:bg-gray-50 transition-colors"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleBulkAssignVendor}
+                disabled={isLoading || !bulkAssignVendorId}
+                className="bg-purple-600 text-white rounded-lg px-4 py-2.5 text-sm sm:text-base hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Assigning...' : `Assign to ${selectedOrders.size} Orders`}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

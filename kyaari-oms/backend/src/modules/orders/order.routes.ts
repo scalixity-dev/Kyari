@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { orderController } from './order.controller';
 import { authenticate, requireRole } from '../../middlewares/auth.middleware';
+import { upload } from '../../middlewares/upload.middleware';
 import { APP_CONSTANTS } from '../../config/constants';
 
 const router = Router();
@@ -12,6 +13,19 @@ router.use(authenticate);
 router.post('/', 
   requireRole([APP_CONSTANTS.ROLES.ADMIN]), 
   orderController.createOrder.bind(orderController)
+);
+
+// Upload orders via Excel - ADMIN only (must be before /:id routes)
+router.post('/upload-excel', 
+  requireRole([APP_CONSTANTS.ROLES.ADMIN]),
+  upload.single('file'),
+  orderController.uploadOrdersExcel.bind(orderController)
+);
+
+// Download Excel template - ADMIN only (must be before /:id routes)
+router.get('/excel-template', 
+  requireRole([APP_CONSTANTS.ROLES.ADMIN]),
+  orderController.downloadExcelTemplate.bind(orderController)
 );
 
 // Order listing - ADMIN and OPS can view orders

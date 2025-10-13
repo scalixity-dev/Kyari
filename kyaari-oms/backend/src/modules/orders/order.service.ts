@@ -11,6 +11,7 @@ import {
   OrderItemDto,
   AssignedOrderItemDto
 } from './order.dto';
+import type { ParsedOrderData } from '../../services/excel.service';
 
 type OrderWithDetails = Order & {
   primaryVendor: VendorProfile;
@@ -83,6 +84,13 @@ export class OrderService {
 
     if (!order) {
       throw new Error('Order not found');
+    }
+
+    // Handle case where primaryVendor might be null
+    if (!order.primaryVendor) {
+      // If no primary vendor, we need to handle the DTO mapping differently
+      const orderWithoutVendor = order as any;
+      return this.mapToOrderDtoWithoutVendor(orderWithoutVendor);
     }
 
     return this.mapToOrderDto(order as OrderWithDetails);
@@ -176,22 +184,24 @@ export class OrderService {
       }
     }
 
-    // Validate primary vendor exists and is active
-    const vendor = await prisma.vendorProfile.findUnique({
-      where: { id: data.primaryVendorId },
-      include: { user: true }
-    });
+    // Validate primary vendor exists and is active (only if vendorId is provided)
+    if (data.primaryVendorId) {
+      const vendor = await prisma.vendorProfile.findUnique({
+        where: { id: data.primaryVendorId },
+        include: { user: true }
+      });
 
-    if (!vendor) {
-      throw new Error('Primary vendor not found');
-    }
+      if (!vendor) {
+        throw new Error('Primary vendor not found');
+      }
 
-    if (vendor.user.status !== 'ACTIVE') {
-      throw new Error('Primary vendor is not active');
-    }
+      if (vendor.user.status !== 'ACTIVE') {
+        throw new Error('Primary vendor is not active');
+      }
 
-    if (!vendor.verified) {
-      throw new Error('Primary vendor is not verified');
+      if (!vendor.verified) {
+        throw new Error('Primary vendor is not verified');
+      }
     }
   }
 
@@ -205,12 +215,12 @@ export class OrderService {
       // Create order record
       const order = await tx.order.create({
         data: {
-          clientOrderId: data.orderNumber, // Use orderNumber as clientOrderId
+          clientOrderId: data.orderNumber,
           orderNumber: data.orderNumber,
-          primaryVendorId: data.primaryVendorId,
+          ...(data.primaryVendorId && { primaryVendorId: data.primaryVendorId }),
           status: 'RECEIVED',
           source: 'MANUAL_ENTRY',
-          totalValue: totalOrderValue, // Calculated from item pricing
+          totalValue: totalOrderValue,
           createdById
         }
       });
@@ -230,16 +240,18 @@ export class OrderService {
           }
         });
 
-        // Auto-create assigned order item for primary vendor
-        await tx.assignedOrderItem.create({
-          data: {
-            orderItemId: orderItem.id,
-            vendorId: data.primaryVendorId,
-            assignedQuantity: itemData.quantity,
-            status: 'PENDING_CONFIRMATION',
-            assignedById: createdById
-          }
-        });
+        // Auto-create assigned order item for primary vendor (only if vendorId is provided)
+        if (data.primaryVendorId) {
+          await tx.assignedOrderItem.create({
+            data: {
+              orderItemId: orderItem.id,
+              vendorId: data.primaryVendorId,
+              assignedQuantity: itemData.quantity,
+              status: 'PENDING_CONFIRMATION',
+              assignedById: createdById
+            }
+          });
+        }
       }
 
       // Create audit log
@@ -251,7 +263,7 @@ export class OrderService {
           entityId: order.id,
           metadata: {
             orderNumber: data.orderNumber,
-            primaryVendorId: data.primaryVendorId,
+            primaryVendorId: data.primaryVendorId || undefined,
             itemCount: data.items.length
           }
         }
@@ -269,6 +281,28 @@ export class OrderService {
       source: order.source,
       primaryVendor: this.mapToVendorSummaryDto(order.primaryVendor),
       items: order.items.map(item => this.mapToOrderItemDto(item)),
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      createdBy: order.createdBy ? {
+        id: order.createdBy.id,
+        name: order.createdBy.name
+      } : undefined
+    };
+  }
+
+  private mapToOrderDtoWithoutVendor(order: any): OrderDto {
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      source: order.source,
+      primaryVendor: {
+        id: 'N/A',
+        companyName: 'Not Assigned',
+        contactPersonName: 'N/A',
+        contactPhone: 'N/A'
+      },
+      items: order.items.map((item: any) => this.mapToOrderItemDto(item)),
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
       createdBy: order.createdBy ? {
@@ -326,7 +360,7 @@ export class OrderService {
       status: order.status,
       itemCount: order.items.length,
       primaryVendor: {
-        companyName: order.primaryVendor.companyName
+        companyName: order.primaryVendor?.companyName || 'Not Assigned'
       },
       createdAt: order.createdAt,
       pricingStatus: 'complete' // Always complete since pricing is mandatory
@@ -504,6 +538,66 @@ export class OrderService {
       logger.error('Failed to assign vendor to order', { error, orderId, vendorId });
       throw error;
     }
+  }
+
+  async createOrdersFromExcel(
+    parsedOrders: ParsedOrderData[], 
+    createdById: string
+  ): Promise<{
+    successCount: number;
+    failedCount: number;
+    errors: { orderNumber: string; error: string }[];
+    createdOrders: OrderDto[];
+  }> {
+    const results = {
+      successCount: 0,
+      failedCount: 0,
+      errors: [] as { orderNumber: string; error: string }[],
+      createdOrders: [] as OrderDto[]
+    };
+
+    for (const orderData of parsedOrders) {
+      try {
+        // Convert to CreateOrderDto format
+        const createOrderDto: CreateOrderDto = {
+          orderNumber: orderData.orderNumber,
+          primaryVendorId: orderData.vendorId || undefined,
+          items: orderData.items
+        };
+
+        // Create the order
+        const createdOrder = await this.createOrder(createOrderDto, createdById);
+        
+        results.successCount++;
+        results.createdOrders.push(createdOrder);
+        
+        logger.info('Order created from Excel', { 
+          orderNumber: orderData.orderNumber,
+          itemCount: orderData.items.length,
+          hasVendor: !!orderData.vendorId
+        });
+      } catch (error) {
+        results.failedCount++;
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        results.errors.push({
+          orderNumber: orderData.orderNumber,
+          error: errorMessage
+        });
+        
+        logger.error('Failed to create order from Excel', { 
+          orderNumber: orderData.orderNumber,
+          error: errorMessage 
+        });
+      }
+    }
+
+    logger.info('Excel upload completed', {
+      total: parsedOrders.length,
+      success: results.successCount,
+      failed: results.failedCount
+    });
+
+    return results;
   }
 }
 

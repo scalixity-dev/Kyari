@@ -33,6 +33,7 @@
     "@types/multer": "^2.0.0",
     "@types/nodemailer": "^7.0.2",
     "@types/uuid": "^10.0.0",
+    "@types/xlsx": "^0.0.35",
     "argon2": "^0.31.2",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -44,6 +45,7 @@
     "nodemailer": "^7.0.9",
     "resend": "^6.1.2",
     "uuid": "^13.0.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.22.4"
   },
   "devDependencies": {
