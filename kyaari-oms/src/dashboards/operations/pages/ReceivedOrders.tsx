@@ -1,6 +1,8 @@
-import React, { useState } from 'react'
-import { CheckSquare, AlertTriangle, Filter, X, Search } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { CheckSquare, AlertTriangle, X, Calendar as CalendarIcon } from 'lucide-react'
 import { CustomDropdown } from '../../../components'
+import { Calendar } from '../../../components/ui/calendar'
+import { format } from 'date-fns'
 
 interface ReceivedOrder {
   id: string
@@ -119,6 +121,9 @@ export default function ReceivedOrders() {
     date: '',
     status: 'all'
   })
+  const [dateCalendar, setDateCalendar] = useState<Date | undefined>()
+  const [showDateCalendar, setShowDateCalendar] = useState(false)
+  const dateCalendarRef = useRef<HTMLDivElement>(null)
   const [ticketModalOpen, setTicketModalOpen] = useState(false)
   const [selectedOrderForTicket, setSelectedOrderForTicket] = useState<ReceivedOrder | null>(null)
   const [ticketData, setTicketData] = useState<TicketData>({
@@ -127,7 +132,18 @@ export default function ReceivedOrders() {
     comments: '',
     proofFile: undefined
   })
-  const [showFilters, setShowFilters] = useState(false)
+
+  // Close calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dateCalendarRef.current && !dateCalendarRef.current.contains(event.target as Node)) {
+        setShowDateCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Apply filters
   React.useEffect(() => {
@@ -230,7 +246,7 @@ export default function ReceivedOrders() {
   const mismatchOrders = orders.filter(order => order.status === 'mismatch').length
 
   return (
-    <div className="p-4 sm:p-6 md:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 md:p-8 bg-[var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
@@ -242,139 +258,201 @@ export default function ReceivedOrders() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 flex-shrink-0" />
-            <span className="text-xs sm:text-sm font-medium text-gray-600">Pending Verification</span>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 mt-8">
+        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
+          {/* Circular icon at top center, overlapping the card edge */}
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-[var(--color-accent)] rounded-full p-3 flex items-center justify-center text-white shadow-md">
+            <AlertTriangle color="white" size={32} />
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{pendingOrders}</div>
+          
+          {/* Card content */}
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">Pending Verification</h3>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{pendingOrders}</div>
         </div>
         
-        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 flex-shrink-0" />
-            <span className="text-xs sm:text-sm font-medium text-gray-600">Verified Orders</span>
+        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
+          {/* Circular icon at top center, overlapping the card edge */}
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-[var(--color-accent)] rounded-full p-3 flex items-center justify-center text-white shadow-md">
+            <CheckSquare color="white" size={32} />
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{verifiedOrders}</div>
+          
+          {/* Card content */}
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">Verified Orders</h3>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{verifiedOrders}</div>
         </div>
         
-        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <X className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 flex-shrink-0" />
-            <span className="text-xs sm:text-sm font-medium text-gray-600">Mismatch Orders</span>
+        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
+          {/* Circular icon at top center, overlapping the card edge */}
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-[var(--color-accent)] rounded-full p-3 flex items-center justify-center text-white shadow-md">
+            <X color="white" size={32} />
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{mismatchOrders}</div>
+          
+          {/* Card content */}
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">Mismatch Orders</h3>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{mismatchOrders}</div>
         </div>
       </div>
 
-      {/* Filters and Actions */}
-      <div className="bg-white rounded-xl shadow-md border border-white/20 mb-6">
-        <div className="p-4 sm:p-6 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-            <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">Orders Management</h2>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              {selectedOrders.size > 0 && canBulkVerify && (
-                <button
-                  onClick={handleBulkVerification}
-                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2 min-h-[44px] whitespace-nowrap"
-                >
-                  <CheckSquare size={16} />
-                  Bulk Verify ({selectedOrders.size})
-                </button>
-              )}
+      {/* Received Orders Heading */}
+      <div className="mb-3 sm:mb-4">
+        <h2 className="text-base sm:text-lg md:text-xl font-semibold text-[var(--color-heading)]">Received Orders</h2>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 pb-3 sm:pb-4 mb-4 sm:mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Order#</label>
+            <input
+              type="text"
+              value={filters.vendor}
+              onChange={(e) => setFilters({...filters, vendor: e.target.value})}
+              placeholder="Search order number"
+              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto mb-2"
+            />
+
+            <div className="hidden sm:flex sm:flex-row sm:items-center gap-2">
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
+                onClick={() => {/* Apply filters */}}
+                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
+                style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
               >
-                <Filter size={16} />
-                Filters
+                Apply
+              </button>
+              <button
+                onClick={() => {
+                  setFilters({vendor: '', date: '', status: 'all'})
+                  setDateCalendar(undefined)
+                }}
+                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
+                style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+              >
+                Reset
               </button>
             </div>
           </div>
 
-          {/* Filters */}
-          {showFilters && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                  <input
-                    type="text"
-                    placeholder="Search vendor..."
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
-                    value={filters.vendor}
-                    onChange={(e) => setFilters({...filters, vendor: e.target.value})}
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Status</label>
+            <CustomDropdown
+              value={filters.status === 'all' ? '' : filters.status}
+              onChange={(value) => setFilters({...filters, status: value || 'all'})}
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'verified', label: 'Verified' },
+                { value: 'mismatch', label: 'Mismatch' }
+              ]}
+              placeholder="All Statuses"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Vendor</label>
+            <input
+              type="text"
+              value={filters.vendor}
+              onChange={(e) => setFilters({...filters, vendor: e.target.value})}
+              placeholder="Search vendor"
+              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Date</label>
+            <div className="relative" ref={dateCalendarRef}>
+              <button
+                type="button"
+                onClick={() => setShowDateCalendar(!showDateCalendar)}
+                className="w-full px-3 py-2.5 sm:py-3 text-xs sm:text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
+              >
+                <span className={dateCalendar ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                  {dateCalendar ? format(dateCalendar, 'PPP') : 'Select date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+              </button>
+              {showDateCalendar && (
+                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={dateCalendar}
+                    onSelect={(date) => {
+                      setDateCalendar(date)
+                      setFilters({...filters, date: date ? format(date, 'yyyy-MM-dd') : ''})
+                      setShowDateCalendar(false)
+                    }}
+                    initialFocus
+                    className="w-full"
                   />
                 </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
-                    value={filters.date}
-                    onChange={(e) => setFilters({...filters, date: e.target.value})}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <CustomDropdown
-                  value={filters.status}
-                  onChange={(value) => setFilters({...filters, status: value})}
-                  options={[
-                    { value: 'all', label: 'All Status' },
-                    { value: 'pending', label: 'Pending' },
-                    { value: 'verified', label: 'Verified' },
-                    { value: 'mismatch', label: 'Mismatch' }
-                  ]}
-                  placeholder="All Status"
-                />
-              </div>
-              
-              <div className="flex items-end">
-                <button
-                  onClick={() => setFilters({vendor: '', date: '', status: 'all'})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
-                >
-                  Clear Filters
-                </button>
-              </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
+        {/* Mobile Apply/Reset Buttons */}
+        <div className="flex sm:hidden flex-row items-center gap-2 mt-4">
+          <button
+            onClick={() => {/* Apply filters */}}
+            className="flex-1 px-4 py-2.5 rounded-md text-white font-medium text-sm min-h-[44px]"
+            style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
+          >
+            Apply
+          </button>
+          <button
+            onClick={() => {
+              setFilters({vendor: '', date: '', status: 'all'})
+              setDateCalendar(undefined)
+            }}
+            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px]"
+            style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+          >
+            Reset
+          </button>
+        </div>
+
+        {/* Bulk Actions */}
+        {selectedOrders.size > 0 && canBulkVerify && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <button
+              onClick={handleBulkVerification}
+              className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
+            >
+              <CheckSquare size={16} />
+              Bulk Verify ({selectedOrders.size})
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Orders Table */}
+      <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden mb-6">
         {/* Desktop Table View - Hidden on Mobile */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-[var(--color-accent)]">
               <tr>
-                <th className="px-6 py-3 text-left">
+                <th className="px-4 xl:px-6 py-3 text-left">
                   <input
                     type="checkbox"
                     checked={selectedOrders.size === filteredOrders.length && filteredOrders.length > 0}
                     onChange={handleSelectAll}
-                    className="rounded border-gray-300 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                    className="rounded border-white text-white focus:ring-white"
                   />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity Invoiced</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity Received</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Order ID</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Vendor</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Items</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Qty Invoiced</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Qty Received</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={selectedOrders.has(order.id)}
@@ -382,11 +460,11 @@ export default function ReceivedOrders() {
                       className="rounded border-gray-300 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-[var(--color-heading)]">{order.orderNumber}</div>
                     <div className="text-xs text-gray-500">{order.submittedAt}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{order.vendor.name}</div>
@@ -394,13 +472,13 @@ export default function ReceivedOrders() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {order.items}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {order.quantityInvoiced}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-600">
                       {order.quantityReceived}
                       {order.quantityInvoiced !== order.quantityReceived && (
@@ -410,12 +488,12 @@ export default function ReceivedOrders() {
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(order.status)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm">
                     {order.status === 'pending' && (
-                      <div className="flex gap-2">
+                      <div className="flex flex-col items-start gap-2">
                         {order.quantityInvoiced === order.quantityReceived ? (
                           <button
                             onClick={() => handleVerifyOrder(order.id)}
