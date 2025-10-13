@@ -1,6 +1,8 @@
-import React, { useState } from 'react'
-import { AlertTriangle, Eye, Filter, Search, X, CheckSquare, Clock } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { AlertTriangle, Eye, X, CheckSquare, Clock, Calendar as CalendarIcon, FileText, Paperclip, Edit } from 'lucide-react'
 import { CustomDropdown } from '../../../components'
+import { Calendar } from '../../../components/ui/calendar'
+import { format } from 'date-fns'
 
 interface Ticket {
   id: string
@@ -213,7 +215,9 @@ export default function TicketManagement() {
     vendor: '',
     date: ''
   })
-  const [showFilters, setShowFilters] = useState(false)
+  const [dateCalendar, setDateCalendar] = useState<Date | undefined>()
+  const [showDateCalendar, setShowDateCalendar] = useState(false)
+  const dateCalendarRef = useRef<HTMLDivElement>(null)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [updateStatusModalOpen, setUpdateStatusModalOpen] = useState(false)
@@ -221,6 +225,18 @@ export default function TicketManagement() {
   const [newComment, setNewComment] = useState('')
   const [newStatus, setNewStatus] = useState<'open' | 'under-review' | 'resolved'>('open')
   const [newAttachment, setNewAttachment] = useState<File | null>(null)
+
+  // Close calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dateCalendarRef.current && !dateCalendarRef.current.contains(event.target as Node)) {
+        setShowDateCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Apply filters
   React.useEffect(() => {
@@ -317,7 +333,7 @@ export default function TicketManagement() {
   const resolvedTickets = tickets.filter(ticket => ticket.status === 'resolved').length
 
   return (
-    <div className="p-4 sm:p-6 md:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 md:p-8 bg-[var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
@@ -329,150 +345,212 @@ export default function TicketManagement() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 flex-shrink-0" />
-            <span className="text-xs sm:text-sm font-medium text-gray-600">Open Tickets</span>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 mt-8">
+        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
+          {/* Circular icon at top center, overlapping the card edge */}
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-[var(--color-accent)] rounded-full p-3 flex items-center justify-center text-white shadow-md">
+            <AlertTriangle color="white" size={32} />
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{openTickets}</div>
+          
+          {/* Card content */}
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">Open Tickets</h3>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{openTickets}</div>
         </div>
         
-        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 flex-shrink-0" />
-            <span className="text-xs sm:text-sm font-medium text-gray-600">Under Review</span>
+        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
+          {/* Circular icon at top center, overlapping the card edge */}
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-[var(--color-accent)] rounded-full p-3 flex items-center justify-center text-white shadow-md">
+            <Clock color="white" size={32} />
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{underReviewTickets}</div>
+          
+          {/* Card content */}
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">Under Review</h3>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{underReviewTickets}</div>
         </div>
         
-        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 flex-shrink-0" />
-            <span className="text-xs sm:text-sm font-medium text-gray-600">Resolved Tickets</span>
+        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
+          {/* Circular icon at top center, overlapping the card edge */}
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-[var(--color-accent)] rounded-full p-3 flex items-center justify-center text-white shadow-md">
+            <CheckSquare color="white" size={32} />
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{resolvedTickets}</div>
+          
+          {/* Card content */}
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">Resolved Tickets</h3>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{resolvedTickets}</div>
         </div>
       </div>
 
-      {/* Filters and Actions */}
-      <div className="bg-white rounded-xl shadow-md border border-white/20 mb-6">
-        <div className="p-4 sm:p-6 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-            <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">All Tickets</h2>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
-            >
-              <Filter size={16} />
-              Filters
-            </button>
+      {/* Tickets Heading */}
+      <div className="mb-3 sm:mb-4">
+        <h2 className="text-base sm:text-lg md:text-xl font-semibold text-[var(--color-heading)]">All Tickets</h2>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 pb-3 sm:pb-4 mb-4 sm:mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Ticket#</label>
+            <input
+              type="text"
+              value={filters.vendor}
+              onChange={(e) => setFilters({...filters, vendor: e.target.value})}
+              placeholder="Search ticket number"
+              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto mb-2"
+            />
+
+            <div className="hidden sm:flex sm:flex-row sm:items-center gap-2">
+              <button
+                onClick={() => {/* Apply filters */}}
+                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
+                style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
+              >
+                Apply
+              </button>
+              <button
+                onClick={() => {
+                  setFilters({status: 'all', vendor: '', date: ''})
+                  setDateCalendar(undefined)
+                }}
+                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
+                style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+              >
+                Reset
+              </button>
+            </div>
           </div>
 
-          {/* Filters */}
-          {showFilters && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <CustomDropdown
-                  value={filters.status}
-                  onChange={(value) => setFilters({...filters, status: value})}
-                  options={[
-                    { value: 'all', label: 'All Status' },
-                    { value: 'open', label: 'Open' },
-                    { value: 'under-review', label: 'Under Review' },
-                    { value: 'resolved', label: 'Resolved' }
-                  ]}
-                  placeholder="All Status"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                  <input
-                    type="text"
-                    placeholder="Search vendor..."
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
-                    value={filters.vendor}
-                    onChange={(e) => setFilters({...filters, vendor: e.target.value})}
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Status</label>
+            <CustomDropdown
+              value={filters.status === 'all' ? '' : filters.status}
+              onChange={(value) => setFilters({...filters, status: value || 'all'})}
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'open', label: 'Open' },
+                { value: 'under-review', label: 'Under Review' },
+                { value: 'resolved', label: 'Resolved' }
+              ]}
+              placeholder="All Statuses"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Vendor</label>
+            <input
+              type="text"
+              value={filters.vendor}
+              onChange={(e) => setFilters({...filters, vendor: e.target.value})}
+              placeholder="Search vendor"
+              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Date</label>
+            <div className="relative" ref={dateCalendarRef}>
+              <button
+                type="button"
+                onClick={() => setShowDateCalendar(!showDateCalendar)}
+                className="w-full px-3 py-2.5 sm:py-3 text-xs sm:text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
+              >
+                <span className={dateCalendar ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                  {dateCalendar ? format(dateCalendar, 'PPP') : 'Select date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+              </button>
+              {showDateCalendar && (
+                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={dateCalendar}
+                    onSelect={(date) => {
+                      setDateCalendar(date)
+                      setFilters({...filters, date: date ? format(date, 'yyyy-MM-dd') : ''})
+                      setShowDateCalendar(false)
+                    }}
+                    initialFocus
+                    className="w-full"
                   />
                 </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
-                  value={filters.date}
-                  onChange={(e) => setFilters({...filters, date: e.target.value})}
-                />
-              </div>
-              
-              <div className="flex items-end">
-                <button
-                  onClick={() => setFilters({status: 'all', vendor: '', date: ''})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
-                >
-                  Clear Filters
-                </button>
-              </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
+        {/* Mobile Apply/Reset Buttons */}
+        <div className="flex sm:hidden flex-row items-center gap-2 mt-4">
+          <button
+            onClick={() => {/* Apply filters */}}
+            className="flex-1 px-4 py-2.5 rounded-md text-white font-medium text-sm min-h-[44px]"
+            style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
+          >
+            Apply
+          </button>
+          <button
+            onClick={() => {
+              setFilters({status: 'all', vendor: '', date: ''})
+              setDateCalendar(undefined)
+            }}
+            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px]"
+            style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
+      {/* Tickets Table */}
+      <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden mb-6">
         {/* Desktop Table View - Hidden on Mobile */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-[var(--color-accent)]">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Raised On</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Ticket ID</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Order ID</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Vendor</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Issue</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Raised On</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Last Updated</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredTickets.map((ticket) => (
                 <tr key={ticket.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <div className="text-sm font-medium text-[var(--color-heading)]">{ticket.ticketNumber}</div>
                       {getPriorityBadge(ticket.priority)}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{ticket.orderNumber}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{ticket.vendor.name}</div>
                       <div className="text-xs text-gray-500">{ticket.vendor.email}</div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 xl:px-6 py-4">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{getIssueTypeLabel(ticket.issueType)}</div>
                       <div className="text-xs text-gray-500 max-w-xs truncate">{ticket.issueDescription}</div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(ticket.status)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {ticket.raisedOn}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {ticket.lastUpdated}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex gap-2">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm">
+                    <div className="flex flex-col items-start gap-2">
                       <button
                         onClick={() => handleViewDetails(ticket)}
                         className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-xs font-medium flex items-center gap-1"
@@ -483,8 +561,9 @@ export default function TicketManagement() {
                       {ticket.status !== 'resolved' && (
                         <button
                           onClick={() => handleUpdateStatus(ticket)}
-                          className="px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors text-xs font-medium"
+                          className="px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors text-xs font-medium flex items-center gap-1"
                         >
+                          <Edit size={14} />
                           Update
                         </button>
                       )}
@@ -492,7 +571,7 @@ export default function TicketManagement() {
                         onClick={() => handleAddComment(ticket)}
                         className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-xs font-medium flex items-center gap-1"
                       >
-                        💬
+                        <FileText size={14} />
                         Comment
                       </button>
                     </div>
@@ -547,8 +626,9 @@ export default function TicketManagement() {
                   {ticket.status !== 'resolved' && (
                     <button
                       onClick={() => handleUpdateStatus(ticket)}
-                      className="px-3 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors text-sm font-medium min-h-[44px]"
+                      className="px-3 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors text-sm font-medium min-h-[44px] flex items-center justify-center gap-1"
                     >
+                      <Edit size={16} />
                       Update
                     </button>
                   )}
@@ -558,7 +638,7 @@ export default function TicketManagement() {
                       ticket.status !== 'resolved' ? '' : 'col-span-2'
                     }`}
                   >
-                    💬 Comment
+                    <FileText size={16} /> Comment
                   </button>
                 </div>
               </div>
@@ -624,7 +704,7 @@ export default function TicketManagement() {
                 <div className="space-y-2">
                   {selectedTicket.attachments.map((attachment) => (
                     <div key={attachment.id} className="flex items-center gap-2 sm:gap-3 p-3 bg-gray-50 rounded-lg">
-                      <span className="text-gray-400 text-lg sm:text-xl">📎</span>
+                      <Paperclip className="text-gray-400 flex-shrink-0" size={20} />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs sm:text-sm font-medium truncate">{attachment.fileName}</p>
                         <p className="text-xs text-gray-500">Uploaded by {attachment.uploadedBy} on {attachment.uploadedAt}</p>
@@ -745,8 +825,8 @@ export default function TicketManagement() {
                   Attach File (Optional)
                 </label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 text-center hover:border-gray-400 transition-colors">
-                  <div className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-3 sm:mb-4 flex items-center justify-center text-2xl sm:text-3xl">
-                    📎
+                  <div className="mx-auto mb-3 sm:mb-4 flex items-center justify-center">
+                    <Paperclip className="text-gray-400" size={40} />
                   </div>
                   <div className="text-xs sm:text-sm text-gray-600 mb-2">
                     <label htmlFor="attachment-upload" className="cursor-pointer text-[var(--color-accent)] hover:underline">
