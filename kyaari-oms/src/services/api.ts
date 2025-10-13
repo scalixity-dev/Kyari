@@ -297,10 +297,11 @@ export class ApiService {
     }
 
     isRefreshing = true;
-    refreshPromise = api.post<{ 
+    // Use raw axios to avoid triggering interceptors and causing recursive refreshes
+    refreshPromise = axios.post<{ 
       success: boolean
       data: { accessToken: string }
-    }>('/api/auth/refresh', {}, {
+    }>(`${API_BASE_URL}/api/auth/refresh`, {}, {
       withCredentials: true // Ensure cookies are sent
     }).then(response => {
       const { data } = response.data;
