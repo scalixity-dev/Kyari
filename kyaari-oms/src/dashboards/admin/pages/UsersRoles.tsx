@@ -496,24 +496,29 @@ export default function UsersRoles() {
       </div>
 
       {/* Tabs */}
-      <div className="overflow-x-auto border-b border-gray-200 mb-4 sm:mb-6">
-        <div className="flex gap-2 sm:gap-4 min-w-max">
-          {tabs.map((t) => {
-            const isActive = activeTab === t.key
-            return (
-              <button
-                key={t.key}
-                onClick={() => setActiveTab(t.key)}
-                className={`px-3 sm:px-4 py-3 font-semibold outline-none whitespace-nowrap text-sm sm:text-base transition-colors ${
-                  isActive 
-                    ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md' 
-                    : 'text-gray-700 hover:text-secondary'
-                }`}
-              >
-                {t.label}
-              </button>
-            )
-          })}
+      <div className="mb-4 sm:mb-6 overflow-x-auto">
+        <div className="relative min-w-max">
+          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[var(--color-accent)] rounded-full opacity-80"></div>
+          <div className="relative flex gap-2 sm:gap-4">
+            {tabs.map((t) => {
+              const isActive = activeTab === t.key
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => setActiveTab(t.key)}
+                  className={`
+                    px-5 py-2.5 font-semibold outline-none whitespace-nowrap text-sm sm:text-base transition-all duration-200
+                    rounded-t-xl rounded-b-none min-h-[44px]
+                    ${isActive 
+                      ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-[0_4px_12px_rgba(0,0,0,0.08)]' 
+                      : 'bg-transparent text-[var(--color-secondary)] hover:text-[var(--color-heading)]'}
+                  `}
+                >
+                  {t.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 

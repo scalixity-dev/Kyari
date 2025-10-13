@@ -338,79 +338,175 @@ export class OrderService {
     };
   }
 
-  /**
-   * Send notification to vendor about new order assignment
-   */
-  private async sendOrderAssignmentNotification(order: Order, orderData: CreateOrderDto): Promise<void> {
+  async deleteOrder(orderId: string, deletedById: string): Promise<void> {
     try {
-      // Get vendor information
+      const orderMetadata = await prisma.$transaction(async (tx) => {
+        const order = await tx.order.findUnique({
+          where: { id: orderId },
+          include: {
+            items: {
+              include: {
+                assignedItems: true
+              }
+            }
+          }
+        });
+
+        if (!order) {
+          throw new Error('Order not found');
+        }
+
+        if (order.status !== 'RECEIVED') {
+          throw new Error(`Order with status ${order.status} cannot be deleted. Only orders with RECEIVED status can be deleted.`);
+        }
+
+        const hasConfirmedAssignments = order.items.some(item =>
+          item.assignedItems.some(assigned => assigned.confirmedQuantity !== null)
+        );
+
+        if (hasConfirmedAssignments) {
+          throw new Error('Order cannot be deleted as it has confirmed vendor assignments');
+        }
+
+        // Delete assigned order items first
+        for (const item of order.items) {
+          await tx.assignedOrderItem.deleteMany({
+            where: { orderItemId: item.id }
+          });
+        }
+
+        // Delete order items
+        await tx.orderItem.deleteMany({
+          where: { orderId }
+        });
+
+        // Delete the order
+        await tx.order.delete({
+          where: { id: orderId }
+        });
+
+        // Create audit log
+        await tx.auditLog.create({
+          data: {
+            actorUserId: deletedById,
+            action: APP_CONSTANTS.AUDIT_ACTIONS.ORDER_DELETE,
+            entityType: 'Order',
+            entityId: orderId,
+            metadata: {
+              orderNumber: order.orderNumber,
+              status: order.status
+            }
+          }
+        });
+
+        return { orderNumber: order.orderNumber };
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+      logger.info('Order deleted successfully', {
+        orderId,
+        orderNumber: orderMetadata.orderNumber,
+        deletedById
+      });
+    } catch (error) {
+      // ... existing error handling ...
+      logger.error('Failed to delete order', { error, orderId, deletedById });
+      throw error;
+    }
+  }
+
+  async assignVendorToOrder(orderId: string, vendorId: string, assignedById: string): Promise<OrderDto> {
+    try {
+      // Validate vendor exists and is active
       const vendor = await prisma.vendorProfile.findUnique({
-        where: { id: orderData.primaryVendorId },
+        where: { id: vendorId },
+        include: { user: true }
+      });
+
+      if (!vendor) {
+        throw new Error('Vendor not found');
+      }
+
+      if (vendor.user.status !== 'ACTIVE') {
+        throw new Error('Vendor is not active');
+      }
+
+      if (!vendor.verified) {
+        throw new Error('Vendor is not verified');
+      }
+
+      // Get order with items
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
         include: {
-          user: true
+          items: {
+            include: {
+              assignedItems: true
+            }
+          }
         }
       });
 
-      if (!vendor || !vendor.user) {
-        logger.warn('Cannot send order notification - vendor or user not found', {
-          vendorId: orderData.primaryVendorId,
-          orderId: order.id
-        });
-        return;
+      if (!order) {
+        throw new Error('Order not found');
       }
 
-      // Calculate total order value for notification
-      const totalValue = orderData.items.reduce((sum, item) => {
-        return sum + (item.pricePerUnit * item.quantity);
-      }, 0);
-
-      // Prepare notification payload
-      const notificationPayload = {
-        title: `New Order Assigned: ${order.orderNumber}`,
-        body: `You have received a new order with ${orderData.items.length} items worth $${totalValue.toFixed(2)}. Please confirm your availability.`,
-        priority: NotificationPriority.URGENT,
-        data: {
-          type: 'order_assignment',
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          itemCount: orderData.items.length.toString(),
-          totalValue: totalValue.toString(),
-          vendorId: vendor.id,
-          action: 'view_order'
-        },
-        clickAction: `/orders/${order.id}`, // Deep link to order details
-        badge: 1
-      };
-
-      // Send notification
-      const result = await notificationService.sendNotificationToUser(
-        vendor.user.id,
-        notificationPayload
-      );
-
-      if (result.success) {
-        logger.info('Order assignment notification sent successfully', {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          vendorId: vendor.id,
-          vendorName: vendor.companyName,
-          notificationId: result.notificationLogId,
-          sentCount: result.sentCount
+      // Update order in transaction
+      await prisma.$transaction(async (tx) => {
+        // Update primary vendor
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            primaryVendorId: vendorId,
+            status: 'ASSIGNED' // Update status to ASSIGNED
+          }
         });
-      } else {
-        logger.error('Failed to send order assignment notification', {
-          orderId: order.id,
-          vendorId: vendor.id,
-          errors: result.errors
-        });
-      }
 
-    } catch (error) {
-      logger.error('Error sending order assignment notification', {
-        orderId: order.id,
-        vendorId: orderData.primaryVendorId,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        // Delete existing assigned items for primary vendor and create new ones
+        for (const item of order.items) {
+          // Delete old assignments
+          await tx.assignedOrderItem.deleteMany({
+            where: { orderItemId: item.id }
+          });
+
+          // Create new assignment for the new vendor
+          await tx.assignedOrderItem.create({
+            data: {
+              orderItemId: item.id,
+              vendorId: vendorId,
+              assignedQuantity: item.quantity,
+              status: 'PENDING_CONFIRMATION',
+              assignedById: assignedById
+            }
+          });
+        }
+
+        // Create audit log
+        await tx.auditLog.create({
+          data: {
+            actorUserId: assignedById,
+            action: 'ORDER_VENDOR_ASSIGN',
+            entityType: 'Order',
+            entityId: orderId,
+            metadata: {
+              orderNumber: order.orderNumber,
+              vendorId: vendorId,
+              vendorName: vendor.companyName
+            }
+          }
+        });
       });
+
+      logger.info('Vendor assigned to order successfully', { 
+        orderId, 
+        vendorId,
+        assignedById 
+      });
+
+      // Return updated order
+      return await this.getOrderById(orderId);
+    } catch (error) {
+      logger.error('Failed to assign vendor to order', { error, orderId, vendorId });
+      throw error;
     }
   }
 }

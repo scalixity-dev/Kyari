@@ -102,6 +102,82 @@ export class OrderController {
       ResponseHelper.internalError(res, 'Failed to cancel order');
     }
   }
+
+  async deleteOrder(req: Request, res: Response): Promise<void> {
+    try {
+      const validation = validateSchema(orderIdSchema, req.params);
+      if (!validation.success) {
+        ResponseHelper.validationError(res, validation.errors);
+        return;
+      }
+
+      const userId = req.user?.userId;
+      if (!userId) {
+        ResponseHelper.unauthorized(res, 'Authentication required');
+        return;
+      }
+
+      await orderService.deleteOrder(validation.data.id, userId);
+
+      ResponseHelper.success(res, null, 'Order deleted successfully');
+    } catch (error) {
+      logger.error('Delete order controller error', { error, orderId: req.params.id });
+      
+      if (error instanceof Error) {
+        if (error.message === 'Order not found') {
+          ResponseHelper.notFound(res, 'Order not found');
+          return;
+        }
+        if (error.message.includes('cannot be deleted')) {
+          ResponseHelper.error(res, error.message, 400);
+          return;
+        }
+      }
+      
+      ResponseHelper.error(res, error instanceof Error ? error.message : 'Failed to delete order');
+    }
+  }
+
+  async assignVendor(req: Request, res: Response): Promise<void> {
+    try {
+      const validation = validateSchema(orderIdSchema, req.params);
+      if (!validation.success) {
+        ResponseHelper.validationError(res, validation.errors);
+        return;
+      }
+
+      const { vendorId } = req.body;
+      if (!vendorId) {
+        ResponseHelper.error(res, 'Vendor ID is required', 400);
+        return;
+      }
+
+      const userId = req.user?.userId;
+      if (!userId) {
+        ResponseHelper.unauthorized(res, 'Authentication required');
+        return;
+      }
+
+      const result = await orderService.assignVendorToOrder(validation.data.id, vendorId, userId);
+
+      ResponseHelper.success(res, result, 'Vendor assigned successfully');
+    } catch (error) {
+      logger.error('Assign vendor controller error', { error, orderId: req.params.id });
+      
+      if (error instanceof Error) {
+        if (error.message === 'Order not found' || error.message.includes('not found')) {
+          ResponseHelper.notFound(res, error.message);
+          return;
+        }
+        if (error.message.includes('not active') || error.message.includes('not verified')) {
+          ResponseHelper.error(res, error.message, 400);
+          return;
+        }
+      }
+      
+      ResponseHelper.error(res, error instanceof Error ? error.message : 'Failed to assign vendor');
+    }
+  }
 }
 
 export const orderController = new OrderController();
