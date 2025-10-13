@@ -55,7 +55,12 @@ app.use(cors({
 }));
 
 // Rate limiting (adjust as needed for your use case)
-app.use(rateLimiter(100, 15 * 60 * 1000)); // 100 requests per 15 minutes
+// More lenient in development, stricter in production
+const rateLimit = env.NODE_ENV === 'production' 
+  ? { max: 100, window: 15 * 60 * 1000 } // Production: 100 requests per 15 minutes
+  : { max: 1000, window: 15 * 60 * 1000 }; // Development: 1000 requests per 15 minutes
+
+app.use(rateLimiter(rateLimit.max, rateLimit.window));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
