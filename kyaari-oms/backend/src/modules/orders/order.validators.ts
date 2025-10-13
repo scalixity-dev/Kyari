@@ -28,7 +28,8 @@ export const createOrderSchema = z.object({
     .max(100, 'Order number must be less than 100 characters')
     .regex(/^[A-Za-z0-9\-_]+$/, 'Order number can only contain letters, numbers, hyphens, and underscores'),
   primaryVendorId: z.string()
-    .min(1, 'Primary vendor ID is required'),
+    .min(1, 'Primary vendor ID is required')
+    .optional(),
   items: z.array(createOrderItemSchema)
     .min(1, 'At least one item is required')
     .max(1000, 'Cannot exceed 1000 items per order')

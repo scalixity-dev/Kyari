@@ -19,6 +19,9 @@ export const s3BucketConfig = {
     'image/png',
     'image/webp',
     'application/pdf',
+    // Excel files for order uploads
+    'application/vnd.ms-excel', // .xls (old Excel format)
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx (new Excel format)
   ],
 };
 
