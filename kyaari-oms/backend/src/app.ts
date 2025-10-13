@@ -14,6 +14,7 @@ import { validationRoutes } from './modules/validation/validation.routes';
 import { opsVerificationRoutes } from './modules/ops-verification/ops-verification.routes';
 import { reportingRoutes } from './modules/reporting/reporting.routes';
 import { notificationRoutes } from './modules/notifications/notification.routes';
+import invoiceRoutes from './modules/invoices/invoice.routes';
 import dispatchRoutes from './routes/dispatch.routes';
 import grnRoutes from './routes/grn.routes';
 import { errorHandler, notFoundHandler, rateLimiter } from './middlewares/error.middleware';
@@ -55,7 +56,12 @@ app.use(cors({
 }));
 
 // Rate limiting (adjust as needed for your use case)
-app.use(rateLimiter(100, 15 * 60 * 1000)); // 100 requests per 15 minutes
+// More lenient in development, stricter in production
+const rateLimit = env.NODE_ENV === 'production' 
+  ? { max: 100, window: 15 * 60 * 1000 } // Production: 100 requests per 15 minutes
+  : { max: 1000, window: 15 * 60 * 1000 }; // Development: 1000 requests per 15 minutes
+
+app.use(rateLimiter(rateLimit.max, rateLimit.window));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -96,6 +102,7 @@ app.use('/api/validation', validationRoutes);
 app.use('/api/ops-verification', opsVerificationRoutes);
 app.use('/api/reporting', reportingRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/invoices', invoiceRoutes);
 app.use('/api/dispatches', dispatchRoutes);
 app.use('/api/grn', grnRoutes);
 

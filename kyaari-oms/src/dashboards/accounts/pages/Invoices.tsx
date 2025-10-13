@@ -1,36 +1,19 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { FileText, Upload, Search, ChevronDown, ChevronRight, Eye, X } from 'lucide-react'
 import { CustomDropdown } from '../../../components/CustomDropdown/CustomDropdown'
-
-type POStatus = 'Pending' | 'Generated'
-
-type POOrder = {
-  id: string
-  vendor: string
-  confirmedQty: number
-  poStatus: POStatus
-  items: string
-  amount: number
-  accountInvoice: string | null
-  vendorInvoice: string | null
-}
+import { JsonViewerModal } from '../../../components/JsonViewerModal'
+import { InvoiceApiService } from '../../../services/invoiceApi'
+import type { POOrder, POStatus } from '../../../services/invoiceApi'
+import toast from 'react-hot-toast'
 
 const PO_STATUS_STYLES: Record<POStatus, { bg: string; color: string; border: string }> = {
   'Pending': { bg: '#FEF9C3', color: '#92400E', border: '#FEF08A' },
   'Generated': { bg: '#D1FAE5', color: '#065F46', border: '#A7F3D0' },
 }
 
-const INITIAL_PO_ORDERS: POOrder[] = [
-  { id: 'VO-2301', vendor: 'GreenLeaf Co', confirmedQty: 80, poStatus: 'Generated', items: 'Rose (50), Lily (30)', amount: 45000, accountInvoice: null, vendorInvoice: 'https://example.com/invoices/vendor-2301.pdf' },
-  { id: 'VO-2302', vendor: 'Urban Roots', confirmedQty: 25, poStatus: 'Pending', items: 'Monstera Plant', amount: 12500, accountInvoice: null, vendorInvoice: null },
-  { id: 'VO-2303', vendor: 'Plantify', confirmedQty: 25, poStatus: 'Pending', items: 'Snake Plant (15), ZZ Plant (10)', amount: 8750, accountInvoice: null, vendorInvoice: 'https://example.com/invoices/vendor-2303.pdf' },
-  { id: 'VO-2304', vendor: 'Clay Works', confirmedQty: 48, poStatus: 'Generated', items: 'Terracotta Pots (Large)', amount: 19200, accountInvoice: null, vendorInvoice: null },
-  { id: 'VO-2305', vendor: 'EcoGarden Solutions', confirmedQty: 100, poStatus: 'Pending', items: 'Organic Fertilizer', amount: 35000, accountInvoice: null, vendorInvoice: 'https://example.com/invoices/vendor-2305.pdf' },
-  { id: 'VO-2306', vendor: 'Flower Garden', confirmedQty: 95, poStatus: 'Pending', items: 'Sunflower (40), Marigold (60)', amount: 28500, accountInvoice: null, vendorInvoice: null },
-]
-
 function AccountsInvoices() {
-  const [poOrders, setPOOrders] = useState<POOrder[]>(INITIAL_PO_ORDERS)
+  const [poOrders, setPOOrders] = useState<POOrder[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedPOs, setSelectedPOs] = useState<Set<string>>(new Set())
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({})
   
@@ -48,6 +31,28 @@ function AccountsInvoices() {
   // Invoice viewer state
   const [viewingInvoice, setViewingInvoice] = useState<{ url: string; type: string } | null>(null)
   const [imageLoadError, setImageLoadError] = useState(false)
+
+  // JSON viewer state
+  const [jsonViewerOpen, setJsonViewerOpen] = useState(false)
+  const [currentJsonData, setCurrentJsonData] = useState<Record<string, unknown> | null>(null)
+  const [currentInvoiceNumber, setCurrentInvoiceNumber] = useState<string>('')
+
+  // Fetch PO orders on mount
+  useEffect(() => {
+    fetchPOOrders()
+  }, [])
+
+  const fetchPOOrders = async () => {
+    try {
+      setLoading(true)
+      const orders = await InvoiceApiService.getPOOrders()
+      setPOOrders(orders)
+    } catch (error) {
+      console.error('Failed to fetch PO orders:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   function toggleRowExpansion(orderId: string) {
     setExpandedRows(prev => {
@@ -86,16 +91,26 @@ function AccountsInvoices() {
     fileInputRefs.current[orderId]?.click()
   }
 
-  function handleFileChange(orderId: string, e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(orderId: string, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
-      // Create a mock URL for the uploaded file (in real app, this would be uploaded to server)
-      const mockUrl = URL.createObjectURL(file)
-      setPOOrders(prev => prev.map(o => 
-        o.id === orderId 
-          ? { ...o, poStatus: 'Generated', accountInvoice: mockUrl } 
-          : o
-      ))
+      try {
+        const order = poOrders.find(o => o.id === orderId)
+        if (!order) return
+
+        // Upload file to S3 and link to order
+        await InvoiceApiService.uploadAndLinkInvoice(
+          file,
+          order.orderId,
+          order.vendorId
+        )
+
+        // Refresh PO orders to get latest data with updated status
+        await fetchPOOrders()
+      } catch (error) {
+        console.error('Failed to upload invoice:', error)
+      }
+      
       // Reset the input so the same file can be selected again
       e.target.value = ''
     }
@@ -110,27 +125,92 @@ function AccountsInvoices() {
     setImageLoadError(false)
   }
 
-  function handleGeneratePO(order: POOrder, format: 'pdf' | 'json') {
-    // In real app, this would trigger PO generation in the specified format
-    console.log(`Generating PO for ${order.id} in ${format.toUpperCase()} format`)
-    setPOOrders(prev => prev.map(o => o.id === order.id ? { ...o, poStatus: 'Generated' } : o))
+  function handleDownloadJson() {
+    if (!currentJsonData) return
+    const blob = new Blob([JSON.stringify(currentJsonData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `invoice-${currentInvoiceNumber}.json`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
-  function handleViewPO(orderId: string) {
-    // In real app, this would open/download the generated PO
-    console.log(`Viewing PO for ${orderId}`)
-    alert(`Opening Purchase Order for ${orderId}`)
+  async function handleGeneratePO(order: POOrder, format: 'pdf' | 'json') {
+    try {
+      if (format === 'json') {
+        // Generate invoice in JSON format with separate orderId and vendorId
+        const invoice = await InvoiceApiService.generateInvoice({
+          orderId: order.orderId, // Use the actual order ID
+          vendorId: order.vendorId,
+          items: [],
+          totalAmount: order.amount
+        })
+
+        // Check if invoice already existed
+        if (invoice.alreadyExists && invoice.jsonContent) {
+          toast.success('Invoice already exists. Opening viewer...')
+          // Show in JSON viewer modal
+          setCurrentJsonData(invoice.jsonContent as Record<string, unknown>)
+          setCurrentInvoiceNumber((invoice.invoiceNumber as string) || (invoice.id as string) || 'invoice')
+          setJsonViewerOpen(true)
+        } else if (invoice.jsonContent) {
+          // New invoice created, show in viewer to download
+          toast.success('Invoice generated successfully!')
+          setCurrentJsonData(invoice.jsonContent as Record<string, unknown>)
+          setCurrentInvoiceNumber((invoice.invoiceNumber as string) || (invoice.id as string) || 'invoice')
+          setJsonViewerOpen(true)
+        }
+
+        // Refresh data to update status
+        await fetchPOOrders()
+      }
+    } catch (error) {
+      console.error('Failed to generate PO:', error)
+    }
   }
 
-  function handleBulkGeneratePO() {
+  async function handleViewPO(orderId: string) {
+    try {
+      const order = poOrders.find(o => o.id === orderId)
+      if (!order?.accountInvoice) {
+        alert('No invoice available for this order')
+        return
+      }
+
+      // Open invoice file in new tab
+      window.open(order.accountInvoice, '_blank')
+    } catch (error) {
+      console.error('Failed to view PO:', error)
+    }
+  }
+
+  async function handleBulkGeneratePO() {
     const eligibleOrders = poOrders.filter(o => selectedPOs.has(o.id) && o.poStatus === 'Pending')
     
     if (eligibleOrders.length === 0) {
       return
     }
 
-    setPOOrders(prev => prev.map(o => selectedPOs.has(o.id) ? { ...o, poStatus: 'Generated' } : o))
-    setSelectedPOs(new Set())
+    try {
+      // Generate invoices for all selected orders
+      await Promise.all(
+        eligibleOrders.map(order => 
+          InvoiceApiService.generateInvoice({
+            orderId: order.orderId, // Use actual order ID
+            vendorId: order.vendorId,
+            items: [],
+            totalAmount: order.amount
+          })
+        )
+      )
+
+      // Refresh data
+      await fetchPOOrders()
+      setSelectedPOs(new Set())
+    } catch (error) {
+      console.error('Failed to bulk generate POs:', error)
+    }
   }
 
   // Status dropdown options
@@ -177,7 +257,24 @@ function AccountsInvoices() {
         <p className="text-sm text-[var(--color-heading)]">Manage Purchase Orders and Vendor Invoices</p>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-accent)]"></div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && poOrders.length === 0 && (
+        <div className="bg-white rounded-xl shadow-md border border-white/20 p-12 text-center">
+          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">No PO Orders Found</h3>
+          <p className="text-gray-500">No confirmed vendor orders are ready for invoice generation.</p>
+        </div>
+      )}
+
       {/* Section 1: PO Generation */}
+      {!loading && poOrders.length > 0 && (
       <div className="mb-6 sm:mb-8">
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h3 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">Purchase Order Generation</h3>
@@ -568,6 +665,7 @@ function AccountsInvoices() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Invoice Viewer Modal */}
       {viewingInvoice && (
@@ -620,6 +718,15 @@ function AccountsInvoices() {
           </div>
         </div>
       )}
+
+      {/* JSON Viewer Modal */}
+      <JsonViewerModal
+        isOpen={jsonViewerOpen}
+        onClose={() => setJsonViewerOpen(false)}
+        jsonData={currentJsonData}
+        title={`Invoice JSON - ${currentInvoiceNumber}`}
+        onDownload={handleDownloadJson}
+      />
     </div>
   )
 }

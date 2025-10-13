@@ -24,6 +24,16 @@ export interface InvoiceDto {
     fileName: string;
     s3Url: string;
   } | null;
+  accountsAttachment: {
+    id: string;
+    fileName: string;
+    s3Url: string;
+  } | null;
+  vendorAttachment: {
+    id: string;
+    fileName: string;
+    s3Url: string;
+  } | null;
   createdAt: Date;
   updatedAt: Date;
 }

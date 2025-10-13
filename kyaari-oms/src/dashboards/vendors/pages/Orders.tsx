@@ -1,28 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { CheckSquare, X, AlertTriangle, Clock, FileText, ChevronDown, ChevronUp, Package } from 'lucide-react'
+import { AssignmentApiService } from '@/services/assignmentApi'
+import type { AssignmentOrder, AssignmentProduct } from '@/services/assignmentApi'
 
-interface Product {
-  id: string
-  sku: string
-  name: string
-  requestedQty: number
-  confirmedQty: number
-  availableQty: number
-  status: 'Pending' | 'Confirmed' | 'Partially Confirmed' | 'Declined' | 'Not Available'
-  backorderQty: number
-  declineReason?: string
-}
-
-interface Order {
-  id: string
-  orderNumber: string
-  date: string
-  customerName: string
-  products: Product[]
-  overallStatus: 'Pending' | 'Confirmed' | 'Partially Confirmed' | 'Declined' | 'Waiting for PO' | 'PO Received' | 'Mixed'
-  totalItems: number
-  totalConfirmed: number
-}
+type Product = AssignmentProduct
+type Order = AssignmentOrder
 
 interface PartialConfirmModalProps {
   isOpen: boolean
@@ -228,120 +210,52 @@ const getStatusBadge = (status: string) => {
 }
 
 export default function Orders() {
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: '1',
-      orderNumber: 'ORD-001',
-      date: '28/09/2025',
-      customerName: 'Mumbai Wholesale Market',
-      overallStatus: 'Pending',
-      totalItems: 2,
-      totalConfirmed: 0,
-      products: [
-        {
-          id: 'p1',
-          sku: 'VEG-TOM-001',
-          name: 'Organic Tomatoes',
-          requestedQty: 50,
-          confirmedQty: 0,
-          availableQty: 0,
-          status: 'Pending',
-          backorderQty: 0
-        },
-        {
-          id: 'p2',
-          sku: 'VEG-ONI-001',
-          name: 'Red Onions',
-          requestedQty: 30,
-          confirmedQty: 0,
-          availableQty: 0,
-          status: 'Pending',
-          backorderQty: 0
-        }
-      ]
-    },
-    {
-      id: '2',
-      orderNumber: 'ORD-002',
-      date: '28/09/2025',
-      customerName: 'Delhi Food Corp',
-      overallStatus: 'Mixed',
-      totalItems: 3,
-      totalConfirmed: 1,
-      products: [
-        {
-          id: 'p3',
-          sku: 'VEG-SPI-001',
-          name: 'Fresh Spinach',
-          requestedQty: 25,
-          confirmedQty: 25,
-          availableQty: 25,
-          status: 'Confirmed',
-          backorderQty: 0
-        },
-        {
-          id: 'p4',
-          sku: 'VEG-CAR-001',
-          name: 'Organic Carrots',
-          requestedQty: 40,
-          confirmedQty: 30,
-          availableQty: 30,
-          status: 'Partially Confirmed',
-          backorderQty: 10
-        },
-        {
-          id: 'p5',
-          sku: 'VEG-BEA-001',
-          name: 'Green Beans',
-          requestedQty: 20,
-          confirmedQty: 0,
-          availableQty: 0,
-          status: 'Declined',
-          backorderQty: 0
-        }
-      ]
-    }
-  ])
-
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [declineModalOpen, setDeclineModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [selectedOrderNumber, setSelectedOrderNumber] = useState<string>('')
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set())
 
-  const calculateOrderStatus = (products: Product[]): Order['overallStatus'] => {
-    const statuses = products.map(p => p.status)
-    const uniqueStatuses = [...new Set(statuses)]
-    
-    if (uniqueStatuses.length === 1) {
-      return uniqueStatuses[0] as Order['overallStatus']
+  // Fetch assignments on component mount
+  useEffect(() => {
+    loadAssignments()
+  }, [])
+
+  const loadAssignments = async () => {
+    try {
+      setLoading(true)
+      const fetchedOrders = await AssignmentApiService.getMyAssignments({
+        limit: 100 // Fetch all assignments
+      })
+      setOrders(fetchedOrders)
+    } catch (error) {
+      console.error('Failed to load assignments:', error)
+    } finally {
+      setLoading(false)
     }
-    return 'Mixed'
   }
 
-  const handleProductConfirmFull = (orderId: string, productId: string) => {
-    setOrders(orders.map(order => {
-      if (order.id === orderId) {
-        const updatedProducts = order.products.map(product => 
-          product.id === productId 
-            ? { 
-                ...product, 
-                status: 'Confirmed' as const,
-                confirmedQty: product.requestedQty,
-                availableQty: product.requestedQty,
-                backorderQty: 0
-              }
-            : product
-        )
-        return {
-          ...order,
-          products: updatedProducts,
-          overallStatus: calculateOrderStatus(updatedProducts),
-          totalConfirmed: updatedProducts.filter(p => p.status === 'Confirmed').length
-        }
-      }
-      return order
-    }))
+  const handleProductConfirmFull = async (orderId: string, productId: string) => {
+    try {
+      const product = orders
+        .find(o => o.id === orderId)
+        ?.products.find(p => p.id === productId)
+      
+      if (!product) return
+
+      // Call API to confirm full
+      await AssignmentApiService.updateAssignmentStatus(
+        product.assignmentId,
+        'VENDOR_CONFIRMED_FULL'
+      )
+
+      // Reload assignments to get updated data
+      await loadAssignments()
+    } catch (error) {
+      console.error('Failed to confirm order:', error)
+    }
   }
 
   const handleProductConfirmPartial = (orderId: string, productId: string) => {
@@ -355,30 +269,25 @@ export default function Orders() {
     }
   }
 
-  const handlePartialConfirm = (productId: string, availableQty: number) => {
+  const handlePartialConfirm = async (_productId: string, availableQty: number) => {
     if (selectedProduct) {
-      setOrders(orders.map(order => {
-        const updatedProducts = order.products.map(product => 
-          product.id === productId 
-            ? { 
-                ...product, 
-                status: 'Partially Confirmed' as const,
-                confirmedQty: availableQty,
-                availableQty: availableQty,
-                backorderQty: product.requestedQty - availableQty
-              }
-            : product
+      try {
+        // Call API to confirm partial
+        await AssignmentApiService.updateAssignmentStatus(
+          selectedProduct.assignmentId,
+          'VENDOR_CONFIRMED_PARTIAL',
+          availableQty
         )
-        return {
-          ...order,
-          products: updatedProducts,
-          overallStatus: calculateOrderStatus(updatedProducts),
-          totalConfirmed: updatedProducts.filter(p => ['Confirmed', 'Partially Confirmed'].includes(p.status)).length
-        }
-      }))
-      setModalOpen(false)
-      setSelectedProduct(null)
-      setSelectedOrderNumber('')
+
+        // Reload assignments to get updated data
+        await loadAssignments()
+        
+        setModalOpen(false)
+        setSelectedProduct(null)
+        setSelectedOrderNumber('')
+      } catch (error) {
+        console.error('Failed to partially confirm order:', error)
+      }
     }
   }
 
@@ -393,22 +302,27 @@ export default function Orders() {
     }
   }
 
-  const handleDeclineWithReason = (productId: string, reason: string) => {
-    setOrders(orders.map(order => {
-      const updatedProducts = order.products.map(product => 
-        product.id === productId 
-          ? { ...product, status: 'Declined' as const, declineReason: reason }
-          : product
-      )
-      return {
-        ...order,
-        products: updatedProducts,
-        overallStatus: calculateOrderStatus(updatedProducts)
+  const handleDeclineWithReason = async (_productId: string, reason: string) => {
+    if (selectedProduct) {
+      try {
+        // Call API to decline
+        await AssignmentApiService.updateAssignmentStatus(
+          selectedProduct.assignmentId,
+          'VENDOR_DECLINED',
+          undefined,
+          reason
+        )
+
+        // Reload assignments to get updated data
+        await loadAssignments()
+        
+        setDeclineModalOpen(false)
+        setSelectedProduct(null)
+        setSelectedOrderNumber('')
+      } catch (error) {
+        console.error('Failed to decline order:', error)
       }
-    }))
-    setDeclineModalOpen(false)
-    setSelectedProduct(null)
-    setSelectedOrderNumber('')
+    }
   }
 
   const toggleOrderExpansion = (orderId: string) => {
@@ -434,6 +348,26 @@ export default function Orders() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 sm:mb-0 font-[var(--font-heading)]">Orders Management</h2>
       </div>
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-accent)]"></div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && orders.length === 0 && (
+        <div className="bg-white rounded-xl shadow-md border border-white/20 p-12 text-center">
+          <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">No Orders Found</h3>
+          <p className="text-gray-500">You don't have any assigned orders at the moment.</p>
+        </div>
+      )}
+
+      {/* Orders Content */}
+      {!loading && orders.length > 0 && (
+        <>
 
       {/* Summary KPI Cards (admin-style) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6">
@@ -739,6 +673,8 @@ export default function Orders() {
         }}
         onDecline={handleDeclineWithReason}
       />
+      </>
+      )}
     </div>
   )
 }

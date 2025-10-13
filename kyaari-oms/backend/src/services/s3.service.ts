@@ -3,11 +3,14 @@ import {
   GetObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
+  CreateBucketCommand,
+  HeadBucketCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3Client, s3BucketConfig } from '../config/s3.config';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import { logger } from '../utils/logger';
 
 export interface UploadResult {
   key: string;
@@ -29,6 +32,46 @@ export interface MulterFile {
 }
 
 class S3Service {
+  private bucketChecked = false;
+
+  /**
+   * Ensure bucket exists, create if it doesn't
+   */
+  private async ensureBucketExists(): Promise<void> {
+    if (this.bucketChecked) return;
+
+    try {
+      // Check if bucket exists
+      await s3Client.send(new HeadBucketCommand({
+        Bucket: s3BucketConfig.bucketName
+      }));
+      
+      this.bucketChecked = true;
+      logger.info('S3 bucket exists', { bucket: s3BucketConfig.bucketName });
+    } catch (error: unknown) {
+      const err = error as { name?: string };
+      if (err.name === 'NotFound' || err.name === 'NoSuchBucket') {
+        // Bucket doesn't exist, create it
+        logger.info('S3 bucket not found, creating...', { bucket: s3BucketConfig.bucketName });
+        
+        try {
+          await s3Client.send(new CreateBucketCommand({
+            Bucket: s3BucketConfig.bucketName
+          }));
+          
+          this.bucketChecked = true;
+          logger.info('S3 bucket created successfully', { bucket: s3BucketConfig.bucketName });
+        } catch (createError) {
+          logger.error('Failed to create S3 bucket', { createError, bucket: s3BucketConfig.bucketName });
+          throw new Error(`Failed to create S3 bucket: ${s3BucketConfig.bucketName}`);
+        }
+      } else {
+        logger.error('Failed to check S3 bucket', { error, bucket: s3BucketConfig.bucketName });
+        throw error;
+      }
+    }
+  }
+
   /**
    * Upload a file to S3
    */
@@ -37,6 +80,9 @@ class S3Service {
     folder: string = 'dispatch-proofs'
   ): Promise<UploadResult> {
     try {
+      // Ensure bucket exists
+      await this.ensureBucketExists();
+
       // Generate unique file key
       const fileExtension = path.extname(file.originalname);
       const uniqueFileName = `${uuidv4()}${fileExtension}`;
@@ -144,6 +190,9 @@ class S3Service {
     folder: string = 'generated-files'
   ): Promise<UploadResult> {
     try {
+      // Ensure bucket exists
+      await this.ensureBucketExists();
+
       const key = `${folder}/${fileName}`;
 
       // Upload to S3
