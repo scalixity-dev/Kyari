@@ -35,3 +35,8 @@ out
 build
 temp
 /.env
+
+# Firebase Security 
+**/firebase-service-account.json
+**/firebase-service-account-*.json
+!**/firebase-service-account-mock.json

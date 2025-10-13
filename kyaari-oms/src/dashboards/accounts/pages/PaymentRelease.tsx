@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Bell, X, AlertTriangle, CheckSquare } from 'lucide-react'
+import { Bell, X, AlertTriangle, CheckSquare, Wallet, Clock } from 'lucide-react'
 import { CustomDropdown } from '../../../components'
 
 type PaymentStatus = 'Pending' | 'Released' | 'Overdue'
@@ -141,32 +141,51 @@ function AccountsPaymentRelease() {
   }, [filteredPayments])
 
   return (
-    <div className="p-3 sm:p-6 font-sans text-primary">
+    <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Page Header */}
-      <div className="mb-4 sm:mb-6">
-        <h2 className="font-heading text-secondary text-xl sm:text-3xl font-semibold mb-2">Payment Release</h2>
-        <p className="text-xs sm:text-sm text-gray-600">Release payments to vendors after verification</p>
+      <div className="mb-4 sm:mb-6 lg:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6">Payment Release</h2>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
-          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Records</div>
-          <div className="text-xl sm:text-2xl font-bold text-secondary">{filteredPayments.length}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 py-8 sm:py-10 gap-10 sm:gap-8 xl:gap-6 mb-6">
+        <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
+          <div className="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-[#C3754C] text-white shadow-md">
+            <Wallet size={32} color="white" />
+          </div>
+          <div className="flex flex-col items-center text-center w-full">
+            <h3 className="font-['Fraunces'] font-bold text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2">Total Records</h3>
+            <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{filteredPayments.length}</div>
+          </div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
-          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Pending Payments</div>
-          <div className="text-xl sm:text-2xl font-bold text-yellow-600">{summaryStats.pendingCount}</div>
-          <div className="text-xs sm:text-sm text-gray-600">₹{summaryStats.totalPending.toLocaleString('en-IN')}</div>
+        <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
+          <div className="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-[#C3754C] text-white shadow-md">
+            <Clock size={32} color="white" />
+          </div>
+          <div className="flex flex-col items-center text-center w-full">
+            <h3 className="font-['Fraunces'] font-bold text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2">Pending Payments</h3>
+            <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{summaryStats.pendingCount}</div>
+            <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">₹{summaryStats.totalPending.toLocaleString('en-IN')}</div>
+          </div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
-          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Overdue Payments</div>
-          <div className="text-xl sm:text-2xl font-bold text-red-600">{summaryStats.overdueCount}</div>
-          <div className="text-xs sm:text-sm text-gray-600">₹{summaryStats.totalOverdue.toLocaleString('en-IN')}</div>
+        <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
+          <div className="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-[#C3754C] text-white shadow-md">
+            <AlertTriangle size={32} color="white" />
+          </div>
+          <div className="flex flex-col items-center text-center w-full">
+            <h3 className="font-['Fraunces'] font-bold text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2">Overdue Payments</h3>
+            <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{summaryStats.overdueCount}</div>
+            <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">₹{summaryStats.totalOverdue.toLocaleString('en-IN')}</div>
+          </div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
-          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Released Payments</div>
-          <div className="text-xl sm:text-2xl font-bold text-green-600">{summaryStats.releasedCount}</div>
+        <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
+          <div className="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-[#C3754C] text-white shadow-md">
+            <CheckSquare size={32} color="white" />
+          </div>
+          <div className="flex flex-col items-center text-center w-full">
+            <h3 className="font-['Fraunces'] font-bold text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2">Released Payments</h3>
+            <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{summaryStats.releasedCount}</div>
+          </div>
         </div>
       </div>
 
@@ -243,79 +262,81 @@ function AccountsPaymentRelease() {
       )}
 
       {/* Table - Desktop View */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full border-separate border-spacing-0">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="text-left p-3 font-heading text-secondary font-medium">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={toggleSelectAll}
-                    className="rounded"
-                  />
-                </th>
-                <th className="text-left p-3 font-heading text-secondary font-medium">Vendor</th>
-                <th className="text-left p-3 font-heading text-secondary font-medium">Order ID</th>
-                <th className="text-left p-3 font-heading text-secondary font-medium">Invoice Amount</th>
-                <th className="text-left p-3 font-heading text-secondary font-medium">Due Date</th>
-                <th className="text-left p-3 font-heading text-secondary font-medium">Delivery Verified</th>
-                <th className="text-left p-3 font-heading text-secondary font-medium">Payment Status</th>
-                <th className="text-left p-3 font-heading text-secondary font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPayments.map((payment, idx) => {
-                const paymentStyle = PAYMENT_STATUS_STYLES[payment.paymentStatus]
-                const deliveryStyle = DELIVERY_VERIFIED_STYLES[payment.deliveryVerified]
-                const isSelected = selectedPayments.has(payment.id)
-                const canRelease = payment.paymentStatus !== 'Released' && payment.deliveryVerified === 'Yes'
-                const isReleased = payment.paymentStatus === 'Released'
+      <div className="rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
+        <div className="hidden lg:block">
+          {/* Table head bar */}
+          <div className="bg-[#C3754C] text-white">
+            <div className="grid grid-cols-[0.5fr_1.5fr_1fr_1.2fr_1fr_1fr_1.2fr_1.5fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-['Quicksand'] font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0] text-center">
+              <div className="flex items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleSelectAll}
+                  className="rounded"
+                />
+              </div>
+              <div>Vendor</div>
+              <div>Order ID</div>
+              <div>Invoice Amount</div>
+              <div>Due Date</div>
+              <div>Delivery Verified</div>
+              <div>Payment Status</div>
+              <div>Actions</div>
+            </div>
+          </div>
+          {/* Body */}
+          <div className="bg-white">
+            <div className="py-2">
+              {filteredPayments.length === 0 ? (
+                <div className="px-6 py-8 text-center text-gray-500">No payment records match current filters.</div>
+              ) : (
+                filteredPayments.map((payment) => {
+                  const paymentStyle = PAYMENT_STATUS_STYLES[payment.paymentStatus]
+                  const deliveryStyle = DELIVERY_VERIFIED_STYLES[payment.deliveryVerified]
+                  const isSelected = selectedPayments.has(payment.id)
+                  const canRelease = payment.paymentStatus !== 'Released' && payment.deliveryVerified === 'Yes'
+                  const isReleased = payment.paymentStatus === 'Released'
 
-                return (
-                  <tr key={payment.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50 hover:bg-[#F5F3E7] transition-colors'}>
-                    <td className="p-3">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => togglePaymentSelection(payment.id)}
-                        disabled={isReleased}
-                        className="rounded"
-                      />
-                    </td>
-                    <td className="p-3 font-medium">{payment.vendor}</td>
-                    <td className="p-3">{payment.orderId}</td>
-                    <td className="p-3 font-semibold">₹{payment.invoiceAmount.toLocaleString('en-IN')}</td>
-                    <td className="p-3 text-sm">
-                      <div>{payment.dueDate}</div>
-                      {payment.paymentStatus === 'Overdue' && (
-                        <div className="text-xs text-red-600 flex items-center gap-1 mt-1">
-                          <AlertTriangle size={12} />
-                          <span>Overdue</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <span 
-                        className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap"
-                        style={{
-                          backgroundColor: deliveryStyle.bg,
-                          color: deliveryStyle.color,
-                          borderColor: deliveryStyle.border,
-                        }}
-                      >
-                        {payment.deliveryVerified}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <div>
+                  return (
+                    <div key={payment.id} className="grid grid-cols-[0.5fr_1.5fr_1fr_1.2fr_1fr_1fr_1.2fr_1.5fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center text-center hover:bg-gray-50 font-bold">
+                      <div className="flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => togglePaymentSelection(payment.id)}
+                          disabled={isReleased}
+                          className="rounded"
+                        />
+                      </div>
+                      <div className="text-xs md:text-sm font-medium text-gray-800 truncate">{payment.vendor}</div>
+                      <div className="text-xs md:text-sm text-gray-700 truncate">{payment.orderId}</div>
+                      <div className="text-xs md:text-sm font-semibold text-gray-900">₹{payment.invoiceAmount.toLocaleString('en-IN')}</div>
+                      <div className="text-xs md:text-sm text-gray-700">
+                        <div>{payment.dueDate}</div>
+                        {payment.paymentStatus === 'Overdue' && (
+                          <div className="text-xs text-red-600 flex items-center justify-center gap-1 mt-1">
+                            <AlertTriangle size={10} />
+                            <span>Overdue</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-center">
                         <span 
-                          className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap"
+                          className="inline-block px-2 py-1 rounded-md text-xs font-semibold"
+                          style={{
+                            backgroundColor: deliveryStyle.bg,
+                            color: deliveryStyle.color,
+                          }}
+                        >
+                          {payment.deliveryVerified}
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center">
+                        <span 
+                          className="inline-block px-2 py-1 rounded-md text-xs font-semibold"
                           style={{
                             backgroundColor: paymentStyle.bg,
                             color: paymentStyle.color,
-                            borderColor: paymentStyle.border,
                           }}
                         >
                           {payment.paymentStatus}
@@ -327,42 +348,35 @@ function AccountsPaymentRelease() {
                           <div className="text-xs text-gray-500">Ref: {payment.referenceId}</div>
                         )}
                       </div>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex gap-2">
+                      <div className="flex flex-col gap-2 items-center">
                         <button 
                           onClick={() => handleMarkAsReleased(payment)}
                           disabled={!canRelease}
-                          className={`rounded-full px-3 py-1.5 text-sm flex items-center gap-1 ${
+                          className={`rounded-full px-3 py-1.5 text-xs flex items-center gap-1 ${
                             canRelease 
                               ? 'bg-accent text-button-text hover:opacity-90' 
                               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                           }`}
                           title={!canRelease ? 'Payment must be verified and not already released' : 'Mark as Released'}
                         >
-                          <CheckSquare size={14} />
+                          <CheckSquare size={12} />
                           <span>Release</span>
                         </button>
                         <button 
                           onClick={() => handleSendNotification(payment)}
-                          className="bg-blue-100 text-blue-700 rounded-full px-3 py-1.5 text-sm flex items-center gap-1 hover:bg-blue-200"
+                          className="bg-blue-100 text-blue-700 rounded-full px-3 py-1.5 text-xs flex items-center gap-1 hover:bg-blue-200"
                           title="Send Notification to Vendor"
                         >
-                          <Bell size={14} />
+                          <Bell size={12} />
                           <span>Notify</span>
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                )
-              })}
-              {filteredPayments.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="p-6 text-center text-gray-500">No payment records match current filters.</td>
-                </tr>
+                    </div>
+                  )
+                })
               )}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
 
         {/* Mobile Card View */}
@@ -370,7 +384,7 @@ function AccountsPaymentRelease() {
           {filteredPayments.length === 0 ? (
             <div className="p-6 text-center text-gray-500">No payment records match current filters.</div>
           ) : (
-            <div className="space-y-3 p-3">
+            <div className="space-y-4 p-3">
               {filteredPayments.map((payment) => {
                 const paymentStyle = PAYMENT_STATUS_STYLES[payment.paymentStatus]
                 const deliveryStyle = DELIVERY_VERIFIED_STYLES[payment.deliveryVerified]

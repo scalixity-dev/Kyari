@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DispatchStatus } from '@prisma/client';
 
 // Dispatch item validation
 export const dispatchItemSchema = z.object({
@@ -20,7 +21,7 @@ export const createDispatchSchema = z.object({
 export const getDispatchesQuerySchema = z.object({
   page: z.string().optional().transform((val) => (val ? parseInt(val, 10) : 1)),
   limit: z.string().optional().transform((val) => (val ? parseInt(val, 10) : 10)),
-  status: z.enum(['PENDING', 'PROCESSING', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'FAILED']).optional(),
+  status: z.nativeEnum(DispatchStatus).optional(),
   awbNumber: z.string().optional(),
 });
 

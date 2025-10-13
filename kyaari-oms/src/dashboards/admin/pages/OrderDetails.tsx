@@ -55,16 +55,21 @@ const OrderDetails = () => {
 
   if (isLoading) {
     return (
-      <div className="p-6 bg-[var(--color-happyplant-bg)] min-h-screen">
-        <div className="max-w-6xl mx-auto">
-          <button
-            onClick={() => navigate('/admin/tracking/orders')}
-            className="flex items-center gap-2 mb-6 text-[var(--color-heading)] hover:text-[var(--color-accent)] transition-colors"
-          >
-            <ChevronUp size={20} className="rotate-90" />
-            Back to Orders
-          </button>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+      <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
+        <div>
+          <div className="mb-6">
+            <button
+              onClick={() => navigate('/admin/tracking/orders')}
+              className="flex items-center gap-2 mb-4 text-[var(--color-heading)] hover:text-[var(--color-accent)] transition-colors"
+            >
+              <ChevronUp size={20} className="rotate-90" />
+              Back to Orders
+            </button>
+            <h1 className="text-2xl font-bold text-[var(--color-heading)] mb-2">Order Details</h1>
+            <p className="text-gray-600">Loading order information</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
             <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-500">Loading order details...</p>
           </div>
@@ -75,8 +80,8 @@ const OrderDetails = () => {
 
   if (!orderDetails) {
     return (
-      <div className="p-6 bg-[var(--color-happyplant-bg)] min-h-screen">
-        <div className="max-w-4xl mx-auto">
+      <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
+        <div>
           <button
             onClick={() => navigate('/admin/tracking/orders')}
             className="flex items-center gap-2 mb-6 text-[var(--color-heading)] hover:text-[var(--color-accent)] transition-colors"
@@ -99,8 +104,8 @@ const OrderDetails = () => {
   const totalQuantity = orderDetails.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="p-6 bg-[var(--color-happyplant-bg)] min-h-screen">
-      <div className="max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
+      <div >
         {/* Header with Back Button */}
         <div className="mb-6">
           <button

@@ -1,6 +1,8 @@
 import { prisma } from '../../config/database';
 import { logger } from '../../utils/logger';
 import { APP_CONSTANTS } from '../../config/constants';
+import { notificationService } from '../notifications/notification.service';
+import { NotificationPriority } from '@prisma/client';
 import type {
   VendorAssignmentDto,
   VendorAssignmentListDto,
@@ -362,7 +364,94 @@ export class AssignmentService {
       }
     });
 
+    // Send notification to ADMIN and ACCOUNTS roles after successful confirmation
+    if (transaction.assignment.status === 'VENDOR_CONFIRMED_FULL' || 
+        transaction.assignment.status === 'VENDOR_CONFIRMED_PARTIAL') {
+      await this.sendVendorConfirmationNotification(transaction.assignment, vendorId);
+    }
+
     return transaction;
+  }
+
+  /**
+   * Send notification to ADMIN and ACCOUNTS roles about vendor confirmation
+   */
+  private async sendVendorConfirmationNotification(
+    assignment: VendorAssignmentDto, 
+    vendorId: string
+  ): Promise<void> {
+    try {
+      // Get vendor information
+      const vendor = await prisma.vendorProfile.findUnique({
+        where: { id: vendorId },
+        select: {
+          id: true,
+          companyName: true,
+          contactPersonName: true
+        }
+      });
+
+      if (!vendor) {
+        logger.warn('Cannot send confirmation notification - vendor not found', { vendorId });
+        return;
+      }
+
+      const isPartialConfirmation = assignment.status === 'VENDOR_CONFIRMED_PARTIAL';
+      const confirmedQuantity = assignment.confirmedQuantity || assignment.assignedQuantity;
+      
+      // Prepare notification payload
+      const notificationPayload = {
+        title: `Order Confirmed: ${assignment.orderItem.order.orderNumber}`,
+        body: `${vendor.companyName} has ${isPartialConfirmation ? 'partially ' : ''}confirmed ${confirmedQuantity} units of ${assignment.orderItem.productName}${isPartialConfirmation ? ` (${assignment.assignedQuantity} requested)` : ''}.`,
+        priority: NotificationPriority.NORMAL,
+        data: {
+          type: 'vendor_confirmation',
+          assignmentId: assignment.id,
+          orderId: assignment.orderItem.order.id,
+          orderNumber: assignment.orderItem.order.orderNumber,
+          vendorId: vendor.id,
+          vendorName: vendor.companyName,
+          productName: assignment.orderItem.productName,
+          confirmedQuantity: confirmedQuantity.toString(),
+          assignedQuantity: assignment.assignedQuantity.toString(),
+          confirmationType: isPartialConfirmation ? 'partial' : 'full',
+          action: 'view_order'
+        },
+        clickAction: `/orders/${assignment.orderItem.order.id}`, // Deep link to order details
+        badge: 1
+      };
+
+      // Send to ADMIN and ACCOUNTS roles
+      const result = await notificationService.sendNotificationToRole(
+        ['ADMIN', 'ACCOUNTS'],
+        notificationPayload
+      );
+
+      if (result.success) {
+        logger.info('Vendor confirmation notification sent successfully', {
+          assignmentId: assignment.id,
+          orderNumber: assignment.orderItem.order.orderNumber,
+          vendorId: vendor.id,
+          vendorName: vendor.companyName,
+          confirmationType: isPartialConfirmation ? 'partial' : 'full',
+          totalUsers: result.totalUsers,
+          totalNotifications: result.totalNotifications
+        });
+      } else {
+        logger.error('Failed to send vendor confirmation notification', {
+          assignmentId: assignment.id,
+          vendorId: vendor.id,
+          errors: result.results.filter(r => !r.result.success).map(r => r.result.errors).flat()
+        });
+      }
+
+    } catch (error) {
+      logger.error('Error sending vendor confirmation notification', {
+        assignmentId: assignment.id,
+        vendorId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   }
 
   /**

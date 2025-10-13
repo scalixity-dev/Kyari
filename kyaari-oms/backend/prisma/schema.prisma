@@ -98,6 +98,26 @@ enum TicketPriority {
   URGENT
 }
 
+enum NotificationPriority {
+  LOW
+  NORMAL
+  URGENT
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  EXPIRED
+}
+
+enum DeviceType {
+  WEB
+  IOS
+  ANDROID
+}
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -136,6 +156,11 @@ model User {
   verifiedGRNs    GoodsReceiptNote[] @relation("VerifiedByUser")
   createdPOs      PurchaseOrder[] @relation("CreatedByAccountsUser")
   processedPayments Payment[]       @relation("ProcessedByUser")
+  
+  // Notification relations
+  deviceTokens    DeviceToken[]
+  notificationLogs NotificationLog[]
+  
   @@index([email])
   @@index([status])
   @@map("users")
@@ -212,6 +237,59 @@ model PasswordResetCode {
   @@index([expiresAt])
   @@map("password_reset_codes")
 }
+
+// =======================================
+// == NOTIFICATION MODELS
+// =======================================
+
+model DeviceToken {
+  id         String    @id @default(cuid())
+  token      String    @unique @db.VarChar(500)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceType DeviceType @default(WEB)
+  isActive   Boolean   @default(true)
+  expiresAt  DateTime  @default(dbgenerated("NOW() + INTERVAL '30 days'"))
+  lastUsed   DateTime  @default(now())
+  metadata   Json?     // Device info, browser, OS, etc.
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@map("device_tokens")
+}
+
+model NotificationLog {
+  id               String             @id @default(cuid())
+  userId           String
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String             @db.VarChar(255)
+  body             String             @db.Text
+  priority         NotificationPriority @default(NORMAL)
+  status           NotificationStatus @default(PENDING)
+  deviceTokenCount Int                @default(0) // Number of tokens targeted
+  sentCount        Int                @default(0) // Successfully sent
+  deliveredCount   Int                @default(0) // Delivered confirmation
+  failedCount      Int                @default(0) // Failed attempts
+  retryCount       Int                @default(0) // Retry attempts
+  metadata         Json?              // Deep linking, custom data, error details
+  scheduledAt      DateTime?          // For future scheduled notifications
+  sentAt           DateTime?
+  lastRetryAt      DateTime?
+  expiresAt        DateTime?          // TTL for the notification
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([scheduledAt])
+  @@map("notification_logs")
+}
+
 model AuditLog {
   id          String   @id @default(cuid())
   actorUserId String?

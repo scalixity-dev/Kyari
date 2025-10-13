@@ -107,46 +107,43 @@ interface ListViewProps {
 }
 
 const ListView: React.FC<ListViewProps> = ({ orders, onOrderClick }) => (
-  <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+  <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
     {/* Desktop Table View */}
-    <div className="hidden md:block overflow-x-auto">
-      <table className="w-full">
-        <thead className="bg-[var(--color-header-bg)] sticky top-0 z-10">
+    <div className="hidden md:block overflow-x-auto w-full">
+      <table className="w-full min-w-full table-fixed border-separate border-spacing-0">
+        <thead className="bg-[var(--color-accent)] sticky top-0 z-10">
           <tr>
-            <th className="text-left py-3 px-4 font-semibold text-[var(--color-heading)] text-sm">
+            <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">
               Order ID
             </th>
-            <th className="text-left py-3 px-4 font-semibold text-[var(--color-heading)] text-sm">
+            <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">
               Vendor
             </th>
-            <th className="text-left py-3 px-4 font-semibold text-[var(--color-heading)] text-sm">
+            <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">
               Quantity
             </th>
-            <th className="text-left py-3 px-4 font-semibold text-[var(--color-heading)] text-sm">
+            <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">
               Status
             </th>
           </tr>
         </thead>
-        <tbody>
-          {orders.map((order, index) => (
+  <tbody className="bg-white divide-y divide-gray-200">
+          {orders.map((order) => (
             <tr
               key={order.id}
               onClick={() => onOrderClick?.(order.id)}
-              className={`
-                border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer
-                ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
-              `}
+              className="hover:bg-gray-50 transition-colors cursor-pointer"
             >
-              <td className="py-3 px-4 font-medium text-[var(--color-heading)]">
+              <td className="px-4 lg:px-6 py-4 font-medium text-[var(--color-heading)]">
                 {order.id}
               </td>
-              <td className="py-3 px-4 text-gray-700">
+              <td className="px-4 lg:px-6 py-4 text-gray-700">
                 {order.vendor}
               </td>
-              <td className="py-3 px-4 text-gray-600">
+              <td className="px-4 lg:px-6 py-4 text-gray-600">
                 {order.qty}
               </td>
-              <td className="py-3 px-4">
+              <td className="px-4 lg:px-6 py-4">
                 <span className={`
                   inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
                   ${getStatusColor(order.status)}
@@ -201,7 +198,7 @@ interface BoardColumnProps {
 }
 
 const BoardColumn: React.FC<BoardColumnProps> = ({ status, orders, onOrderClick }) => (
-  <div className="flex-shrink-0 w-64 sm:w-72 bg-gray-100 rounded-lg p-3 mr-3 sm:mr-4 last:mr-0">
+  <div className="flex-shrink-0 w-64 sm:w-72 bg-[var(--color-happyplant-bg)] rounded-lg p-3 mr-3 sm:mr-4 last:mr-0">
     <div className="flex items-center justify-between mb-3">
       <h3 className="font-semibold text-[var(--color-heading)] text-sm sm:text-base">
         {status}
@@ -306,75 +303,74 @@ const OrderTracking: React.FC = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-screen font-sans w-full overflow-x-hidden">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-[var(--color-header-bg)] p-4 sm:p-6 lg:p-8 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] mb-4 sm:mb-6 border border-[rgba(0,0,0,0.03)]">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
-            Order Tracking
-          </h1>
-          <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium">
-            Monitor and manage order status across the fulfillment pipeline
-          </p>
-        </div>
+    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-6 font-[var(--font-heading)]">
+          Order Tracking
+        </h1>
 
         {/* View Toggle */}
         <div className="mb-4 sm:mb-6">
-          <div className="inline-flex bg-white rounded-lg border border-gray-200 shadow-sm w-full sm:w-auto">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`
-                flex items-center justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-medium rounded-l-lg transition-colors flex-1 sm:flex-none min-h-[44px]
-                ${viewMode === 'list'
-                  ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-sm'
-                  : 'text-gray-700 hover:text-[var(--color-heading)] hover:bg-gray-50'
-                }
-              `}
-            >
-              <LayoutDashboard size={16} />
-              <span className="text-xs sm:text-sm">List View</span>
-            </button>
-            <button
-              onClick={() => setViewMode('board')}
-              className={`
-                flex items-center justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-medium rounded-r-lg transition-colors flex-1 sm:flex-none min-h-[44px]
-                ${viewMode === 'board'
-                  ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-sm'
-                  : 'text-gray-700 hover:text-[var(--color-heading)] hover:bg-gray-50'
-                }
-              `}
-            >
-              <Package size={16} />
-              <span className="text-xs sm:text-sm">Board View</span>
-            </button>
+          <div className="relative w-full sm:w-auto">
+            {/* Accent baseline under tabs */}
+            <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[var(--color-accent)] rounded-full opacity-80"></div>
+
+            <div className="relative inline-flex gap-4">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`
+                  flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium rounded-t-xl rounded-b-none transition-all duration-200
+                  min-h-[44px]
+                  ${viewMode === 'list'
+                    ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-[0_4px_12px_rgba(0,0,0,0.08)]'
+                    : 'bg-transparent text-[var(--color-secondary)] hover:text-[var(--color-heading)]'
+                  }
+                `}
+              >
+                <LayoutDashboard size={16} />
+                <span className="text-xs sm:text-sm">List View</span>
+              </button>
+              <button
+                onClick={() => setViewMode('board')}
+                className={`
+                  flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium rounded-t-xl rounded-b-none transition-all duration-200
+                  min-h-[44px]
+                  ${viewMode === 'board'
+                    ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-[0_4px_12px_rgba(0,0,0,0.08)]'
+                    : 'bg-transparent text-[var(--color-secondary)] hover:text-[var(--color-heading)]'
+                  }
+                `}
+              >
+                <Package size={16} />
+                <span className="text-xs sm:text-sm">Board View</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Orders Summary */}
-        <div className="mb-4 sm:mb-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4">
+        <div className="mt-10 sm:mt-12 mb-4 sm:mb-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4">
           {statusColumns.map(status => {
             const count = orders.filter(order => order.status === status).length;
+            const icon = getStatusIcon(status);
             return (
               <div
                 key={status}
-                className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 text-center shadow-sm"
+                className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative"
               >
-                <div className="flex items-center justify-center mb-2">
-                  {getStatusIcon(status)}
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
+                  {React.isValidElement(icon)
+                    ? React.cloneElement(icon as any, { className: 'text-white', size: 28 } as any)
+                    : icon}
                 </div>
-                <div className="text-xl sm:text-2xl font-bold text-[var(--color-heading)] mb-1">
-                  {count}
-                </div>
-                <div className="text-xs text-gray-600 uppercase tracking-wide leading-tight">
-                  {status}
-                </div>
+                <h3 className="text-sm font-semibold text-gray-800 mb-1">{status}</h3>
+                <div className="text-2xl font-bold text-gray-900 mt-1">{count}</div>
               </div>
             );
           })}
         </div>
 
         {/* Main Content */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div className={`${viewMode === 'board' ? 'bg-[var(--color-sharktank-bg)] border-0' : 'bg-white border border-gray-200'} rounded-lg shadow-sm`}>
           {viewMode === 'list' ? (
             <ListView orders={orders} onOrderClick={handleOrderClick} />
           ) : (
@@ -391,7 +387,6 @@ const OrderTracking: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 };
