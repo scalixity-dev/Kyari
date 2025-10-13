@@ -79,6 +79,7 @@ export class AccountsAssignmentService {
               order: {
                 select: {
                   id: true,
+                  clientOrderId: true,
                   orderNumber: true,
                   status: true,
                   createdAt: true
@@ -151,8 +152,9 @@ export class AccountsAssignmentService {
           orderDate: firstAssignment.orderItem.order.createdAt.toISOString().split('T')[0],
           confirmationDate: firstAssignment.vendorActionAt?.toISOString().split('T')[0] || '',
           orderNumber: firstAssignment.orderItem.order.orderNumber,
-          orderId: firstAssignment.orderItem.order.id,
+          orderId: firstAssignment.orderItem.order.clientOrderId,
           totalAmount,
+          poNumber: null, // Will be set later after batch check
           accountInvoiceUrl: null,
           vendorInvoiceUrl: null
         })
@@ -185,6 +187,7 @@ export class AccountsAssignmentService {
 
         if (matchingPO) {
           vo.poStatus = 'Generated'
+          vo.poNumber = matchingPO.poNumber
           
           if (matchingPO.vendorInvoice) {
             // Set invoice ID for fetching JSON data
@@ -311,6 +314,7 @@ export class AccountsAssignmentService {
               order: {
                 select: {
                   id: true,
+                  clientOrderId: true,
                   orderNumber: true,
                   status: true,
                   createdAt: true
@@ -365,9 +369,11 @@ export class AccountsAssignmentService {
       let accountInvoiceUrl: string | null = null
       let vendorInvoiceUrl: string | null = null
       let invoiceId: string | null = null
+      let poNumber: string | null = null
 
       if (matchingPO) {
         poStatus = 'Generated'
+        poNumber = matchingPO.poNumber
         
         if (matchingPO.vendorInvoice) {
           // Set invoice ID for fetching JSON data
@@ -421,8 +427,9 @@ export class AccountsAssignmentService {
         orderDate: firstAssignment.orderItem.order.createdAt.toISOString().split('T')[0],
         confirmationDate: firstAssignment.vendorActionAt?.toISOString().split('T')[0] || '',
         orderNumber: firstAssignment.orderItem.order.orderNumber,
-        orderId: firstAssignment.orderItem.order.id,
+        orderId: firstAssignment.orderItem.order.clientOrderId,
         totalAmount,
+        poNumber,
         accountInvoiceUrl,
         vendorInvoiceUrl,
         invoiceId

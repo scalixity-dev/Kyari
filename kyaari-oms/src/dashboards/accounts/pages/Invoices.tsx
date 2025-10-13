@@ -386,7 +386,7 @@ function AccountsInvoices() {
                         </div>
                         <div className="text-[10px] xl:text-xs 2xl:text-sm font-medium text-gray-800 truncate">{order.orderId}</div>
                         <div className="text-[10px] xl:text-xs 2xl:text-sm font-medium text-gray-800 truncate">
-                          {order.poStatus === 'Generated' ? order.orderNumber : '—'}
+                          {order.poStatus === 'Generated' && order.poNumber ? order.poNumber : '—'}
                         </div>
                         <div className="flex items-center justify-center min-w-0">
                           <button
@@ -556,8 +556,8 @@ function AccountsInvoices() {
                       />
                       <div>
                         <div className="font-medium text-secondary">{order.orderId}</div>
-                        {order.poStatus === 'Generated' && order.orderNumber && (
-                          <div className="text-xs text-gray-500 mt-0.5">PO: {order.orderNumber}</div>
+                        {order.poStatus === 'Generated' && order.poNumber && (
+                          <div className="text-xs text-gray-500 mt-0.5">PO: {order.poNumber}</div>
                         )}
                         <button
                           onClick={() => toggleRowExpansion(order.id)}
