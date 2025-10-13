@@ -170,13 +170,22 @@ export class InvoiceService {
   /**
    * Get invoice by ID
    */
-  async getInvoiceById(id: string): Promise<InvoiceDto> {
+  async getInvoiceById(id: string): Promise<InvoiceDto & { jsonContent?: Record<string, unknown> }> {
     const invoice = await prisma.vendorInvoice.findUnique({
       where: { id },
       include: {
         purchaseOrder: {
           include: {
-            vendor: true
+            vendor: true,
+            items: {
+              include: {
+                assignedOrderItem: {
+                  include: {
+                    orderItem: true
+                  }
+                }
+              }
+            }
           }
         },
         accountsAttachment: true,
@@ -188,7 +197,15 @@ export class InvoiceService {
       throw new Error('Invoice not found');
     }
 
-    return this.mapToInvoiceDto(invoice);
+    // Generate JSON content from purchase order data
+    const invoiceData = this.prepareInvoiceTemplateData(invoice.purchaseOrder as any);
+    const jsonContent = await this.generateJsonInvoice(invoiceData, invoice.invoiceNumber);
+
+    const dto = this.mapToInvoiceDto(invoice);
+    return {
+      ...dto,
+      jsonContent
+    };
   }
 
   /**

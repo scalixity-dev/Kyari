@@ -24,6 +24,7 @@ export interface AccountsVendorOrderDto {
   totalAmount: number
   accountInvoiceUrl?: string | null
   vendorInvoiceUrl?: string | null
+  invoiceId?: string | null  // Invoice ID for fetching JSON data
 }
 
 export interface AccountsVendorOrderListResponseDto {

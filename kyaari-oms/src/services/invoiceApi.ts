@@ -38,6 +38,7 @@ export interface POOrder {
   amount: number
   accountInvoice: string | null
   vendorInvoice: string | null
+  invoiceId: string | null
 }
 
 export interface GenerateInvoicePayload {
@@ -87,6 +88,7 @@ export class InvoiceApiService {
             totalAmount: number
             accountInvoiceUrl?: string | null
             vendorInvoiceUrl?: string | null
+            invoiceId?: string | null
           }>
         }
       }>('/api/assignments/accounts/vendor-orders?limit=100')
@@ -107,7 +109,8 @@ export class InvoiceApiService {
           items: itemsStr,
           amount: order.totalAmount, // Use actual total amount from backend
           accountInvoice: order.accountInvoiceUrl ?? null, // Actual URL from backend
-          vendorInvoice: order.vendorInvoiceUrl ?? null  // Actual URL from backend
+          vendorInvoice: order.vendorInvoiceUrl ?? null, // Actual URL from backend
+          invoiceId: order.invoiceId ?? null  // Invoice ID for fetching JSON data
         }
       })
 
