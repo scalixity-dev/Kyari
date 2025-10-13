@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactElement } from 'react'
+import React, { useState, type ReactElement } from 'react'
 import { FileText, AlertTriangle, Wallet, MapPin, Bell, X } from 'lucide-react'
 import Button from '../../../components/Button/Button'
 
@@ -6,7 +6,6 @@ type KPI = {
   title: string
   value: string
   subtitle?: string
-  color: 'blue' | 'orange' | 'green' | 'red'
   icon: ReactElement
 }
 
@@ -16,26 +15,20 @@ type NotificationItem = {
   description: string
 }
 
-function KPICard({ title, value, subtitle, color, icon }: KPI) {
-  const borderTopClass =
-    color === 'blue'
-      ? 'border-t-4 border-blue-600'
-      : color === 'orange'
-      ? 'border-t-4 border-orange-600'
-      : color === 'green'
-      ? 'border-t-4 border-green-600'
-      : 'border-t-4 border-red-600'
-
+function KPICard({ title, value, subtitle, icon }: KPI) {
   return (
-    <div className={`bg-white p-4 sm:p-6 rounded-xl shadow-md flex items-center gap-3 sm:gap-4 border border-white/20 relative overflow-hidden ${borderTopClass}`}>
-      <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded-lg text-2xl sm:text-3xl text-[var(--color-heading)] flex-shrink-0">
-        {icon}
+    <div
+      className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative"
+    >
+      {/* Circular icon at top center, overlapping the card edge */}
+      <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-[var(--color-accent)] rounded-full p-3 flex items-center justify-center text-white shadow-md">
+        {React.isValidElement(icon) ? React.cloneElement(icon, { color: 'white', size: 32, strokeWidth: 2 } as React.SVGProps<SVGSVGElement>) : icon}
       </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="text-xs font-semibold text-[var(--color-primary)] uppercase tracking-wide mb-1 leading-tight" style={{ fontFamily: 'var(--font-heading)' }}>{title}</h3>
-        <div className="text-xl sm:text-2xl font-bold text-[var(--color-heading)] mb-1">{value}</div>
-        {subtitle && <div className="text-xs sm:text-sm text-gray-500 leading-tight">{subtitle}</div>}
-      </div>
+      
+      {/* Card content */}
+      <h3 className="text-lg font-semibold text-gray-800 mb-1">{title}</h3>
+      <div className="text-2xl font-bold text-gray-900 mt-1">{value}</div>
+      {subtitle && <div className="text-sm text-gray-600 mt-1">{subtitle}</div>}
     </div>
   )
 }
@@ -117,13 +110,11 @@ function MarkPaymentReleasedModal({ open, onClose }: { open: boolean; onClose: (
 }
 
 function AccountsDashboard() {
-  const today = useMemo(() => new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), [])
-
   const kpis: KPI[] = [
-    { title: 'Total Orders Pending Invoicing', value: '128', subtitle: 'Requires invoice generation', color: 'blue', icon: <FileText size={32} color="var(--color-heading)" /> },
-    { title: 'Orders Awaiting Delivery Verification', value: '73', subtitle: 'Await ops confirmation', color: 'orange', icon: <MapPin size={32} color="var(--color-heading)" /> },
-    { title: 'Payments Pending Release', value: '56', subtitle: 'Finance approval queued', color: 'green', icon: <Wallet size={32} color="var(--color-heading)" /> },
-    { title: 'Overdue Payments / SLA Breaches', value: '9', subtitle: 'Action required', color: 'red', icon: <AlertTriangle size={32} color="var(--color-heading)" /> }
+    { title: 'Total Orders Pending Invoicing', value: '128', subtitle: 'Requires invoice generation', icon: <FileText /> },
+    { title: 'Orders Awaiting Delivery Verification', value: '73', subtitle: 'Await ops confirmation', icon: <MapPin /> },
+    { title: 'Payments Pending Release', value: '56', subtitle: 'Finance approval queued', icon: <Wallet /> },
+    { title: 'Overdue Payments / SLA Breaches', value: '9', subtitle: 'Action required', icon: <AlertTriangle /> }
   ]
 
   const notifications: NotificationItem[] = [
@@ -136,17 +127,13 @@ function AccountsDashboard() {
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false)
 
   return (
-    <div className="p-3 sm:p-4 lg:p-6 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="py-4 px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header Section */}
-      <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg mb-6 sm:mb-8 border border-gray-200">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Welcome, Accounts Team!</h1>
-        <p className="text-base sm:text-lg text-[var(--color-primary)] font-medium">{today}</p>
-      </div>
 
       {/* KPI Cards */}
-      <div className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Today's Overview</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="mb-6 lg:mb-8">
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6">Today's Overview</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 sm:gap-4 mt-12 sm:mt-8">
           {kpis.map((kpi) => (
             <KPICard key={kpi.title} {...kpi} />
           ))}
