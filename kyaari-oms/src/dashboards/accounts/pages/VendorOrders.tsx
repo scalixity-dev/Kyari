@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Eye, FileText, ChevronRight, X, ChevronDown } from 'lucide-react'
+import { Eye, ChevronRight, X, ChevronDown, Package } from 'lucide-react'
 import { CustomDropdown } from '../../../components'
 import { AccountsAssignmentApiService } from '../../../services/accountsAssignmentApi'
 import type { VendorOrder, OrderStatus, POStatus, InvoiceStatus } from '../../../services/accountsAssignmentApi'
@@ -26,9 +26,8 @@ const INVOICE_STATUS_STYLES: Record<InvoiceStatus, { label: string; bg: string; 
 export default function VendorOrders() {
   const [orders, setOrders] = useState<VendorOrder[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
-  const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<VendorOrder | null>(null)
+  const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
   // Filter states
@@ -84,30 +83,12 @@ export default function VendorOrders() {
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = Math.min(startIndex + itemsPerPage, totalCount)
 
-  const handleSelectOrder = (orderId: string) => {
-    const newSelected = new Set(selectedOrders)
-    if (newSelected.has(orderId)) {
-      newSelected.delete(orderId)
-    } else {
-      newSelected.add(orderId)
-    }
-    setSelectedOrders(newSelected)
-  }
-
-  const handleSelectAll = () => {
-    if (selectedOrders.size === orders.length) {
-      setSelectedOrders(new Set())
-    } else {
-      setSelectedOrders(new Set(orders.map(o => o.id)))
-    }
-  }
-
   const handleViewDetails = (order: VendorOrder) => {
     setSelectedOrder(order)
   }
 
   // Animate panel open/close
-  function closeDetailPanel() {
+  const closeDetailPanel = () => {
     setIsDetailPanelOpen(false)
     setTimeout(() => setSelectedOrder(null), 300)
   }
@@ -126,37 +107,6 @@ export default function VendorOrders() {
     }
     return undefined
   }, [selectedOrder])
-
-  const handleGeneratePO = async (vendorOrderId: string) => {
-    try {
-      const order = orders.find(o => o.id === vendorOrderId)
-      if (!order) return
-
-      // Pass actual orderId and vendorId separately
-      await AccountsAssignmentApiService.generatePO(order.orderId, order.vendorId)
-      
-      // Refresh the list
-      await fetchVendorOrders()
-    } catch (error) {
-      console.error('Failed to generate PO:', error)
-    }
-  }
-
-  const handleBulkGeneratePO = async () => {
-    try {
-      const orderIds = Array.from(selectedOrders)
-        .map(id => orders.find(o => o.id === id)?.orderId)
-        .filter(Boolean) as string[]
-
-      await AccountsAssignmentApiService.bulkGeneratePO(orderIds)
-      
-      // Refresh the list
-      await fetchVendorOrders()
-      setSelectedOrders(new Set())
-    } catch (error) {
-      console.error('Failed to bulk generate POs:', error)
-    }
-  }
 
   const toggleRowExpansion = (orderId: string) => {
     const newExpanded = new Set(expandedRows)
@@ -249,29 +199,6 @@ export default function VendorOrders() {
         </div>
       </div>
 
-      {/* Bulk Actions Bar */}
-      {selectedOrders.size > 0 && (
-        <div className="bg-accent text-button-text rounded-xl p-3 sm:p-4 xl:p-5 2xl:p-6 mb-4 sm:mb-6 xl:mb-7 2xl:mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 xl:gap-5 2xl:gap-6">
-            <span className="font-medium text-sm sm:text-base xl:text-lg 2xl:text-xl">{selectedOrders.size} orders selected</span>
-            <div className="flex flex-col sm:flex-row gap-2 xl:gap-3 2xl:gap-4 w-full sm:w-auto">
-              <button
-                onClick={handleBulkGeneratePO}
-                className="bg-white text-accent rounded-lg px-3 sm:px-4 xl:px-5 2xl:px-6 py-2 xl:py-2.5 2xl:py-3 font-medium hover:bg-gray-50 text-xs xl:text-sm 2xl:text-base w-full sm:w-auto transition-colors"
-              >
-                Generate POs
-              </button>
-              <button
-                onClick={() => setSelectedOrders(new Set())}
-                className="bg-white/20 text-white rounded-lg px-3 sm:px-4 xl:px-5 2xl:px-6 py-2 xl:py-2.5 2xl:py-3 font-medium hover:bg-white/30 text-xs xl:text-sm 2xl:text-base w-full sm:w-auto transition-colors"
-              >
-                Clear Selection
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Loading State */}
       {loading && (
         <div className="flex justify-center items-center py-12">
@@ -282,7 +209,7 @@ export default function VendorOrders() {
       {/* Empty State */}
       {!loading && orders.length === 0 && (
         <div className="bg-white rounded-xl shadow-md border border-white/20 p-12 text-center">
-          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-700 mb-2">No Vendor Orders Found</h3>
           <p className="text-gray-500">No confirmed vendor orders match your current filters.</p>
         </div>
@@ -293,15 +220,7 @@ export default function VendorOrders() {
       <div className="hidden lg:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
         {/* Table head bar */}
         <div className="bg-[#C3754C] text-white">
-          <div className="grid grid-cols-[50px_90px_1fr_0.8fr_1fr_0.9fr_1fr_140px] xl:grid-cols-[60px_100px_1.2fr_0.9fr_1.1fr_1fr_1.1fr_160px] 2xl:grid-cols-[70px_120px_1.3fr_1fr_1.2fr_1fr_1.2fr_180px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-3 xl:py-4 2xl:py-5 font-['Quicksand'] font-bold text-sm xl:text-base 2xl:text-lg leading-[100%] tracking-[0] text-center">
-            <div className="flex items-center justify-center">
-              <input
-                type="checkbox"
-                checked={selectedOrders.size === orders.length && orders.length > 0}
-                onChange={handleSelectAll}
-                className="rounded border-white w-4 h-4"
-              />
-            </div>
+          <div className="grid grid-cols-[90px_1fr_0.8fr_1fr_0.9fr_1fr_100px] xl:grid-cols-[100px_1.2fr_0.9fr_1.1fr_1fr_1.1fr_120px] 2xl:grid-cols-[120px_1.3fr_1fr_1.2fr_1fr_1.2fr_140px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-3 xl:py-4 2xl:py-5 font-['Quicksand'] font-bold text-sm xl:text-base 2xl:text-lg leading-[100%] tracking-[0] text-center">
             <div className="text-xs xl:text-sm 2xl:text-base">Order ID</div>
             <div className="text-xs xl:text-sm 2xl:text-base">Vendor Name</div>
             <div className="text-xs xl:text-sm 2xl:text-base">Confirmed Qty</div>
@@ -325,15 +244,7 @@ export default function VendorOrders() {
                 
                 return (
                   <div key={order.id}>
-                    <div className="grid grid-cols-[50px_90px_1fr_0.8fr_1fr_0.9fr_1fr_140px] xl:grid-cols-[60px_100px_1.2fr_0.9fr_1.1fr_1fr_1.1fr_160px] 2xl:grid-cols-[70px_120px_1.3fr_1fr_1.2fr_1fr_1.2fr_180px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-2 xl:py-3 2xl:py-4 items-center text-center hover:bg-gray-50 font-bold">
-                      <div className="flex items-center justify-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedOrders.has(order.id)}
-                          onChange={() => handleSelectOrder(order.id)}
-                          className="rounded border-gray-300 w-4 h-4"
-                        />
-                      </div>
+                    <div className="grid grid-cols-[90px_1fr_0.8fr_1fr_0.9fr_1fr_100px] xl:grid-cols-[100px_1.2fr_0.9fr_1.1fr_1fr_1.1fr_120px] 2xl:grid-cols-[120px_1.3fr_1fr_1.2fr_1fr_1.2fr_140px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-2 xl:py-3 2xl:py-4 items-center text-center hover:bg-gray-50 font-bold">
                       <div className="text-[10px] xl:text-xs 2xl:text-sm font-medium text-gray-800 truncate">{order.id}</div>
                       <div className="flex items-center justify-center min-w-0">
                         <button
@@ -381,20 +292,11 @@ export default function VendorOrders() {
                       <div className="flex gap-0.5 xl:gap-1 justify-center items-center">
                         <button
                           onClick={() => handleViewDetails(order)}
-                          className="bg-white text-secondary border border-secondary rounded-md px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 text-[9px] xl:text-[10px] 2xl:text-xs hover:bg-gray-50 flex items-center gap-0.5 whitespace-nowrap flex-shrink-0"
+                          className="bg-white text-secondary border border-secondary rounded-md px-2 xl:px-3 2xl:px-4 py-1 xl:py-1.5 2xl:py-2 text-[10px] xl:text-xs 2xl:text-sm hover:bg-gray-50 flex items-center gap-1 whitespace-nowrap"
                           title="View Details"
                         >
-                          <Eye size={10} className="flex-shrink-0" />
+                          <Eye size={12} className="flex-shrink-0" />
                           <span>View</span>
-                        </button>
-                        <button
-                          onClick={() => handleGeneratePO(order.id)}
-                          disabled={order.poStatus === 'Generated'}
-                          className="bg-accent text-button-text rounded-md px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 text-[9px] xl:text-[10px] 2xl:text-xs hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-0.5 whitespace-nowrap flex-shrink-0"
-                          title="Generate PO"
-                        >
-                          <FileText size={10} className="flex-shrink-0" />
-                          <span>PO</span>
                         </button>
                       </div>
                     </div>
@@ -471,22 +373,6 @@ export default function VendorOrders() {
       {/* Mobile Card View */}
       {!loading && orders.length > 0 && (
       <div className="lg:hidden space-y-4">
-        {/* Mobile Select All */}
-        {paginatedOrders.length > 0 && (
-          <div className="bg-white rounded-xl shadow-md p-4 border border-gray-200">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={selectedOrders.size === orders.length && orders.length > 0}
-                onChange={handleSelectAll}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                Select all ({orders.length} orders)
-              </span>
-            </div>
-          </div>
-        )}
 
         {paginatedOrders.map((order) => {
           const isExpanded = expandedRows.has(order.id)
@@ -499,35 +385,27 @@ export default function VendorOrders() {
               {/* Card Header */}
               <div className="p-4 border-b border-gray-100">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 flex-1">
-                    <input
-                      type="checkbox"
-                      checked={selectedOrders.has(order.id)}
-                      onChange={() => handleSelectOrder(order.id)}
-                      className="rounded border-gray-300 mt-1"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-secondary truncate">{order.id}</h3>
-                        <span 
-                          className="inline-block px-2 py-1 rounded-full text-xs font-semibold border flex-shrink-0"
-                          style={{
-                            backgroundColor: orderStatusStyle.bg,
-                            color: orderStatusStyle.color,
-                            borderColor: orderStatusStyle.border,
-                          }}
-                        >
-                          {orderStatusStyle.label}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => toggleRowExpansion(order.id)}
-                        className="flex items-center gap-1 text-sm text-gray-600 hover:text-accent transition-colors mt-1"
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="font-medium text-secondary truncate">{order.id}</h3>
+                      <span 
+                        className="inline-block px-2 py-1 rounded-full text-xs font-semibold border flex-shrink-0"
+                        style={{
+                          backgroundColor: orderStatusStyle.bg,
+                          color: orderStatusStyle.color,
+                          borderColor: orderStatusStyle.border,
+                        }}
                       >
-                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        <span>{order.vendorName}</span>
-                      </button>
+                        {orderStatusStyle.label}
+                      </span>
                     </div>
+                    <button
+                      onClick={() => toggleRowExpansion(order.id)}
+                      className="flex items-center gap-1 text-sm text-gray-600 hover:text-accent transition-colors"
+                    >
+                      {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      <span>{order.vendorName}</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -591,18 +469,10 @@ export default function VendorOrders() {
                 <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     onClick={() => handleViewDetails(order)}
-                    className="flex-1 bg-white text-secondary border border-secondary rounded-lg px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-center gap-2"
+                    className="w-full bg-white text-secondary border border-secondary rounded-lg px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-center gap-2"
                   >
                     <Eye size={16} />
                     View Details
-                  </button>
-                  <button
-                    onClick={() => handleGeneratePO(order.id)}
-                    disabled={order.poStatus === 'Generated'}
-                    className="flex-1 bg-accent text-button-text rounded-lg px-3 py-2 text-sm hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    <FileText size={16} />
-                    Generate PO
                   </button>
                 </div>
               </div>
@@ -737,16 +607,6 @@ export default function VendorOrders() {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-2 xl:gap-3 2xl:gap-4 pt-4 xl:pt-5 2xl:pt-6 border-t border-gray-200">
-                <button
-                  onClick={() => handleGeneratePO(selectedOrder.id)}
-                  disabled={selectedOrder.poStatus === 'Generated'}
-                  className="w-full bg-accent text-button-text rounded-lg px-4 xl:px-5 2xl:px-6 py-2 xl:py-2.5 2xl:py-3 font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 xl:gap-3 2xl:gap-4 text-sm xl:text-base 2xl:text-lg transition-colors"
-                >
-                  <FileText size={16} className="xl:w-5 xl:h-5 2xl:w-6 2xl:h-6" />
-                  Generate PO
-                </button>
-              </div>
             </div>
           </div>
         </div>
