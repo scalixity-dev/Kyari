@@ -4,6 +4,7 @@ import { logger } from '../../utils/logger';
 import { APP_CONSTANTS } from '../../config/constants';
 import { InvoiceDto, CreateInvoiceDto, InvoiceTemplateData } from './invoice.dto';
 import s3Service from '../../services/s3.service';
+import { notificationService } from '../notifications/notification.service';
 
 type PurchaseOrderWithDetails = PurchaseOrder & {
   vendor: VendorProfile;
@@ -117,6 +118,34 @@ export class InvoiceService {
         purchaseOrderId,
         amount: totalAmount
       });
+
+      // Send notification to vendor about PO creation
+      try {
+        await notificationService.sendNotificationToUser(
+          purchaseOrder.vendor.userId,
+          {
+            title: 'New Purchase Order Ready',
+            body: `Purchase Order ${invoiceNumber} has been generated. Amount: ₹${totalAmount.toLocaleString('en-IN')}`,
+            priority: 'NORMAL' as const,
+            data: {
+              type: 'PO_CREATED',
+              purchaseOrderId,
+              invoiceId: invoice.id,
+              invoiceNumber,
+              amount: totalAmount.toString(),
+              vendorName: purchaseOrder.vendor.companyName,
+              deepLink: `/vendor/orders/${purchaseOrderId}/invoice`
+            }
+          }
+        );
+      } catch (notificationError) {
+        // Don't fail the invoice generation if notification fails
+        logger.warn('Failed to send PO creation notification', { 
+          notificationError, 
+          purchaseOrderId, 
+          vendorId: purchaseOrder.vendor.id 
+        });
+      }
 
       return this.mapToInvoiceDto(invoice);
     } catch (error) {

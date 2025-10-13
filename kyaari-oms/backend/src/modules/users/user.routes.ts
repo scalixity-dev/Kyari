@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { userController } from './user.controller';
 import { authenticate, requireRole } from '../../middlewares/auth.middleware';
+import { deviceTokenController } from '../notifications/deviceToken.controller';
 
 const router = Router();
 
@@ -55,6 +56,54 @@ router.delete(
   authenticate,
   requireRole(['ADMIN']),
   userController.deleteUser.bind(userController)
+);
+
+// =======================================
+// == DEVICE TOKEN MANAGEMENT ROUTES
+// =======================================
+
+/**
+ * @route POST /api/users/me/device-tokens
+ * @desc Register a device token for push notifications
+ * @access Private (any authenticated user)
+ */
+router.post(
+  '/me/device-tokens',
+  authenticate,
+  deviceTokenController.registerToken.bind(deviceTokenController)
+);
+
+/**
+ * @route DELETE /api/users/me/device-tokens
+ * @desc Remove a specific device token
+ * @access Private (any authenticated user)
+ */
+router.delete(
+  '/me/device-tokens',
+  authenticate,
+  deviceTokenController.removeToken.bind(deviceTokenController)
+);
+
+/**
+ * @route DELETE /api/users/me/device-tokens/all
+ * @desc Remove all device tokens for the current user (logout all devices)
+ * @access Private (any authenticated user)
+ */
+router.delete(
+  '/me/device-tokens/all',
+  authenticate,
+  deviceTokenController.removeAllTokens.bind(deviceTokenController)
+);
+
+/**
+ * @route GET /api/users/me/device-tokens
+ * @desc Get device tokens for the current user
+ * @access Private (any authenticated user)
+ */
+router.get(
+  '/me/device-tokens',
+  authenticate,
+  deviceTokenController.getMyTokens.bind(deviceTokenController)
 );
 
 export const userRoutes = router;

@@ -2,6 +2,7 @@ import { prisma } from '../config/database';
 import { CreateGRNRequest, GRNResponse } from '../modules/grn/grn.dto';
 import { APP_CONSTANTS } from '../config/constants';
 import { GRNStatus, GRNItemStatus, AssignmentStatus } from '@prisma/client';
+import { notificationService } from '../modules/notifications/notification.service';
 
 class GRNService {
   /**
@@ -185,6 +186,77 @@ class GRNService {
 
       return newGRN;
     });
+
+    // Send URGENT notification for discrepancies
+    if (grn.status === GRNStatus.VERIFIED_MISMATCH) {
+      try {
+        // Prepare discrepancy details
+        const discrepantItems = grn.items.filter(item => 
+          item.status !== GRNItemStatus.VERIFIED_OK
+        );
+
+        const discrepancySummary = discrepantItems.map(item => {
+          const issues = [];
+          if (item.damageReported) {
+            issues.push(`Damage: ${item.damageDescription || 'Reported'}`);
+          }
+          if (item.discrepancyQuantity !== 0) {
+            const type = item.discrepancyQuantity > 0 ? 'Excess' : 'Shortage';
+            issues.push(`${type}: ${Math.abs(item.discrepancyQuantity)} units`);
+          }
+          return `${item.assignedOrderItem?.orderItem?.productName || 'Item'}: ${issues.join(', ')}`;
+        }).join(' | ');
+
+        // Send to Operations, Admin, Accounts, and Vendor
+        await notificationService.sendNotificationToRole(
+          ['OPERATIONS', 'ADMIN', 'ACCOUNTS'],
+          {
+            title: '🚨 GRN Discrepancy Alert',
+            body: `Quality issues detected in GRN ${grn.grnNumber}. Immediate action required.`,
+            priority: 'URGENT' as const,
+            data: {
+              type: 'GRN_DISCREPANCY',
+              grnId: grn.id,
+              grnNumber: grn.grnNumber,
+              vendorName: grn.dispatch?.vendor?.companyName || 'Unknown',
+              vendorId: grn.dispatch?.vendor?.id || '',
+              dispatchId: grn.dispatchId,
+              discrepancySummary,
+              itemCount: discrepantItems.length.toString(),
+              totalItems: grn.items.length.toString(),
+              verifiedBy: userEmail,
+              deepLink: `/operations/grn/${grn.id}/discrepancy-review`
+            }
+          }
+        );
+
+        // Also notify the vendor about the discrepancy
+        if (grn.dispatch?.vendor?.userId) {
+          await notificationService.sendNotificationToUser(
+            grn.dispatch.vendor.userId,
+            {
+              title: 'GRN Discrepancy Notification',
+              body: `Quality issues detected in your delivery (GRN ${grn.grnNumber}). Please review.`,
+              priority: 'URGENT' as const,
+              data: {
+                type: 'VENDOR_GRN_DISCREPANCY',
+                grnId: grn.id,
+                grnNumber: grn.grnNumber,
+                dispatchId: grn.dispatchId,
+                discrepancySummary,
+                deepLink: `/vendor/dispatches/${grn.dispatchId}/grn-review`
+              }
+            }
+          );
+        }
+      } catch (notificationError) {
+        // Don't fail the GRN creation if notification fails
+        console.warn('Failed to send GRN discrepancy notification', { 
+          notificationError, 
+          grnId: grn.id 
+        });
+      }
+    }
 
     return this.formatGRNResponse(grn, userEmail);
   }

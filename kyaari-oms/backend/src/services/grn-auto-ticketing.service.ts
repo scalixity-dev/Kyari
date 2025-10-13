@@ -1,6 +1,7 @@
 import { prisma } from '../config/database';
 import { logger } from '../utils/logger';
 import { GRNStatus, GRNItemStatus, TicketStatus, TicketPriority, PrismaClient } from '@prisma/client';
+import { notificationService } from '../modules/notifications/notification.service';
 
 export interface GRNMismatchData {
   goodsReceiptNoteId: string;
@@ -173,6 +174,82 @@ export class GRNAutoTicketingService {
         hasTicket: !!result.ticket,
         ticketId: result.ticket?.id
       });
+
+      // Send URGENT notifications for ticket creation
+      if (result.ticket) {
+        try {
+          const vendor = result.grn.dispatch?.vendor;
+          const ticketPriorityText = result.ticket.priority === 'URGENT' ? '🔥 URGENT' : 
+                                   result.ticket.priority === 'HIGH' ? '🚨 HIGH PRIORITY' : 
+                                   result.ticket.priority === 'MEDIUM' ? '⚠️ MEDIUM' : 'LOW';
+
+          // Notify Operations, Admin, and QC teams
+          await notificationService.sendNotificationToRole(
+            ['OPERATIONS', 'ADMIN', 'QC'],
+            {
+              title: `${ticketPriorityText} GRN Ticket Created`,
+              body: `Ticket ${result.ticket.ticketNumber} created for GRN ${grnData.grnNumber}. Immediate review required.`,
+              priority: 'URGENT' as const,
+              data: {
+                type: 'GRN_TICKET_CREATED',
+                ticketId: result.ticket.id,
+                ticketNumber: result.ticket.ticketNumber,
+                grnId: grnData.goodsReceiptNoteId,
+                grnNumber: grnData.grnNumber,
+                vendorName: vendor?.companyName || 'Unknown',
+                priority: result.ticket.priority,
+                assigneeId: result.ticket.assigneeId || '',
+                deepLink: `/operations/tickets/${result.ticket.id}/review`
+              }
+            }
+          );
+
+          // Notify the vendor about the quality issue
+          if (vendor?.userId) {
+            await notificationService.sendNotificationToUser(
+              vendor.userId,
+              {
+                title: 'Quality Issue Ticket Created',
+                body: `A quality issue ticket (${result.ticket.ticketNumber}) has been created for your delivery. Please review.`,
+                priority: 'URGENT' as const,
+                data: {
+                  type: 'VENDOR_QUALITY_ISSUE',
+                  ticketId: result.ticket.id,
+                  ticketNumber: result.ticket.ticketNumber,
+                  grnNumber: grnData.grnNumber,
+                  deepLink: `/vendor/tickets/${result.ticket.id}/details`
+                }
+              }
+            );
+          }
+
+          // If there's an assignee, notify them specifically
+          if (result.ticket.assigneeId) {
+            await notificationService.sendNotificationToUser(
+              result.ticket.assigneeId,
+              {
+                title: 'New GRN Quality Ticket Assigned',
+                body: `You have been assigned ticket ${result.ticket.ticketNumber} for GRN ${grnData.grnNumber}. Priority: ${result.ticket.priority}`,
+                priority: 'URGENT' as const,
+                data: {
+                  type: 'TICKET_ASSIGNED',
+                  ticketId: result.ticket.id,
+                  ticketNumber: result.ticket.ticketNumber,
+                  grnNumber: grnData.grnNumber,
+                  priority: result.ticket.priority,
+                  deepLink: `/tickets/${result.ticket.id}/action-required`
+                }
+              }
+            );
+          }
+        } catch (notificationError) {
+          // Don't fail the ticket creation if notification fails
+          logger.warn('Failed to send GRN ticket notifications', { 
+            notificationError, 
+            ticketId: result.ticket?.id 
+          });
+        }
+      }
 
       return {
         success: true,
@@ -419,7 +496,19 @@ export class GRNAutoTicketingService {
             updatedAt: new Date()
           },
           include: {
-            goodsReceiptNote: true,
+            goodsReceiptNote: {
+              include: {
+                dispatch: {
+                  include: {
+                    vendor: {
+                      include: {
+                        user: true
+                      }
+                    }
+                  }
+                }
+              }
+            },
             createdBy: true,
             assignee: true
           }
@@ -444,6 +533,59 @@ export class GRNAutoTicketingService {
         status,
         userId
       });
+
+      // Send notifications for important status changes
+      if (status === 'RESOLVED' || status === 'CLOSED') {
+        try {
+          const statusEmoji = status === 'RESOLVED' ? '✅' : '🔒';
+          const vendor = result.goodsReceiptNote?.dispatch?.vendor;
+
+          // Notify stakeholders about resolution
+          await notificationService.sendNotificationToRole(
+            ['OPERATIONS', 'ADMIN'],
+            {
+              title: `${statusEmoji} GRN Ticket ${status}`,
+              body: `Ticket ${result.ticketNumber} has been ${status.toLowerCase()}. GRN: ${result.goodsReceiptNote?.grnNumber}`,
+              priority: 'NORMAL' as const,
+              data: {
+                type: 'TICKET_STATUS_UPDATED',
+                ticketId: result.id,
+                ticketNumber: result.ticketNumber,
+                status,
+                grnNumber: result.goodsReceiptNote?.grnNumber || '',
+                vendorName: vendor?.companyName || 'Unknown',
+                updatedBy: userId,
+                deepLink: `/operations/tickets/${result.id}/summary`
+              }
+            }
+          );
+
+          // Notify vendor about resolution
+          if (vendor?.userId) {
+            await notificationService.sendNotificationToUser(
+              vendor.userId,
+              {
+                title: `Quality Issue ${status}`,
+                body: `Quality issue ticket ${result.ticketNumber} has been ${status.toLowerCase()}.`,
+                priority: 'NORMAL' as const,
+                data: {
+                  type: 'VENDOR_TICKET_RESOLVED',
+                  ticketId: result.id,
+                  ticketNumber: result.ticketNumber,
+                  status,
+                  deepLink: `/vendor/tickets/${result.id}/resolution`
+                }
+              }
+            );
+          }
+        } catch (notificationError) {
+          logger.warn('Failed to send ticket status update notification', { 
+            notificationError, 
+            ticketId, 
+            status 
+          });
+        }
+      }
 
       return {
         success: true,
