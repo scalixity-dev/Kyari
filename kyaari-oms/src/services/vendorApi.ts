@@ -36,6 +36,8 @@ export interface VendorListItem {
   contactPhone: string;
   warehouseLocation: string;
   pincode: string;
+  gstNumber?: string;
+  panNumber?: string;
   email?: string;
   status: string;
   verified: boolean;

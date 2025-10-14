@@ -9,7 +9,6 @@ import { useAuth } from '../../../auth/AuthProvider'
 type TabKey = 'admin' | 'accounts' | 'ops' | 'vendors' | 'matrix'
 type UserRole = 'Admin' | 'Accounts' | 'Ops'
 type UserStatus = 'Active' | 'Inactive'
-type VendorStatus = 'Approved' | 'Pending'
 
 type UserRow = {
   id: string
@@ -35,16 +34,6 @@ type VendorRow = {
 
 type Permission = 'Orders' | 'Vendors' | 'Accounts' | 'Ops'
 type MatrixRole = 'Admin' | 'Accounts' | 'Ops' | 'Vendor'
-
-function generateId(prefix: string): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 9)}`
-}
-
-function generatePassword(): string {
-  const base = Math.random().toString(36).slice(2, 8)
-  const num = Math.floor(100 + Math.random() * 900)
-  return `${base}${num}!`
-}
 
 function Badge({ label, color }: { label: string; color: string }) {
   return (
@@ -218,7 +207,6 @@ export default function UsersRoles() {
   // Modals
   const [showUserModal, setShowUserModal] = useState(false)
   const [userForm, setUserForm] = useState<{ name: string; email: string; role: UserRole; status: UserStatus }>({ name: '', email: '', role: 'Admin', status: 'Active' })
-  const isAdminTab = activeTab === 'admin'
   const isAccountsTab = activeTab === 'accounts'
   const isOpsTab = activeTab === 'ops'
 
