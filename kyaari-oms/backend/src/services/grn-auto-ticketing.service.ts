@@ -418,24 +418,31 @@ export class GRNAutoTicketingService {
    * Generate unique ticket number
    */
   private static async generateTicketNumber(tx: any): Promise<string> {
-    const today = new Date();
-    const yearMonth = today.toISOString().slice(0, 7).replace('-', ''); // YYYYMM
-    
-    // Get the count of tickets created today
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
-    
-    const todayTicketsCount = await tx.ticket.count({
-      where: {
-        createdAt: {
-          gte: startOfDay,
-          lt: endOfDay
+    try {
+      const today = new Date();
+      const yearMonth = today.toISOString().slice(0, 7).replace('-', ''); // YYYYMM
+      
+      // Get the count of tickets created today
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+      
+      const todayTicketsCount = await tx.ticket.count({
+        where: {
+          createdAt: {
+            gte: startOfDay,
+            lt: endOfDay
+          }
         }
-      }
-    });
+      });
 
-    const sequenceNumber = (todayTicketsCount + 1).toString().padStart(3, '0');
-    return `TKT-${yearMonth}-${sequenceNumber}`;
+      const sequenceNumber = (todayTicketsCount + 1).toString().padStart(3, '0');
+      return `TKT-${yearMonth}-${sequenceNumber}`;
+    } catch (error) {
+      // Fallback to timestamp-based ticket number if count fails
+      const timestamp = Date.now().toString().slice(-6);
+      const yearMonth = new Date().toISOString().slice(0, 7).replace('-', '');
+      return `TKT-${yearMonth}-${timestamp}`;
+    }
   }
 
   /**
