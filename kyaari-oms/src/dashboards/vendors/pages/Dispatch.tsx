@@ -4,6 +4,7 @@ import DispatchApiService, { type DispatchResponse } from '../../../services/dis
 import { InvoiceApiService } from '../../../services/invoiceApi'
 import toast from 'react-hot-toast'
 import { format, parseISO } from 'date-fns'
+import { KPICard } from '../../../components'
 
 interface DispatchOrder {
   id: string
@@ -473,41 +474,30 @@ export default function Dispatch() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6">
-        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <Package size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Ready for Dispatch</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{readyForDispatch.length}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Pending</div>
-        </div>
-
-        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <Clock size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Dispatched</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{dispatched.length}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Marked</div>
-        </div>
-
-        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <MapPin size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">In Transit</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{inTransit.length}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">En route</div>
-        </div>
-
-        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <CheckSquare size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Delivered</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{delivered.length}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Completed</div>
-        </div>
+        <KPICard
+          title="Ready for Dispatch"
+          value={readyForDispatch.length}
+          subtitle="Pending"
+          icon={<Package size={32} />}
+        />
+        <KPICard
+          title="Dispatched"
+          value={dispatched.length}
+          subtitle="Marked"
+          icon={<Clock size={32} />}
+        />
+        <KPICard
+          title="In Transit"
+          value={inTransit.length}
+          subtitle="En route"
+          icon={<MapPin size={32} />}
+        />
+        <KPICard
+          title="Delivered"
+          value={delivered.length}
+          subtitle="Completed"
+          icon={<CheckSquare size={32} />}
+        />
       </div>
 
       {/* Status Flow Indicator */}

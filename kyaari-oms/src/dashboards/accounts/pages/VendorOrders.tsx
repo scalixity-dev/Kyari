@@ -1,8 +1,11 @@
-import { useState, useMemo, useEffect } from 'react'
-import { Eye, ChevronRight, X, ChevronDown, Package } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { Eye, ChevronRight, X, ChevronDown, Package, Calendar as CalendarIcon } from 'lucide-react'
 import { CustomDropdown } from '../../../components'
+import { Calendar } from '../../../components/ui/calendar'
+import { Pagination } from '../../../components/ui/Pagination'
 import { AccountsAssignmentApiService } from '../../../services/accountsAssignmentApi'
 import type { VendorOrder, OrderStatus, POStatus, InvoiceStatus } from '../../../services/accountsAssignmentApi'
+import { format } from 'date-fns'
 
 const STATUS_STYLES: Record<OrderStatus, { label: string; bg: string; color: string; border: string }> = {
   Confirmed: { label: 'Confirmed', bg: '#D1FAE5', color: '#065F46', border: '#A7F3D0' },
@@ -35,6 +38,12 @@ export default function VendorOrders() {
   const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('')
   const [filterDateFrom, setFilterDateFrom] = useState('')
   const [filterDateTo, setFilterDateTo] = useState('')
+  const [dateFromDate, setDateFromDate] = useState<Date | undefined>()
+  const [dateToDate, setDateToDate] = useState<Date | undefined>()
+  const [showFromCalendar, setShowFromCalendar] = useState(false)
+  const [showToCalendar, setShowToCalendar] = useState(false)
+  const fromCalendarRef = useRef<HTMLDivElement>(null)
+  const toCalendarRef = useRef<HTMLDivElement>(null)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -123,8 +132,25 @@ export default function VendorOrders() {
     setFilterStatus('')
     setFilterDateFrom('')
     setFilterDateTo('')
+    setDateFromDate(undefined)
+    setDateToDate(undefined)
     setCurrentPage(1)
   }
+
+  // Close calendars when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fromCalendarRef.current && !fromCalendarRef.current.contains(event.target as Node)) {
+        setShowFromCalendar(false)
+      }
+      if (toCalendarRef.current && !toCalendarRef.current.contains(event.target as Node)) {
+        setShowToCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   return (
     <div className="p-4 sm:p-6 lg:pl-9 xl:p-9 2xl:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
@@ -169,22 +195,71 @@ export default function VendorOrders() {
           
           <div>
             <label className="block text-xs xl:text-sm 2xl:text-base font-medium text-secondary mb-1 xl:mb-1.5 2xl:mb-2">Date From</label>
-            <input 
-              type="date" 
-              value={filterDateFrom} 
-              onChange={(e) => setFilterDateFrom(e.target.value)}
-              className="w-full px-3 xl:px-3.5 2xl:px-4 py-2 xl:py-2.5 2xl:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-xs xl:text-sm 2xl:text-base hover:border-accent transition-all duration-200"
-            />
+            <div className="relative" ref={fromCalendarRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFromCalendar(!showFromCalendar)
+                  setShowToCalendar(false)
+                }}
+                className="w-full px-3 xl:px-3.5 2xl:px-4 py-2 xl:py-2.5 2xl:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-xs xl:text-sm 2xl:text-base hover:border-accent transition-all duration-200 flex items-center justify-between text-left"
+              >
+                <span className={dateFromDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                  {dateFromDate ? format(dateFromDate, 'PPP') : 'From date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+              </button>
+              {showFromCalendar && (
+                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={dateFromDate}
+                    onSelect={(date) => {
+                      setDateFromDate(date)
+                      setFilterDateFrom(date ? format(date, 'yyyy-MM-dd') : '')
+                      setShowFromCalendar(false)
+                    }}
+                    initialFocus
+                    className="w-full"
+                  />
+                </div>
+              )}
+            </div>
           </div>
           
           <div>
             <label className="block text-xs xl:text-sm 2xl:text-base font-medium text-secondary mb-1 xl:mb-1.5 2xl:mb-2">Date To</label>
-            <input 
-              type="date" 
-              value={filterDateTo} 
-              onChange={(e) => setFilterDateTo(e.target.value)}
-              className="w-full px-3 xl:px-3.5 2xl:px-4 py-2 xl:py-2.5 2xl:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-xs xl:text-sm 2xl:text-base hover:border-accent transition-all duration-200"
-            />
+            <div className="relative" ref={toCalendarRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowToCalendar(!showToCalendar)
+                  setShowFromCalendar(false)
+                }}
+                className="w-full px-3 xl:px-3.5 2xl:px-4 py-2 xl:py-2.5 2xl:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-xs xl:text-sm 2xl:text-base hover:border-accent transition-all duration-200 flex items-center justify-between text-left"
+              >
+                <span className={dateToDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                  {dateToDate ? format(dateToDate, 'PPP') : 'To date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+              </button>
+              {showToCalendar && (
+                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={dateToDate}
+                    onSelect={(date) => {
+                      setDateToDate(date)
+                      setFilterDateTo(date ? format(date, 'yyyy-MM-dd') : '')
+                      setShowToCalendar(false)
+                    }}
+                    initialFocus
+                    disabled={(date) => dateFromDate ? date < dateFromDate : false}
+                    className="w-full"
+                  />
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="sm:col-span-2 lg:col-span-1">
@@ -330,43 +405,18 @@ export default function VendorOrders() {
           </div>
         </div>
 
-        {/* Pagination controls (desktop) */}
-        <div className="flex items-center justify-between px-3 xl:px-4 2xl:px-6 py-2.5 xl:py-3 bg-white border-t border-gray-100">
-          <div className="text-[10px] xl:text-xs 2xl:text-sm text-gray-500">
-            Showing {totalCount === 0 ? 0 : startIndex + 1}-{endIndex} of {totalCount}
-          </div>
-          <div className="flex items-center gap-1 xl:gap-1.5 2xl:gap-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="h-7 w-7 xl:h-8 xl:w-8 2xl:h-9 2xl:w-9 flex items-center justify-center rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors"
-              aria-label="Previous page"
-            >
-              <svg className="w-3.5 h-3.5 xl:w-4 xl:h-4 2xl:w-5 2xl:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                onClick={() => setCurrentPage(p)}
-                className={`min-w-7 h-7 xl:min-w-8 xl:h-8 2xl:min-w-9 2xl:h-9 px-1.5 xl:px-2 2xl:px-2.5 rounded-md border text-[10px] xl:text-xs 2xl:text-sm transition-colors ${currentPage === p ? 'bg-[var(--color-secondary)] text-white border-[var(--color-secondary)]' : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'}`}
-              >
-                {p}
-              </button>
-            ))}
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="h-7 w-7 xl:h-8 xl:w-8 2xl:h-9 2xl:w-9 flex items-center justify-center rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors"
-              aria-label="Next page"
-            >
-              <svg className="w-3.5 h-3.5 xl:w-4 xl:h-4 2xl:w-5 2xl:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-        </div>
+        {totalCount > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalCount}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setCurrentPage}
+            itemLabel="orders"
+            variant="desktop"
+          />
+        )}
       </div>
       )}
 
@@ -480,28 +530,18 @@ export default function VendorOrders() {
           )
         })}
 
-        {/* Pagination controls (mobile) */}
-        <div className="flex items-center justify-between px-1 py-2">
-          <div className="text-xs text-gray-500">
-            {totalCount === 0 ? 'No results' : `Showing ${startIndex + 1}-${endIndex} of ${totalCount}`}
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} 
-              disabled={currentPage === 1} 
-              className="h-8 px-3 rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 text-sm font-medium"
-            >
-              Prev
-            </button>
-            <button 
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} 
-              disabled={currentPage === totalPages} 
-              className="h-8 px-3 rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 text-sm font-medium"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        {totalCount > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalCount}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setCurrentPage}
+            itemLabel="orders"
+            variant="mobile"
+          />
+        )}
       </div>
       )}
 

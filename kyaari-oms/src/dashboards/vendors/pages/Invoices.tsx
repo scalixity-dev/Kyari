@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { FileText, CheckSquare, X, Clock, Calendar as CalendarIcon } from 'lucide-react'
-import { CustomDropdown } from '../../../components'
+import { CustomDropdown, KPICard } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
+import { Pagination } from '../../../components/ui/Pagination'
 import { format, parseISO } from 'date-fns'
 import { InvoiceApiService, type VendorInvoiceDetailed } from '../../../services/invoiceApi'
 import toast from 'react-hot-toast'
@@ -166,10 +167,6 @@ const getValidationDisplay = (po: PurchaseOrder) => {
         </div>
         <div className="flex items-center gap-1 text-green-600">
           <CheckSquare size={12} />
-          <span>Rate: ₹{po.rate} ✓</span>
-        </div>
-        <div className="flex items-center gap-1 text-green-600">
-          <CheckSquare size={12} />
           <span>Amount: ₹{po.amount.toLocaleString()} ✓</span>
         </div>
       </div>
@@ -220,6 +217,11 @@ export default function Invoices() {
   useEffect(() => {
     fetchInvoices()
   }, [])
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [statusFilter, poSearch, linkedOrderSearch, dateFrom, dateTo])
 
   const fetchInvoices = async () => {
     try {
@@ -405,7 +407,9 @@ export default function Invoices() {
   })
 
   const totalPages = Math.max(1, Math.ceil(filteredPurchaseOrders.length / pageSize))
-  const paginatedPurchaseOrders = filteredPurchaseOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, filteredPurchaseOrders.length)
+  const paginatedPurchaseOrders = filteredPurchaseOrders.slice(startIndex, endIndex)
 
   return (
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden bg-[var(--color-sharktank-bg)]">
@@ -435,41 +439,30 @@ export default function Invoices() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6">
-        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <FileText size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">New POs</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{receivedPOs.length}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Pending invoices</div>
-        </div>
-
-        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <Clock size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Validating</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{pendingValidation.length}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Under review</div>
-        </div>
-
-        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <CheckSquare size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Approved</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{approvedPOs.length}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Ready for payment</div>
-        </div>
-
-        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <X size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Rejected</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{rejectedPOs.length}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Needs attention</div>
-        </div>
+        <KPICard
+          title="New POs"
+          value={receivedPOs.length}
+          subtitle="Pending invoices"
+          icon={<FileText size={32} />}
+        />
+        <KPICard
+          title="Validating"
+          value={pendingValidation.length}
+          subtitle="Under review"
+          icon={<Clock size={32} />}
+        />
+        <KPICard
+          title="Approved"
+          value={approvedPOs.length}
+          subtitle="Ready for payment"
+          icon={<CheckSquare size={32} />}
+        />
+        <KPICard
+          title="Rejected"
+          value={rejectedPOs.length}
+          subtitle="Needs attention"
+          icon={<X size={32} />}
+        />
       </div>
 
       {/* Purchase Orders Heading */}
@@ -656,8 +649,6 @@ export default function Invoices() {
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Linked Orders</th>
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Items</th>
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Qty</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Rate</th>
-                
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Dispatch Status</th>
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Actions</th>
               </tr>
@@ -681,10 +672,6 @@ export default function Invoices() {
                   <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {po.quantity}
                   </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    ₹{po.rate.toFixed(2)}
-                  </td>
-                  
                   <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(po.dispatchStatus as PurchaseOrder['status'] || po.status)}
                   </td>
@@ -746,7 +733,7 @@ export default function Invoices() {
                   <span className="font-medium text-gray-800">Item:</span> {po.items}
                 </p>
                 <p className="text-xs sm:text-sm text-gray-600">
-                  <span className="font-medium text-gray-800">Quantity:</span> {po.quantity} @ ₹{po.rate.toFixed(2)}
+                  <span className="font-medium text-gray-800">Quantity:</span> {po.quantity}
                 </p>
                 <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2">
                   <span className="font-medium text-gray-800">Dispatch Status:</span>
@@ -790,29 +777,18 @@ export default function Invoices() {
             </div>
           ))}
         </div>
-        {/* Pagination controls (below table/cards) */}
-        <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-2 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-xs sm:text-sm text-gray-600 border-t border-gray-200">
-          <div className="text-center sm:text-left">
-            Showing {Math.min((currentPage - 1) * pageSize + 1, Math.max(1, filteredPurchaseOrders.length))} - {Math.min(currentPage * pageSize, filteredPurchaseOrders.length)} of {filteredPurchaseOrders.length}
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
-              disabled={currentPage === 1} 
-              className="px-3 py-1.5 sm:px-2 sm:py-1 border rounded bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors min-w-[60px] sm:min-w-0"
-            >
-              Prev
-            </button>
-            <span className="whitespace-nowrap">Page {currentPage} / {totalPages}</span>
-            <button 
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
-              disabled={currentPage >= totalPages} 
-              className="px-3 py-1.5 sm:px-2 sm:py-1 border rounded bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors min-w-[60px] sm:min-w-0"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        {filteredPurchaseOrders.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredPurchaseOrders.length}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setCurrentPage}
+            itemLabel="invoices"
+            variant="desktop"
+          />
+        )}
       </div>
 
       {/* Invoice Upload Modal */}
