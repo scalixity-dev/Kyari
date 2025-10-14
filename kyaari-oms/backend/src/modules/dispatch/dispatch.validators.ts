@@ -10,8 +10,8 @@ export const dispatchItemSchema = z.object({
 // Create dispatch validation
 export const createDispatchSchema = z.object({
   items: z.array(dispatchItemSchema).min(1, 'At least one item is required'),
-  awbNumber: z.string().min(1, 'AWB number is required').max(100),
-  logisticsPartner: z.string().min(1, 'Logistics partner is required').max(255),
+  awbNumber: z.string().max(100).optional().default('LOCAL-PORTER'),
+  logisticsPartner: z.string().max(255).optional().default('Local Porter'),
   dispatchDate: z.string().datetime().optional(),
   estimatedDeliveryDate: z.string().datetime().optional(),
   remarks: z.string().max(1000).optional(),

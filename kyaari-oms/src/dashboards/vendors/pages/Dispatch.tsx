@@ -1,5 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { FileText, CheckSquare, X, Clock, Package, MapPin, AlertTriangle } from 'lucide-react'
+import DispatchApiService, { type DispatchResponse } from '../../../services/dispatchApi'
+import { InvoiceApiService } from '../../../services/invoiceApi'
+import toast from 'react-hot-toast'
+import { format, parseISO } from 'date-fns'
 
 interface DispatchOrder {
   id: string
@@ -12,23 +16,31 @@ interface DispatchOrder {
   status: 'Ready for Dispatch' | 'Dispatch Marked' | 'In Transit' | 'Delivered - Verified' | 'Delivered - Mismatch' | 'Received by Store'
   dispatchDate?: string
   dispatchProof?: string
+  dispatchProofUrl?: string
   storeVerification?: 'Pending' | 'OK' | 'Mismatch'
   verificationNotes?: string
   estimatedDelivery?: string
+  awbNumber?: string
+  logisticsPartner?: string
+  assignmentItems?: Array<{ assignmentId: string; quantity: number }> // For creating dispatch
 }
 
 interface DispatchModalProps {
   isOpen: boolean
   order: DispatchOrder | null
   onClose: () => void
-  onDispatch: (file?: File) => void
+  onDispatch: (data: { file?: File; awbNumber?: string; logisticsPartner?: string }) => void
 }
 
 const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, order, onClose, onDispatch }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  const [awbNumber, setAwbNumber] = useState('')
+  const [logisticsPartner, setLogisticsPartner] = useState('')
 
   if (!isOpen || !order) return null
+  
+  const isReadyForDispatch = order.status === 'Ready for Dispatch'
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -51,8 +63,14 @@ const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, order, onClose, o
   }
 
   const handleSubmit = () => {
-    onDispatch(selectedFile || undefined)
+    onDispatch({ 
+      file: selectedFile || undefined,
+      awbNumber: awbNumber.trim() || undefined,
+      logisticsPartner: logisticsPartner.trim() || undefined
+    })
     setSelectedFile(null)
+    setAwbNumber('')
+    setLogisticsPartner('')
   }
 
   return (
@@ -72,8 +90,40 @@ const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, order, onClose, o
           <p className="text-xs sm:text-sm text-gray-600">Quantity: <span className="font-medium text-gray-900">{order.quantity}</span></p>
         </div>
 
+        {/* Show AWB and Logistics fields only for Ready for Dispatch */}
+        {isReadyForDispatch && (
+          <div className="mb-4 space-y-3">
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                AWB/Tracking Number (Optional)
+              </label>
+              <input
+                type="text"
+                value={awbNumber}
+                onChange={(e) => setAwbNumber(e.target.value)}
+                placeholder="Leave empty for local porter"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                Logistics Partner (Optional)
+              </label>
+              <input
+                type="text"
+                value={logisticsPartner}
+                onChange={(e) => setLogisticsPartner(e.target.value)}
+                placeholder="e.g., Local Porter, Delhivery, Blue Dart"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+              />
+            </div>
+          </div>
+        )}
+
         <div className="mb-4">
-          <h4 className="text-sm font-medium text-[var(--color-heading)] mb-2">Upload Dispatch Proof (Optional)</h4>
+          <h4 className="text-sm font-medium text-[var(--color-heading)] mb-2">
+            Upload Dispatch Proof {isReadyForDispatch ? '(Optional)' : ''}
+          </h4>
           <p className="text-xs text-gray-500 mb-3">Upload handover note, porter receipt, or delivery photo</p>
           
           <div 
@@ -115,7 +165,7 @@ const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, order, onClose, o
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-yellow-800">Dispatch Confirmation</p>
               <p className="text-xs text-yellow-700 mt-1 leading-relaxed">
-                By marking as dispatched, you confirm that the order has been handed over for delivery.
+                By marking as dispatched, you confirm that the order has been handed over to porter/delivery partner.
                 Store operator will verify receipt upon arrival.
               </p>
             </div>
@@ -199,91 +249,144 @@ const getVerificationBadge = (verification: DispatchOrder['storeVerification']) 
 }
 
 export default function Dispatch() {
-  const [dispatchOrders, setDispatchOrders] = useState<DispatchOrder[]>([
-    {
-      id: '1',
-      orderNumber: 'ORD-003',
-      poNumber: 'PO-2025-001',
-      date: '29/09/2025',
-      items: 'Green Beans',
-      quantity: 25,
-      amount: 2000,
-      status: 'Ready for Dispatch',
-      estimatedDelivery: '30/09/2025'
-    },
-    {
-      id: '2',
-      orderNumber: 'ORD-001',
-      poNumber: 'PO-2025-002',
-      date: '28/09/2025',
-      items: 'Organic Tomatoes',
-      quantity: 50,
-      amount: 6000,
-      status: 'Dispatch Marked',
-      dispatchDate: '29/09/2025',
-      dispatchProof: 'handover_receipt_001.pdf',
-      storeVerification: 'Pending',
-      estimatedDelivery: '30/09/2025'
-    },
-    {
-      id: '3',
-      orderNumber: 'ORD-004',
-      poNumber: 'PO-2025-003',
-      date: '28/09/2025',
-      items: 'Organic Carrots',
-      quantity: 30,
-      amount: 1800,
-      status: 'In Transit',
-      dispatchDate: '28/09/2025',
-      dispatchProof: 'delivery_photo_002.jpg',
-      storeVerification: 'Pending',
-      estimatedDelivery: '29/09/2025'
-    },
-    {
-      id: '4',
-      orderNumber: 'ORD-005',
-      poNumber: 'PO-2025-004',
-      date: '27/09/2025',
-      items: 'Bell Peppers',
-      quantity: 15,
-      amount: 2250,
-      status: 'Delivered - Verified',
-      dispatchDate: '27/09/2025',
-      dispatchProof: 'porter_receipt_003.pdf',
-      storeVerification: 'OK',
-      verificationNotes: 'All items received in good condition'
-    },
-    {
-      id: '5',
-      orderNumber: 'ORD-006',
-      poNumber: 'PO-2025-005',
-      date: '26/09/2025',
-      items: 'Fresh Spinach',
-      quantity: 20,
-      amount: 1800,
-      status: 'Delivered - Mismatch',
-      dispatchDate: '26/09/2025',
-      dispatchProof: 'handover_note_004.pdf',
-      storeVerification: 'Mismatch',
-      verificationNotes: 'Received 18 units instead of 20. 2 units damaged during transit.'
-    },
-    {
-      id: '6',
-      orderNumber: 'ORD-007',
-      poNumber: 'PO-2025-006',
-      date: '25/09/2025',
-      items: 'Cucumber',
-      quantity: 40,
-      amount: 1800,
-      status: 'Received by Store',
-      dispatchDate: '25/09/2025',
-      dispatchProof: 'delivery_confirmation_005.jpg',
-      storeVerification: 'OK'
-    }
-  ])
+  const [dispatchOrders, setDispatchOrders] = useState<DispatchOrder[]>([])
+  const [loading, setLoading] = useState(true)
 
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<DispatchOrder | null>(null)
+
+  // Fetch dispatches on mount
+  useEffect(() => {
+    fetchDispatchesAndInvoices()
+  }, [])
+
+  const fetchDispatchesAndInvoices = async () => {
+    try {
+      setLoading(true)
+      
+      // Fetch both dispatches and invoices in parallel
+      const [dispatchResponse, invoiceResponse] = await Promise.all([
+        DispatchApiService.getMyDispatches({ limit: 100 }),
+        InvoiceApiService.getVendorInvoicesDetailed({ limit: 100 })
+      ])
+
+      // Transform existing dispatches
+      const existingDispatches = transformDispatchesToUI(dispatchResponse.data.dispatches)
+      
+      // Create "Ready for Dispatch" orders from invoices created by accounts team
+      // These are orders where accounts has created invoice/PO, ready for vendor to dispatch
+      const readyToDispatch = invoiceResponse.data.invoices
+        .filter(invoice => {
+          // Check if any assignment item is NOT yet dispatched
+          const hasUndispatchedItems = invoice.purchaseOrder.items.some((item: any) => {
+            const assignmentStatus = item.assignedOrderItem.status
+            // Include if status is INVOICED or VENDOR_CONFIRMED (not DISPATCHED yet)
+            return assignmentStatus === 'INVOICED' || 
+                   assignmentStatus === 'VENDOR_CONFIRMED_FULL' || 
+                   assignmentStatus === 'VENDOR_CONFIRMED_PARTIAL'
+          })
+          
+          return hasUndispatchedItems
+        })
+        .map(invoice => transformInvoiceToDispatchOrder(invoice))
+
+      // Combine both lists
+      const allOrders = [...readyToDispatch, ...existingDispatches]
+      setDispatchOrders(allOrders)
+    } catch (error) {
+      console.error('Failed to fetch dispatch data:', error)
+      toast.error('Failed to load dispatch information')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Transform invoice to dispatch order (for Ready for Dispatch status)
+  const transformInvoiceToDispatchOrder = (invoice: any): DispatchOrder => {
+    const po = invoice.purchaseOrder
+    const items = po.items.map((item: any) => item.assignedOrderItem.orderItem.productName).join(', ')
+    const quantity = po.items.reduce((sum: number, item: any) => sum + item.quantity, 0)
+    const orderNumbers = Array.from(new Set(
+      po.items.map((item: any) => item.assignedOrderItem.orderItem.order?.clientOrderId || item.assignedOrderItem.orderItem.order?.orderNumber)
+    )).filter(Boolean).join(', ')
+    
+    // Extract assignment IDs and quantities for dispatch creation
+    const assignmentItems = po.items.map((item: any) => ({
+      assignmentId: item.assignedOrderItem.id,
+      quantity: item.quantity
+    }))
+    
+    return {
+      id: invoice.id,
+      orderNumber: orderNumbers || 'N/A',
+      poNumber: po.poNumber,
+      date: format(parseISO(po.createdAt), 'dd/MM/yyyy'),
+      items: items || 'N/A',
+      quantity: quantity,
+      amount: Number(po.totalAmount),
+      status: 'Ready for Dispatch',
+      estimatedDelivery: undefined,
+      assignmentItems: assignmentItems
+    }
+  }
+
+  // Transform backend dispatch data to UI format
+  const transformDispatchesToUI = (dispatches: DispatchResponse[]): DispatchOrder[] => {
+    return dispatches.map(dispatch => {
+      // Get items summary
+      const itemsText = dispatch.items.map(item => item.productName).join(', ')
+      const totalQuantity = dispatch.items.reduce((sum, item) => sum + item.dispatchedQuantity, 0)
+      
+      // Get unique order numbers
+      const orderNumbers = Array.from(new Set(dispatch.items.map(item => item.orderNumber)))
+      const orderNumber = orderNumbers.join(', ')
+      
+      // Map backend status to UI status
+      let uiStatus: DispatchOrder['status'] = 'Dispatch Marked'
+      switch (dispatch.status) {
+        case 'DISPATCHED':
+          uiStatus = 'Dispatch Marked'
+          break
+        case 'IN_TRANSIT':
+          uiStatus = 'In Transit'
+          break
+        case 'DELIVERED':
+          uiStatus = 'Received by Store'
+          break
+        default:
+          uiStatus = 'Dispatch Marked'
+      }
+
+      // Get attachment info
+      const firstAttachment = dispatch.attachments && dispatch.attachments.length > 0 
+        ? dispatch.attachments[0] 
+        : null
+
+      // Format dates
+      const dispatchDate = format(parseISO(dispatch.dispatchDate), 'dd/MM/yyyy')
+      const estimatedDelivery = dispatch.estimatedDeliveryDate 
+        ? format(parseISO(dispatch.estimatedDeliveryDate), 'dd/MM/yyyy')
+        : undefined
+
+      return {
+        id: dispatch.id,
+        orderNumber: orderNumber,
+        poNumber: dispatch.awbNumber, // Using AWB as reference since PO might not be directly available
+        date: dispatchDate,
+        items: itemsText || 'N/A',
+        quantity: totalQuantity,
+        amount: 0, // Amount not available in dispatch data
+        status: uiStatus,
+        dispatchDate: dispatchDate,
+        dispatchProof: firstAttachment?.fileName,
+        dispatchProofUrl: firstAttachment?.s3Url,
+        estimatedDelivery: estimatedDelivery,
+        awbNumber: dispatch.awbNumber,
+        logisticsPartner: dispatch.logisticsPartner,
+        storeVerification: 'Pending' // Default, would need GRN data for actual verification
+      }
+    })
+  }
 
   const handleMarkDispatch = (orderId: string) => {
     const order = dispatchOrders.find(o => o.id === orderId)
@@ -293,24 +396,50 @@ export default function Dispatch() {
     }
   }
 
-  const handleDispatchConfirm = (file?: File) => {
-    if (selectedOrder) {
-      const today = new Date().toLocaleDateString('en-GB')
-      setDispatchOrders(orders => 
-        orders.map(order => 
-          order.id === selectedOrder.id 
-            ? { 
-                ...order, 
-                status: 'Dispatch Marked' as const,
-                dispatchDate: today,
-                dispatchProof: file ? file.name : undefined,
-                storeVerification: 'Pending' as const
-              }
-            : order
-        )
-      )
+  const handleDispatchConfirm = async (data: { file?: File; awbNumber?: string; logisticsPartner?: string }) => {
+    if (!selectedOrder) return
+
+    try {
+      // For Ready for Dispatch orders, create the dispatch first
+      if (selectedOrder.status === 'Ready for Dispatch') {
+        if (!selectedOrder.assignmentItems || selectedOrder.assignmentItems.length === 0) {
+          toast.error('No assignment items found for this order')
+          return
+        }
+
+        // Create dispatch
+        const dispatchItems = selectedOrder.assignmentItems.map(item => ({
+          assignmentId: item.assignmentId,
+          dispatchedQuantity: item.quantity
+        }))
+
+        const newDispatch = await DispatchApiService.createDispatch({
+          items: dispatchItems,
+          awbNumber: data.awbNumber || 'LOCAL-PORTER',
+          logisticsPartner: data.logisticsPartner || 'Local Porter',
+          dispatchDate: new Date().toISOString(),
+          estimatedDeliveryDate: undefined,
+          remarks: undefined
+        })
+
+        // If file provided, upload proof
+        if (data.file) {
+          await DispatchApiService.uploadDispatchProof(newDispatch.id, data.file)
+        }
+      } else {
+        // For existing dispatches, just upload proof
+        if (data.file) {
+          await DispatchApiService.uploadDispatchProof(selectedOrder.id, data.file)
+        }
+      }
+
+      // Refresh data
+      await fetchDispatchesAndInvoices()
+      
       setDispatchModalOpen(false)
       setSelectedOrder(null)
+    } catch (error) {
+      console.error('Failed to process dispatch:', error)
     }
   }
 
@@ -323,8 +452,27 @@ export default function Dispatch() {
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden bg-[var(--color-sharktank-bg)]">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 sm:mb-0 font-[var(--font-heading)]">Dispatch Management</h1>
+        <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 sm:mb-0">Dispatch Management</h1>
       </div>
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-accent)]"></div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && dispatchOrders.length === 0 && (
+        <div className="bg-white rounded-xl shadow-md border border-white/20 p-12 text-center">
+          <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">No Dispatches Found</h3>
+          <p className="text-gray-500">You haven't dispatched any orders yet.</p>
+        </div>
+      )}
+
+      {!loading && dispatchOrders.length > 0 && (
+        <>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6">
@@ -599,6 +747,8 @@ export default function Dispatch() {
         }}
         onDispatch={handleDispatchConfirm}
       />
+      </>
+      )}
     </div>
   )
 }
