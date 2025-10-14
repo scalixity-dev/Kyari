@@ -26,6 +26,7 @@ export interface VendorOrder {
   orderNumber: string
   orderId: string
   totalAmount: number
+  poNumber?: string | null
   accountInvoiceUrl?: string | null
   vendorInvoiceUrl?: string | null
 }

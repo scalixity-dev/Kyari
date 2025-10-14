@@ -170,13 +170,22 @@ export class InvoiceService {
   /**
    * Get invoice by ID
    */
-  async getInvoiceById(id: string): Promise<InvoiceDto> {
+  async getInvoiceById(id: string): Promise<InvoiceDto & { jsonContent?: Record<string, unknown> }> {
     const invoice = await prisma.vendorInvoice.findUnique({
       where: { id },
       include: {
         purchaseOrder: {
           include: {
-            vendor: true
+            vendor: true,
+            items: {
+              include: {
+                assignedOrderItem: {
+                  include: {
+                    orderItem: true
+                  }
+                }
+              }
+            }
           }
         },
         accountsAttachment: true,
@@ -188,7 +197,15 @@ export class InvoiceService {
       throw new Error('Invoice not found');
     }
 
-    return this.mapToInvoiceDto(invoice);
+    // Generate JSON content from purchase order data
+    const invoiceData = this.prepareInvoiceTemplateData(invoice.purchaseOrder as any);
+    const jsonContent = await this.generateJsonInvoice(invoiceData, invoice.invoiceNumber);
+
+    const dto = this.mapToInvoiceDto(invoice);
+    return {
+      ...dto,
+      jsonContent
+    };
   }
 
   /**
@@ -252,10 +269,19 @@ export class InvoiceService {
   private async findPurchaseOrderByOrderAndVendor(orderId: string, vendorId: string): Promise<PurchaseOrderWithDetails | null> {
     try {
       // Get the order to find its order number
-      const order = await prisma.order.findUnique({
+      // orderId can be either internal ID or clientOrderId
+      let order = await prisma.order.findUnique({
         where: { id: orderId },
         select: { orderNumber: true }
       });
+
+      // If not found by ID, try to find by clientOrderId
+      if (!order) {
+        order = await prisma.order.findUnique({
+          where: { clientOrderId: orderId },
+          select: { orderNumber: true }
+        });
+      }
 
       if (!order) {
         return null;
@@ -302,11 +328,20 @@ export class InvoiceService {
     try {
       logger.info('Creating PO from assignments', { orderId, vendorId });
 
-      // Get the order to find its order number
-      const order = await prisma.order.findUnique({
+      // Get the order to find its order number and internal ID
+      // orderId can be either internal ID or clientOrderId
+      let order = await prisma.order.findUnique({
         where: { id: orderId },
-        select: { orderNumber: true }
+        select: { id: true, orderNumber: true }
       });
+
+      // If not found by ID, try to find by clientOrderId
+      if (!order) {
+        order = await prisma.order.findUnique({
+          where: { clientOrderId: orderId },
+          select: { id: true, orderNumber: true }
+        });
+      }
 
       if (!order) {
         logger.warn('Order not found', { orderId });
@@ -314,6 +349,7 @@ export class InvoiceService {
       }
 
       const orderNumber = order.orderNumber;
+      const internalOrderId = order.id; // Use the internal database ID for querying assignments
 
       // Get confirmed assignments for this order and vendor
       const assignments = await prisma.assignedOrderItem.findMany({
@@ -321,7 +357,7 @@ export class InvoiceService {
           vendorId,
           status: { in: ['VENDOR_CONFIRMED_FULL', 'VENDOR_CONFIRMED_PARTIAL'] },
           orderItem: {
-            orderId
+            orderId: internalOrderId // Use internal ID here
           }
         },
         include: {

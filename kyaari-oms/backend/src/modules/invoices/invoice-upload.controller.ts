@@ -278,10 +278,19 @@ export class InvoiceUploadController {
         
         if (!finalPurchaseOrderId && orderId && vendorId) {
           // Find purchase order by orderId and vendorId
-          const order = await prisma.order.findUnique({
+          // orderId can be either internal ID or clientOrderId
+          let order = await prisma.order.findUnique({
             where: { id: orderId },
             select: { orderNumber: true }
           });
+
+          // If not found by ID, try to find by clientOrderId
+          if (!order) {
+            order = await prisma.order.findUnique({
+              where: { clientOrderId: orderId },
+              select: { orderNumber: true }
+            });
+          }
 
           if (!order) {
             return ResponseHelper.error(res, 'Order not found', 400);

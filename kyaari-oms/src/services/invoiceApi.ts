@@ -36,8 +36,10 @@ export interface POOrder {
   poStatus: POStatus
   items: string
   amount: number
+  poNumber: string | null
   accountInvoice: string | null
   vendorInvoice: string | null
+  invoiceId: string | null
 }
 
 export interface GenerateInvoicePayload {
@@ -85,8 +87,10 @@ export class InvoiceApiService {
             orderDate: string
             confirmationDate: string
             totalAmount: number
+            poNumber?: string | null
             accountInvoiceUrl?: string | null
             vendorInvoiceUrl?: string | null
+            invoiceId?: string | null
           }>
         }
       }>('/api/assignments/accounts/vendor-orders?limit=100')
@@ -106,8 +110,10 @@ export class InvoiceApiService {
           poStatus: order.poStatus,
           items: itemsStr,
           amount: order.totalAmount, // Use actual total amount from backend
+          poNumber: order.poNumber ?? null, // Actual PO number from backend
           accountInvoice: order.accountInvoiceUrl ?? null, // Actual URL from backend
-          vendorInvoice: order.vendorInvoiceUrl ?? null  // Actual URL from backend
+          vendorInvoice: order.vendorInvoiceUrl ?? null, // Actual URL from backend
+          invoiceId: order.invoiceId ?? null  // Invoice ID for fetching JSON data
         }
       })
 

@@ -118,11 +118,24 @@ function AccountsInvoices() {
 
   function handleViewInvoice(invoiceUrl: string, type: string) {
     setViewingInvoice({ url: invoiceUrl, type })
+    setImageLoadError(false)
   }
 
   function handleCloseInvoice() {
     setViewingInvoice(null)
     setImageLoadError(false)
+  }
+
+  // Detect file type from URL
+  function getFileType(url: string): 'pdf' | 'image' | 'unknown' {
+    const lowerUrl = url.toLowerCase()
+    if (lowerUrl.includes('.pdf') || lowerUrl.includes('application/pdf')) {
+      return 'pdf'
+    }
+    if (lowerUrl.match(/\.(jpg|jpeg|png|gif|webp|bmp)/)) {
+      return 'image'
+    }
+    return 'unknown'
   }
 
   function handleDownloadJson() {
@@ -173,15 +186,21 @@ function AccountsInvoices() {
   async function handleViewPO(orderId: string) {
     try {
       const order = poOrders.find(o => o.id === orderId)
-      if (!order?.accountInvoice) {
-        alert('No invoice available for this order')
+      if (!order?.invoiceId) {
+        toast.error('No invoice data available for this order')
         return
       }
 
-      // Open invoice file in new tab
-      window.open(order.accountInvoice, '_blank')
+      // Fetch invoice JSON data from backend
+      const invoiceData = await InvoiceApiService.getInvoiceJson(order.invoiceId)
+      
+      // Show in JSON viewer modal
+      setCurrentJsonData(invoiceData.jsonContent as Record<string, unknown>)
+      setCurrentInvoiceNumber((invoiceData.invoiceNumber as string) || order.orderNumber)
+      setJsonViewerOpen(true)
     } catch (error) {
-      console.error('Failed to view PO:', error)
+      console.error('Failed to view invoice JSON:', error)
+      toast.error('Failed to load invoice data')
     }
   }
 
@@ -225,7 +244,7 @@ function AccountsInvoices() {
     return poOrders.filter(order => {
       // Search filter
       const matchesSearch = searchQuery === '' || 
-        order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
         order.vendor.toLowerCase().includes(searchQuery.toLowerCase()) ||
         order.items.toLowerCase().includes(searchQuery.toLowerCase())
       
@@ -320,7 +339,7 @@ function AccountsInvoices() {
         <div className="hidden lg:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
           {/* Table head bar */}
           <div className="bg-[#C3754C] text-white">
-            <div className="grid grid-cols-[50px_90px_1fr_0.8fr_0.9fr_0.8fr_0.8fr_0.8fr_150px] xl:grid-cols-[60px_100px_1.2fr_0.9fr_1fr_0.9fr_0.9fr_0.9fr_170px] 2xl:grid-cols-[70px_120px_1.3fr_1fr_1.1fr_1fr_1fr_1fr_190px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-3 xl:py-4 2xl:py-5 font-['Quicksand'] font-bold text-sm xl:text-base 2xl:text-lg leading-[100%] tracking-[0] text-center">
+            <div className="grid grid-cols-[50px_90px_90px_1fr_0.8fr_0.9fr_0.8fr_0.8fr_0.8fr_150px] xl:grid-cols-[60px_100px_100px_1.2fr_0.9fr_1fr_0.9fr_0.9fr_0.9fr_170px] 2xl:grid-cols-[70px_120px_120px_1.3fr_1fr_1.1fr_1fr_1fr_1fr_190px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-3 xl:py-4 2xl:py-5 font-['Quicksand'] font-bold text-sm xl:text-base 2xl:text-lg leading-[100%] tracking-[0] text-center">
               <div className="flex items-center justify-center">
                 <input
                   type="checkbox"
@@ -330,6 +349,7 @@ function AccountsInvoices() {
                 />
               </div>
               <div className="text-xs xl:text-sm 2xl:text-base">Order ID</div>
+              <div className="text-xs xl:text-sm 2xl:text-base">PO ID</div>
               <div className="text-xs xl:text-sm 2xl:text-base">Vendor</div>
               <div className="text-xs xl:text-sm 2xl:text-base">Confirmed Qty</div>
               <div className="text-xs xl:text-sm 2xl:text-base">Amount</div>
@@ -354,7 +374,7 @@ function AccountsInvoices() {
 
                   return (
                     <div key={order.id}>
-                      <div className="grid grid-cols-[50px_90px_1fr_0.8fr_0.9fr_0.8fr_0.8fr_0.8fr_150px] xl:grid-cols-[60px_100px_1.2fr_0.9fr_1fr_0.9fr_0.9fr_0.9fr_170px] 2xl:grid-cols-[70px_120px_1.3fr_1fr_1.1fr_1fr_1fr_1fr_190px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-2 xl:py-3 2xl:py-4 items-center text-center hover:bg-gray-50 font-bold">
+                      <div className="grid grid-cols-[50px_90px_90px_1fr_0.8fr_0.9fr_0.8fr_0.8fr_0.8fr_150px] xl:grid-cols-[60px_100px_100px_1.2fr_0.9fr_1fr_0.9fr_0.9fr_0.9fr_170px] 2xl:grid-cols-[70px_120px_120px_1.3fr_1fr_1.1fr_1fr_1fr_1fr_190px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-2 xl:py-3 2xl:py-4 items-center text-center hover:bg-gray-50 font-bold">
                         <div className="flex items-center justify-center">
                           <input
                             type="checkbox"
@@ -364,7 +384,10 @@ function AccountsInvoices() {
                             className="rounded border-gray-300 w-4 h-4"
                           />
                         </div>
-                        <div className="text-[10px] xl:text-xs 2xl:text-sm font-medium text-gray-800 truncate">{order.id}</div>
+                        <div className="text-[10px] xl:text-xs 2xl:text-sm font-medium text-gray-800 truncate">{order.orderId}</div>
+                        <div className="text-[10px] xl:text-xs 2xl:text-sm font-medium text-gray-800 truncate">
+                          {order.poStatus === 'Generated' && order.poNumber ? order.poNumber : '—'}
+                        </div>
                         <div className="flex items-center justify-center min-w-0">
                           <button
                             onClick={() => toggleRowExpansion(order.id)}
@@ -532,7 +555,10 @@ function AccountsInvoices() {
                         className="rounded mt-1"
                       />
                       <div>
-                        <div className="font-medium text-secondary">{order.id}</div>
+                        <div className="font-medium text-secondary">{order.orderId}</div>
+                        {order.poStatus === 'Generated' && order.poNumber && (
+                          <div className="text-xs text-gray-500 mt-0.5">PO: {order.poNumber}</div>
+                        )}
                         <button
                           onClick={() => toggleRowExpansion(order.id)}
                           className="flex items-center gap-1 text-sm text-gray-600 hover:text-accent transition-colors mt-1"
@@ -693,26 +719,62 @@ function AccountsInvoices() {
             {/* Content - Scrollable */}
             <div className="flex-1 overflow-auto p-4 sm:p-6 xl:p-7 2xl:p-8 bg-gray-50">
               <div className="flex items-start justify-center min-h-full">
-                {imageLoadError ? (
-                  <div className="text-center p-8 xl:p-10 2xl:p-12 text-gray-500 text-sm xl:text-base 2xl:text-lg">
-                    Unable to load invoice preview.{' '}
-                    <a 
-                      href={viewingInvoice.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-accent hover:underline"
-                    >
-                      Click here to download
-                    </a>
-                  </div>
-                ) : (
-                  <img 
-                    src={viewingInvoice.url} 
-                    alt={`${viewingInvoice.type} Invoice`}
-                    className="max-w-full h-auto rounded-lg shadow-lg bg-white"
-                    onError={() => setImageLoadError(true)}
-                  />
-                )}
+                {(() => {
+                  const fileType = getFileType(viewingInvoice.url)
+                  
+                  if (fileType === 'pdf') {
+                    return (
+                      <div className="w-full h-full min-h-[600px] bg-white rounded-lg shadow-lg overflow-hidden">
+                        <iframe
+                          src={viewingInvoice.url}
+                          className="w-full h-full min-h-[600px]"
+                          title={`${viewingInvoice.type} Invoice PDF`}
+                        />
+                      </div>
+                    )
+                  }
+                  
+                  if (fileType === 'image') {
+                    return imageLoadError ? (
+                      <div className="text-center p-8 xl:p-10 2xl:p-12 text-gray-500 text-sm xl:text-base 2xl:text-lg">
+                        Unable to load invoice preview.{' '}
+                        <a 
+                          href={viewingInvoice.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-accent hover:underline"
+                        >
+                          Click here to download
+                        </a>
+                      </div>
+                    ) : (
+                      <img 
+                        src={viewingInvoice.url} 
+                        alt={`${viewingInvoice.type} Invoice`}
+                        className="max-w-full h-auto rounded-lg shadow-lg bg-white"
+                        onError={() => setImageLoadError(true)}
+                      />
+                    )
+                  }
+                  
+                  // Unknown file type - provide download link
+                  return (
+                    <div className="text-center p-8 xl:p-10 2xl:p-12">
+                      <div className="text-gray-700 text-sm xl:text-base 2xl:text-lg mb-4">
+                        Preview not available for this file type.
+                      </div>
+                      <a 
+                        href={viewingInvoice.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-button-text rounded-full hover:opacity-90 transition-opacity"
+                      >
+                        <FileText size={20} />
+                        <span>Download Invoice</span>
+                      </a>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           </div>

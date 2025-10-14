@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../../config/database'
 import { logger } from '../../utils/logger'
+import s3Service from '../../services/s3.service'
 import type {
   AccountsVendorOrderDto,
   AccountsVendorOrderListResponseDto,
@@ -78,6 +79,7 @@ export class AccountsAssignmentService {
               order: {
                 select: {
                   id: true,
+                  clientOrderId: true,
                   orderNumber: true,
                   status: true,
                   createdAt: true
@@ -150,8 +152,9 @@ export class AccountsAssignmentService {
           orderDate: firstAssignment.orderItem.order.createdAt.toISOString().split('T')[0],
           confirmationDate: firstAssignment.vendorActionAt?.toISOString().split('T')[0] || '',
           orderNumber: firstAssignment.orderItem.order.orderNumber,
-          orderId: firstAssignment.orderItem.order.id,
+          orderId: firstAssignment.orderItem.order.clientOrderId,
           totalAmount,
+          poNumber: null, // Will be set later after batch check
           accountInvoiceUrl: null,
           vendorInvoiceUrl: null
         })
@@ -176,22 +179,47 @@ export class AccountsAssignmentService {
       })
 
       // Update each vendor order with actual PO and invoice status
-      vendorOrders.forEach(vo => {
+      // Using Promise.all to handle async presigned URL generation
+      await Promise.all(vendorOrders.map(async (vo) => {
         const matchingPO = purchaseOrders.find(po => 
           po.vendorId === vo.vendorId && po.poNumber.includes(vo.orderNumber)
         )
 
         if (matchingPO) {
           vo.poStatus = 'Generated'
+          vo.poNumber = matchingPO.poNumber
           
           if (matchingPO.vendorInvoice) {
-            // Set invoice file URLs from separate attachment fields
-            if (matchingPO.vendorInvoice.accountsAttachment) {
-              vo.accountInvoiceUrl = matchingPO.vendorInvoice.accountsAttachment.s3Url
+            // Set invoice ID for fetching JSON data
+            vo.invoiceId = matchingPO.vendorInvoice.id
+            
+            // Set invoice file URLs from separate attachment fields - use presigned URLs
+            if (matchingPO.vendorInvoice.accountsAttachment?.s3Key) {
+              try {
+                vo.accountInvoiceUrl = await s3Service.getPresignedUrl(
+                  matchingPO.vendorInvoice.accountsAttachment.s3Key
+                )
+              } catch (error) {
+                logger.error('Failed to generate presigned URL for accounts attachment', { 
+                  error, 
+                  s3Key: matchingPO.vendorInvoice.accountsAttachment.s3Key 
+                })
+                vo.accountInvoiceUrl = null
+              }
             }
             
-            if (matchingPO.vendorInvoice.vendorAttachment) {
-              vo.vendorInvoiceUrl = matchingPO.vendorInvoice.vendorAttachment.s3Url
+            if (matchingPO.vendorInvoice.vendorAttachment?.s3Key) {
+              try {
+                vo.vendorInvoiceUrl = await s3Service.getPresignedUrl(
+                  matchingPO.vendorInvoice.vendorAttachment.s3Key
+                )
+              } catch (error) {
+                logger.error('Failed to generate presigned URL for vendor attachment', { 
+                  error, 
+                  s3Key: matchingPO.vendorInvoice.vendorAttachment.s3Key 
+                })
+                vo.vendorInvoiceUrl = null
+              }
             }
             
             // Check invoice status based on attachments
@@ -204,7 +232,7 @@ export class AccountsAssignmentService {
             }
           }
         }
-      })
+      }))
 
       // Apply additional filters
       let filteredOrders = vendorOrders
@@ -286,6 +314,7 @@ export class AccountsAssignmentService {
               order: {
                 select: {
                   id: true,
+                  clientOrderId: true,
                   orderNumber: true,
                   status: true,
                   createdAt: true
@@ -339,18 +368,42 @@ export class AccountsAssignmentService {
       let invoiceStatus: 'Not Created' | 'Awaiting Validation' | 'Approved' = 'Not Created'
       let accountInvoiceUrl: string | null = null
       let vendorInvoiceUrl: string | null = null
+      let invoiceId: string | null = null
+      let poNumber: string | null = null
 
       if (matchingPO) {
         poStatus = 'Generated'
+        poNumber = matchingPO.poNumber
         
         if (matchingPO.vendorInvoice) {
-          // Set invoice file URLs from separate attachment fields
-          if (matchingPO.vendorInvoice.accountsAttachment) {
-            accountInvoiceUrl = matchingPO.vendorInvoice.accountsAttachment.s3Url
+          // Set invoice ID for fetching JSON data
+          invoiceId = matchingPO.vendorInvoice.id
+          
+          // Set invoice file URLs from separate attachment fields - use presigned URLs
+          if (matchingPO.vendorInvoice.accountsAttachment?.s3Key) {
+            try {
+              accountInvoiceUrl = await s3Service.getPresignedUrl(
+                matchingPO.vendorInvoice.accountsAttachment.s3Key
+              )
+            } catch (error) {
+              logger.error('Failed to generate presigned URL for accounts attachment', { 
+                error, 
+                s3Key: matchingPO.vendorInvoice.accountsAttachment.s3Key 
+              })
+            }
           }
           
-          if (matchingPO.vendorInvoice.vendorAttachment) {
-            vendorInvoiceUrl = matchingPO.vendorInvoice.vendorAttachment.s3Url
+          if (matchingPO.vendorInvoice.vendorAttachment?.s3Key) {
+            try {
+              vendorInvoiceUrl = await s3Service.getPresignedUrl(
+                matchingPO.vendorInvoice.vendorAttachment.s3Key
+              )
+            } catch (error) {
+              logger.error('Failed to generate presigned URL for vendor attachment', { 
+                error, 
+                s3Key: matchingPO.vendorInvoice.vendorAttachment.s3Key 
+              })
+            }
           }
           
           if (matchingPO.vendorInvoice.status === 'APPROVED') {
@@ -374,10 +427,12 @@ export class AccountsAssignmentService {
         orderDate: firstAssignment.orderItem.order.createdAt.toISOString().split('T')[0],
         confirmationDate: firstAssignment.vendorActionAt?.toISOString().split('T')[0] || '',
         orderNumber: firstAssignment.orderItem.order.orderNumber,
-        orderId: firstAssignment.orderItem.order.id,
+        orderId: firstAssignment.orderItem.order.clientOrderId,
         totalAmount,
+        poNumber,
         accountInvoiceUrl,
-        vendorInvoiceUrl
+        vendorInvoiceUrl,
+        invoiceId
       }
 
     } catch (error) {

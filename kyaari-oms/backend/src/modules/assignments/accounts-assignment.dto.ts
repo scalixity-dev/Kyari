@@ -22,8 +22,10 @@ export interface AccountsVendorOrderDto {
   orderNumber: string
   orderId: string
   totalAmount: number
+  poNumber?: string | null  // Actual PO number from PurchaseOrder table
   accountInvoiceUrl?: string | null
   vendorInvoiceUrl?: string | null
+  invoiceId?: string | null  // Invoice ID for fetching JSON data
 }
 
 export interface AccountsVendorOrderListResponseDto {
