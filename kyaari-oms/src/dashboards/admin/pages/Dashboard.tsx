@@ -1,6 +1,7 @@
 import React from 'react';
 // import { useNavigate } from 'react-router-dom';
 import { Package, BarChart3, Wallet, FileText } from 'lucide-react'
+import { CSVPDFExportButton } from '../../../components'
 import {
   ResponsiveContainer,
   BarChart,
@@ -105,6 +106,73 @@ export default function Dashboard() {
     { description: 'weekly reports due', urgency: 'low' as const, count: 1 }
   ];
 
+  // Payment Status data for export
+  const paymentStatusData = [
+    { status: 'Completed', payments: 720, amount: 850000 },
+    { status: 'Pending', payments: 300, amount: 234500 },
+    { status: 'Overdue', payments: 180, amount: 161100 }
+  ];
+
+  // Export functions
+  const handleExportCSV = () => {
+    const headers = ['Metric', 'Value']
+    const csvContent = [
+      headers.join(','),
+      // Payment Status Summary
+      '"Payment Status Summary"',
+      '"Total Payments","1,200"',
+      '"Total Amount","₹12,45,600"',
+      '"Net Received","₹10,98,400"',
+      '',
+      '"Payment Breakdown"',
+      '"Status","Payments","Amount (₹)"',
+      ...paymentStatusData.map(item => `"${item.status}","${item.payments}","${item.amount}"`),
+      '',
+      // Order Fulfillment Rate
+      '"Order Fulfillment Rate"',
+      '"Period","Fulfillment Rate (%)"',
+      ...fulfillmentDataSets[fulfillmentPeriod].map(item => `"${item.name}","${item.value}"`)
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `quick-insights-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const handleExportPDF = () => {
+    const content = [
+      'QUICK INSIGHTS REPORT',
+      `Generated: ${new Date().toLocaleString()}`,
+      '',
+      '=== PAYMENT STATUS SUMMARY ===',
+      'Total Payments: 1,200',
+      'Total Amount: ₹12,45,600',
+      'Net Received: ₹10,98,400',
+      '',
+      'Payment Breakdown:',
+      ...paymentStatusData.map(item => 
+        `  ${item.status}: ${item.payments} payments • ₹${item.amount.toLocaleString()}`
+      ),
+      '',
+      `=== ORDER FULFILLMENT RATE (${fulfillmentPeriod.toUpperCase()}) ===`,
+      ...fulfillmentDataSets[fulfillmentPeriod].map(item => 
+        `  ${item.name}: ${item.value}%`
+      )
+    ].join('\n')
+    
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `quick-insights-${new Date().toISOString().split('T')[0]}.txt`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="py-4 px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header Section */}
@@ -189,7 +257,13 @@ export default function Dashboard() {
 
       {/* Quick Insights */}
       <div>
-        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Quick Insights</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
+          <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] font-[var(--font-heading)]">Quick Insights</h2>
+          <CSVPDFExportButton
+            onExportCSV={handleExportCSV}
+            onExportPDF={handleExportPDF}
+          />
+        </div>
   <div className="grid grid-cols-1 gap-6">
           {/* Payment Status Card */}
           <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">

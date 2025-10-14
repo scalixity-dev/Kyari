@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 // NotificationSection removed — rendering unified list below
-import { Search } from 'lucide-react';
+import { Search, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar } from '../../../components/ui/calendar';
+import { format } from 'date-fns';
 import type { 
   Notification, 
   NotificationActions, 
@@ -97,8 +99,28 @@ export default function Notifications() {
   const [mutedVendors, setMutedVendors] = useState<MutedVendor[]>([]);
   const [showRead] = useState<boolean>(false); // Always show only unread
   const [selectedType, setSelectedType] = useState<'all' | NotificationType>('all')
-  const [selectedDate, setSelectedDate] = useState<string>('')
-  const [endDate, setEndDate] = useState<string>('')
+  const [dateFrom, setDateFrom] = useState<Date>()
+  const [dateTo, setDateTo] = useState<Date>()
+  const [showFromCalendar, setShowFromCalendar] = useState(false)
+  const [showToCalendar, setShowToCalendar] = useState(false)
+  
+  const fromCalendarRef = useRef<HTMLDivElement>(null)
+  const toCalendarRef = useRef<HTMLDivElement>(null)
+
+  // Close calendars when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fromCalendarRef.current && !fromCalendarRef.current.contains(event.target as Node)) {
+        setShowFromCalendar(false)
+      }
+      if (toCalendarRef.current && !toCalendarRef.current.contains(event.target as Node)) {
+        setShowToCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Filter notifications based on current filters
   const filteredNotifications = useMemo(() => {
@@ -115,8 +137,8 @@ export default function Notifications() {
     // }
 
     // Filter by date (on or after selected date)
-    if (selectedDate) {
-      const filterDate = new Date(selectedDate);
+    if (dateFrom) {
+      const filterDate = new Date(dateFrom);
       filterDate.setHours(0, 0, 0, 0); // Start of day
       filtered = filtered.filter(n => {
         const notifDate = new Date(n.timestamp);
@@ -126,8 +148,8 @@ export default function Notifications() {
     }
 
     // Filter by end date (on or before end date)
-    if (endDate) {
-      const filterEndDate = new Date(endDate);
+    if (dateTo) {
+      const filterEndDate = new Date(dateTo);
       filterEndDate.setHours(23, 59, 59, 999); // End of day
       filtered = filtered.filter(n => {
         const notifDate = new Date(n.timestamp);
@@ -156,7 +178,7 @@ export default function Notifications() {
     });
 
     return filtered;
-  }, [notifications, showRead, selectedDate, endDate]);
+  }, [notifications, showRead, dateFrom, dateTo]);
 
   // (grouping removed — unified list used)
 
@@ -245,22 +267,69 @@ export default function Notifications() {
             <Search className="w-4 h-4 text-gray-400" />
             <input placeholder="Search notifications..." className="flex-1 text-sm placeholder-gray-400 focus:outline-none bg-transparent" />
           </div>
-          <input 
-            type="date" 
-            value={selectedDate} 
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="bg-white rounded-lg px-3 py-2 border border-gray-200 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200"
-            title="Start date"
-            placeholder="Start date"
-          />
-          <input 
-            type="date" 
-            value={endDate} 
-            onChange={(e) => setEndDate(e.target.value)}
-            className="bg-white rounded-lg px-3 py-2 border border-gray-200 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200"
-            title="End date"
-            placeholder="End date"
-          />
+          
+          {/* From Date Calendar */}
+          <div className="relative" ref={fromCalendarRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setShowFromCalendar(!showFromCalendar)
+                setShowToCalendar(false)
+              }}
+              className="bg-white rounded-lg px-3 py-2 border border-gray-200 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 flex items-center justify-between min-w-[140px]"
+            >
+              <span className={dateFrom ? "text-gray-900" : "text-gray-500"}>
+                {dateFrom ? format(dateFrom, "PPP") : "From date"}
+              </span>
+              <CalendarIcon className="h-4 w-4 text-gray-500 ml-2" />
+            </button>
+            {showFromCalendar && (
+              <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[320px]">
+                <Calendar
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={(date) => {
+                    setDateFrom(date)
+                    setShowFromCalendar(false)
+                  }}
+                  initialFocus
+                  className="w-full"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* To Date Calendar */}
+          <div className="relative" ref={toCalendarRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setShowToCalendar(!showToCalendar)
+                setShowFromCalendar(false)
+              }}
+              className="bg-white rounded-lg px-3 py-2 border border-gray-200 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 flex items-center justify-between min-w-[140px]"
+            >
+              <span className={dateTo ? "text-gray-900" : "text-gray-500"}>
+                {dateTo ? format(dateTo, "PPP") : "To date"}
+              </span>
+              <CalendarIcon className="h-4 w-4 text-gray-500 ml-2" />
+            </button>
+            {showToCalendar && (
+              <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[320px] right-0">
+                <Calendar
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={(date) => {
+                    setDateTo(date)
+                    setShowToCalendar(false)
+                  }}
+                  initialFocus
+                  disabled={(date) => dateFrom ? date < dateFrom : false}
+                  className="w-full"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

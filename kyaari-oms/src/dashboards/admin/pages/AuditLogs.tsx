@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { FileText, Calendar as CalendarIcon } from 'lucide-react'
-import { CustomDropdown } from '../../../components'
+import { Calendar as CalendarIcon } from 'lucide-react'
+import { CustomDropdown, CSVPDFExportButton } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
 
@@ -411,22 +411,10 @@ export default function AuditLogs() {
 
       {/* Export Controls (separate) */}
       <div className="flex justify-end gap-3 mb-4">
-        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-          <button
-            onClick={handleExportCSV}
-            className="flex bg-white items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
-          >
-            <FileText size={16} className="flex-shrink-0" />
-            <span>Export CSV</span>
-          </button>
-          <button
-            onClick={handleExportPDF}
-            className="flex bg-white items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
-          >
-            <FileText size={16} className="flex-shrink-0" />
-            <span>Export PDF</span>
-          </button>
-        </div>
+        <CSVPDFExportButton
+          onExportCSV={handleExportCSV}
+          onExportPDF={handleExportPDF}
+        />
       </div>
 
       {/* Table Container */}
