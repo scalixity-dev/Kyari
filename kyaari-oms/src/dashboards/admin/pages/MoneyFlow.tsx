@@ -14,45 +14,7 @@ import {
   Cell,
   Legend
 } from 'recharts'
-
-interface KPICardProps {
-  title: string;
-  value: number | string;
-  icon: React.ReactNode;
-  color: string;
-  subtitle?: string;
-}
-
-function KPICard({ title, value, icon, color, subtitle }: KPICardProps) {
-  const iconBgClass =
-    color === 'blue'
-      ? 'bg-blue-600'
-      : color === 'orange'
-      ? 'bg-[#C3754C]'
-      : color === 'green'
-      ? 'bg-green-600'
-      : color === 'red'
-      ? 'bg-red-600'
-      : 'bg-gray-600'
-  
-  return (
-    <div className={`bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible`}>
-      <div className={`absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full ${iconBgClass} text-white shadow-md`}>
-        {React.isValidElement(icon)
-          ? React.cloneElement(
-              icon as React.ReactElement<{ color?: string; size?: number }>,
-              { color: 'white', size: 32 }
-            )
-          : icon}
-      </div>
-      <div className="flex flex-col items-center text-center w-full">
-        <h3 className="font-['Fraunces'] font-bold text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2">{title}</h3>
-        <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{value}</div>
-        {subtitle && <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">{subtitle}</div>}
-      </div>
-    </div>
-  )
-}
+import { KPICard } from '../../../components'
 
 type TrendRange = 'Weekly' | 'Monthly' | 'Yearly'
 
@@ -164,22 +126,19 @@ export default function MoneyFlow() {
       title: 'Total Payments Pending', 
       value: '₹2,34,500', 
       subtitle: '23 invoices',
-      icon: <Wallet size={32} />,
-      color: 'orange'
+      icon: <Wallet size={32} />
     },
     { 
       title: 'Payments Released This Month', 
       value: '₹5,60,000', 
       subtitle: '42 payouts',
-      icon: <FileText size={32} />,
-      color: 'orange'
+      icon: <FileText size={32} />
     },
     { 
       title: 'Vendor with Highest Outstanding', 
       value: 'GreenLeaf Farms', 
       subtitle: '₹75,000',
-      icon: <Users size={32} />,
-      color: 'orange'
+      icon: <Users size={32} />
     }
   ]
 
@@ -262,7 +221,6 @@ export default function MoneyFlow() {
               value={k.value} 
               subtitle={k.subtitle}
               icon={k.icon}
-              color={k.color}
             />
           ))}
         </div>

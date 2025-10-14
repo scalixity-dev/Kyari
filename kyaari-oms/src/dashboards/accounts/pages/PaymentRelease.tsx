@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Bell, X, AlertTriangle, CheckSquare, Wallet, Clock } from 'lucide-react'
-import { CustomDropdown } from '../../../components'
+import { CustomDropdown, KPICard } from '../../../components'
 
 type PaymentStatus = 'Pending' | 'Released' | 'Overdue'
 type DeliveryVerified = 'Yes' | 'No' | 'Partial'
@@ -148,45 +148,29 @@ function AccountsPaymentRelease() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 py-8 sm:py-10 gap-10 sm:gap-8 xl:gap-6 mb-6">
-        <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
-          <div className="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-[#C3754C] text-white shadow-md">
-            <Wallet size={32} color="white" />
-          </div>
-          <div className="flex flex-col items-center text-center w-full">
-            <h3 className="font-['Fraunces'] font-bold text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2">Total Records</h3>
-            <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{filteredPayments.length}</div>
-          </div>
-        </div>
-        <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
-          <div className="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-[#C3754C] text-white shadow-md">
-            <Clock size={32} color="white" />
-          </div>
-          <div className="flex flex-col items-center text-center w-full">
-            <h3 className="font-['Fraunces'] font-bold text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2">Pending Payments</h3>
-            <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{summaryStats.pendingCount}</div>
-            <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">₹{summaryStats.totalPending.toLocaleString('en-IN')}</div>
-          </div>
-        </div>
-        <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
-          <div className="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-[#C3754C] text-white shadow-md">
-            <AlertTriangle size={32} color="white" />
-          </div>
-          <div className="flex flex-col items-center text-center w-full">
-            <h3 className="font-['Fraunces'] font-bold text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2">Overdue Payments</h3>
-            <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{summaryStats.overdueCount}</div>
-            <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">₹{summaryStats.totalOverdue.toLocaleString('en-IN')}</div>
-          </div>
-        </div>
-        <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
-          <div className="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-[#C3754C] text-white shadow-md">
-            <CheckSquare size={32} color="white" />
-          </div>
-          <div className="flex flex-col items-center text-center w-full">
-            <h3 className="font-['Fraunces'] font-bold text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2">Released Payments</h3>
-            <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{summaryStats.releasedCount}</div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 pt-6 sm:pt-8 pb-4 sm:pb-6 gap-10 sm:gap-8 xl:gap-6 mb-6">
+        <KPICard
+          title="Total Records"
+          value={filteredPayments.length}
+          icon={<Wallet size={32} />}
+        />
+        <KPICard
+          title="Pending Payments"
+          value={summaryStats.pendingCount}
+          subtitle={`₹${summaryStats.totalPending.toLocaleString('en-IN')}`}
+          icon={<Clock size={32} />}
+        />
+        <KPICard
+          title="Overdue Payments"
+          value={summaryStats.overdueCount}
+          subtitle={`₹${summaryStats.totalOverdue.toLocaleString('en-IN')}`}
+          icon={<AlertTriangle size={32} />}
+        />
+        <KPICard
+          title="Released Payments"
+          value={summaryStats.releasedCount}
+          icon={<CheckSquare size={32} />}
+        />
       </div>
 
       {/* Filter Bar */}

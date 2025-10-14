@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
 import { LayoutDashboard, Package, Bell, Users, CheckSquare, FileText, Wallet, MapPin, Eye } from 'lucide-react';
+import { KPICard } from '../../../components';
 
 // TypeScript types
 type Status = "Received" | "Assigned" | "Confirmed" | "Invoiced" | "Dispatched" | "Verified" | "Paid";
@@ -353,18 +354,12 @@ const OrderTracking: React.FC = () => {
             const count = orders.filter(order => order.status === status).length;
             const icon = getStatusIcon(status);
             return (
-              <div
+              <KPICard
                 key={status}
-                className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative"
-              >
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
-                  {React.isValidElement(icon)
-                    ? React.cloneElement(icon as any, { className: 'text-white', size: 28 } as any)
-                    : icon}
-                </div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-1">{status}</h3>
-                <div className="text-2xl font-bold text-gray-900 mt-1">{count}</div>
-              </div>
+                title={status}
+                value={count}
+                icon={icon}
+              />
             );
           })}
         </div>
