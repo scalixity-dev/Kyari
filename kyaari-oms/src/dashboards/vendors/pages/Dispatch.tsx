@@ -12,7 +12,6 @@ interface DispatchOrder {
   date: string
   items: string
   quantity: number
-  amount: number
   status: 'Ready for Dispatch' | 'Dispatch Marked' | 'In Transit' | 'Delivered - Verified' | 'Delivered - Mismatch' | 'Received by Store'
   dispatchDate?: string
   dispatchProof?: string
@@ -323,7 +322,6 @@ export default function Dispatch() {
       date: format(parseISO(po.createdAt), 'dd/MM/yyyy'),
       items: items || 'N/A',
       quantity: quantity,
-      amount: Number(po.totalAmount),
       status: 'Ready for Dispatch',
       estimatedDelivery: undefined,
       assignmentItems: assignmentItems
@@ -371,11 +369,10 @@ export default function Dispatch() {
       return {
         id: dispatch.id,
         orderNumber: orderNumber,
-        poNumber: dispatch.awbNumber, // Using AWB as reference since PO might not be directly available
+        poNumber: dispatch.poNumber || 'N/A',
         date: dispatchDate,
         items: itemsText || 'N/A',
         quantity: totalQuantity,
-        amount: 0, // Amount not available in dispatch data
         status: uiStatus,
         dispatchDate: dispatchDate,
         dispatchProof: firstAttachment?.fileName,
@@ -599,7 +596,6 @@ export default function Dispatch() {
                 <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">PO Number</th>
                 <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Items</th>
                 <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Qty</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Amount</th>
                 <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
                 <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Store Verification</th>
                 <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Actions</th>
@@ -622,9 +618,6 @@ export default function Dispatch() {
                   </td>
                   <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {order.quantity}
-                  </td>
-                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ₹{order.amount.toLocaleString()}
                   </td>
                   <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(order.status)}
@@ -691,9 +684,6 @@ export default function Dispatch() {
                 </p>
                 <p className="text-xs sm:text-sm text-gray-600">
                   <span className="font-medium text-gray-800">Quantity:</span> {order.quantity}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-900">
-                  <span className="font-medium text-gray-800">Amount:</span> <span className="font-semibold">₹{order.amount.toLocaleString()}</span>
                 </p>
                 {order.dispatchDate && (
                   <p className="text-xs text-gray-500">

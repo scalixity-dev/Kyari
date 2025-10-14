@@ -1,23 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { CheckSquare, AlertTriangle, X, Calendar as CalendarIcon } from 'lucide-react'
+import { CheckSquare, AlertTriangle, X, Calendar as CalendarIcon, ChevronDown, ChevronRight } from 'lucide-react'
 import { CustomDropdown, KPICard } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
-
-interface ReceivedOrder {
-  id: string
-  orderNumber: string
-  vendor: {
-    name: string
-    id: string
-    email: string
-  }
-  submittedAt: string
-  items: number
-  quantityInvoiced: number
-  quantityReceived: number
-  status: 'pending' | 'verified' | 'mismatch'
-}
+import ReceivedOrdersApiService, { type ReceivedOrder } from '../../../services/receivedOrdersApi'
 
 interface TicketData {
   orderId: string
@@ -26,78 +12,10 @@ interface TicketData {
   proofFile?: File
 }
 
-const sampleOrders: ReceivedOrder[] = [
-  {
-    id: '1',
-    orderNumber: 'ORD-001',
-    vendor: {
-      name: 'Fresh Farms Pvt Ltd',
-      id: 'VEN-001',
-      email: 'orders@freshfarms.in'
-    },
-    submittedAt: '2025-09-29',
-    items: 5,
-    quantityInvoiced: 150,
-    quantityReceived: 150,
-    status: 'pending'
-  },
-  {
-    id: '2',
-    orderNumber: 'ORD-002',
-    vendor: {
-      name: 'Green Valley Suppliers',
-      id: 'VEN-002',
-      email: 'supply@greenvalley.com'
-    },
-    submittedAt: '2025-09-29',
-    items: 3,
-    quantityInvoiced: 100,
-    quantityReceived: 95,
-    status: 'mismatch'
-  },
-  {
-    id: '3',
-    orderNumber: 'ORD-003',
-    vendor: {
-      name: 'Organic Harvest Co',
-      id: 'VEN-003',
-      email: 'info@organicharvest.com'
-    },
-    submittedAt: '2025-09-28',
-    items: 8,
-    quantityInvoiced: 200,
-    quantityReceived: 200,
-    status: 'verified'
-  },
-  {
-    id: '4',
-    orderNumber: 'ORD-004',
-    vendor: {
-      name: 'Farm Direct Ltd',
-      id: 'VEN-004',
-      email: 'orders@farmdirect.in'
-    },
-    submittedAt: '2025-09-28',
-    items: 2,
-    quantityInvoiced: 75,
-    quantityReceived: 70,
-    status: 'pending'
-  },
-  {
-    id: '5',
-    orderNumber: 'ORD-005',
-    vendor: {
-      name: 'Metro Vegetables',
-      id: 'VEN-005',
-      email: 'supply@metroveg.com'
-    },
-    submittedAt: '2025-09-27',
-    items: 12,
-    quantityInvoiced: 300,
-    quantityReceived: 300,
-    status: 'verified'
-  }
-]
+interface ItemQuantityInput {
+  itemId: string
+  receivedQuantity: number
+}
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -113,9 +31,11 @@ const getStatusBadge = (status: string) => {
 }
 
 export default function ReceivedOrders() {
-  const [orders, setOrders] = useState<ReceivedOrder[]>(sampleOrders)
-  const [filteredOrders, setFilteredOrders] = useState<ReceivedOrder[]>(sampleOrders)
+  const [orders, setOrders] = useState<ReceivedOrder[]>([])
+  const [filteredOrders, setFilteredOrders] = useState<ReceivedOrder[]>([])
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
     vendor: '',
     date: '',
@@ -132,6 +52,57 @@ export default function ReceivedOrders() {
     comments: '',
     proofFile: undefined
   })
+  const [itemQuantities, setItemQuantities] = useState<ItemQuantityInput[]>([])
+  const [metrics, setMetrics] = useState({
+    pending: 0,
+    verified: 0,
+    mismatch: 0,
+    total: 0
+  })
+
+  // Fetch orders and metrics on mount
+  useEffect(() => {
+    fetchReceivedOrders()
+    fetchMetrics()
+  }, [])
+
+  // Fetch received orders
+  const fetchReceivedOrders = async () => {
+    try {
+      setLoading(true)
+      const response = await ReceivedOrdersApiService.getReceivedOrders({
+        limit: 100
+      })
+      setOrders(response.data.orders)
+      setFilteredOrders(response.data.orders)
+      
+      // Clean up selection - remove any non-pending orders
+      setSelectedOrders(prev => {
+        const validSelections = new Set<string>()
+        prev.forEach(orderId => {
+          const order = response.data.orders.find(o => o.id === orderId)
+          if (order && order.status === 'pending') {
+            validSelections.add(orderId)
+          }
+        })
+        return validSelections
+      })
+    } catch (error) {
+      console.error('Failed to fetch received orders:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Fetch metrics
+  const fetchMetrics = async () => {
+    try {
+      const response = await ReceivedOrdersApiService.getMetrics()
+      setMetrics(response.data)
+    } catch (error) {
+      console.error('Failed to fetch metrics:', error)
+    }
+  }
 
   // Close calendar when clicking outside
   useEffect(() => {
@@ -156,7 +127,7 @@ export default function ReceivedOrders() {
     }
 
     if (filters.date) {
-      filtered = filtered.filter(order => order.submittedAt === filters.date)
+      filtered = filtered.filter(order => order.submittedAt.startsWith(filters.date))
     }
 
     if (filters.status !== 'all') {
@@ -166,12 +137,15 @@ export default function ReceivedOrders() {
     setFilteredOrders(filtered)
   }, [filters, orders])
 
-  const handleVerifyOrder = (orderId: string) => {
-    setOrders(orders.map(order => 
-      order.id === orderId 
-        ? { ...order, status: 'verified' as const }
-        : order
-    ))
+  const handleVerifyOrder = async (orderId: string) => {
+    try {
+      await ReceivedOrdersApiService.verifyOrder(orderId, {})
+      // Refresh data
+      await fetchReceivedOrders()
+      await fetchMetrics()
+    } catch (error) {
+      console.error('Failed to verify order:', error)
+    }
   }
 
   const handleRaiseTicket = (order: ReceivedOrder) => {
@@ -182,41 +156,107 @@ export default function ReceivedOrders() {
       comments: '',
       proofFile: undefined
     })
+    // Initialize item quantities with dispatched quantities as default
+    if (order.itemDetails && order.itemDetails.length > 0) {
+      setItemQuantities(
+        order.itemDetails.map(item => ({
+          itemId: item.id,
+          receivedQuantity: item.quantityDispatched
+        }))
+      )
+    } else {
+      setItemQuantities([])
+    }
     setTicketModalOpen(true)
   }
 
-  const handleSubmitTicket = () => {
-    // In a real app, this would submit to an API
-    console.log('Submitting ticket:', ticketData)
-    
-    // Update order status to mismatch
-    setOrders(orders.map(order => 
-      order.id === ticketData.orderId 
-        ? { ...order, status: 'mismatch' as const }
-        : order
-    ))
-    
-    setTicketModalOpen(false)
-    setSelectedOrderForTicket(null)
-    setTicketData({
-      orderId: '',
-      issueType: 'qty-mismatch',
-      comments: '',
-      proofFile: undefined
-    })
+  const updateItemReceivedQuantity = (index: number, itemId: string, quantity: number) => {
+    const newQuantities = [...itemQuantities]
+    newQuantities[index] = {
+      itemId: itemId,
+      receivedQuantity: quantity
+    }
+    setItemQuantities(newQuantities)
   }
 
-  const handleBulkVerification = () => {
+  const handleSubmitTicket = async () => {
+    if (!selectedOrderForTicket || !selectedOrderForTicket.itemDetails) return
+
+    try {
+      // Create mismatches array from item quantities
+      const mismatches = selectedOrderForTicket.itemDetails.map((item, index) => {
+        const receivedQty = itemQuantities[index]?.receivedQuantity ?? item.quantityDispatched
+        const discrepancy = receivedQty - item.quantityInvoiced
+        
+        return {
+          grnItemId: item.id, // This is the dispatch item ID, will be mapped to GRN item ID in backend
+          assignedOrderItemId: item.assignedOrderItemId,
+          assignedQuantity: item.quantityInvoiced,
+          confirmedQuantity: item.quantityInvoiced,
+          receivedQuantity: receivedQty,
+          discrepancyQuantity: discrepancy,
+          status: ticketData.issueType === 'damaged' 
+            ? 'DAMAGE_REPORTED' as const
+            : discrepancy < 0 
+              ? 'SHORTAGE_REPORTED' as const 
+              : 'QUANTITY_MISMATCH' as const,
+          itemRemarks: ticketData.comments,
+          damageReported: ticketData.issueType === 'damaged',
+          damageDescription: ticketData.issueType === 'damaged' ? ticketData.comments : undefined
+        }
+      })
+
+      await ReceivedOrdersApiService.raiseTicket(selectedOrderForTicket.id, {
+        issueType: ticketData.issueType,
+        comments: ticketData.comments,
+        mismatches: mismatches,
+        operatorRemarks: ticketData.comments
+      })
+      
+      // Refresh data
+      await fetchReceivedOrders()
+      await fetchMetrics()
+      
+      setTicketModalOpen(false)
+      setSelectedOrderForTicket(null)
+      setItemQuantities([])
+      setTicketData({
+        orderId: '',
+        issueType: 'qty-mismatch',
+        comments: '',
+        proofFile: undefined
+      })
+    } catch (error) {
+      console.error('Failed to raise ticket:', error)
+    }
+  }
+
+  const handleBulkVerification = async () => {
     const selectedOrdersList = Array.from(selectedOrders)
-    setOrders(orders.map(order => 
-      selectedOrdersList.includes(order.id) && order.quantityInvoiced === order.quantityReceived
-        ? { ...order, status: 'verified' as const }
-        : order
-    ))
-    setSelectedOrders(new Set())
+    const ordersToVerify = orders.filter(
+      order => selectedOrdersList.includes(order.id) && order.status === 'pending'
+    )
+
+    try {
+      // Verify each selected order
+      await Promise.all(
+        ordersToVerify.map(order => ReceivedOrdersApiService.verifyOrder(order.id, {}))
+      )
+      
+      // Refresh data
+      await fetchReceivedOrders()
+      await fetchMetrics()
+      setSelectedOrders(new Set())
+    } catch (error) {
+      console.error('Failed to bulk verify orders:', error)
+    }
   }
 
   const handleOrderSelection = (orderId: string) => {
+    const order = orders.find(o => o.id === orderId)
+    // Only allow selection of pending orders
+    if (order && order.status !== 'pending') return
+    
     setSelectedOrders(prev => {
       const newSet = new Set(prev)
       if (newSet.has(orderId)) {
@@ -229,21 +269,31 @@ export default function ReceivedOrders() {
   }
 
   const handleSelectAll = () => {
-    if (selectedOrders.size === filteredOrders.length) {
+    // Only select pending orders
+    const pendingOrders = filteredOrders.filter(order => order.status === 'pending')
+    if (selectedOrders.size === pendingOrders.length && pendingOrders.length > 0) {
       setSelectedOrders(new Set())
     } else {
-      setSelectedOrders(new Set(filteredOrders.map(order => order.id)))
+      setSelectedOrders(new Set(pendingOrders.map(order => order.id)))
     }
+  }
+
+  const toggleRowExpansion = (orderId: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId)
+      } else {
+        newSet.add(orderId)
+      }
+      return newSet
+    })
   }
 
   const canBulkVerify = Array.from(selectedOrders).some(orderId => {
     const order = orders.find(o => o.id === orderId)
-    return order && order.quantityInvoiced === order.quantityReceived && order.status === 'pending'
+    return order && order.status === 'pending'
   })
-
-  const pendingOrders = orders.filter(order => order.status === 'pending').length
-  const verifiedOrders = orders.filter(order => order.status === 'verified').length
-  const mismatchOrders = orders.filter(order => order.status === 'mismatch').length
 
   return (
     <div className="p-4 sm:p-6 md:p-8 bg-[var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
@@ -261,17 +311,17 @@ export default function ReceivedOrders() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 mt-8">
         <KPICard
           title="Pending Verification"
-          value={pendingOrders}
+          value={metrics.pending}
           icon={<AlertTriangle size={32} />}
         />
         <KPICard
           title="Verified Orders"
-          value={verifiedOrders}
+          value={metrics.verified}
           icon={<CheckSquare size={32} />}
         />
         <KPICard
           title="Mismatch Orders"
-          value={mismatchOrders}
+          value={metrics.mismatch}
           icon={<X size={32} />}
         />
       </div>
@@ -281,7 +331,15 @@ export default function ReceivedOrders() {
         <h2 className="text-base sm:text-lg md:text-xl font-semibold text-[var(--color-heading)]">Received Orders</h2>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-accent)]"></div>
+        </div>
+      )}
+
       {/* Filters */}
+      {!loading && (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 pb-3 sm:pb-4 mb-4 sm:mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div>
@@ -407,25 +465,29 @@ export default function ReceivedOrders() {
           </div>
         )}
       </div>
+      )}
 
       {/* Orders Table */}
+      {!loading && (
       <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden mb-6">
         {/* Desktop Table View - Hidden on Mobile */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[var(--color-accent)]">
               <tr>
+                <th className="px-4 xl:px-6 py-3 text-left w-12"></th>
                 <th className="px-4 xl:px-6 py-3 text-left">
                   <input
                     type="checkbox"
-                    checked={selectedOrders.size === filteredOrders.length && filteredOrders.length > 0}
+                    checked={selectedOrders.size > 0 && selectedOrders.size === filteredOrders.filter(o => o.status === 'pending').length && filteredOrders.filter(o => o.status === 'pending').length > 0}
                     onChange={handleSelectAll}
+                    title="Select all pending orders"
                     className="rounded border-white text-white focus:ring-white"
                   />
                 </th>
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Order ID</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Vendor</th>
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Items</th>
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Vendor</th>
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Qty Invoiced</th>
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Qty Received</th>
                 <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
@@ -434,91 +496,132 @@ export default function ReceivedOrders() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
-                    <input
-                      type="checkbox"
-                      checked={selectedOrders.has(order.id)}
-                      onChange={() => handleOrderSelection(order.id)}
-                      className="rounded border-gray-300 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
-                    />
-                  </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-[var(--color-heading)]">{order.orderNumber}</div>
-                    <div className="text-xs text-gray-500">{order.submittedAt}</div>
-                  </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
+                <React.Fragment key={order.id}>
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => toggleRowExpansion(order.id)}
+                        className="text-gray-600 hover:text-[var(--color-accent)] transition-colors"
+                      >
+                        {expandedRows.has(order.id) ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                      </button>
+                    </td>
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedOrders.has(order.id)}
+                        onChange={() => handleOrderSelection(order.id)}
+                        disabled={order.status !== 'pending'}
+                        title={order.status !== 'pending' ? 'Only pending orders can be selected' : 'Select order'}
+                        className="rounded border-gray-300 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    </td>
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-[var(--color-heading)]">{order.orderNumber}</div>
+                      <div className="text-xs text-gray-500">{format(new Date(order.submittedAt), 'dd/MM/yyyy')}</div>
+                    </td>
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {order.items} {order.items === 1 ? 'item' : 'items'}
+                    </td>
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{order.vendor.name}</div>
                         <div className="text-xs text-gray-500">{order.vendor.email}</div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {order.items}
-                  </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {order.quantityInvoiced}
-                  </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-600">
-                      {order.quantityReceived}
-                      {order.quantityInvoiced !== order.quantityReceived && (
-                        <span className="ml-2 text-red-600 font-medium">
-                          (Δ {order.quantityReceived - order.quantityInvoiced})
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(order.status)}
-                  </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm">
-                    {order.status === 'pending' && (
-                      <div className="flex flex-col items-start gap-2">
-                        {order.quantityInvoiced === order.quantityReceived ? (
+                    </td>
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {order.quantityInvoiced}
+                    </td>
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">
+                        {order.status === 'pending' ? (
+                          <span className="text-gray-400 italic">-</span>
+                        ) : (
+                          <>
+                            {order.quantityReceived}
+                            {order.quantityInvoiced !== order.quantityReceived && (
+                              <span className="ml-2 text-red-600 font-medium">
+                                (Δ {order.quantityReceived - order.quantityInvoiced})
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(order.status)}
+                    </td>
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm">
+                      {order.status === 'pending' && (
+                        <div className="flex flex-col items-start gap-2">
                           <button
                             onClick={() => handleVerifyOrder(order.id)}
                             className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-xs font-medium flex items-center gap-1"
                           >
                             <CheckSquare size={14} />
-                            Verified OK
+                            Verify OK
                           </button>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => handleVerifyOrder(order.id)}
-                              className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-xs font-medium flex items-center gap-1"
-                            >
-                              <CheckSquare size={14} />
-                              Verified OK
-                            </button>
-                            <button
-                              onClick={() => handleRaiseTicket(order)}
-                              className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors text-xs font-medium flex items-center gap-1"
-                            >
-                              <AlertTriangle size={14} />
-                              Raise Ticket
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
-                    {order.status === 'verified' && (
-                      <span className="text-xs text-green-600 flex items-center gap-1">
-                        <CheckSquare size={14} />
-                        Verified
-                      </span>
-                    )}
-                    {order.status === 'mismatch' && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertTriangle size={14} />
-                        Ticket Raised
-                      </span>
-                    )}
-                  </td>
-                </tr>
+                          <button
+                            onClick={() => handleRaiseTicket(order)}
+                            className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors text-xs font-medium flex items-center gap-1"
+                          >
+                            <AlertTriangle size={14} />
+                            Raise Ticket
+                          </button>
+                        </div>
+                      )}
+                      {order.status === 'verified' && (
+                        <span className="text-xs text-green-600 flex items-center gap-1">
+                          <CheckSquare size={14} />
+                          Verified
+                        </span>
+                      )}
+                      {order.status === 'mismatch' && (
+                        <span className="text-xs text-red-600 flex items-center gap-1">
+                          <AlertTriangle size={14} />
+                          Ticket Raised
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                  {expandedRows.has(order.id) && (
+                    <tr className="bg-gray-50">
+                      <td colSpan={9} className="px-4 xl:px-6 py-4">
+                        <div className="text-sm">
+                          <h4 className="font-semibold text-gray-900 mb-3">Item Details ({order.itemDetails?.length || 0} items):</h4>
+                          {order.itemDetails && order.itemDetails.length > 0 ? (
+                            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                              <table className="w-full">
+                                <thead className="bg-gray-100">
+                                  <tr>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Product Name</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">SKU</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Order #</th>
+                                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">Qty Invoiced</th>
+                                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">Qty Dispatched</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                  {order.itemDetails.map((item, idx) => (
+                                    <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                      <td className="px-3 py-2 text-sm text-gray-900">{item.productName}</td>
+                                      <td className="px-3 py-2 text-sm text-gray-600">{item.sku || '-'}</td>
+                                      <td className="px-3 py-2 text-sm text-gray-600">{item.orderNumber}</td>
+                                      <td className="px-3 py-2 text-sm text-gray-900 text-right">{item.quantityInvoiced}</td>
+                                      <td className="px-3 py-2 text-sm text-gray-900 text-right">{item.quantityDispatched}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 italic">No item details available</p>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -529,16 +632,24 @@ export default function ReceivedOrders() {
           {filteredOrders.map((order) => (
             <div key={order.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
               <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-1">
+                  <button
+                    onClick={() => toggleRowExpansion(order.id)}
+                    className="text-gray-600 hover:text-[var(--color-accent)] transition-colors min-w-[32px] min-h-[32px] flex items-center justify-center"
+                  >
+                    {expandedRows.has(order.id) ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                  </button>
                   <input
                     type="checkbox"
                     checked={selectedOrders.has(order.id)}
                     onChange={() => handleOrderSelection(order.id)}
-                    className="rounded border-gray-300 text-[var(--color-accent)] focus:ring-[var(--color-accent)] mt-0.5"
+                    disabled={order.status !== 'pending'}
+                    title={order.status !== 'pending' ? 'Only pending orders can be selected' : 'Select order'}
+                    className="rounded border-gray-300 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed mt-0.5"
                   />
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold text-[var(--color-heading)]">{order.orderNumber}</div>
-                    <div className="text-xs text-gray-500">{order.submittedAt}</div>
+                    <div className="text-xs text-gray-500">{format(new Date(order.submittedAt), 'dd/MM/yyyy')}</div>
                   </div>
                 </div>
                 {getStatusBadge(order.status)}
@@ -547,11 +658,11 @@ export default function ReceivedOrders() {
               <div className="space-y-2 mb-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Vendor:</span>
-                  <span className="font-medium text-gray-900 text-right">{order.vendor.name}</span>
+                  <span className="font-medium text-gray-900 text-right truncate max-w-[60%]">{order.vendor.name}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Items:</span>
-                  <span className="font-medium text-gray-900">{order.items}</span>
+                  <span className="font-medium text-gray-900">{order.items} {order.items === 1 ? 'item' : 'items'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Qty Invoiced:</span>
@@ -560,44 +671,69 @@ export default function ReceivedOrders() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Qty Received:</span>
                   <span className="font-medium text-gray-900">
-                    {order.quantityReceived}
-                    {order.quantityInvoiced !== order.quantityReceived && (
-                      <span className="ml-2 text-red-600 font-semibold">
-                        (Δ {order.quantityReceived - order.quantityInvoiced})
-                      </span>
+                    {order.status === 'pending' ? (
+                      <span className="text-gray-400 italic">-</span>
+                    ) : (
+                      <>
+                        {order.quantityReceived}
+                        {order.quantityInvoiced !== order.quantityReceived && (
+                          <span className="ml-2 text-red-600 font-semibold">
+                            (Δ {order.quantityReceived - order.quantityInvoiced})
+                          </span>
+                        )}
+                      </>
                     )}
                   </span>
                 </div>
               </div>
 
+              {expandedRows.has(order.id) && (
+                <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <h4 className="font-semibold text-gray-900 mb-2 text-sm">Item Details ({order.itemDetails?.length || 0} items):</h4>
+                  {order.itemDetails && order.itemDetails.length > 0 ? (
+                    <div className="space-y-2">
+                      {order.itemDetails.map((item) => (
+                        <div key={item.id} className="bg-white p-3 rounded border border-gray-200 text-sm">
+                          <div className="font-medium text-gray-900 mb-1">{item.productName}</div>
+                          <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                            <div>
+                              <span className="font-medium">SKU:</span> {item.sku || '-'}
+                            </div>
+                            <div>
+                              <span className="font-medium">Order:</span> {item.orderNumber}
+                            </div>
+                            <div>
+                              <span className="font-medium">Qty Invoiced:</span> {item.quantityInvoiced}
+                            </div>
+                            <div>
+                              <span className="font-medium">Qty Dispatched:</span> {item.quantityDispatched}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic text-sm">No item details available</p>
+                  )}
+                </div>
+              )}
+
               {order.status === 'pending' && (
                 <div className="flex flex-col gap-2">
-                  {order.quantityInvoiced === order.quantityReceived ? (
-                    <button
-                      onClick={() => handleVerifyOrder(order.id)}
-                      className="w-full px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm font-medium flex items-center justify-center gap-2 min-h-[44px]"
-                    >
-                      <CheckSquare size={16} />
-                      Verified OK
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => handleVerifyOrder(order.id)}
-                        className="w-full px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm font-medium flex items-center justify-center gap-2 min-h-[44px]"
-                      >
-                        <CheckSquare size={16} />
-                        Verified OK
-                      </button>
-                      <button
-                        onClick={() => handleRaiseTicket(order)}
-                        className="w-full px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors text-sm font-medium flex items-center justify-center gap-2 min-h-[44px]"
-                      >
-                        <AlertTriangle size={16} />
-                        Raise Ticket
-                      </button>
-                    </>
-                  )}
+                  <button
+                    onClick={() => handleVerifyOrder(order.id)}
+                    className="w-full px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm font-medium flex items-center justify-center gap-2 min-h-[44px]"
+                  >
+                    <CheckSquare size={16} />
+                    Verify OK
+                  </button>
+                  <button
+                    onClick={() => handleRaiseTicket(order)}
+                    className="w-full px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors text-sm font-medium flex items-center justify-center gap-2 min-h-[44px]"
+                  >
+                    <AlertTriangle size={16} />
+                    Raise Ticket
+                  </button>
                 </div>
               )}
               {order.status === 'verified' && (
@@ -622,6 +758,7 @@ export default function ReceivedOrders() {
           </div>
         )}
       </div>
+      )}
 
       {/* Raise Ticket Modal */}
       {ticketModalOpen && selectedOrderForTicket && (
@@ -630,7 +767,11 @@ export default function ReceivedOrders() {
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Raise Ticket</h3>
               <button 
-                onClick={() => setTicketModalOpen(false)} 
+                onClick={() => {
+                  setTicketModalOpen(false)
+                  setSelectedOrderForTicket(null)
+                  setItemQuantities([])
+                }}
                 className="text-gray-400 hover:text-gray-600 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 <X size={20} />
@@ -640,9 +781,63 @@ export default function ReceivedOrders() {
             <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-gray-50 rounded-lg">
               <p className="text-xs sm:text-sm text-gray-600 mb-2">Order: <span className="font-medium">{selectedOrderForTicket.orderNumber}</span></p>
               <p className="text-xs sm:text-sm text-gray-600 mb-2">Vendor: <span className="font-medium">{selectedOrderForTicket.vendor.name}</span></p>
-              <p className="text-xs sm:text-sm text-gray-600 mb-2">Invoiced: <span className="font-medium">{selectedOrderForTicket.quantityInvoiced}</span></p>
-              <p className="text-xs sm:text-sm text-gray-600">Received: <span className="font-medium">{selectedOrderForTicket.quantityReceived}</span></p>
+              <p className="text-xs sm:text-sm text-gray-600">Total Qty Invoiced: <span className="font-medium">{selectedOrderForTicket.quantityInvoiced}</span></p>
             </div>
+
+            {/* Items with Received Quantities */}
+            {selectedOrderForTicket.itemDetails && selectedOrderForTicket.itemDetails.length > 0 && (
+              <div className="mb-4 sm:mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-gray-900">Enter Received Quantities *</h4>
+                  <div className="text-xs text-gray-600">
+                    <span className="font-medium">Total Expected:</span> {selectedOrderForTicket.quantityInvoiced} | 
+                    <span className="font-medium ml-1">Total Received:</span> {itemQuantities.reduce((sum, item) => sum + item.receivedQuantity, 0)}
+                  </div>
+                </div>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {selectedOrderForTicket.itemDetails.map((item, index) => (
+                    <div key={item.id} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">{item.productName}</p>
+                          <p className="text-xs text-gray-600">SKU: {item.sku || 'N/A'} | Order: {item.orderNumber}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Invoiced Qty</label>
+                          <input
+                            type="number"
+                            value={item.quantityInvoiced}
+                            disabled
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-100 text-gray-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Received Qty *</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={itemQuantities[index]?.receivedQuantity ?? item.quantityDispatched}
+                            onChange={(e) => updateItemReceivedQuantity(index, item.id, parseInt(e.target.value) || 0)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                      {(itemQuantities[index]?.receivedQuantity ?? item.quantityDispatched) !== item.quantityInvoiced && (
+                        <div className="mt-2 flex items-center gap-1 text-xs">
+                          <AlertTriangle size={12} className="text-orange-600" />
+                          <span className="text-orange-600 font-medium">
+                            Discrepancy: {((itemQuantities[index]?.receivedQuantity ?? item.quantityDispatched) - item.quantityInvoiced) > 0 ? '+' : ''}
+                            {(itemQuantities[index]?.receivedQuantity ?? item.quantityDispatched) - item.quantityInvoiced}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-4 sm:space-y-6">
               <div>
@@ -706,7 +901,17 @@ export default function ReceivedOrders() {
 
             <div className="flex flex-col-reverse sm:flex-row gap-3 mt-4 sm:mt-6">
               <button
-                onClick={() => setTicketModalOpen(false)}
+                onClick={() => {
+                  setTicketModalOpen(false)
+                  setSelectedOrderForTicket(null)
+                  setItemQuantities([])
+                  setTicketData({
+                    orderId: '',
+                    issueType: 'qty-mismatch',
+                    comments: '',
+                    proofFile: undefined
+                  })
+                }}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
               >
                 Cancel

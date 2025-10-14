@@ -45,7 +45,7 @@ export class GRNAutoTicketingService {
     message: string;
   }> {
     try {
-      // Start transaction
+      // Start transaction with increased timeout
       const result = await prisma.$transaction(async (tx) => {
         // 1. Update GRN status based on verification
         const hasAnyMismatch = grnData.mismatches.some(
@@ -166,6 +166,9 @@ export class GRNAutoTicketingService {
         }
 
         return { grn: updatedGRN, ticket };
+      }, {
+        maxWait: 10000, // Maximum time to wait for transaction to start (10 seconds)
+        timeout: 20000, // Maximum time for transaction to complete (20 seconds)
       });
 
       logger.info('GRN verification processed successfully', {
@@ -533,6 +536,9 @@ export class GRNAutoTicketingService {
         }
 
         return ticket;
+      }, {
+        maxWait: 10000, // Maximum time to wait for transaction to start (10 seconds)
+        timeout: 15000, // Maximum time for transaction to complete (15 seconds)
       });
 
       logger.info('Ticket status updated', {
