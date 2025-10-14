@@ -19,6 +19,27 @@ router.post('/generate',
 );
 
 /**
+ * @route POST /api/invoices/upload-and-link
+ * @desc Upload invoice file and create new invoice record linked to purchase order
+ * @access Vendor, Accounts
+ */
+router.post(
+  '/upload-and-link',
+  InvoiceUploadController.uploadAndLinkInvoice
+);
+
+/**
+ * @route GET /api/invoices/uploads
+ * @desc Get uploaded invoices for authenticated user (role-based filtering)
+ * @access Vendor, Accounts, Ops
+ * @important This route MUST come before /:id routes to avoid conflicts
+ */
+router.get(
+  '/uploads',
+  InvoiceUploadController.getUploadedInvoices
+);
+
+/**
  * @route GET /api/invoices
  * @desc List invoices with pagination and filters
  * @access ACCOUNTS team only
@@ -56,26 +77,6 @@ router.get('/:id/download',
 router.post(
   '/:invoiceId/upload',
   InvoiceUploadController.uploadInvoiceFile
-);
-
-/**
- * @route POST /api/invoices/upload-and-link
- * @desc Upload invoice file and create new invoice record linked to purchase order
- * @access Vendor, Accounts
- */
-router.post(
-  '/upload-and-link',
-  InvoiceUploadController.uploadAndLinkInvoice
-);
-
-/**
- * @route GET /api/invoices/uploads
- * @desc Get uploaded invoices for authenticated user (role-based filtering)
- * @access Vendor, Accounts, Ops
- */
-router.get(
-  '/uploads',
-  InvoiceUploadController.getUploadedInvoices
 );
 
 export default router;
