@@ -1,16 +1,8 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Package, CheckSquare, AlertTriangle, Wallet, Bell, Eye, FileText, BarChart3, X, Clock } from 'lucide-react'
+import { KPICard } from '../../../components'
 // Recharts removed — charts taken out from vendor dashboard
-
-interface KPICardProps {
-  title: string
-  value: number | string
-  icon: React.ReactNode
-  color: string
-  subtitle?: string
-  onClick?: () => void
-}
 
 interface NotificationProps {
   id: string
@@ -27,27 +19,6 @@ interface QuickActionProps {
   icon: React.ReactElement<{ size?: number }>
   color: string
   onClick: () => void
-}
-
-const KPICard: React.FC<KPICardProps> = ({ title, value, icon, subtitle, onClick }) => {
-  return (
-    <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative ${onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all' : ''}`}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : -1}
-      onKeyDown={(e) => { if (onClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() } }}
-      onClick={onClick}
-    >
-      {/* Circular icon at top center, overlapping the card edge */}
-      <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-        {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<{ color?: string; size?: number; strokeWidth?: number }>, { color: 'white', size: 24, strokeWidth: 2 }) : icon}
-      </div>
-      
-      {/* Card content */}
-      <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">{title}</h3>
-      <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{value}</div>
-      {subtitle && <div className="text-xs sm:text-sm text-gray-600 mt-1 px-2">{subtitle}</div>}
-    </div>
-  )
 }
 
 const NotificationItem: React.FC<NotificationProps> = ({ type, message, time, read }) => {
@@ -327,28 +298,24 @@ export default function Dashboard() {
       title: 'Pending Orders',
       value: '12',
       icon: <Package size={32} />,
-      color: 'orange',
       subtitle: 'Awaiting confirmation'
     },
     {
       title: 'Orders Confirmed Today',
       value: '8',
       icon: <CheckSquare size={32} />,
-      color: 'green',
       subtitle: 'Ready for dispatch'
     },
     {
       title: 'Dispatches Pending',
       value: '5',
       icon: <BarChart3 size={32} />,
-      color: 'blue',
       subtitle: 'Awaiting pickup'
     },
     {
       title: 'Payments Pending',
       value: '₹45,600',
       icon: <Wallet size={32} />,
-      color: 'red',
       subtitle: '3 invoices'
     }
   ]
@@ -411,7 +378,6 @@ export default function Dashboard() {
               title={kpi.title}
               value={kpi.value}
               icon={kpi.icon}
-              color={kpi.color}
               subtitle={kpi.subtitle}
               onClick={
                 kpi.title === 'Pending Orders' ? () => navigate('/vendors/orders') :

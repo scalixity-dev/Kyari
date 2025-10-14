@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
 import type { LucideIcon } from 'lucide-react'
 import { LayoutDashboard, Package, FileText, Bell, BarChart3, Users, Search, Wallet, Menu, X, Clock, CheckSquare } from 'lucide-react'
+import kyariLogo from '../../assets/kyariLogo.webp'
 
 type NotificationType = 'order' | 'invoice' | 'dispatch' | 'performance' | 'support'
 
@@ -239,7 +240,12 @@ function VendorsLayout() {
         <div>
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: 28, fontWeight: 600 }}>Kyari</div>
+              <img 
+                src={kyariLogo} 
+                alt="Kyari Logo" 
+                className="h-8"
+                style={{ filter: 'brightness(0) invert(1)' }}
+              />
               {!isMobile && <div className="text-sm text-white/70 mt-1">Vendor Portal</div>}
             </div>
             {/* Mobile Close Button */}
@@ -282,7 +288,7 @@ function VendorsLayout() {
   {/* Main area */}
   <main className={`transition-all duration-300 ease-in-out ${isMobile ? 'ml-0' : 'ml-[230px]'}`} style={{ marginTop: 0, paddingTop: 0, overflowX: 'hidden', height: '100vh' }}>
   {/* Top bar (fixed) */}
-  <div className={`flex items-center justify-between bg-[var(--color-secondary)] py-2 pr-6 pl-0 fixed top-0 right-0 h-16 z-40 border-l border-white/20 transition-all duration-300 ease-in-out ${
+  <div className={`flex items-center justify-between bg-[var(--color-sharktank-bg)] py-2 pr-6 pl-0 fixed top-0 right-0 h-28 z-40 border-l border-white/20 transition-all duration-300 ease-in-out ${
     isMobile ? 'left-0' : 'left-[230px]'
   }`}>
           {/* Mobile Menu Button */}
@@ -290,35 +296,44 @@ function VendorsLayout() {
             <button
               data-mobile-menu-toggle
               onClick={() => setSidebarOpen(true)}
-              className="p-2 text-white hover:bg-white/10 rounded-md transition-colors lg:hidden"
+              className="p-2 text-[var(--color-secondary)] hover:bg-white/10 rounded-md transition-colors lg:hidden"
               aria-label="Open menu"
             >
               <Menu size={20} />
             </button>
           )}
 
-          <form onSubmit={handleSearchSubmit} className={`flex items-center gap-3 ${isMobile ? 'flex-1 mx-3' : 'w-[60%]'}`}>
-            <div className="relative w-full">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/90">
-                <Search size={18} />
-              </div>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={isMobile ? "Search..." : "Search orders, invoices..."}
-                className={`pl-11 pr-3 h-9 rounded-md bg-[var(--color-secondary)] text-white outline-none transition-all ${
-                  isMobile ? 'w-full' : 'w-1/2'
-                }`}
-              />
-            </div>
-          </form>
+          {/* Left welcome text (visible on md+) */}
+          <div className="hidden md:block ml-9 mr-6 text-3xl font-medium" style={{ color: 'var(--color-secondary)' }}>
+            <div className="font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Vendor Dashboard</div>
+            <div className="text-xl mt-1">Welcome Vendor</div>
+          </div>
+          {/* Spacer on desktop to push right-group to the edge */}
+          {!isMobile && <div className="flex-1" />}
 
           <div className="flex items-center gap-4">
+            <form onSubmit={handleSearchSubmit} className={`flex items-center gap-3 ${isMobile ? 'flex-1 mx-3' : 'w-80'}`}>
+              <div className={`relative ${isMobile ? 'w-full' : 'w-full'}`}>
+                <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-secondary)' }}>
+                  <Search size={18} />
+                </div>
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={isMobile ? "Search..." : "Mega Search"}
+                  className={`pl-11 pr-3 h-9 rounded-md bg-white text-[var(--color-secondary)] placeholder-[var(--color-secondary)] outline-none transition-all ${
+                    isMobile ? 'w-full' : 'w-full'
+                  }`}
+                />
+              </div>
+            </form>
+
+            <div className="flex items-center gap-4">
             <div className="relative" ref={notificationsRef}>
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
                 aria-label="Notifications" 
-                className="relative p-2 rounded-md text-white hover:bg-white/10 transition-colors" 
+                className="relative rounded-md text-[var(--color-secondary)] hover:bg-white/10 p-2 transition-colors" 
                 style={{ background: 'transparent' }}
               >
                 <Bell size={18} />
@@ -331,7 +346,7 @@ function VendorsLayout() {
 
               {showNotifications && (
                 <div className={`absolute right-0 mt-2 rounded-lg shadow-lg border border-gray-200 z-50 ${
-                  isMobile ? 'w-[calc(100vw-2rem)] max-w-sm -mr-12' : 'w-96'
+                  isMobile ? 'w-[calc(100vw-2rem)] max-w-sm -mr-4' : 'w-96'
                 } max-h-[500px]`} style={{ background: 'white' }}>
                   {/* Notifications Header */}
                   <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
@@ -431,8 +446,8 @@ function VendorsLayout() {
             <div className="relative">
               <button onClick={() => setShowProfile((s) => !s)} className="flex items-center gap-3 p-1 rounded-md" style={{ background: 'transparent' }}>
                 <div className={`${isMobile ? 'hidden' : 'block'}`} style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 600, color: 'white' }}>{user?.email ? user.email.split('@')[0] : 'Vendor'}</div>
-                  <div style={{ fontSize: 12, color: 'white' }}>Vendor</div>
+                  <div style={{ fontWeight: 600, color: 'var(--color-secondary)' }}>{user?.email ? user.email.split('@')[0] : 'Vendor'}</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-secondary)' }}>Vendor</div>
                 </div>
                 <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'var(--color-accent)', color: 'var(--color-button-text)', fontSize: 13 }}>V</div>
               </button>
@@ -446,11 +461,12 @@ function VendorsLayout() {
                 </div>
               )}
             </div>
+            </div>
           </div>
         </div>
 
         {/* Main content area - Outlet renders module content */}
-        <div style={{ marginTop: 64, height: 'calc(100vh - 64px)', overflow: 'auto' }}>
+        <div style={{ marginTop: 112, height: 'calc(100vh - 112px)', overflow: 'auto' }}>
           {/* Module area - transparent background, modules should use full width */}
           <div style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box', padding: 0, background: 'transparent' }}>
             <div style={{ width: '100%', padding: 0 }}>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Plus, Send, Paperclip, Clock, AlertTriangle, CheckSquare } from 'lucide-react'
-import { CustomDropdown } from '../../../components'
+import { CustomDropdown, KPICard } from '../../../components'
 
 type IssueType = 'Invoice Mismatch' | 'Duplicate Entry' | 'Payment Pending' | 'Payment Delay' | 'Others'
 type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent'
@@ -264,39 +264,31 @@ export default function VendorSupport() {
       </div>
 
       {/* Analytics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6">
-        <div className="bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <Clock size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Open Tickets</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{openTickets}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Awaiting response</div>
-        </div>
-        <div className="bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <AlertTriangle size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">In Progress</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{inProgressTickets}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Being resolved</div>
-        </div>
-        <div className="bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <CheckSquare size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Resolved This Week</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{resolvedThisWeek}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Completed tickets</div>
-        </div>
-        <div className="bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <Clock size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Avg Resolution Time</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{avgResolutionHours} hrs</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Average time</div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6 pt-6 sm:pt-8 pb-4 sm:pb-6">
+        <KPICard
+          title="Open Tickets"
+          value={openTickets}
+          subtitle="Awaiting response"
+          icon={<Clock size={32} />}
+        />
+        <KPICard
+          title="In Progress"
+          value={inProgressTickets}
+          subtitle="Being resolved"
+          icon={<AlertTriangle size={32} />}
+        />
+        <KPICard
+          title="Resolved This Week"
+          value={resolvedThisWeek}
+          subtitle="Completed tickets"
+          icon={<CheckSquare size={32} />}
+        />
+        <KPICard
+          title="Avg Resolution Time"
+          value={`${avgResolutionHours} hrs`}
+          subtitle="Average time"
+          icon={<Clock size={32} />}
+        />
       </div>
 
       {/* Filters */}

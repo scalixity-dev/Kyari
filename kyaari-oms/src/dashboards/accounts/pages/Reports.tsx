@@ -9,6 +9,7 @@ import {
   LineChart,
   Line
 } from 'recharts'
+import { KPICard } from '../../../components'
 
 type PaymentAgingRecord = {
   vendor: string
@@ -73,28 +74,6 @@ const PAYMENT_MONTHLY_DATA = [
   { period: 'Sep', released: 4100000, pending: 703000 },
 ]
 
-interface KPICardProps {
-  title: string
-  value: string | number
-  icon: React.ReactNode
-  color: 'blue' | 'orange' | 'green' | 'red'
-  subtitle?: string
-}
-
-function KPICard({ title, value, icon, subtitle }: KPICardProps) {
-  return (
-    <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
-      <div className="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-[#C3754C] text-white shadow-md">
-        {icon}
-      </div>
-      <div className="flex flex-col items-center text-center w-full">
-        <h3 className="font-['Fraunces'] font-bold text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2">{title}</h3>
-        <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{value}</div>
-        {subtitle && <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">{subtitle}</div>}
-      </div>
-    </div>
-  )
-}
 
 function AccountsReports() {
   const [timeRange, setTimeRange] = useState<TimeRange>('weekly')
@@ -143,33 +122,29 @@ function AccountsReports() {
 
       {/* Top KPI Cards */}
       <div className="mb-6 sm:mb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 py-8 sm:py-10 gap-10 sm:gap-12 xl:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 pt-6 sm:pt-8 pb-4 sm:pb-6 gap-10 sm:gap-12 xl:gap-6">
           <KPICard
             title="Total Outstanding"
             value={`₹${summaryMetrics.totalOutstanding.toLocaleString('en-IN')}`}
-            icon={<Wallet size={32} color="white" />}
-            color="blue"
+            icon={<Wallet size={32} />}
             subtitle="Pending vendor payments"
           />
           <KPICard
             title="Avg Compliance"
             value={`${summaryMetrics.avgCompliance}%`}
-            icon={<CheckSquare size={32} color="white" />}
-            color="green"
+            icon={<CheckSquare size={32} />}
             subtitle="Invoice-PO compliance rate"
           />
           <KPICard
             title="SLA Breaches"
             value={summaryMetrics.totalBreaches}
-            icon={<AlertTriangle size={32} color="white" />}
-            color="red"
+            icon={<AlertTriangle size={32} />}
             subtitle="Requires attention"
           />
           <KPICard
             title="Payments This Period"
             value={`₹${summaryMetrics.paymentsReleased.toLocaleString('en-IN')}`}
-            icon={<BarChart3 size={32} color="white" />}
-            color="orange"
+            icon={<BarChart3 size={32} />}
             subtitle={`${timeRange === 'weekly' ? 'This week' : 'This month'}`}
           />
         </div>

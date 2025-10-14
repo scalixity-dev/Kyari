@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Clock, AlertTriangle, CheckSquare, BarChart3, ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Clock, AlertTriangle, CheckSquare, BarChart3, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { CustomDropdown } from '../../../components/CustomDropdown'
 import type { DropdownOption } from '../../../components/CustomDropdown/CustomDropdown'
+import { KPICard } from '../../../components'
 
 interface TicketMetrics {
   raised: number
@@ -77,46 +77,6 @@ const monthlyTrends: MonthlyData[] = [
   { month: 'Sep', ticketsRaised: 45, ticketsResolved: 38, avgResolutionHours: 18.5 }
 ]
 
-const getPerformanceIndicator = (current: number, previous: number) => {
-  const change = ((current - previous) / previous) * 100
-  const isPositive = change > 0
-  return {
-    value: Math.abs(change).toFixed(1),
-    isPositive,
-    icon: isPositive ? ChevronUp : ChevronDown,
-    color: isPositive ? 'text-green-600' : 'text-red-600',
-    bgColor: isPositive ? 'bg-green-100' : 'bg-red-100'
-  }
-}
-
-const MetricCard = ({ title, value, unit, change, icon: Icon, subtitle }: {
-  title: string
-  value: number | string
-  unit?: string
-  change?: { value: string; isPositive: boolean; color: string; bgColor: string }
-  icon: LucideIcon
-  subtitle?: string
-}) => (
-  <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
-    <div className="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-[#C3754C] text-white shadow-md">
-      <Icon className="w-7 h-7 sm:w-8 sm:h-8" color="white" />
-    </div>
-    <div className="flex flex-col items-center text-center w-full">
-
-      <h3 className="text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2 font-bold">{title}</h3>
-      {change && (
-        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${change.bgColor} ${change.color} mb-2`}>
-          {change.isPositive ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          {change.value}%
-        </div>
-      )}
-      <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">
-        {value}{unit}
-      </div>
-      {subtitle && <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">{subtitle}</div>}
-    </div>
-  </div>
-)
 
 export default function Reports() {
   const [timeRange, setTimeRange] = useState('30d')
@@ -131,14 +91,6 @@ export default function Reports() {
     { value: 'Good', label: 'Good' },
     { value: 'Needs Attention', label: 'Needs Attention' }
   ]
-
-  // Calculate performance indicators
-  const currentMonth = monthlyTrends[monthlyTrends.length - 1]
-  const previousMonth = monthlyTrends[monthlyTrends.length - 2]
-  
-  const raisedChange = getPerformanceIndicator(currentMonth.ticketsRaised, previousMonth.ticketsRaised)
-  const resolvedChange = getPerformanceIndicator(currentMonth.ticketsResolved, previousMonth.ticketsResolved)
-  const resolutionTimeChange = getPerformanceIndicator(previousMonth.avgResolutionHours, currentMonth.avgResolutionHours) // Inverted for better performance
 
   const totalPendingVerification = 23 // This would come from actual data
   const resolutionRate = ((currentTicketMetrics.resolved / currentTicketMetrics.raised) * 100).toFixed(1)
@@ -221,33 +173,29 @@ export default function Reports() {
 
       {/* Key Metrics */}
       <div className="mb-6 sm:mb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 py-8 sm:py-10 gap-10 sm:gap-12 xl:gap-6">
-          <MetricCard
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 pt-6 sm:pt-8 pb-4 sm:pb-6 gap-10 sm:gap-12 xl:gap-6">
+          <KPICard
             title="Tickets Raised"
             value={currentTicketMetrics.raised}
-            icon={AlertTriangle}
-            change={raisedChange}
+            icon={<AlertTriangle size={32} />}
             subtitle="This month"
           />
-          <MetricCard
+          <KPICard
             title="Tickets Resolved"
             value={currentTicketMetrics.resolved}
-            icon={CheckSquare}
-            change={resolvedChange}
+            icon={<CheckSquare size={32} />}
             subtitle="This month"
           />
-          <MetricCard
+          <KPICard
             title="Avg Resolution Time"
-            value={currentTicketMetrics.avgResolutionTime}
-            unit="h"
-            icon={Clock}
-            change={resolutionTimeChange}
+            value={`${currentTicketMetrics.avgResolutionTime}h`}
+            icon={<Clock size={32} />}
             subtitle="Hours to resolve"
           />
-          <MetricCard
+          <KPICard
             title="Pending Verification"
             value={totalPendingVerification}
-            icon={AlertTriangle}
+            icon={<AlertTriangle size={32} />}
             subtitle="Awaiting action"
           />
         </div>

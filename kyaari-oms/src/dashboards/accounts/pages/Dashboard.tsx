@@ -1,36 +1,19 @@
-import React, { useState, type ReactElement } from 'react'
+import React, { useState } from 'react'
 import { FileText, AlertTriangle, Wallet, MapPin, Bell, X } from 'lucide-react'
 import Button from '../../../components/Button/Button'
+import { KPICard } from '../../../components'
 
 type KPI = {
   title: string
   value: string
   subtitle?: string
-  icon: ReactElement
+  icon: React.ReactElement
 }
 
 type NotificationItem = {
   id: string
   title: string
   description: string
-}
-
-function KPICard({ title, value, subtitle, icon }: KPI) {
-  return (
-    <div
-      className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative"
-    >
-      {/* Circular icon at top center, overlapping the card edge */}
-      <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-[var(--color-accent)] rounded-full p-3 flex items-center justify-center text-white shadow-md">
-        {React.isValidElement(icon) ? React.cloneElement(icon, { color: 'white', size: 32, strokeWidth: 2 } as React.SVGProps<SVGSVGElement>) : icon}
-      </div>
-      
-      {/* Card content */}
-      <h3 className="text-lg font-semibold text-gray-800 mb-1">{title}</h3>
-      <div className="text-2xl font-bold text-gray-900 mt-1">{value}</div>
-      {subtitle && <div className="text-sm text-gray-600 mt-1">{subtitle}</div>}
-    </div>
-  )
 }
 
 function GenerateInvoiceModal({ open, onClose }: { open: boolean; onClose: () => void }) {

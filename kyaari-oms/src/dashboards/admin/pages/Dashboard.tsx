@@ -13,43 +13,11 @@ import {
   Cell,
   
 } from 'recharts'
-
-interface KPICardProps {
-  title: string;
-  value: number | string;
-  icon: React.ReactNode;
-  color: string;
-  subtitle?: string;
-  onClick?: () => void;
-}
+import { KPICard } from '../../../components'
 
 // task items will be rendered in a table below
 
 /* styles migrated to Tailwind classes */
-
-const KPICard: React.FC<KPICardProps> = ({ title, value, icon, subtitle, onClick }) => {
-  return (
-    <div
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : -1}
-      onKeyDown={(e) => { if (onClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() } }}
-      onClick={onClick}
-      className={`bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative ${onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all' : ''}`}
-    >
-      {/* Circular icon at top center, overlapping the card edge */}
-      <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-[var(--color-accent)] rounded-full p-3 flex items-center justify-center text-white shadow-md">
-        {React.isValidElement(icon) ? React.cloneElement(icon as any, { color: 'white', size: 32, strokeWidth: 2 } as any) : icon}
-      </div>
-      
-      {/* Card content */}
-      <h3 className="text-lg font-semibold text-gray-800 mb-1">{title}</h3>
-      <div className="text-2xl font-bold text-gray-900 mt-1">{value}</div>
-      {subtitle && <div className="text-sm text-gray-600 mt-1">{subtitle}</div>}
-    </div>
-  )
-}
-
-// TaskItem removed; tasks are now rendered as a table with an Actions column
 
 export default function Dashboard() {
   // const navigate = useNavigate()
@@ -107,28 +75,24 @@ export default function Dashboard() {
       title: 'Order Today',
       value: '47',
       icon: <Package size={32} />,
-      color: 'orange',
       subtitle: 'Pending: 12 | Confirmed: 20 | Dispatched: 15'
     },
     {
       title: 'Vendor Confirmation',
       value: '8',
       icon: <BarChart3 size={32} />,
-      color: 'orange',
       subtitle: 'Pending Approval'
     },
     {
       title: 'Payment Pending',
       value: '₹2,34,500',
       icon: <Wallet size={32} />,
-      color: 'orange',
       subtitle: '15 Invoices'
     },
     {
       title: 'Tickets Open',
       value: '6',
       icon: <FileText size={32} />,
-      color: 'orange',
       subtitle: '2 High Priority'
     }
   ];
@@ -217,7 +181,6 @@ export default function Dashboard() {
               title={kpi.title}
               value={kpi.value}
               icon={kpi.icon}
-              color={kpi.color}
               subtitle={kpi.subtitle}
             />
           ))}

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
 import type { LucideIcon } from 'lucide-react'
 import { LayoutDashboard, Package, Users, Bell, Wallet, MapPin, BarChart3, FileText, Search, ChevronRight, X, Clock, CheckSquare, Menu } from 'lucide-react'
+import kyariLogo from '../../assets/kyariLogo.webp'
 
 type NotificationType = 'order' | 'user' | 'system' | 'report' | 'audit'
 
@@ -252,7 +253,12 @@ function AdminLayout() {
         <div>
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: 28, fontWeight: 600 }}>Kyari</div>
+              <img 
+                src={kyariLogo} 
+                alt="Kyari Logo" 
+                className="h-8"
+                style={{ filter: 'brightness(0) invert(1)' }}
+              />
               {!isMobile && <div className="text-sm text-white/70 mt-1">Admin Portal</div>}
             </div>
             {/* Mobile Close Button */}

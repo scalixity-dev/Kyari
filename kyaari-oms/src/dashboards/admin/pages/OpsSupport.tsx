@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { Plus, Send, Paperclip, FileText, AlertTriangle, Clock } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { CustomDropdown } from '../../../components'
+import { CustomDropdown, KPICard } from '../../../components'
 
 type IssueType = 'Mismatch' | 'Missing Item' | 'Damaged Item' | 'Escalation' | 'Others'
 type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent'
@@ -47,44 +47,6 @@ const STATUS_STYLES: Record<TicketStatus, { bg: string; color: string; border: s
   Closed: { bg: '#E5E7EB', color: '#111827', border: '#D1D5DB' },
 }
 
-interface KPICardProps {
-  title: string;
-  value: number | string;
-  icon: React.ReactNode;
-  color: string;
-  subtitle?: string;
-}
-
-function KPICard({ title, value, icon, color, subtitle }: KPICardProps) {
-  const iconBgClass =
-    color === 'blue'
-      ? 'bg-blue-600'
-      : color === 'orange'
-      ? 'bg-[#C3754C]'
-      : color === 'green'
-      ? 'bg-green-600'
-      : color === 'red'
-      ? 'bg-red-600'
-      : 'bg-gray-600'
-  
-  return (
-    <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
-      <div className={`absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full ${iconBgClass} text-white shadow-md`}>
-        {React.isValidElement(icon)
-          ? React.cloneElement(
-              icon as React.ReactElement<{ color?: string; size?: number }>,
-              { color: 'white', size: 32 }
-            )
-          : icon}
-      </div>
-      <div className="flex flex-col items-center text-center w-full">
-        <h3 className="font-heading text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2 font-semibold">{title}</h3>
-        <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{value}</div>
-        {subtitle && <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">{subtitle}</div>}
-      </div>
-    </div>
-  )
-}
 
 const INITIAL_TICKETS: Ticket[] = [
   { 
@@ -369,7 +331,6 @@ export default function OpsSupport() {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div className="flex-1 min-w-0">
             <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-[var(--color-heading)]">OPS Support</h2>
-            <div className="text-xs sm:text-sm text-gray-600 mt-1">Manage operational discrepancies, store tickets, and escalations.</div>
           </div>
           <button
             onClick={() => setShowNewTicket(true)}
@@ -381,34 +342,30 @@ export default function OpsSupport() {
         </div>
         
         {/* Analytics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 pt-12 sm:pt-12 pb-8 sm:pb-10 gap-6 sm:gap-8 xl:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 pt-6 sm:pt-8 pb-4 sm:pb-6 gap-6 sm:gap-8 xl:gap-6">
           <KPICard 
             title="Open Ops Tickets" 
             value={openOpsTickets}
             subtitle={`${openOpsTickets} pending`}
             icon={<FileText size={32} />}
-            color="orange"
           />
           <KPICard 
             title="Store Mismatch Reports" 
             value={storeMismatchReports}
             subtitle="Needs attention"
             icon={<AlertTriangle size={32} />}
-            color="orange"
           />
           <KPICard 
             title="Escalated Cases" 
             value={escalatedCases}
             subtitle="Urgent cases"
             icon={<AlertTriangle size={32} />}
-            color="orange"
           />
           <KPICard 
             title="Avg Resolution Time" 
             value={`${avgResolutionDays} days`}
             subtitle="Response time"
             icon={<Clock size={32} />}
-            color="orange"
           />
         </div>
       </div>

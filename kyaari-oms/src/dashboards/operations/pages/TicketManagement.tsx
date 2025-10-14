@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, Eye, X, CheckSquare, Clock, Calendar as CalendarIcon, FileText, Paperclip, Edit } from 'lucide-react'
-import { CustomDropdown } from '../../../components'
+import { CustomDropdown, KPICard } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
 
@@ -346,38 +346,21 @@ export default function TicketManagement() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 mt-8">
-        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
-          {/* Circular icon at top center, overlapping the card edge */}
-          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-[var(--color-accent)] rounded-full p-3 flex items-center justify-center text-white shadow-md">
-            <AlertTriangle color="white" size={32} />
-          </div>
-          
-          {/* Card content */}
-          <h3 className="text-lg font-semibold text-gray-800 mb-1">Open Tickets</h3>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{openTickets}</div>
-        </div>
-        
-        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
-          {/* Circular icon at top center, overlapping the card edge */}
-          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-[var(--color-accent)] rounded-full p-3 flex items-center justify-center text-white shadow-md">
-            <Clock color="white" size={32} />
-          </div>
-          
-          {/* Card content */}
-          <h3 className="text-lg font-semibold text-gray-800 mb-1">Under Review</h3>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{underReviewTickets}</div>
-        </div>
-        
-        <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative">
-          {/* Circular icon at top center, overlapping the card edge */}
-          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-[var(--color-accent)] rounded-full p-3 flex items-center justify-center text-white shadow-md">
-            <CheckSquare color="white" size={32} />
-          </div>
-          
-          {/* Card content */}
-          <h3 className="text-lg font-semibold text-gray-800 mb-1">Resolved Tickets</h3>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{resolvedTickets}</div>
-        </div>
+        <KPICard
+          title="Open Tickets"
+          value={openTickets}
+          icon={<AlertTriangle size={32} />}
+        />
+        <KPICard
+          title="Under Review"
+          value={underReviewTickets}
+          icon={<Clock size={32} />}
+        />
+        <KPICard
+          title="Resolved Tickets"
+          value={resolvedTickets}
+          icon={<CheckSquare size={32} />}
+        />
       </div>
 
       {/* Tickets Heading */}
