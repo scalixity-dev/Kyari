@@ -18,4 +18,8 @@ router.post('/reset-password', authController.resetPasswordWithCode.bind(authCon
 router.post('/logout', authenticate, authController.logout.bind(authController));
 router.get('/me', authenticate, authController.getCurrentUser.bind(authController));
 
+// Admin routes for token management
+router.post('/admin/cleanup-tokens', authenticate, authController.cleanupExpiredTokens.bind(authController));
+router.post('/admin/revoke-user-tokens/:userId', authenticate, authController.revokeUserTokens.bind(authController));
+
 export { router as authRoutes };

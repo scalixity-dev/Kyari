@@ -82,21 +82,23 @@ export class AuthController {
       const result = await authService.refreshTokens(refreshToken, ipAddress, userAgent);
 
       // Set new refresh token as httpOnly cookie (token rotation)
-      const newRefreshToken = await this.extractRefreshTokenFromResult(result);
-      if (newRefreshToken) {
-        res.cookie('refresh_token', newRefreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-          path: '/'
-        });
-      }
+      res.cookie('refresh_token', result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/'
+      });
 
       ResponseHelper.success(res, { accessToken: result.accessToken }, 'Token refreshed successfully');
     } catch (error) {
       // Clear invalid refresh token
-      res.clearCookie('refresh_token');
+      res.clearCookie('refresh_token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/'
+      });
       logger.error('Token refresh controller error', { error });
       ResponseHelper.unauthorized(res, error instanceof Error ? error.message : 'Token refresh failed');
     }
@@ -258,11 +260,50 @@ export class AuthController {
     }
   }
 
-  private async extractRefreshTokenFromResult(result: unknown): Promise<string | null> {
-    // This is a placeholder - in the actual implementation,
-    // the refresh token would be returned from the auth service
-    // For now, we'll handle this in the service layer
-    return null;
+  /**
+   * Admin endpoint to cleanup expired tokens
+   */
+  async cleanupExpiredTokens(req: Request, res: Response): Promise<void> {
+    try {
+      // Check if user is admin
+      const userRoles = req.user?.roles || [];
+      if (!userRoles.includes('ADMIN')) {
+        ResponseHelper.forbidden(res, 'Admin access required');
+        return;
+      }
+
+      const result = await authService.cleanupExpiredTokens();
+      ResponseHelper.success(res, result, `Cleaned up ${result.deletedCount} expired tokens`);
+    } catch (error) {
+      logger.error('Token cleanup error', { error });
+      ResponseHelper.internalError(res, 'Failed to cleanup expired tokens');
+    }
+  }
+
+  /**
+   * Admin endpoint to revoke all tokens for a user
+   */
+  async revokeUserTokens(req: Request, res: Response): Promise<void> {
+    try {
+      // Check if user is admin
+      const userRoles = req.user?.roles || [];
+      if (!userRoles.includes('ADMIN')) {
+        ResponseHelper.forbidden(res, 'Admin access required');
+        return;
+      }
+
+      const { userId } = req.params;
+      if (!userId) {
+        ResponseHelper.error(res, 'User ID is required', 400);
+        return;
+      }
+
+      const result = await authService.revokeAllUserTokens(userId);
+      ResponseHelper.success(res, result, `Revoked ${result.revokedCount} tokens for user`);
+    } catch (error) {
+      logger.error('User token revocation error', { error });
+      ResponseHelper.internalError(res, 'Failed to revoke user tokens');
+    }
   }
 }
 

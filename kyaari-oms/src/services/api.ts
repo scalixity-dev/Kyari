@@ -60,20 +60,11 @@ export interface ApiError {
 // Token management
 class TokenManager {
   private static readonly ACCESS_TOKEN_KEY = 'kyaari_access_token'
-  private static readonly REFRESH_TOKEN_KEY = 'kyaari_refresh_token'
   private static readonly USER_KEY = 'kyaari_user'
 
   static getAccessToken(): string | null {
     try {
       return localStorage.getItem(this.ACCESS_TOKEN_KEY)
-    } catch {
-      return null
-    }
-  }
-
-  static getRefreshToken(): string | null {
-    try {
-      return localStorage.getItem(this.REFRESH_TOKEN_KEY)
     } catch {
       return null
     }
@@ -88,12 +79,11 @@ class TokenManager {
     }
   }
 
-  static setTokens(accessToken: string, refreshToken: string): void {
+  static setAccessToken(accessToken: string): void {
     try {
       localStorage.setItem(this.ACCESS_TOKEN_KEY, accessToken)
-      localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken)
     } catch (error) {
-      console.error('Failed to store tokens:', error)
+      console.error('Failed to store access token:', error)
     }
   }
 
@@ -108,13 +98,16 @@ class TokenManager {
   static clearAll(): void {
     try {
       localStorage.removeItem(this.ACCESS_TOKEN_KEY)
-      localStorage.removeItem(this.REFRESH_TOKEN_KEY)
       localStorage.removeItem(this.USER_KEY)
     } catch (error) {
       console.error('Failed to clear tokens:', error)
     }
   }
 }
+
+// Token refresh state management
+let isRefreshing = false;
+let refreshPromise: Promise<{ accessToken: string }> | null = null;
 
 // Create axios instance
 const createApiInstance = (): AxiosInstance => {
@@ -154,24 +147,52 @@ const createApiInstance = (): AxiosInstance => {
         originalRequest._retry = true
 
         try {
-          const refreshToken = TokenManager.getRefreshToken()
-          if (refreshToken) {
-            const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
-              refreshToken
-            })
+          let accessToken: string;
 
-            const { accessToken, refreshToken: newRefreshToken } = response.data
-            TokenManager.setTokens(accessToken, newRefreshToken)
+          // Check if we're already refreshing tokens to prevent race conditions
+          if (isRefreshing && refreshPromise) {
+            // Wait for the ongoing refresh to complete
+            const result = await refreshPromise;
+            accessToken = result.accessToken;
+          } else {
+            // Start a new refresh process
+            isRefreshing = true;
+            refreshPromise = axios.post(`${API_BASE_URL}/api/auth/refresh`, {}, {
+              withCredentials: true, // Include httpOnly cookies
+            }).then(response => {
+              // Backend sends: { success: true, data: { accessToken: "..." } }
+              const { data } = response.data;
+              const { accessToken } = data;
+              
+              // Store new access token
+              TokenManager.setAccessToken(accessToken);
+              
+              return { accessToken };
+            }).catch(error => {
+              console.error('Token refresh failed:', error.response?.data || error.message);
+              throw error;
+            }).finally(() => {
+              // Reset refresh state
+              isRefreshing = false;
+              refreshPromise = null;
+            });
 
-            // Retry original request with new token
-            originalRequest.headers.Authorization = `Bearer ${accessToken}`
-            return instance(originalRequest)
+            const result = await refreshPromise;
+            accessToken = result.accessToken;
           }
+
+          // Retry original request with new token
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          return instance(originalRequest);
         } catch (refreshError) {
-          // Refresh failed, redirect to login
-          TokenManager.clearAll()
-          window.location.href = '/'
-          return Promise.reject(refreshError)
+          // Refresh failed, clear auth data
+          TokenManager.clearAll();
+          // Reset refresh state
+          isRefreshing = false;
+          refreshPromise = null;
+          // Don't redirect immediately, let the app handle it
+          console.error('Token refresh failed:', refreshError);
+          return Promise.reject(error);
         }
       }
 
@@ -182,7 +203,7 @@ const createApiInstance = (): AxiosInstance => {
         errors: error.response?.data?.errors
       }
 
-      // Show error toast for user-facing errors
+      // Don't show toast for 401 errors as they should be handled by auth system
       if (error.response?.status !== 401) {
         toast.error(apiError.message)
       }
@@ -206,7 +227,7 @@ export class ApiService {
     const { user, accessToken } = data
 
     // Store access token only - refresh token is handled via httpOnly cookies
-    TokenManager.setTokens(accessToken, '')
+    TokenManager.setAccessToken(accessToken)
     
     // Map backend user format to frontend User format
     const mappedUser: User = {
@@ -237,44 +258,66 @@ export class ApiService {
     const response = await api.get<{
       success: boolean
       data: {
-        id: string
-        email?: string
-        name: string
-        status: string
-        roles: string[]
-        lastLoginAt?: string
-        createdAt: string
+        user: {
+          id: string
+          email?: string
+          name: string
+          status: string
+          roles: string[]
+          lastLoginAt?: string
+          createdAt: string
+        }
       }
     }>('/api/auth/me')
     
     const { data } = response.data
     
-    // Map backend user format to frontend User format
+    // Extract user data from the nested structure
+    const userData = data.user;
+    const name = userData.name || userData.email || 'Unknown User';
+    const nameParts = name.split(' ');
+    
     const mappedUser: User = {
-      id: data.id,
-      email: data.email || '',
-      firstName: data.name.split(' ')[0] || data.name,
-      lastName: data.name.split(' ').slice(1).join(' ') || '',
-      role: data.roles[0] as User['role'], // Take first role
-      status: data.status
+      id: userData.id,
+      email: userData.email || '',
+      firstName: nameParts[0] || name,
+      lastName: nameParts.slice(1).join(' ') || '',
+      role: userData.roles[0] as User['role'], // Take first role
+      status: userData.status
     }
     
     TokenManager.setUser(mappedUser)
     return mappedUser
   }
 
-  static async refreshToken(): Promise<{ accessToken: string; refreshToken: string }> {
-    // Refresh token is sent automatically via httpOnly cookie
-    const response = await api.post<{ 
+  static async refreshToken(): Promise<{ accessToken: string }> {
+    // Use the same deduplication logic as the interceptor
+    if (isRefreshing && refreshPromise) {
+      return refreshPromise;
+    }
+
+    isRefreshing = true;
+    // Use raw axios to avoid triggering interceptors and causing recursive refreshes
+    refreshPromise = axios.post<{ 
       success: boolean
       data: { accessToken: string }
-    }>('/api/auth/refresh')
+    }>(`${API_BASE_URL}/api/auth/refresh`, {}, {
+      withCredentials: true // Ensure cookies are sent
+    }).then(response => {
+      const { data } = response.data;
+      // Store new access token only - refresh token stays in httpOnly cookie
+      TokenManager.setAccessToken(data.accessToken);
+      return { accessToken: data.accessToken };
+    }).catch(error => {
+      console.error('Token refresh failed:', error.response?.data || error.message);
+      throw error;
+    }).finally(() => {
+      // Reset refresh state
+      isRefreshing = false;
+      refreshPromise = null;
+    });
 
-    const { data } = response.data
-    // Store new access token
-    const currentRefreshToken = TokenManager.getRefreshToken() || ''
-    TokenManager.setTokens(data.accessToken, currentRefreshToken)
-    return { accessToken: data.accessToken, refreshToken: currentRefreshToken }
+    return refreshPromise;
   }
 
   static async logout(): Promise<void> {
