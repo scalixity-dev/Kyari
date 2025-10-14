@@ -48,6 +48,7 @@ export interface DispatchResponse {
   estimatedDeliveryDate?: string
   status: 'PENDING' | 'PROCESSING' | 'DISPATCHED' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED'
   remarks?: string
+  poNumber?: string | null
   items: DispatchItemResponse[]
   attachments?: AttachmentResponse[]
   createdAt: string

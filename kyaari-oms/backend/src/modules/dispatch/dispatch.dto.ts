@@ -43,6 +43,7 @@ export interface DispatchResponse {
   estimatedDeliveryDate?: string;
   status: string;
   remarks?: string;
+  poNumber?: string | null;
   items: DispatchItemResponse[];
   attachments?: AttachmentResponse[];
   createdAt: string;

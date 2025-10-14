@@ -79,30 +79,35 @@ class DispatchService {
             }),
           },
         },
-        include: {
-          items: {
-            include: {
-              assignedOrderItem: {
-                include: {
-                  orderItem: {
-                    include: {
-                      order: true,
-                    },
+      include: {
+        items: {
+          include: {
+            assignedOrderItem: {
+              include: {
+                orderItem: {
+                  include: {
+                    order: true,
+                  },
+                },
+                purchaseOrderItem: {
+                  include: {
+                    purchaseOrder: true,
                   },
                 },
               },
             },
           },
-          vendor: {
-            include: {
-              user: {
-                select: {
-                  email: true,
-                },
+        },
+        vendor: {
+          include: {
+            user: {
+              select: {
+                email: true,
               },
             },
           },
         },
+      },
       });
 
       // Update assignment statuses to DISPATCHED
@@ -158,6 +163,11 @@ class DispatchService {
                 orderItem: {
                   include: {
                     order: true,
+                  },
+                },
+                purchaseOrderItem: {
+                  include: {
+                    purchaseOrder: true,
                   },
                 },
               },
@@ -221,6 +231,11 @@ class DispatchService {
                   orderItem: {
                     include: {
                       order: true,
+                    },
+                  },
+                  purchaseOrderItem: {
+                    include: {
+                      purchaseOrder: true,
                     },
                   },
                 },
@@ -368,6 +383,9 @@ class DispatchService {
    * Format dispatch response
    */
   private formatDispatchResponse(dispatch: any): DispatchResponse {
+    // Extract PO number from the first item (all items should have the same PO)
+    const poNumber = dispatch.items?.[0]?.assignedOrderItem?.purchaseOrderItem?.purchaseOrder?.poNumber || null;
+
     return {
       id: dispatch.id,
       vendorId: dispatch.vendorId,
@@ -378,6 +396,7 @@ class DispatchService {
       estimatedDeliveryDate: dispatch.estimatedDeliveryDate?.toISOString(),
       status: dispatch.status,
       remarks: dispatch.remarks,
+      poNumber: poNumber,
       items: dispatch.items.map((item: any) => ({
         id: item.id,
         assignmentId: item.assignmentId,
