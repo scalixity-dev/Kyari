@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Plus, Send, Paperclip, FileText, AlertTriangle, CheckSquare, Clock } from 'lucide-react'
 import { CustomDropdown, KPICard } from '../../../components'
 

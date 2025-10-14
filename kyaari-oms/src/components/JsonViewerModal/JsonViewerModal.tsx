@@ -1,6 +1,5 @@
 import React from 'react'
-import { X, FileDown, Clipboard, Check } from 'lucide-react'
-import { ClipboardCopy } from 'lucide-react';
+import { X, FileDown, FileText, CheckSquare } from 'lucide-react'
 
 interface JsonViewerModalProps {
   isOpen: boolean
@@ -64,12 +63,12 @@ export const JsonViewerModal: React.FC<JsonViewerModalProps> = ({
             >
               {copied ? (
                 <>
-                  <Check size={16} className="text-green-600" />
+                  <CheckSquare size={16} className="text-green-600" />
                   <span className="text-green-600">Copied!</span>
                 </>
               ) : (
                 <>
-                  <ClipboardCopy size={16} />
+                  <FileText size={16} />
                     <span>Copy</span>
                 </>
               )}

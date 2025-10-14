@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Plus, Upload, Search, FileText, ChevronDown, ChevronRight, Edit, Trash2 } from 'lucide-react'
-import { CustomDropdown, ConfirmationModal } from '../../../components'
+import { CustomDropdown, ConfirmationModal, CSVPDFExportButton } from '../../../components'
 import { orderApi, type OrderListItem, type CreateOrderRequest, type Order } from '../../../services/orderApi'
 import { vendorApi, type VendorListItem } from '../../../services/vendorApi'
 import toast from 'react-hot-toast'
@@ -477,6 +477,61 @@ export default function Orders() {
     }
   }
 
+  // Export functions
+  const handleExportCSV = () => {
+    const headers = ['Order Number', 'Items', 'Vendor', 'Status', 'Created Date']
+    const csvContent = [
+      headers.join(','),
+      ...orders.map(order => {
+        const status = STATUS_STYLES[order.status as OrderStatus]?.label || order.status
+        return [
+          order.orderNumber,
+          order.itemCount,
+          `"${order.primaryVendor.companyName}"`,
+          status,
+          new Date(order.createdAt).toLocaleDateString('en-GB')
+        ].join(',')
+      })
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `orders-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const handleExportPDF = () => {
+    const content = [
+      'ORDERS REPORT',
+      `Generated: ${new Date().toLocaleString()}`,
+      `Total Orders: ${total}`,
+      '',
+      '=== ORDER LIST ===',
+      ...orders.map(order => {
+        const status = STATUS_STYLES[order.status as OrderStatus]?.label || order.status
+        return [
+          `Order: ${order.orderNumber}`,
+          `Vendor: ${order.primaryVendor.companyName}`,
+          `Items: ${order.itemCount}`,
+          `Status: ${status}`,
+          `Created: ${new Date(order.createdAt).toLocaleDateString('en-GB')}`,
+          '---'
+        ].join('\n')
+      })
+    ].join('\n')
+    
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `orders-${new Date().toISOString().split('T')[0]}.txt`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="p-4 sm:p-6 font-sans text-primary min-h-[calc(100vh-4rem)] w-full" style={{ background: 'var(--color-sharktank-bg)' }}>
       <div className="flex flex-col gap-4 mb-6">
@@ -504,6 +559,10 @@ export default function Orders() {
               <Search size={16} />
               <span>Filters</span>
             </button>
+            <CSVPDFExportButton
+              onExportCSV={handleExportCSV}
+              onExportPDF={handleExportPDF}
+            />
         </div>
         </div>
 

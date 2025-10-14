@@ -1,6 +1,7 @@
 // React import removed - using automatic JSX runtime
 import React from 'react'
 import { Wallet, FileText, Users, Search, ChevronDown } from 'lucide-react'
+import { CSVPDFExportButton, Pagination } from '../../../components'
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
@@ -207,12 +208,58 @@ export default function MoneyFlow() {
   const endIndex = Math.min(startIndex + pageSize, filteredTransactions.length)
   const pageTransactions = filteredTransactions.slice(startIndex, endIndex)
 
+  // Export functions
+  const handleExportCSV = () => {
+    const headers = ['Invoice ID', 'Vendor', 'Amount', 'Status', 'Date']
+    const csvContent = [
+      headers.join(','),
+      ...filteredTransactions.map(t => [
+        t.id,
+        `"${t.vendor}"`,
+        t.amount,
+        t.status,
+        t.date
+      ].join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `money-flow-transactions-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const handleExportPDF = () => {
+    const content = [
+      'MONEY FLOW TRANSACTIONS REPORT',
+      `Generated: ${new Date().toLocaleString()}`,
+      `Total Transactions: ${filteredTransactions.length}`,
+      `Filter: ${statusFilter}`,
+      `Sort: ${sortOrder}`,
+      '',
+      '=== TRANSACTIONS ===',
+      ...filteredTransactions.map(t => 
+        `${t.id} | ${t.vendor} | ${t.amount} | ${t.status} | ${t.date}`
+      )
+    ].join('\n')
+    
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `money-flow-transactions-${new Date().toISOString().split('T')[0]}.txt`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
      
 
       <div className="mb-4 sm:mb-6 lg:mb-8">
-        <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6">Money Flow</h2>
+        <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Money Flow</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 py-8 sm:py-10 gap-6 sm:gap-8 xl:gap-6">
           {kpis.map((k, i) => (
             <KPICard 
@@ -239,7 +286,7 @@ export default function MoneyFlow() {
           <div className="py-4 sm:py-6">
             {/* Header controls row */}
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
-              <div className="text-2xl sm:text-3xl md:text-[28px] font-extrabold text-[color:var(--color-secondary)]">Transactions</div>
+              <div className="text-2xl sm:text-3xl md:text-[28px] font-extrabold text-[var(--color-heading)] font-[var(--font-heading)]">Transactions</div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 lg:gap-6 w-full lg:w-auto">
                 <div className="relative w-full sm:flex-1 lg:w-[320px]">
                   <Search size={18} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 sm:w-5 sm:h-5 text-[#424242]" />
@@ -256,7 +303,7 @@ export default function MoneyFlow() {
                     <button
                       type="button"
                       onClick={() => { setStatusOpen((s) => !s); setSortOpen(false) }}
-                      className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-['Quicksand'] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap"
+                      className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-[var(--font-heading)] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap"
                       aria-haspopup="listbox"
                       aria-expanded={statusOpen}
                       aria-controls="status-menu"
@@ -276,7 +323,7 @@ export default function MoneyFlow() {
                     <button
                       type="button"
                       onClick={() => { setSortOpen((s) => !s); setStatusOpen(false) }}
-                      className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-['Quicksand'] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap"
+                      className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-[var(--font-heading)] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap"
                       aria-haspopup="listbox"
                       aria-expanded={sortOpen}
                       aria-controls="sort-menu"
@@ -292,6 +339,10 @@ export default function MoneyFlow() {
                       </div>
                     )}
                   </div>
+                  <CSVPDFExportButton
+                    onExportCSV={handleExportCSV}
+                    onExportPDF={handleExportPDF}
+                  />
                 </div>
               </div>
             </div>
@@ -300,7 +351,7 @@ export default function MoneyFlow() {
             <div className="hidden md:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
               {/* Table head bar */}
               <div className="bg-[#C3754C] text-white">
-                <div className="grid grid-cols-[1.2fr_1.8fr_1.1fr_1.1fr_1.1fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-['Quicksand'] font-bold text-sm md:text-base lg:text-[18px] xl:text-[20px] leading-[100%] tracking-[0] text-center">
+                <div className="grid grid-cols-[1.2fr_1.8fr_1.1fr_1.1fr_1.1fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-[var(--font-heading)] font-bold text-sm md:text-base lg:text-[18px] xl:text-[20px] leading-[100%] tracking-[0] text-center">
                   <div>Invoice ID</div>
                   <div>Vendor</div>
                   <div>Amount</div>
@@ -334,40 +385,15 @@ export default function MoneyFlow() {
                 </div>
               </div>
               {/* Pagination controls (desktop) */}
-              <div className="flex items-center justify-between px-3 md:px-4 lg:px-6 py-3 bg-white border-t border-gray-100">
-                <div className="text-xs text-gray-500">Showing {filteredTransactions.length === 0 ? 0 : startIndex + 1}-{endIndex} of {filteredTransactions.length}</div>
-                <div className="flex items-center gap-1 md:gap-2">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-700 disabled:opacity-40"
-                    aria-label="Previous page"
-                  >
-                    <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPage(p)}
-                      className={`min-w-7 h-7 md:min-w-8 md:h-8 px-1.5 md:px-2 rounded-md border text-xs md:text-sm ${page === p ? 'bg-[var(--color-secondary)] text-white border-[var(--color-secondary)]' : 'border-gray-200 text-gray-700 bg-white'}`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-700 disabled:opacity-40"
-                    aria-label="Next page"
-                  >
-                    <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={filteredTransactions.length}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                onPageChange={setPage}
+                variant="desktop"
+              />
             </div>
 
             {/* Mobile cards keep parity */}
@@ -394,13 +420,15 @@ export default function MoneyFlow() {
                 </>
               )}
               {/* Pagination controls (mobile) */}
-              <div className="flex items-center justify-between px-1 py-2">
-                <div className="text-xs text-gray-500">{filteredTransactions.length === 0 ? 'No results' : `Showing ${startIndex + 1}-${endIndex} of ${filteredTransactions.length}`}</div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="h-8 px-3 rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 text-sm font-medium">Prev</button>
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-8 px-3 rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 text-sm font-medium">Next</button>
-                </div>
-              </div>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={filteredTransactions.length}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                onPageChange={setPage}
+                variant="mobile"
+              />
             </div>
           </div>
 
