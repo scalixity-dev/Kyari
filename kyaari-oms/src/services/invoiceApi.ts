@@ -373,5 +373,177 @@ export class InvoiceApiService {
       throw error
     }
   }
+
+  // =============================================
+  // VENDOR-SPECIFIC INVOICE METHODS (NEW)
+  // =============================================
+
+  /**
+   * Get vendor invoices with full purchase order and dispatch details
+   * This is specifically for the vendor dashboard invoice page
+   */
+  static async getVendorInvoicesDetailed(params?: {
+    page?: number
+    limit?: number
+    status?: string
+    purchaseOrderId?: string
+  }): Promise<VendorInvoiceListResponse> {
+    try {
+      const queryParams = new URLSearchParams()
+      
+      if (params?.page) queryParams.append('page', params.page.toString())
+      if (params?.limit) queryParams.append('limit', params.limit.toString())
+      if (params?.status) queryParams.append('status', params.status)
+      if (params?.purchaseOrderId) queryParams.append('purchaseOrderId', params.purchaseOrderId)
+
+      const response = await api.get<VendorInvoiceListResponse>(
+        `/api/invoices/uploads${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      )
+      
+      return response.data
+    } catch (error) {
+      console.error('Failed to fetch vendor invoices:', error)
+      toast.error('Failed to load invoices')
+      throw error
+    }
+  }
+
+  /**
+   * Upload vendor invoice file to existing invoice/purchase order
+   * This is for vendors to upload their invoice documents
+   */
+  static async uploadVendorInvoice(request: VendorInvoiceUploadRequest): Promise<VendorInvoiceUploadResponse> {
+    try {
+      const formData = new FormData()
+      formData.append('invoice', request.file)
+      formData.append('invoiceType', 'VENDOR_UPLOAD')
+      if (request.notes) {
+        formData.append('notes', request.notes)
+      }
+
+      const response = await api.post<VendorInvoiceUploadResponse>(
+        `/api/invoices/${request.invoiceId}/upload`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      )
+
+      toast.success('Invoice uploaded successfully')
+      return response.data
+    } catch (error) {
+      console.error('Failed to upload vendor invoice:', error)
+      toast.error('Failed to upload invoice')
+      throw error
+    }
+  }
+}
+
+// =============================================
+// VENDOR INVOICE TYPES (NEW)
+// =============================================
+
+export interface VendorInvoiceDetailed {
+  id: string
+  invoiceNumber: string
+  invoiceDate: string
+  invoiceAmount: number
+  status: 'PENDING_VERIFICATION' | 'APPROVED' | 'REJECTED' | 'PAID'
+  purchaseOrder: {
+    id: string
+    poNumber: string
+    totalAmount: number
+    status: 'DRAFT' | 'ISSUED' | 'ACCEPTED' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED'
+    issuedAt: string | null
+    createdAt: string
+    vendor: {
+      id: string
+      companyName: string
+      contactPersonName: string
+    }
+    items: VendorPurchaseOrderItem[]
+  }
+  attachment: {
+    id: string
+    fileName: string
+    s3Url: string
+  } | null
+  accountsAttachment: {
+    id: string
+    fileName: string
+    s3Url: string
+  } | null
+  vendorAttachment: {
+    id: string
+    fileName: string
+    s3Url: string
+  } | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface VendorPurchaseOrderItem {
+  id: string
+  quantity: number
+  pricePerUnit: number
+  totalPrice: number
+  assignedOrderItem: {
+    id: string
+    assignedQuantity: number
+    confirmedQuantity: number | null
+    status: string
+    orderItem: {
+      id: string
+      productName: string
+      sku: string | null
+      orderId: string
+      order: {
+        id: string
+        clientOrderId: string
+        orderNumber: string
+      }
+    }
+  }
+}
+
+export interface VendorInvoiceListResponse {
+  success: boolean
+  message: string
+  data: {
+    invoices: VendorInvoiceDetailed[]
+    pagination: {
+      currentPage: number
+      totalPages: number
+      totalItems: number
+      itemsPerPage: number
+    }
+  }
+}
+
+export interface VendorInvoiceUploadRequest {
+  file: File
+  invoiceId: string
+  notes?: string
+}
+
+export interface VendorInvoiceUploadResponse {
+  success: boolean
+  message: string
+  data: {
+    invoice: {
+      id: string
+      invoiceNumber: string
+      purchaseOrderId: string
+      status: string
+    }
+    attachment: {
+      id: string
+      fileName: string
+      fileSize: number
+      uploadedAt: string
+    }
+  }
 }
 

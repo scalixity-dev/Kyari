@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react'
 import { FileText, CheckSquare, X, Clock, Calendar as CalendarIcon } from 'lucide-react'
 import { CustomDropdown } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
+import { InvoiceApiService, type VendorInvoiceDetailed } from '../../../services/invoiceApi'
+import toast from 'react-hot-toast'
 
 interface PurchaseOrder {
   id: string
@@ -15,8 +17,11 @@ interface PurchaseOrder {
   amount: number
   status: 'Received' | 'Dispatched' | 'Validating' | 'Validated' | 'Approved' | 'Rejected' | 'Payment Received'
   invoiceFile?: string
+  invoiceUrl?: string
   validationIssues?: string[]
   rejectionReason?: string
+  invoiceId?: string
+  dispatchStatus?: string
 }
 
 interface InvoiceUploadModalProps {
@@ -188,83 +193,8 @@ const getValidationDisplay = (po: PurchaseOrder) => {
 }
 
 export default function Invoices() {
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([
-    {
-      id: '1',
-      poNumber: 'PO-2025-001',
-      date: '29/09/2025',
-      linkedOrders: ['ORD-003'],
-      items: 'Green Beans',
-      quantity: 25,
-      rate: 80,
-      amount: 2000,
-      status: 'Received'
-    },
-    {
-      id: '2',
-      poNumber: 'PO-2025-002',
-      date: '28/09/2025',
-      linkedOrders: ['ORD-001', 'ORD-002'],
-      items: 'Organic Tomatoes',
-      quantity: 50,
-      rate: 120,
-      amount: 6000,
-  // Vendor uploaded invoice -> dispatch status becomes Validating
-  status: 'Validating',
-      invoiceFile: 'invoice_PO-2025-002.pdf'
-    },
-    {
-      id: '3',
-      poNumber: 'PO-2025-003',
-      date: '28/09/2025',
-      linkedOrders: ['ORD-004'],
-      items: 'Organic Carrots',
-      quantity: 30,
-      rate: 60,
-      amount: 1800,
-      status: 'Validated',
-      invoiceFile: 'invoice_PO-2025-003.json'
-    },
-    {
-      id: '4',
-      poNumber: 'PO-2025-004',
-      date: '27/09/2025',
-      linkedOrders: ['ORD-005'],
-      items: 'Bell Peppers',
-      quantity: 15,
-      rate: 150,
-      amount: 2250,
-      status: 'Approved',
-      invoiceFile: 'invoice_PO-2025-004.pdf'
-    },
-    {
-      id: '5',
-      poNumber: 'PO-2025-005',
-      date: '26/09/2025',
-      linkedOrders: ['ORD-006'],
-      items: 'Fresh Spinach',
-      quantity: 20,
-      rate: 90,
-      amount: 1800,
-      status: 'Rejected',
-      invoiceFile: 'invoice_PO-2025-005.pdf',
-      validationIssues: ['Rate mismatch: Expected ₹90, Got ₹100', 'Amount calculation error'],
-      rejectionReason: 'Invoice amount does not match PO terms'
-    },
-    {
-      id: '6',
-      poNumber: 'PO-2025-006',
-      date: '25/09/2025',
-      linkedOrders: ['ORD-007'],
-      items: 'Cucumber',
-      quantity: 40,
-      rate: 45,
-      amount: 1800,
-      // Payment released to vendor -> Dispatch status = Payment Received
-      status: 'Payment Received',
-      invoiceFile: 'invoice_PO-2025-006.pdf'
-    }
-  ])
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([])
+  const [loading, setLoading] = useState(true)
 
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null)
@@ -282,6 +212,92 @@ export default function Invoices() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize] = useState(10) // fixed to 10 rows per page
 
+  // Invoice viewer state
+  const [viewingInvoice, setViewingInvoice] = useState<{ url: string; type: string } | null>(null)
+  const [imageLoadError, setImageLoadError] = useState(false)
+
+  // Fetch invoices from API
+  useEffect(() => {
+    fetchInvoices()
+  }, [])
+
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true)
+      const response = await InvoiceApiService.getVendorInvoicesDetailed({
+        limit: 100 // Get all invoices
+      })
+
+      // Transform backend data to UI format
+      const transformed = transformInvoicesToPOs(response.data.invoices)
+      setPurchaseOrders(transformed)
+    } catch (error) {
+      console.error('Failed to fetch invoices:', error)
+      toast.error('Failed to load invoices')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Transform backend invoice data to UI PurchaseOrder format
+  const transformInvoicesToPOs = (invoices: VendorInvoiceDetailed[]): PurchaseOrder[] => {
+    return invoices.map(invoice => {
+      const po = invoice.purchaseOrder
+      
+      // Calculate totals from items
+      const totalQuantity = po.items.reduce((sum, item) => sum + item.quantity, 0)
+      const avgRate = po.items.length > 0 
+        ? po.items.reduce((sum, item) => sum + Number(item.pricePerUnit), 0) / po.items.length 
+        : 0
+
+      // Get item names
+      const itemNames = po.items.map(item => item.assignedOrderItem.orderItem.productName).join(', ')
+      
+      // Get linked orders (unique client order IDs from items)
+      const linkedOrders = Array.from(new Set(
+        po.items
+          .map(item => item.assignedOrderItem.orderItem.order?.clientOrderId || item.assignedOrderItem.orderItem.order?.orderNumber)
+          .filter(Boolean)
+      )) as string[]
+
+      // Map invoice status to UI status
+      let uiStatus: PurchaseOrder['status'] = 'Received'
+      if (invoice.status === 'PENDING_VERIFICATION') {
+        uiStatus = invoice.vendorAttachment ? 'Validating' : 'Received'
+      } else if (invoice.status === 'APPROVED') {
+        uiStatus = 'Approved'
+      } else if (invoice.status === 'REJECTED') {
+        uiStatus = 'Rejected'
+      } else if (invoice.status === 'PAID') {
+        uiStatus = 'Payment Received'
+      }
+
+      // Dispatch status mirrors invoice status
+      const dispatchStatus = uiStatus
+
+      // Format date
+      const dateObj = parseISO(po.createdAt)
+      const formattedDate = format(dateObj, 'dd/MM/yyyy')
+
+      return {
+        id: invoice.id,
+        poNumber: po.poNumber,
+        date: formattedDate,
+        linkedOrders: linkedOrders,
+        items: itemNames || 'N/A',
+        quantity: totalQuantity,
+        rate: avgRate,
+        amount: Number(po.totalAmount),
+        status: uiStatus,
+        invoiceFile: invoice.vendorAttachment?.fileName || invoice.accountsAttachment?.fileName,
+        invoiceUrl: invoice.vendorAttachment?.s3Url || invoice.accountsAttachment?.s3Url,
+        invoiceId: invoice.id,
+        dispatchStatus: dispatchStatus,
+        rejectionReason: invoice.status === 'REJECTED' ? 'Invoice rejected by accounts team' : undefined
+      }
+    })
+  }
+
   const handleUploadInvoice = (poId: string) => {
     const po = purchaseOrders.find(p => p.id === poId)
     if (po) {
@@ -290,34 +306,46 @@ export default function Invoices() {
     }
   }
 
-  const handleFileUpload = (file: File) => {
-    if (selectedPO) {
-      setPurchaseOrders(orders => 
-        orders.map(po => 
-          po.id === selectedPO.id 
-            ? { 
-                ...po, 
-                status: 'Validating' as const,
-                invoiceFile: file.name
-              }
-            : po
-        )
-      )
-      
-      // Simulate validation process
-      setTimeout(() => {
-        setPurchaseOrders(orders => 
-          orders.map(po => 
-            po.id === selectedPO.id 
-              ? { ...po, status: 'Validated' as const }
-              : po
-          )
-        )
-      }, 2000)
-      
-      setUploadModalOpen(false)
-      setSelectedPO(null)
+  const handleFileUpload = async (file: File) => {
+    if (selectedPO && selectedPO.invoiceId) {
+      try {
+        // Upload file to backend
+        await InvoiceApiService.uploadVendorInvoice({
+          file,
+          invoiceId: selectedPO.invoiceId
+        })
+
+        // Refresh invoices
+        await fetchInvoices()
+        
+        setUploadModalOpen(false)
+        setSelectedPO(null)
+      } catch (error) {
+        console.error('Failed to upload invoice:', error)
+      }
     }
+  }
+
+  const handleViewInvoice = (invoiceUrl: string, type: string) => {
+    setViewingInvoice({ url: invoiceUrl, type })
+    setImageLoadError(false)
+  }
+
+  const handleCloseInvoice = () => {
+    setViewingInvoice(null)
+    setImageLoadError(false)
+  }
+
+  // Detect file type from URL
+  const getFileType = (url: string): 'pdf' | 'image' | 'unknown' => {
+    const lowerUrl = url.toLowerCase()
+    if (lowerUrl.includes('.pdf') || lowerUrl.includes('application/pdf')) {
+      return 'pdf'
+    }
+    if (lowerUrl.match(/\.(jpg|jpeg|png|gif|webp|bmp)/)) {
+      return 'image'
+    }
+    return 'unknown'
   }
 
   const receivedPOs = purchaseOrders.filter(po => po.status === 'Received')
@@ -383,8 +411,27 @@ export default function Invoices() {
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden bg-[var(--color-sharktank-bg)]">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 sm:mb-0 font-[var(--font-heading)]">Invoice Management</h1>
+        <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 sm:mb-0">Invoice Management</h1>
       </div>
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-accent)]"></div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && purchaseOrders.length === 0 && (
+        <div className="bg-white rounded-xl shadow-md border border-white/20 p-12 text-center">
+          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">No Invoices Found</h3>
+          <p className="text-gray-500">You don't have any purchase orders with invoices yet.</p>
+        </div>
+      )}
+
+      {!loading && purchaseOrders.length > 0 && (
+        <>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6">
@@ -489,16 +536,16 @@ export default function Invoices() {
             />
           </div>
 
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Linked Order</label>
-            <input
-              type="text"
-              value={linkedOrderSearch}
-              onChange={(e) => setLinkedOrderSearch(e.target.value)}
-              placeholder="Search linked order"
-              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
-            />
-          </div>
+           <div>
+             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Client Order</label>
+             <input
+               type="text"
+               value={linkedOrderSearch}
+               onChange={(e) => setLinkedOrderSearch(e.target.value)}
+               placeholder="Search client order"
+               className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
+             />
+           </div>
 
           <div>
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Date Range</label>
@@ -635,35 +682,39 @@ export default function Invoices() {
                     {po.quantity}
                   </td>
                   <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    ₹{po.rate}
+                    ₹{po.rate.toFixed(2)}
                   </td>
                   
                   <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(po.status)}
+                    {getStatusBadge(po.dispatchStatus as PurchaseOrder['status'] || po.status)}
                   </td>
                   <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex flex-col items-start gap-2">
+                      {/* Only show upload button for Rejected invoices */}
                       {po.status === 'Rejected' && (
-                        <div>
-                          <button
-                            onClick={() => handleUploadInvoice(po.id)}
-                            className="px-3 py-1 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs font-medium flex items-center gap-1"
-                          >
-                            <FileText size={12} />
-                            Upload Invoice
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => handleUploadInvoice(po.id)}
+                          className="px-3 py-1 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs font-medium flex items-center gap-1"
+                        >
+                          <FileText size={12} />
+                          Re-upload Invoice
+                        </button>
                       )}
 
-                      {po.invoiceFile && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <FileText className="w-4 h-4 text-gray-500" />
-                          <span className="truncate max-w-[12rem]">{po.invoiceFile}</span>
-                        </div>
+                      {/* Show view button if invoice exists */}
+                      {po.invoiceFile && po.invoiceUrl && (
+                        <button
+                          onClick={() => handleViewInvoice(po.invoiceUrl!, 'Vendor')}
+                          className="px-3 py-1 border border-[var(--color-accent)] text-[var(--color-accent)] rounded-md hover:bg-[var(--color-accent)] hover:text-white transition-colors text-xs font-medium flex items-center gap-1"
+                        >
+                          <FileText size={12} />
+                          View Invoice
+                        </button>
                       )}
 
+                      {/* Show rejection reason */}
                       {po.status === 'Rejected' && po.rejectionReason && (
-                        <div className="text-xs text-red-600">
+                        <div className="text-xs text-red-600 max-w-[12rem]">
                           {po.rejectionReason}
                         </div>
                       )}
@@ -695,30 +746,40 @@ export default function Invoices() {
                   <span className="font-medium text-gray-800">Item:</span> {po.items}
                 </p>
                 <p className="text-xs sm:text-sm text-gray-600">
-                  <span className="font-medium text-gray-800">Quantity:</span> {po.quantity} @ ₹{po.rate}
+                  <span className="font-medium text-gray-800">Quantity:</span> {po.quantity} @ ₹{po.rate.toFixed(2)}
+                </p>
+                <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2">
+                  <span className="font-medium text-gray-800">Dispatch Status:</span>
+                  {getStatusBadge(po.dispatchStatus as PurchaseOrder['status'] || po.status)}
                 </p>
                 
                 {getValidationDisplay(po)}
               </div>
 
               <div className="flex flex-col gap-2">
+                {/* Only show upload button for Rejected invoices */}
                 {po.status === 'Rejected' && (
                   <button
                     onClick={() => handleUploadInvoice(po.id)}
                     className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2"
                   >
                     <FileText size={14} />
-                    <span>Upload Invoice</span>
+                    <span>Re-upload Invoice</span>
                   </button>
                 )}
 
-                {po.invoiceFile && (
-                  <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-100 rounded text-xs text-gray-600">
-                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
-                    <span className="truncate text-blue-800">{po.invoiceFile}</span>
-                  </div>
+                {/* Show view button if invoice exists */}
+                {po.invoiceFile && po.invoiceUrl && (
+                  <button
+                    onClick={() => handleViewInvoice(po.invoiceUrl!, 'Vendor')}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-[var(--color-accent)] text-[var(--color-accent)] rounded-md hover:bg-[var(--color-accent)] hover:text-white transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2"
+                  >
+                    <FileText size={14} />
+                    <span>View Invoice</span>
+                  </button>
                 )}
 
+                {/* Show rejection reason */}
                 {po.status === 'Rejected' && po.rejectionReason && (
                   <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 leading-relaxed">
                     <p className="font-medium mb-0.5">Rejection Reason:</p>
@@ -764,6 +825,96 @@ export default function Invoices() {
         }}
         onUpload={handleFileUpload}
       />
+
+      {/* Invoice Viewer Modal */}
+      {viewingInvoice && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4 xl:p-6 2xl:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="invoice-modal-title"
+        >
+          <div className="bg-white rounded-2xl w-full max-w-[95vw] sm:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl max-h-[95vh] flex flex-col shadow-2xl">
+            {/* Header - Fixed */}
+            <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 xl:px-7 xl:py-5 2xl:px-8 2xl:py-6 border-b border-gray-200 flex-shrink-0">
+              <h3 id="invoice-modal-title" className="text-lg sm:text-xl xl:text-2xl 2xl:text-3xl font-semibold text-[var(--color-heading)]">
+                {viewingInvoice.type} Invoice
+              </h3>
+              <button
+                onClick={handleCloseInvoice}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 xl:p-1.5 2xl:p-2 rounded-lg hover:bg-gray-100"
+                aria-label="Close invoice viewer"
+              >
+                <X size={24} className="xl:w-7 xl:h-7 2xl:w-8 2xl:h-8" />
+              </button>
+            </div>
+            
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-auto p-4 sm:p-6 xl:p-7 2xl:p-8 bg-gray-50">
+              <div className="flex items-start justify-center min-h-full">
+                {(() => {
+                  const fileType = getFileType(viewingInvoice.url)
+                  
+                  if (fileType === 'pdf') {
+                    return (
+                      <div className="w-full h-full min-h-[600px] bg-white rounded-lg shadow-lg overflow-hidden">
+                        <iframe
+                          src={viewingInvoice.url}
+                          className="w-full h-full min-h-[600px]"
+                          title={`${viewingInvoice.type} Invoice PDF`}
+                        />
+                      </div>
+                    )
+                  }
+                  
+                  if (fileType === 'image') {
+                    return imageLoadError ? (
+                      <div className="text-center p-8 xl:p-10 2xl:p-12 text-gray-500 text-sm xl:text-base 2xl:text-lg">
+                        Unable to load invoice preview.{' '}
+                        <a 
+                          href={viewingInvoice.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-[var(--color-accent)] hover:underline"
+                        >
+                          Click here to download
+                        </a>
+                      </div>
+                    ) : (
+                      <img 
+                        src={viewingInvoice.url} 
+                        alt={`${viewingInvoice.type} Invoice`}
+                        className="max-w-full h-auto rounded-lg shadow-lg bg-white"
+                        onError={() => setImageLoadError(true)}
+                      />
+                    )
+                  }
+                  
+                  // Unknown file type - provide download link
+                  return (
+                    <div className="text-center p-8 xl:p-10 2xl:p-12">
+                      <div className="text-gray-700 text-sm xl:text-base 2xl:text-lg mb-4">
+                        Preview not available for this file type.
+                      </div>
+                      <a 
+                        href={viewingInvoice.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--color-accent)] text-white rounded-full hover:opacity-90 transition-opacity"
+                      >
+                        <FileText size={20} />
+                        <span>Download Invoice</span>
+                      </a>
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      </>
+      )}
     </div>
   )
 }

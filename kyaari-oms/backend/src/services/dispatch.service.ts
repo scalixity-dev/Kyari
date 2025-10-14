@@ -54,7 +54,7 @@ class DispatchService {
       throw new Error('Some assignments are already dispatched');
     }
 
-    // Create dispatch with items in a transaction
+    // Create dispatch with items in a transaction (with increased timeout)
     const dispatch = await prisma.$transaction(async (tx) => {
       // Create dispatch
       const newDispatch = await tx.dispatch.create({
@@ -131,6 +131,9 @@ class DispatchService {
       });
 
       return newDispatch;
+    }, {
+      maxWait: 10000, // Maximum time to wait for transaction to start (10 seconds)
+      timeout: 15000, // Maximum time for transaction to complete (15 seconds)
     });
 
     return this.formatDispatchResponse(dispatch);
@@ -224,6 +227,15 @@ class DispatchService {
               },
             },
           },
+          vendor: {
+            include: {
+              user: {
+                select: {
+                  email: true,
+                },
+              },
+            },
+          },
           attachments: true,
         },
         skip,
@@ -233,8 +245,40 @@ class DispatchService {
       prisma.dispatch.count({ where }),
     ]);
 
+    // Generate presigned URLs for attachments
+    const dispatchesWithPresignedUrls = await Promise.all(
+      dispatches.map(async (dispatch) => {
+        if (!dispatch.attachments || dispatch.attachments.length === 0) {
+          return dispatch;
+        }
+
+        const attachmentsWithUrls = await Promise.all(
+          dispatch.attachments.map(async (att) => {
+            if (att.s3Key) {
+              try {
+                const presignedUrl = await s3Service.getPresignedUrl(att.s3Key);
+                return {
+                  ...att,
+                  s3Url: presignedUrl
+                };
+              } catch (error) {
+                console.error('Failed to generate presigned URL for attachment', { error, s3Key: att.s3Key });
+                return att;
+              }
+            }
+            return att;
+          })
+        );
+
+        return {
+          ...dispatch,
+          attachments: attachmentsWithUrls
+        };
+      })
+    );
+
     return {
-      dispatches: dispatches.map((d) => this.formatDispatchResponse(d)),
+      dispatches: dispatchesWithPresignedUrls.map((d) => this.formatDispatchResponse(d)),
       pagination: {
         page,
         limit,
@@ -327,7 +371,7 @@ class DispatchService {
     return {
       id: dispatch.id,
       vendorId: dispatch.vendorId,
-      vendorEmail: dispatch.vendor.user.email,
+      vendorEmail: dispatch.vendor?.user?.email || 'N/A',
       awbNumber: dispatch.awbNumber,
       logisticsPartner: dispatch.logisticsPartner,
       dispatchDate: dispatch.dispatchDate.toISOString(),
@@ -339,7 +383,7 @@ class DispatchService {
         assignmentId: item.assignmentId,
         orderItemId: item.orderItemId,
         productName: item.assignedOrderItem.orderItem.productName,
-        sku: item.assignedOrderItem.orderItem.sku,
+        sku: item.assignedOrderItem.orderItem.sku || '',
         dispatchedQuantity: item.dispatchedQuantity,
         orderNumber: item.assignedOrderItem.orderItem.order.orderNumber,
       })),

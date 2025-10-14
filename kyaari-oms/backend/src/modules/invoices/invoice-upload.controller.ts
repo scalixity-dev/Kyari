@@ -544,14 +544,20 @@ export class InvoiceUploadController {
                   include: {
                     assignedOrderItem: {
                       include: {
-                        orderItem: true
+                        orderItem: {
+                          include: {
+                            order: true // Include full order details to get clientOrderId and orderNumber
+                          }
+                        }
                       }
                     }
                   }
                 }
               }
             },
-            attachment: true
+            attachment: true,
+            accountsAttachment: true,
+            vendorAttachment: true
           },
           orderBy: { createdAt: 'desc' },
           skip: offset,
@@ -560,8 +566,41 @@ export class InvoiceUploadController {
         prisma.vendorInvoice.count({ where: whereClause })
       ]);
 
+      // Generate presigned URLs for all attachments
+      const invoicesWithPresignedUrls = await Promise.all(
+        invoices.map(async (invoice) => {
+          const vendorAttachment = invoice.vendorAttachment ? {
+            ...invoice.vendorAttachment,
+            s3Url: invoice.vendorAttachment.s3Key 
+              ? await s3Service.getPresignedUrl(invoice.vendorAttachment.s3Key)
+              : invoice.vendorAttachment.s3Url
+          } : null;
+
+          const accountsAttachment = invoice.accountsAttachment ? {
+            ...invoice.accountsAttachment,
+            s3Url: invoice.accountsAttachment.s3Key
+              ? await s3Service.getPresignedUrl(invoice.accountsAttachment.s3Key)
+              : invoice.accountsAttachment.s3Url
+          } : null;
+
+          const attachment = invoice.attachment ? {
+            ...invoice.attachment,
+            s3Url: invoice.attachment.s3Key
+              ? await s3Service.getPresignedUrl(invoice.attachment.s3Key)
+              : invoice.attachment.s3Url
+          } : null;
+
+          return {
+            ...invoice,
+            vendorAttachment,
+            accountsAttachment,
+            attachment
+          };
+        })
+      );
+
       return ResponseHelper.success(res, {
-        invoices,
+        invoices: invoicesWithPresignedUrls,
         pagination: {
           currentPage: pageNum,
           totalPages: Math.ceil(total / limitNum),
