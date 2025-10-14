@@ -226,16 +226,33 @@ export class AssignmentService {
   ): Promise<AssignmentStatusUpdateResponseDto> {
     const transaction = await prisma.$transaction(async (prisma) => {
       try {
-        // First, get the assignment with related data
+        // First, get the assignment with minimal data needed for validation
         const existingAssignment = await prisma.assignedOrderItem.findFirst({
           where: {
             id: assignmentId,
             vendorId
           },
-          include: {
+          select: {
+            id: true,
+            status: true,
+            assignedQuantity: true,
+            confirmedQuantity: true,
+            vendorRemarks: true,
+            assignedAt: true,
             orderItem: {
-              include: {
-                order: true
+              select: {
+                id: true,
+                productName: true,
+                sku: true,
+                quantity: true,
+                order: {
+                  select: {
+                    id: true,
+                    orderNumber: true,
+                    status: true,
+                    createdAt: true
+                  }
+                }
               }
             }
           }
@@ -260,8 +277,8 @@ export class AssignmentService {
           }
         }
 
-        // Update the assignment
-        const updatedAssignment = await prisma.assignedOrderItem.update({
+        // Update the assignment - no includes needed, we have the data
+        await prisma.assignedOrderItem.update({
           where: { id: assignmentId },
           data: {
             status: updateData.status,
@@ -272,22 +289,15 @@ export class AssignmentService {
                 : null,
             vendorRemarks: updateData.vendorRemarks,
             vendorActionAt: new Date()
-          },
-          include: {
-            orderItem: {
-              include: {
-                order: {
-                  select: {
-                    id: true,
-                    orderNumber: true,
-                    status: true,
-                    createdAt: true
-                  }
-                }
-              }
-            }
           }
         });
+
+        // Calculate the new confirmed quantity
+        const finalConfirmedQuantity = updateData.status === 'VENDOR_CONFIRMED_PARTIAL' 
+          ? updateData.confirmedQuantity 
+          : updateData.status === 'VENDOR_CONFIRMED_FULL' 
+            ? existingAssignment.assignedQuantity 
+            : null;
 
         // Check if we need to update the parent order status
         let orderStatusUpdated = false;
@@ -321,7 +331,7 @@ export class AssignmentService {
           {
             previousStatus: existingAssignment.status,
             newStatus: updateData.status,
-            confirmedQuantity: updatedAssignment.confirmedQuantity,
+            confirmedQuantity: finalConfirmedQuantity,
             vendorRemarks: updateData.vendorRemarks,
             orderNumber: existingAssignment.orderItem.order.orderNumber,
             orderStatusUpdated,
@@ -329,25 +339,25 @@ export class AssignmentService {
           }
         );
 
-        // Transform to DTO
+        // Transform to DTO using existing data
         const assignmentDto: VendorAssignmentDto = {
-          id: updatedAssignment.id,
-          assignedQuantity: updatedAssignment.assignedQuantity,
-          confirmedQuantity: updatedAssignment.confirmedQuantity || undefined,
-          status: updatedAssignment.status,
-          vendorRemarks: updatedAssignment.vendorRemarks || undefined,
-          assignedAt: updatedAssignment.assignedAt,
-          vendorActionAt: updatedAssignment.vendorActionAt || undefined,
+          id: existingAssignment.id,
+          assignedQuantity: existingAssignment.assignedQuantity,
+          confirmedQuantity: finalConfirmedQuantity || undefined,
+          status: updateData.status,
+          vendorRemarks: updateData.vendorRemarks || existingAssignment.vendorRemarks || undefined,
+          assignedAt: existingAssignment.assignedAt,
+          vendorActionAt: new Date(),
           orderItem: {
-            id: updatedAssignment.orderItem.id,
-            productName: updatedAssignment.orderItem.productName,
-            sku: updatedAssignment.orderItem.sku || undefined,
-            quantity: updatedAssignment.orderItem.quantity,
+            id: existingAssignment.orderItem.id,
+            productName: existingAssignment.orderItem.productName,
+            sku: existingAssignment.orderItem.sku || undefined,
+            quantity: existingAssignment.orderItem.quantity,
             order: {
-              id: updatedAssignment.orderItem.order.id,
-              orderNumber: updatedAssignment.orderItem.order.orderNumber,
-              status: newOrderStatus || updatedAssignment.orderItem.order.status,
-              createdAt: updatedAssignment.orderItem.order.createdAt
+              id: existingAssignment.orderItem.order.id,
+              orderNumber: existingAssignment.orderItem.order.orderNumber,
+              status: newOrderStatus || existingAssignment.orderItem.order.status,
+              createdAt: existingAssignment.orderItem.order.createdAt
             }
           }
         };
@@ -362,6 +372,9 @@ export class AssignmentService {
         logger.error('Assignment status update failed', { error, assignmentId, vendorId, updateData });
         throw error;
       }
+    }, {
+      maxWait: 10000, // Maximum time to wait for transaction to start (10 seconds)
+      timeout: 15000, // Maximum time for transaction to complete (15 seconds)
     });
 
     // Send notification to ADMIN and ACCOUNTS roles after successful confirmation

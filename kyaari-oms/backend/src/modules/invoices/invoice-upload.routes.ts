@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { InvoiceUploadController } from './invoice-upload.controller';
 import { authenticate } from '../../middlewares/auth.middleware';
+import { userCache, invalidateCache } from '../../middlewares/cache.middleware';
 
 const router = Router();
 
@@ -14,6 +15,7 @@ router.use(authenticate);
  */
 router.post(
   '/:invoiceId/upload',
+  invalidateCache(['api:*:/api/invoices/*', 'user:*:/api/invoices/*']),
   InvoiceUploadController.uploadInvoiceFile
 );
 
@@ -24,16 +26,18 @@ router.post(
  */
 router.post(
   '/upload-and-link',
+  invalidateCache(['api:*:/api/invoices/*', 'user:*:/api/invoices/*', 'api:*:/api/ops-verification/*']),
   InvoiceUploadController.uploadAndLinkInvoice
 );
 
 /**
  * @route GET /api/invoices/uploads
- * @desc Get uploaded invoices for authenticated user (role-based filtering)
+ * @desc Get uploaded invoices for authenticated user (cached for 3 minutes)
  * @access Vendor, Accounts, Ops
  */
 router.get(
   '/uploads',
+  userCache(180),
   InvoiceUploadController.getUploadedInvoices
 );
 
