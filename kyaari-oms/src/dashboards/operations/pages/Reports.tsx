@@ -1,5 +1,8 @@
-import { useState } from 'react'
-import { Clock, AlertTriangle, CheckSquare, BarChart3, Filter, ChevronUp, ChevronDown } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Clock, AlertTriangle, CheckSquare, BarChart3, ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { CustomDropdown } from '../../../components/CustomDropdown'
+import type { DropdownOption } from '../../../components/CustomDropdown/CustomDropdown'
 
 interface TicketMetrics {
   raised: number
@@ -91,35 +94,43 @@ const MetricCard = ({ title, value, unit, change, icon: Icon, subtitle }: {
   value: number | string
   unit?: string
   change?: { value: string; isPositive: boolean; color: string; bgColor: string }
-  icon: any
+  icon: LucideIcon
   subtitle?: string
 }) => (
-  <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-    <div className="flex items-center justify-between mb-3 sm:mb-4">
-      <div className="flex items-center gap-2 sm:gap-3">
-        <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
-          <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-        </div>
-        <div>
-          <h3 className="text-xs sm:text-sm font-medium text-gray-600">{title}</h3>
-          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
-        </div>
-      </div>
+  <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
+    <div className="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-[#C3754C] text-white shadow-md">
+      <Icon className="w-7 h-7 sm:w-8 sm:h-8" color="white" />
+    </div>
+    <div className="flex flex-col items-center text-center w-full">
+
+      <h3 className="text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2 font-bold">{title}</h3>
       {change && (
-        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${change.bgColor} ${change.color} flex-shrink-0`}>
+        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${change.bgColor} ${change.color} mb-2`}>
           {change.isPositive ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           {change.value}%
         </div>
       )}
-    </div>
-    <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)] mb-1">
-      {value}{unit}
+      <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">
+        {value}{unit}
+      </div>
+      {subtitle && <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">{subtitle}</div>}
     </div>
   </div>
 )
 
 export default function Reports() {
   const [timeRange, setTimeRange] = useState('30d')
+  const [vendorSearch, setVendorSearch] = useState('')
+  const [performanceFilter, setPerformanceFilter] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 4
+
+  const performanceOptions: DropdownOption[] = [
+    { value: 'all', label: 'All' },
+    { value: 'Excellent', label: 'Excellent' },
+    { value: 'Good', label: 'Good' },
+    { value: 'Needs Attention', label: 'Needs Attention' }
+  ]
 
   // Calculate performance indicators
   const currentMonth = monthlyTrends[monthlyTrends.length - 1]
@@ -132,11 +143,47 @@ export default function Reports() {
   const totalPendingVerification = 23 // This would come from actual data
   const resolutionRate = ((currentTicketMetrics.resolved / currentTicketMetrics.raised) * 100).toFixed(1)
 
+  // Helper function to get performance label
+  const getPerformanceLabel = (percentage: number) => {
+    if (percentage <= 2) return 'Excellent'
+    if (percentage <= 5) return 'Good'
+    return 'Needs Attention'
+  }
+
+  // Filter vendors based on search and performance
+  const filteredVendors = vendorMismatchData.filter((vendor) => {
+    // Filter by search term
+    const matchesSearch = vendor.vendorName.toLowerCase().includes(vendorSearch.toLowerCase()) ||
+                         vendor.vendorId.toLowerCase().includes(vendorSearch.toLowerCase())
+    
+    // Filter by performance
+    const vendorPerformance = getPerformanceLabel(vendor.mismatchPercentage)
+    const matchesPerformance = performanceFilter === 'all' || vendorPerformance === performanceFilter
+    
+    return matchesSearch && matchesPerformance
+  })
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [vendorSearch, performanceFilter])
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredVendors.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedVendors = filteredVendors.slice(startIndex, endIndex)
+
+  // Pagination handlers
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)))
+  }
+
   return (
-    <div className="p-4 sm:p-6 md:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
+        <h1 className="text-2xl sm:text-3xl text-[var(--color-heading)] mb-2 font-bold">
           Reports & Analytics
         </h1>
         <p className="text-sm sm:text-base text-[var(--color-primary)]">
@@ -173,35 +220,37 @@ export default function Reports() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <MetricCard
-          title="Tickets Raised"
-          value={currentTicketMetrics.raised}
-          icon={AlertTriangle}
-          change={raisedChange}
-          subtitle="This month"
-        />
-        <MetricCard
-          title="Tickets Resolved"
-          value={currentTicketMetrics.resolved}
-          icon={CheckSquare}
-          change={resolvedChange}
-          subtitle="This month"
-        />
-        <MetricCard
-          title="Avg Resolution Time"
-          value={currentTicketMetrics.avgResolutionTime}
-          unit="h"
-          icon={Clock}
-          change={resolutionTimeChange}
-          subtitle="Hours to resolve"
-        />
-        <MetricCard
-          title="Pending Verification"
-          value={totalPendingVerification}
-          icon={AlertTriangle}
-          subtitle="Awaiting action"
-        />
+      <div className="mb-6 sm:mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 py-8 sm:py-10 gap-10 sm:gap-12 xl:gap-6">
+          <MetricCard
+            title="Tickets Raised"
+            value={currentTicketMetrics.raised}
+            icon={AlertTriangle}
+            change={raisedChange}
+            subtitle="This month"
+          />
+          <MetricCard
+            title="Tickets Resolved"
+            value={currentTicketMetrics.resolved}
+            icon={CheckSquare}
+            change={resolvedChange}
+            subtitle="This month"
+          />
+          <MetricCard
+            title="Avg Resolution Time"
+            value={currentTicketMetrics.avgResolutionTime}
+            unit="h"
+            icon={Clock}
+            change={resolutionTimeChange}
+            subtitle="Hours to resolve"
+          />
+          <MetricCard
+            title="Pending Verification"
+            value={totalPendingVerification}
+            icon={AlertTriangle}
+            subtitle="Awaiting action"
+          />
+        </div>
       </div>
 
       {/* Charts Section */}
@@ -321,167 +370,280 @@ export default function Reports() {
       </div>
 
       {/* Vendor-wise Mismatch Analysis */}
-      <div className="bg-white rounded-xl shadow-md border border-white/20 mb-6 sm:mb-8">
-        <div className="p-4 sm:p-6 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Vendor-wise Mismatch Analysis</h3>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
-              <Filter className="w-4 h-4 flex-shrink-0" />
-              <span>Last 30 days</span>
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4">
+          Vendor-wise Mismatch Analysis
+        </h2>
+        
+        {/* Filters */}
+        <div className="mb-4 sm:mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search Input */}
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by vendor name or ID..."
+                  value={vendorSearch}
+                  onChange={(e) => setVendorSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+                />
+              </div>
+            </div>
+            
+            {/* Performance Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Performance:</span>
+              <CustomDropdown
+                value={performanceFilter}
+                options={performanceOptions}
+                onChange={setPerformanceFilter}
+                className="min-w-[160px]"
+              />
             </div>
           </div>
+          
+          {/* Results count */}
+          <div className="mt-3 text-sm text-gray-600">
+            Showing {filteredVendors.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredVendors.length)} of {filteredVendors.length} vendors
+            {filteredVendors.length !== vendorMismatchData.length && (
+              <span className="text-gray-500"> (filtered from {vendorMismatchData.length} total)</span>
+            )}
+          </div>
         </div>
+        
+        <div className="rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
+          {/* Desktop Table View - hidden on mobile */}
+          <div className="hidden md:block overflow-x-auto">
+            {/* Table head bar */}
+            <div className="bg-[#C3754C] text-white">
+              <div className="flex justify-between px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-heading font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0]">
+                <div className="flex-1 text-center">Vendor</div>
+                <div className="flex-1 text-center">Total Orders</div>
+                <div className="flex-1 text-center">Mismatch Orders</div>
+                <div className="flex-1 text-center">Mismatch %</div>
+                <div className="flex-1 text-center">Performance</div>
+              </div>
+            </div>
+            {/* Body */}
+            <div className="bg-white">
+              <div className="py-2">
+                {paginatedVendors.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="text-sm">No vendors found matching the selected filters.</p>
+                  </div>
+                ) : (
+                  paginatedVendors.map((vendor) => {
+                    const getPerformanceColor = (percentage: number) => {
+                      if (percentage <= 2) return 'bg-green-100 text-green-700 border border-green-300'
+                      if (percentage <= 5) return 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                      return 'bg-red-100 text-red-700 border border-red-300'
+                    }
 
-        {/* Desktop Table View */}
-        <div className="overflow-x-auto hidden md:block">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Orders</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mismatch Orders</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mismatch %</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {vendorMismatchData.map((vendor) => {
-                const getPerformanceColor = (percentage: number) => {
-                  if (percentage <= 2) return 'bg-green-100 text-green-800'
-                  if (percentage <= 5) return 'bg-yellow-100 text-yellow-800'
-                  return 'bg-red-100 text-red-800'
-                }
-
-                const getPerformanceLabel = (percentage: number) => {
-                  if (percentage <= 2) return 'Excellent'
-                  if (percentage <= 5) return 'Good'
-                  return 'Needs Attention'
-                }
-
-                return (
-                  <tr key={vendor.vendorId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{vendor.vendorName}</div>
+                    return (
+                    <div key={vendor.vendorId} className="flex justify-between px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center hover:bg-gray-50">
+                      <div className="flex-1 text-center">
+                        <div className="text-xs md:text-sm font-medium text-gray-800">{vendor.vendorName}</div>
                         <div className="text-xs text-gray-500">{vendor.vendorId}</div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {vendor.totalOrders}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {vendor.mismatchOrders}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900">
+                      <div className="flex-1 text-xs md:text-sm text-gray-700 text-center">
+                        {vendor.totalOrders}
+                      </div>
+                      <div className="flex-1 text-xs md:text-sm text-gray-700 text-center">
+                        {vendor.mismatchOrders}
+                      </div>
+                      <div className="flex-1 flex items-center justify-center gap-2 sm:gap-3">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[120px]">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              vendor.mismatchPercentage <= 2
+                                ? 'bg-green-600'
+                                : vendor.mismatchPercentage <= 5
+                                ? 'bg-yellow-500'
+                                : 'bg-red-600'
+                            }`}
+                            style={{ width: `${Math.min(vendor.mismatchPercentage * 10, 100)}%` }}
+                          />
+                        </div>
+                        <span className={`font-semibold text-xs sm:text-sm ${
+                          vendor.mismatchPercentage <= 2
+                            ? 'text-green-600'
+                            : vendor.mismatchPercentage <= 5
+                            ? 'text-yellow-600'
+                            : 'text-red-600'
+                        }`}>
                           {vendor.mismatchPercentage}%
                         </span>
-                        <div className="flex-1 max-w-20">
-                          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full ${
-                                vendor.mismatchPercentage <= 2 ? 'bg-green-500' :
-                                vendor.mismatchPercentage <= 5 ? 'bg-yellow-500' : 'bg-red-500'
-                              }`}
-                              style={{ width: `${Math.min(vendor.mismatchPercentage * 10, 100)}%` }}
-                            />
-                          </div>
-                        </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPerformanceColor(vendor.mismatchPercentage)}`}>
-                        {getPerformanceLabel(vendor.mismatchPercentage)}
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="md:hidden divide-y divide-gray-200">
-          {vendorMismatchData.map((vendor) => {
-            const getPerformanceColor = (percentage: number) => {
-              if (percentage <= 2) return 'bg-green-100 text-green-800'
-              if (percentage <= 5) return 'bg-yellow-100 text-yellow-800'
-              return 'bg-red-100 text-red-800'
-            }
-
-            const getPerformanceLabel = (percentage: number) => {
-              if (percentage <= 2) return 'Excellent'
-              if (percentage <= 5) return 'Good'
-              return 'Needs Attention'
-            }
-
-            return (
-              <div key={vendor.vendorId} className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900 mb-0.5">{vendor.vendorName}</div>
-                    <div className="text-xs text-gray-500">{vendor.vendorId}</div>
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPerformanceColor(vendor.mismatchPercentage)} flex-shrink-0`}>
-                    {getPerformanceLabel(vendor.mismatchPercentage)}
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div className="bg-gray-50 p-2 rounded-lg">
-                    <div className="text-xs text-gray-500 mb-0.5">Total Orders</div>
-                    <div className="text-sm font-semibold text-gray-900">{vendor.totalOrders}</div>
-                  </div>
-                  <div className="bg-gray-50 p-2 rounded-lg">
-                    <div className="text-xs text-gray-500 mb-0.5">Mismatches</div>
-                    <div className="text-sm font-semibold text-gray-900">{vendor.mismatchOrders}</div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                    <span>Mismatch Rate</span>
-                    <span className="font-medium text-gray-900">{vendor.mismatchPercentage}%</span>
-                  </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full ${
-                        vendor.mismatchPercentage <= 2 ? 'bg-green-500' :
-                        vendor.mismatchPercentage <= 5 ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}
-                      style={{ width: `${Math.min(vendor.mismatchPercentage * 10, 100)}%` }}
-                    />
-                  </div>
-                </div>
+                      <div className="flex-1 flex items-center justify-center">
+                        <span className={`inline-block px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap ${getPerformanceColor(vendor.mismatchPercentage)}`}>
+                          {getPerformanceLabel(vendor.mismatchPercentage)}
+                        </span>
+                      </div>
+                    </div>
+                    )
+                  })
+                )}
               </div>
-            )
-          })}
-        </div>
-
-        <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-50">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-xl sm:text-2xl font-bold text-green-600">
-                {vendorMismatchData.filter(v => v.mismatchPercentage <= 2).length}
-              </div>
-              <div className="text-xs sm:text-sm text-gray-600">Excellent Performers</div>
-            </div>
-            <div>
-              <div className="text-xl sm:text-2xl font-bold text-yellow-600">
-                {vendorMismatchData.filter(v => v.mismatchPercentage > 2 && v.mismatchPercentage <= 5).length}
-              </div>
-              <div className="text-xs sm:text-sm text-gray-600">Good Performers</div>
-            </div>
-            <div>
-              <div className="text-xl sm:text-2xl font-bold text-red-600">
-                {vendorMismatchData.filter(v => v.mismatchPercentage > 5).length}
-              </div>
-              <div className="text-xs sm:text-sm text-gray-600">Need Attention</div>
             </div>
           </div>
+
+          {/* Mobile Card View - visible only on mobile */}
+          <div className="md:hidden bg-white">
+            {paginatedVendors.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p className="text-sm">No vendors found matching the selected filters.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {paginatedVendors.map((vendor) => {
+                  const getPerformanceColor = (percentage: number) => {
+                    if (percentage <= 2) return 'bg-green-100 text-green-700 border border-green-300'
+                    if (percentage <= 5) return 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                    return 'bg-red-100 text-red-700 border border-red-300'
+                  }
+
+                  return (
+                    <div key={vendor.vendorId} className="p-4 space-y-3">
+                      {/* Vendor Name and ID */}
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900">{vendor.vendorName}</div>
+                          <div className="text-xs text-gray-500">{vendor.vendorId}</div>
+                        </div>
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getPerformanceColor(vendor.mismatchPercentage)}`}>
+                          {getPerformanceLabel(vendor.mismatchPercentage)}
+                        </span>
+                      </div>
+
+                      {/* Stats Grid */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <div className="text-xs text-gray-600 mb-1">Total Orders</div>
+                          <div className="text-lg font-semibold text-gray-900">{vendor.totalOrders}</div>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <div className="text-xs text-gray-600 mb-1">Mismatch Orders</div>
+                          <div className="text-lg font-semibold text-gray-900">{vendor.mismatchOrders}</div>
+                        </div>
+                      </div>
+
+                      {/* Mismatch Percentage */}
+                      <div>
+                        <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+                          <span>Mismatch Rate</span>
+                          <span className={`font-semibold ${
+                            vendor.mismatchPercentage <= 2
+                              ? 'text-green-600'
+                              : vendor.mismatchPercentage <= 5
+                              ? 'text-yellow-600'
+                              : 'text-red-600'
+                          }`}>
+                            {vendor.mismatchPercentage}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              vendor.mismatchPercentage <= 2
+                                ? 'bg-green-600'
+                                : vendor.mismatchPercentage <= 5
+                                ? 'bg-yellow-500'
+                                : 'bg-red-600'
+                            }`}
+                            style={{ width: `${Math.min(vendor.mismatchPercentage * 10, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+          
+          {/* Pagination Controls */}
+          {filteredVendors.length > 0 && totalPages > 1 && (
+            <div className="bg-white border-t border-gray-200 px-4 py-3 sm:px-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                {/* Page info */}
+                <div className="text-sm text-gray-700">
+                  Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages}</span>
+                </div>
+                
+                {/* Pagination buttons */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`p-2 rounded-lg border transition-colors ${
+                      currentPage === 1
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+                    }`}
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  
+                  {/* Page numbers */}
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      // Show first page, last page, current page, and pages around current
+                      const showPage = 
+                        page === 1 || 
+                        page === totalPages || 
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      
+                      // Show ellipsis
+                      const showEllipsisBefore = page === currentPage - 2 && currentPage > 3
+                      const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2
+                      
+                      if (showEllipsisBefore || showEllipsisAfter) {
+                        return (
+                          <span key={page} className="px-2 text-gray-500">
+                            ...
+                          </span>
+                        )
+                      }
+                      
+                      if (!showPage) return null
+                      
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => goToPage(page)}
+                          className={`min-w-[36px] h-9 px-3 rounded-lg text-sm font-medium transition-colors ${
+                            currentPage === page
+                              ? 'bg-[var(--color-accent)] text-white'
+                              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  
+                  <button
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`p-2 rounded-lg border transition-colors ${
+                      currentPage === totalPages
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+                    }`}
+                    aria-label="Next page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+
       </div>
 
       {/* Summary Insights */}
