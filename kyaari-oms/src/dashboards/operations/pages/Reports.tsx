@@ -3,6 +3,7 @@ import { Clock, AlertTriangle, CheckSquare, BarChart3, Search, ChevronLeft, Chev
 import { CustomDropdown } from '../../../components/CustomDropdown'
 import type { DropdownOption } from '../../../components/CustomDropdown/CustomDropdown'
 import { KPICard } from '../../../components'
+import { CSVPDFExportButton } from '../../../components/ui/export-button'
 
 interface TicketMetrics {
   raised: number
@@ -129,6 +130,104 @@ export default function Reports() {
   // Pagination handlers
   const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)))
+  }
+
+  // --- Export helpers ---
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const toCSV = (rows: Array<Record<string, unknown>>, headerOrder?: string[]) => {
+    if (!rows || rows.length === 0) return ''
+    const headers = headerOrder && headerOrder.length > 0 ? headerOrder : Array.from(new Set(rows.flatMap((r) => Object.keys(r))))
+    const escapeCell = (val: unknown) => {
+      const s = val === undefined || val === null ? '' : String(val)
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s
+    }
+    const lines = [headers.join(',')]
+    for (const row of rows) {
+      lines.push(headers.map((h) => escapeCell((row as Record<string, unknown>)[h])).join(','))
+    }
+    return lines.join('\n')
+  }
+
+  const handleExportCSV = () => {
+    const rows = filteredVendors.map(v => ({
+      vendorName: v.vendorName,
+      vendorId: v.vendorId,
+      totalOrders: v.totalOrders,
+      mismatchOrders: v.mismatchOrders,
+      mismatchPercentage: v.mismatchPercentage,
+      performance: getPerformanceLabel(v.mismatchPercentage)
+    }))
+    const csv = toCSV(rows, ['vendorName','vendorId','totalOrders','mismatchOrders','mismatchPercentage','performance'])
+    downloadFile(csv, `ops_vendor_mismatch_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;')
+  }
+
+  const handleExportPDF = () => {
+    const rows = filteredVendors
+    const html = `
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Vendor-wise Mismatch Analysis</title>
+          <style>
+            body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 16px; color:#111827 }
+            h1 { font-size: 18px; margin: 0 0 12px }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff }
+            th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb }
+            thead { background: #f9fafb }
+          </style>
+        </head>
+        <body>
+          <h1>Vendor-wise Mismatch Analysis</h1>
+          <table>
+            <thead>
+              <tr>
+                <th>Vendor</th>
+                <th>Vendor ID</th>
+                <th>Total Orders</th>
+                <th>Mismatch Orders</th>
+                <th>Mismatch %</th>
+                <th>Performance</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(r => `<tr>
+                <td>${r.vendorName}</td>
+                <td>${r.vendorId}</td>
+                <td>${r.totalOrders}</td>
+                <td>${r.mismatchOrders}</td>
+                <td>${r.mismatchPercentage}%</td>
+                <td>${getPerformanceLabel(r.mismatchPercentage)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    document.body.appendChild(iframe)
+    const doc = iframe.contentWindow?.document
+    if (!doc) { document.body.removeChild(iframe); return }
+    doc.open(); doc.write(html); doc.close()
+    const cleanup = () => { if (iframe.parentNode) document.body.removeChild(iframe) }
+    iframe.contentWindow?.addEventListener('afterprint', cleanup, { once: true })
+    setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(cleanup, 1500) }, 250)
   }
 
   return (
@@ -359,6 +458,15 @@ export default function Reports() {
               <span className="text-gray-500"> (filtered from {vendorMismatchData.length} total)</span>
             )}
           </div>
+        </div>
+
+        {/* Export actions (right-aligned) */}
+        <div className="mb-3 flex justify-end">
+          <CSVPDFExportButton
+            onExportCSV={handleExportCSV}
+            onExportPDF={handleExportPDF}
+            buttonClassName="min-h-[42px]"
+          />
         </div>
         
         <div className="rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
