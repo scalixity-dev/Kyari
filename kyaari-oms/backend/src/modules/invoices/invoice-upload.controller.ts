@@ -548,6 +548,19 @@ export class InvoiceUploadController {
                           include: {
                             order: true // Include full order details to get clientOrderId and orderNumber
                           }
+                        },
+                        dispatchItems: {
+                          include: {
+                            dispatch: {
+                              include: {
+                                goodsReceiptNote: {
+                                  include: {
+                                    items: true
+                                  }
+                                }
+                              }
+                            }
+                          }
                         }
                       }
                     }

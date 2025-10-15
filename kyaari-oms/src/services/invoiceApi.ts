@@ -505,6 +505,24 @@ export interface VendorPurchaseOrderItem {
         orderNumber: string
       }
     }
+    dispatchItems?: Array<{
+      id: string
+      dispatch: {
+        id: string
+        goodsReceiptNote: {
+          id: string
+          grnNumber: string
+          status: string
+          items: Array<{
+            id: string
+            status: string
+            receivedQuantity: number
+            discrepancyQuantity: number
+            damageReported: boolean
+          }>
+        } | null
+      }
+    }>
   }
 }
 

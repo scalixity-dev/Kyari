@@ -135,7 +135,7 @@ export const assertSuccessResponse = (jsonMock: jest.Mock, expectedData?: unknow
   expect(jsonMock).toHaveBeenCalledWith(
     expect.objectContaining({
       success: true,
-      ...(expectedData && { data: expectedData }),
+      ...(expectedData ? { data: expectedData } : {}),
     })
   );
 };
@@ -154,7 +154,7 @@ export const assertValidationErrorResponse = (jsonMock: jest.Mock, errors?: Reco
     expect.objectContaining({
       success: false,
       error: 'Validation failed',
-      ...(errors && { errors }),
+      ...(errors ? { errors } : {}),
     })
   );
 };

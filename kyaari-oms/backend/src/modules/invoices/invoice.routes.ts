@@ -16,7 +16,11 @@ router.use(authenticate);
  */
 router.post('/generate', 
   requireRole(['ACCOUNTS']),
-  invalidateCache(['api:*:/api/invoices*', 'user:*:/api/invoices/*']),
+  invalidateCache([
+    'api:*:/api/invoices*', 
+    'user:*:/api/invoices/*',
+    'user:*:/api/assignments/accounts/vendor-orders*'  // Invalidate accounts invoice page cache
+  ]),
   invoiceController.generateInvoice.bind(invoiceController)
 );
 
@@ -27,7 +31,12 @@ router.post('/generate',
  */
 router.post(
   '/upload-and-link',
-  invalidateCache(['api:*:/api/invoices*', 'user:*:/api/invoices/*', 'api:*:/api/ops-verification/*']),
+  invalidateCache([
+    'api:*:/api/invoices*', 
+    'user:*:/api/invoices/*', 
+    'api:*:/api/ops-verification/*',
+    'user:*:/api/assignments/accounts/vendor-orders*'  // Invalidate accounts invoice page cache
+  ]),
   InvoiceUploadController.uploadAndLinkInvoice
 );
 
@@ -82,7 +91,11 @@ router.get('/:id/download',
  */
 router.post(
   '/:invoiceId/upload',
-  invalidateCache(['api:*:/api/invoices/*', 'user:*:/api/invoices/*']),
+  invalidateCache([
+    'api:*:/api/invoices/*', 
+    'user:*:/api/invoices/*',
+    'user:*:/api/assignments/accounts/vendor-orders*'  // Invalidate accounts invoice page cache
+  ]),
   InvoiceUploadController.uploadInvoiceFile
 );
 

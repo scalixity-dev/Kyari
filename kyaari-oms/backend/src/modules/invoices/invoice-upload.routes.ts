@@ -15,7 +15,11 @@ router.use(authenticate);
  */
 router.post(
   '/:invoiceId/upload',
-  invalidateCache(['api:*:/api/invoices/*', 'user:*:/api/invoices/*']),
+  invalidateCache([
+    'api:*:/api/invoices/*', 
+    'user:*:/api/invoices/*',
+    'user:*:/api/assignments/accounts/vendor-orders*'  // Invalidate accounts invoice page cache
+  ]),
   InvoiceUploadController.uploadInvoiceFile
 );
 
@@ -26,7 +30,12 @@ router.post(
  */
 router.post(
   '/upload-and-link',
-  invalidateCache(['api:*:/api/invoices/*', 'user:*:/api/invoices/*', 'api:*:/api/ops-verification/*']),
+  invalidateCache([
+    'api:*:/api/invoices/*', 
+    'user:*:/api/invoices/*', 
+    'api:*:/api/ops-verification/*',
+    'user:*:/api/assignments/accounts/vendor-orders*'  // Invalidate accounts invoice page cache
+  ]),
   InvoiceUploadController.uploadAndLinkInvoice
 );
 

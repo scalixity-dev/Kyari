@@ -31,10 +31,18 @@ export class AccountsAssignmentService {
 
       const offset = (page - 1) * limit
 
-      // Build where clause for confirmed assignments
+      // Build where clause for ALL confirmed assignments (including invoiced, dispatched, verified)
       const where: Prisma.AssignedOrderItemWhereInput = {
         status: {
-          in: ['VENDOR_CONFIRMED_FULL', 'VENDOR_CONFIRMED_PARTIAL']
+          in: [
+            'VENDOR_CONFIRMED_FULL',
+            'VENDOR_CONFIRMED_PARTIAL',
+            'INVOICED',
+            'DISPATCHED',
+            'STORE_RECEIVED',
+            'VERIFIED_OK',
+            'VERIFIED_MISMATCH'
+          ]
         }
       }
 
@@ -294,7 +302,15 @@ export class AccountsAssignmentService {
         where: {
           vendorId,
           status: {
-            in: ['VENDOR_CONFIRMED_FULL', 'VENDOR_CONFIRMED_PARTIAL']
+            in: [
+              'VENDOR_CONFIRMED_FULL',
+              'VENDOR_CONFIRMED_PARTIAL',
+              'INVOICED',
+              'DISPATCHED',
+              'STORE_RECEIVED',
+              'VERIFIED_OK',
+              'VERIFIED_MISMATCH'
+            ]
           },
           orderItem: {
             order: {
