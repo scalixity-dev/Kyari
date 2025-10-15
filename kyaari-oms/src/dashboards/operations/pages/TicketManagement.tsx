@@ -3,6 +3,7 @@ import { AlertTriangle, Eye, X, CheckSquare, Clock, Calendar as CalendarIcon, Fi
 import { CustomDropdown, KPICard } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
+import { TicketApi, type TicketListItem, type TicketComment } from '../../../services/ticketApi'
 
 interface Ticket {
   id: string
@@ -40,133 +41,10 @@ interface Attachment {
   fileType: string
   uploadedBy: string
   uploadedAt: string
+  url?: string
 }
 
-const sampleTickets: Ticket[] = [
-  {
-    id: '1',
-    ticketNumber: 'TKT-001',
-    orderId: '2',
-    orderNumber: 'ORD-002',
-    vendor: {
-      name: 'Green Valley Suppliers',
-      id: 'VEN-002',
-      email: 'supply@greenvalley.com'
-    },
-    issueType: 'qty-mismatch',
-    issueDescription: 'Quantity received (95) does not match invoiced quantity (100). Missing 5 units of organic carrots.',
-    status: 'open',
-    raisedOn: '2025-09-29',
-    lastUpdated: '2025-09-29',
-    raisedBy: 'Operations Team',
-    priority: 'high',
-    comments: [
-      {
-        id: 'c1',
-        author: 'Operations Team',
-        message: 'Quantity mismatch identified during receiving. Please provide explanation and delivery schedule for remaining units.',
-        timestamp: '2025-09-29 10:30 AM',
-        type: 'internal'
-      }
-    ],
-    attachments: [
-      {
-        id: 'a1',
-        fileName: 'delivery_receipt.pdf',
-        fileType: 'pdf',
-        uploadedBy: 'Operations Team',
-        uploadedAt: '2025-09-29 10:30 AM'
-      }
-    ]
-  },
-  {
-    id: '2',
-    ticketNumber: 'TKT-002',
-    orderId: '4',
-    orderNumber: 'ORD-004',
-    vendor: {
-      name: 'Farm Direct Ltd',
-      id: 'VEN-004',
-      email: 'orders@farmdirect.in'
-    },
-    issueType: 'damaged',
-    issueDescription: '10% of the vegetables received were damaged during transit. Quality does not meet standards.',
-    status: 'under-review',
-    raisedOn: '2025-09-28',
-    lastUpdated: '2025-09-29',
-    raisedBy: 'Quality Team',
-    assignedTo: 'John Doe',
-    priority: 'medium',
-    comments: [
-      {
-        id: 'c2',
-        author: 'Quality Team',
-        message: 'Damaged items found during quality inspection. Photos attached for reference.',
-        timestamp: '2025-09-28 02:15 PM',
-        type: 'internal'
-      },
-      {
-        id: 'c3',
-        author: 'Farm Direct Ltd',
-        message: 'We apologize for the quality issue. We will investigate with our logistics partner and provide replacement items.',
-        timestamp: '2025-09-29 09:30 AM',
-        type: 'vendor-response'
-      }
-    ],
-    attachments: [
-      {
-        id: 'a2',
-        fileName: 'damaged_items_photo.jpg',
-        fileType: 'jpg',
-        uploadedBy: 'Quality Team',
-        uploadedAt: '2025-09-28 02:15 PM'
-      }
-    ]
-  },
-  {
-    id: '3',
-    ticketNumber: 'TKT-003',
-    orderId: '1',
-    orderNumber: 'ORD-001',
-    vendor: {
-      name: 'Fresh Farms Pvt Ltd',
-      id: 'VEN-001',
-      email: 'orders@freshfarms.in'
-    },
-    issueType: 'missing-item',
-    issueDescription: 'Invoice shows organic tomatoes but item was not included in the delivery.',
-    status: 'resolved',
-    raisedOn: '2025-09-27',
-    lastUpdated: '2025-09-28',
-    raisedBy: 'Operations Team',
-    assignedTo: 'Jane Smith',
-    priority: 'low',
-    comments: [
-      {
-        id: 'c4',
-        author: 'Operations Team',
-        message: 'Missing item identified during receiving process.',
-        timestamp: '2025-09-27 03:45 PM',
-        type: 'internal'
-      },
-      {
-        id: 'c5',
-        author: 'Fresh Farms Pvt Ltd',
-        message: 'Item was shipped separately due to quality check delay. Will be delivered tomorrow.',
-        timestamp: '2025-09-27 04:30 PM',
-        type: 'vendor-response'
-      },
-      {
-        id: 'c6',
-        author: 'Operations Team',
-        message: 'Item received and verified. Closing ticket.',
-        timestamp: '2025-09-28 11:00 AM',
-        type: 'internal'
-      }
-    ],
-    attachments: []
-  }
-]
+// Remove mock data; will load from API
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -208,12 +86,13 @@ const getIssueTypeLabel = (issueType: string) => {
 }
 
 export default function TicketManagement() {
-  const [tickets, setTickets] = useState<Ticket[]>(sampleTickets)
-  const [filteredTickets, setFilteredTickets] = useState<Ticket[]>(sampleTickets)
+  const [tickets, setTickets] = useState<Ticket[]>([])
+  const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([])
   const [filters, setFilters] = useState({
     status: 'all',
     vendor: '',
-    date: ''
+    date: '',
+    ticket: ''
   })
   const [dateCalendar, setDateCalendar] = useState<Date | undefined>()
   const [showDateCalendar, setShowDateCalendar] = useState(false)
@@ -225,8 +104,82 @@ export default function TicketManagement() {
   const [newComment, setNewComment] = useState('')
   const [newStatus, setNewStatus] = useState<'open' | 'under-review' | 'resolved'>('open')
   const [newAttachment, setNewAttachment] = useState<File | null>(null)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [pagination, setPagination] = useState<{ page: number; limit: number; total: number }>({ page: 1, limit: 20, total: 0 })
+  const [viewingAttachment, setViewingAttachment] = useState<{ url: string; type: 'image' | 'pdf' | 'unknown'; name: string } | null>(null)
 
-  // Close calendar when clicking outside
+  const mapApiTicketToUI = (t: TicketListItem): Ticket => {
+    const orderIdentifiers: string[] = []
+    const items = t.goodsReceiptNote?.dispatch?.items || []
+    items.forEach(i => {
+      const ord = i.assignedOrderItem.orderItem.order
+      if (ord.orderNumber) orderIdentifiers.push(ord.orderNumber)
+      else if (ord.clientOrderId) orderIdentifiers.push(ord.clientOrderId)
+    })
+    const orderNumber = orderIdentifiers[0] || 'N/A'
+    const vendorName = t.goodsReceiptNote?.dispatch?.vendor.companyName || 'N/A'
+    const vendorEmail = t.goodsReceiptNote?.dispatch?.vendor.user?.email || ''
+
+    const statusMap: Record<string, Ticket['status']> = {
+      OPEN: 'open',
+      IN_PROGRESS: 'under-review',
+      RESOLVED: 'resolved',
+      CLOSED: 'resolved',
+    }
+
+    const priorityMap: Record<string, Ticket['priority']> = {
+      LOW: 'low',
+      MEDIUM: 'medium',
+      HIGH: 'high',
+      URGENT: 'high',
+    }
+
+    return {
+      id: t.id,
+      ticketNumber: t.ticketNumber,
+      orderId: t.goodsReceiptNote?.id || t.id,
+      orderNumber,
+      vendor: { name: vendorName, id: t.id, email: vendorEmail },
+      issueType: 'qty-mismatch',
+      issueDescription: t._count?.comments ? `${t._count.comments} comment(s)` : 'Ticket',
+      status: statusMap[t.status] || 'open',
+      raisedOn: t.createdAt.split('T')[0],
+      lastUpdated: t.updatedAt.split('T')[0],
+      raisedBy: 'Operations',
+      priority: priorityMap[t.priority] || 'medium',
+      comments: [],
+      attachments: [],
+    }
+  }
+
+  const fetchTickets = async () => {
+    try {
+      setLoading(true)
+      const res = await TicketApi.list({
+        status: filters.status as any,
+        vendor: filters.vendor || undefined,
+        dateFrom: filters.date || undefined,
+        page: pagination.page,
+        limit: pagination.limit,
+      })
+      const apiTickets = res.data.tickets
+      const mapped = apiTickets.map(mapApiTicketToUI)
+      setTickets(mapped)
+      setFilteredTickets(mapped)
+      setPagination(res.data.pagination)
+    } catch (e) {
+      console.error('Failed to load tickets', e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTickets()
+ 
+  }, [])
+
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dateCalendarRef.current && !dateCalendarRef.current.contains(event.target as Node)) {
@@ -256,12 +209,53 @@ export default function TicketManagement() {
       filtered = filtered.filter(ticket => ticket.raisedOn === filters.date)
     }
 
+    if (filters.ticket) {
+      const q = filters.ticket.toLowerCase()
+      filtered = filtered.filter(ticket => ticket.ticketNumber.toLowerCase().includes(q))
+    }
+
     setFilteredTickets(filtered)
   }, [filters, tickets])
 
-  const handleViewDetails = (ticket: Ticket) => {
+  // Build vendor dropdown options from loaded tickets
+  const vendorOptions = React.useMemo(() => {
+    const names = Array.from(new Set(tickets.map(t => t.vendor.name).filter(Boolean)))
+    return [
+      { value: '', label: 'All Vendors' },
+      ...names.map(name => ({ value: name, label: name }))
+    ]
+  }, [tickets])
+
+  const handleViewDetails = async (ticket: Ticket) => {
     setSelectedTicket(ticket)
     setDetailsModalOpen(true)
+    try {
+      const res = await TicketApi.getComments(ticket.id)
+      const comments = res.data as unknown as TicketComment[]
+      // Map comments to UI shape
+      const mapped: Comment[] = comments.map(c => ({
+        id: c.id,
+        author: c.user?.name || 'User',
+        message: c.content,
+        timestamp: format(new Date(c.createdAt), 'yyyy-MM-dd HH:mm'),
+        type: 'internal'
+      }))
+      // Also load attachments
+      const att = await TicketApi.listAttachments(ticket.id)
+      const attachments = att.data.map((a) => ({
+        id: a.id,
+        fileName: a.fileName,
+        fileType: a.fileType,
+        uploadedBy: a.uploadedBy,
+        uploadedAt: format(new Date(a.uploadedAt), 'yyyy-MM-dd HH:mm'),
+        url: a.url,
+      })) as Attachment[]
+      const enriched = { ...ticket, comments: mapped, attachments }
+      setSelectedTicket(enriched)
+      setTickets(prev => prev.map(t => t.id === ticket.id ? enriched : t))
+    } catch (e) {
+      console.error('Failed to load comments', e)
+    }
   }
 
   const handleUpdateStatus = (ticket: Ticket) => {
@@ -293,38 +287,33 @@ export default function TicketManagement() {
     }
   }
 
-  const submitComment = () => {
+  const submitComment = async () => {
     if (selectedTicket && newComment.trim()) {
-      const newCommentObj: Comment = {
-        id: `c${Date.now()}`,
-        author: 'Current User',
-        message: newComment,
-        timestamp: new Date().toLocaleString(),
-        type: 'internal'
+      try {
+        // If file selected, upload first
+        if (newAttachment) {
+          await TicketApi.uploadAttachment(selectedTicket.id, newAttachment)
+        }
+        await TicketApi.addComment(selectedTicket.id, newComment)
+        // Reload comments after posting
+        const res = await TicketApi.getComments(selectedTicket.id)
+        const comments = res.data as unknown as TicketComment[]
+        const mapped: Comment[] = comments.map(c => ({
+          id: c.id,
+          author: c.user?.name || 'User',
+          message: c.content,
+          timestamp: format(new Date(c.createdAt), 'yyyy-MM-dd HH:mm'),
+          type: 'internal'
+        }))
+        setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, comments: mapped, lastUpdated: new Date().toISOString().split('T')[0] } : t))
+        setSelectedTicket(prev => prev ? { ...prev, comments: mapped } : prev)
+        setCommentModalOpen(false)
+        setSelectedTicket(null)
+        setNewComment('')
+        setNewAttachment(null)
+      } catch (e) {
+        console.error('Failed to add comment', e)
       }
-
-      const newAttachmentObj: Attachment | null = newAttachment ? {
-        id: `a${Date.now()}`,
-        fileName: newAttachment.name,
-        fileType: newAttachment.type,
-        uploadedBy: 'Current User',
-        uploadedAt: new Date().toLocaleString()
-      } : null
-
-      setTickets(tickets.map(ticket => 
-        ticket.id === selectedTicket.id 
-          ? { 
-              ...ticket, 
-              comments: [...ticket.comments, newCommentObj],
-              attachments: newAttachmentObj ? [...ticket.attachments, newAttachmentObj] : ticket.attachments,
-              lastUpdated: new Date().toISOString().split('T')[0]
-            }
-          : ticket
-      ))
-      setCommentModalOpen(false)
-      setSelectedTicket(null)
-      setNewComment('')
-      setNewAttachment(null)
     }
   }
 
@@ -336,7 +325,7 @@ export default function TicketManagement() {
     <div className="p-4 sm:p-6 md:p-8 bg-[var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2">
           Ticket Management
         </h1>
         <p className="text-sm sm:text-base text-[var(--color-primary)]">
@@ -375,8 +364,8 @@ export default function TicketManagement() {
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Ticket#</label>
             <input
               type="text"
-              value={filters.vendor}
-              onChange={(e) => setFilters({...filters, vendor: e.target.value})}
+              value={filters.ticket}
+              onChange={(e) => setFilters({ ...filters, ticket: e.target.value })}
               placeholder="Search ticket number"
               className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto mb-2"
             />
@@ -391,7 +380,7 @@ export default function TicketManagement() {
               </button>
               <button
                 onClick={() => {
-                  setFilters({status: 'all', vendor: '', date: ''})
+                  setFilters({ status: 'all', vendor: '', date: '', ticket: '' })
                   setDateCalendar(undefined)
                 }}
                 className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
@@ -419,12 +408,11 @@ export default function TicketManagement() {
 
           <div>
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Vendor</label>
-            <input
-              type="text"
+            <CustomDropdown
               value={filters.vendor}
-              onChange={(e) => setFilters({...filters, vendor: e.target.value})}
-              placeholder="Search vendor"
-              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
+              onChange={(value) => setFilters({ ...filters, vendor: value || '' })}
+              options={vendorOptions}
+              placeholder="All Vendors"
             />
           </div>
 
@@ -471,7 +459,7 @@ export default function TicketManagement() {
           </button>
           <button
             onClick={() => {
-              setFilters({status: 'all', vendor: '', date: ''})
+              setFilters({ status: 'all', vendor: '', date: '', ticket: '' })
               setDateCalendar(undefined)
             }}
             className="flex-1 px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px]"
@@ -684,16 +672,34 @@ export default function TicketManagement() {
             {selectedTicket.attachments.length > 0 && (
               <div className="mb-4 sm:mb-6">
                 <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Attachments</h4>
-                <div className="space-y-2">
-                  {selectedTicket.attachments.map((attachment) => (
-                    <div key={attachment.id} className="flex items-center gap-2 sm:gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Paperclip className="text-gray-400 flex-shrink-0" size={20} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs sm:text-sm font-medium truncate">{attachment.fileName}</p>
-                        <p className="text-xs text-gray-500">Uploaded by {attachment.uploadedBy} on {attachment.uploadedAt}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {selectedTicket.attachments.map((attachment) => {
+                    const isImage = /image\/(png|jpe?g|webp|gif|bmp)/i.test(attachment.fileType)
+                    const isPdf = /application\/pdf/i.test(attachment.fileType)
+                    return (
+                      <div key={attachment.id} className="bg-gray-50 rounded-lg border border-gray-200 p-2">
+                        <div className="aspect-video bg-white rounded flex items-center justify-center overflow-hidden">
+                          {isImage && attachment.url ? (
+                            <img src={attachment.url} alt={attachment.fileName} className="object-contain max-h-40" />
+                          ) : (
+                            <div className="text-xs text-gray-500 flex items-center gap-2"><Paperclip size={16} /> {attachment.fileName}</div>
+                          )}
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <div className="text-[10px] text-gray-500 truncate max-w-[65%]" title={attachment.fileName}>{attachment.fileName}</div>
+                          {attachment.url && (
+                            <button
+                              type="button"
+                              onClick={() => setViewingAttachment({ url: attachment.url!, type: isPdf ? 'pdf' : (isImage ? 'image' : 'unknown'), name: attachment.fileName })}
+                              className="text-[10px] text-[var(--color-accent)] hover:underline"
+                            >
+                              {isPdf ? 'Open PDF' : 'Open'}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -712,6 +718,35 @@ export default function TicketManagement() {
                     <p className="text-xs sm:text-sm text-gray-700">{comment.message}</p>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Attachment Viewer Modal */}
+      {viewingAttachment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] truncate">{viewingAttachment.name}</h3>
+              <button onClick={() => setViewingAttachment(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-3 sm:p-4 bg-gray-50">
+              <div className="flex items-start justify-center min-h-full">
+                {viewingAttachment.type === 'image' && (
+                  <img src={viewingAttachment.url} alt={viewingAttachment.name} className="max-w-full h-auto rounded-md shadow bg-white" />
+                )}
+                {viewingAttachment.type === 'pdf' && (
+                  <iframe src={viewingAttachment.url} title={viewingAttachment.name} className="w-full min-h-[600px] bg-white rounded-md shadow" />
+                )}
+                {viewingAttachment.type === 'unknown' && (
+                  <div className="text-center p-8 text-gray-600 text-sm">
+                    Preview not available. <a href={viewingAttachment.url} target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent)] hover:underline">Download</a>
+                  </div>
+                )}
               </div>
             </div>
           </div>
