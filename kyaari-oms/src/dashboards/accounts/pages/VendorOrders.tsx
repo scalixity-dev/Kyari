@@ -156,7 +156,7 @@ export default function VendorOrders() {
     <div className="p-4 sm:p-6 lg:pl-9 xl:p-9 2xl:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6 xl:mb-7 2xl:mb-8">
-        <h2 className="text-2xl sm:text-3xl  font-semibold text-[var(--color-heading)] mb-2">Vendor Orders</h2>
+        <h2 className="text-2xl   font-semibold text-[var(--color-heading)] mb-2">Vendor Orders</h2>
         <p className="text-sm xl:text-base 2xl:text-base text-[var(--color-heading)]">Manage vendor orders, generate POs, and track order status</p>
       </div>
 
