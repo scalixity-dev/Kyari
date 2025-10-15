@@ -184,6 +184,26 @@ class DispatchService {
           },
         },
         attachments: true,
+        goodsReceiptNote: {
+          include: {
+            ticket: {
+              select: {
+                id: true,
+                ticketNumber: true,
+                status: true,
+              },
+            },
+            items: {
+              select: {
+                id: true,
+                status: true,
+                receivedQuantity: true,
+                discrepancyQuantity: true,
+                damageReported: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -252,6 +272,26 @@ class DispatchService {
             },
           },
           attachments: true,
+          goodsReceiptNote: {
+            include: {
+              ticket: {
+                select: {
+                  id: true,
+                  ticketNumber: true,
+                  status: true,
+                },
+              },
+              items: {
+                select: {
+                  id: true,
+                  status: true,
+                  receivedQuantity: true,
+                  discrepancyQuantity: true,
+                  damageReported: true,
+                },
+              },
+            },
+          },
         },
         skip,
         take: limit,
@@ -414,6 +454,15 @@ class DispatchService {
         mimeType: att.mimeType,
         uploadedAt: att.createdAt.toISOString(),
       })),
+      goodsReceiptNote: dispatch.goodsReceiptNote ? {
+        id: dispatch.goodsReceiptNote.id,
+        grnNumber: dispatch.goodsReceiptNote.grnNumber,
+        status: dispatch.goodsReceiptNote.status,
+        verifiedAt: dispatch.goodsReceiptNote.verifiedAt?.toISOString(),
+        operatorRemarks: dispatch.goodsReceiptNote.operatorRemarks,
+        ticket: dispatch.goodsReceiptNote.ticket || null,
+        items: dispatch.goodsReceiptNote.items || []
+      } : null,
       createdAt: dispatch.createdAt.toISOString(),
       updatedAt: dispatch.updatedAt.toISOString(),
     };

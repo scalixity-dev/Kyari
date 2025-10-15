@@ -238,30 +238,26 @@ const getStatusBadge = (status: PurchaseOrder['status']) => {
 }
 
 const getValidationDisplay = (po: PurchaseOrder) => {
-  if (po.status === 'Validating' || po.status === 'Validated') {
+  // For verified/validated dispatch - show quantity as correct
+  if (po.dispatchStatus === 'Validated') {
     return (
       <div className="mt-2 text-xs">
         <div className="flex items-center gap-1 text-green-600">
           <CheckSquare size={12} />
           <span>Qty: {po.quantity} ✓</span>
         </div>
-        <div className="flex items-center gap-1 text-green-600">
-          <CheckSquare size={12} />
-          <span>Amount: ₹{po.amount.toLocaleString()} ✓</span>
-        </div>
       </div>
     )
   }
   
-  if (po.status === 'Rejected' && po.validationIssues) {
+  // For rejected dispatch (ticket raised) - show mismatch
+  if (po.dispatchStatus === 'Rejected' || (po.status === 'Rejected' && po.validationIssues)) {
     return (
       <div className="mt-2 text-xs">
-        {po.validationIssues.map((issue, index) => (
-          <div key={index} className="flex items-center gap-1 text-red-600">
-            <X size={12} />
-            <span>{issue}</span>
-          </div>
-        ))}
+        <div className="flex items-center gap-1 text-red-600">
+          <X size={12} />
+          <span>Mismatch</span>
+        </div>
       </div>
     )
   }

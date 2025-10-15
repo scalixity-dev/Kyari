@@ -33,6 +33,26 @@ export interface AttachmentResponse {
   uploadedAt: string;
 }
 
+export interface GRNResponse {
+  id: string;
+  grnNumber: string;
+  status: string;
+  verifiedAt?: string;
+  operatorRemarks?: string;
+  ticket?: {
+    id: string;
+    ticketNumber: string;
+    status: string;
+  } | null;
+  items: Array<{
+    id: string;
+    status: string;
+    receivedQuantity: number;
+    discrepancyQuantity: number;
+    damageReported: boolean;
+  }>;
+}
+
 export interface DispatchResponse {
   id: string;
   vendorId: string;
@@ -46,6 +66,7 @@ export interface DispatchResponse {
   poNumber?: string | null;
   items: DispatchItemResponse[];
   attachments?: AttachmentResponse[];
+  goodsReceiptNote?: GRNResponse | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -51,6 +51,25 @@ export interface DispatchResponse {
   poNumber?: string | null
   items: DispatchItemResponse[]
   attachments?: AttachmentResponse[]
+  goodsReceiptNote?: {
+    id: string
+    grnNumber: string
+    status: 'PENDING_VERIFICATION' | 'VERIFIED_OK' | 'VERIFIED_MISMATCH' | 'PARTIALLY_VERIFIED'
+    verifiedAt?: string
+    operatorRemarks?: string
+    ticket?: {
+      id: string
+      ticketNumber: string
+      status: string
+    } | null
+    items: Array<{
+      id: string
+      status: string
+      receivedQuantity: number
+      discrepancyQuantity: number
+      damageReported: boolean
+    }>
+  } | null
   createdAt: string
   updatedAt: string
 }

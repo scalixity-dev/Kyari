@@ -340,20 +340,66 @@ export default function Dispatch() {
       const orderNumbers = Array.from(new Set(dispatch.items.map(item => item.orderNumber)))
       const orderNumber = orderNumbers.join(', ')
       
-      // Map backend status to UI status
+      // Check GRN verification status
+      const grn = dispatch.goodsReceiptNote
+      let storeVerification: DispatchOrder['storeVerification'] = 'Pending'
+      let verificationNotes: string | undefined = undefined
       let uiStatus: DispatchOrder['status'] = 'Dispatch Marked'
-      switch (dispatch.status) {
-        case 'DISPATCHED':
-          uiStatus = 'Dispatch Marked'
-          break
-        case 'IN_TRANSIT':
-          uiStatus = 'In Transit'
-          break
-        case 'DELIVERED':
+      
+      if (grn) {
+        // Map GRN status to store verification
+        if (grn.status === 'VERIFIED_OK') {
+          storeVerification = 'OK'
+          uiStatus = 'Delivered - Verified'
+        } else if (grn.status === 'VERIFIED_MISMATCH' || grn.status === 'PARTIALLY_VERIFIED') {
+          storeVerification = 'Mismatch'
+          uiStatus = 'Delivered - Mismatch'
+          
+          // Get mismatch details from GRN items
+          const mismatchItems = grn.items.filter(item => 
+            item.status !== 'VERIFIED_OK'
+          )
+          
+          if (mismatchItems.length > 0) {
+            const details = mismatchItems.map(item => {
+              if (item.damageReported) {
+                return 'Damage reported'
+              } else if (item.discrepancyQuantity < 0) {
+                return `Shortage: ${Math.abs(item.discrepancyQuantity)} units`
+              } else if (item.discrepancyQuantity > 0) {
+                return `Excess: ${item.discrepancyQuantity} units`
+              }
+              return 'Mismatch detected'
+            })
+            verificationNotes = details.join(', ')
+          }
+          
+          if (grn.ticket) {
+            verificationNotes = `Ticket ${grn.ticket.ticketNumber}: ${verificationNotes || 'Quantity mismatch'}`
+          }
+        } else if (grn.status === 'PENDING_VERIFICATION') {
+          storeVerification = 'Pending'
           uiStatus = 'Received by Store'
-          break
-        default:
-          uiStatus = 'Dispatch Marked'
+        }
+        
+        if (grn.operatorRemarks && !verificationNotes) {
+          verificationNotes = grn.operatorRemarks
+        }
+      } else {
+        // No GRN yet - map dispatch status to UI status
+        switch (dispatch.status) {
+          case 'DISPATCHED':
+            uiStatus = 'Dispatch Marked'
+            break
+          case 'IN_TRANSIT':
+            uiStatus = 'In Transit'
+            break
+          case 'DELIVERED':
+            uiStatus = 'Received by Store'
+            break
+          default:
+            uiStatus = 'Dispatch Marked'
+        }
       }
 
       // Get attachment info
@@ -381,7 +427,8 @@ export default function Dispatch() {
         estimatedDelivery: estimatedDelivery,
         awbNumber: dispatch.awbNumber,
         logisticsPartner: dispatch.logisticsPartner,
-        storeVerification: 'Pending' // Default, would need GRN data for actual verification
+        storeVerification: storeVerification,
+        verificationNotes: verificationNotes
       }
     })
   }
