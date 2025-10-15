@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { FileText, CheckSquare, X, Clock, Calendar as CalendarIcon } from 'lucide-react'
+import { FileText, CheckSquare, X, Clock, Calendar as CalendarIcon, ChevronDown, ChevronUp } from 'lucide-react'
 import { CustomDropdown, KPICard } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { Pagination } from '../../../components/ui/Pagination'
@@ -23,6 +23,10 @@ interface PurchaseOrder {
   rejectionReason?: string
   invoiceId?: string
   dispatchStatus?: string
+  vendorInvoiceFile?: string
+  vendorInvoiceUrl?: string
+  accountsInvoiceFile?: string
+  accountsInvoiceUrl?: string
 }
 
 interface InvoiceUploadModalProps {
@@ -30,6 +34,80 @@ interface InvoiceUploadModalProps {
   po: PurchaseOrder | null
   onClose: () => void
   onUpload: (file: File) => void
+}
+
+// Expandable Rejection Reason Component (Desktop)
+const RejectionReasonBox: React.FC<{ reason: string }> = ({ reason }) => {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const needsExpansion = reason.length > 80
+
+  return (
+    <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 leading-relaxed max-w-[14rem]">
+      <p className="font-medium mb-0.5 flex items-center justify-between">
+        <span className="flex items-center gap-1">
+          <span>⚠️</span>
+          <span>Issue:</span>
+        </span>
+        {needsExpansion && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-red-600 hover:text-red-800 transition-colors ml-1"
+            aria-label={isExpanded ? 'Show less' : 'Show more'}
+          >
+            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+        )}
+      </p>
+      <p className={`whitespace-pre-wrap break-words ${!isExpanded && needsExpansion ? 'line-clamp-2' : ''}`}>
+        {reason}
+      </p>
+      {needsExpansion && !isExpanded && (
+        <button
+          onClick={() => setIsExpanded(true)}
+          className="text-red-700 hover:text-red-900 font-medium mt-1 text-xs underline"
+        >
+          Read more
+        </button>
+      )}
+    </div>
+  )
+}
+
+// Expandable Rejection Reason Component (Mobile)
+const MobileRejectionReasonBox: React.FC<{ reason: string }> = ({ reason }) => {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const needsExpansion = reason.length > 100
+
+  return (
+    <div className="p-3 bg-red-50 border border-red-200 rounded text-xs sm:text-sm text-red-600 leading-relaxed">
+      <p className="font-semibold mb-1 flex items-center justify-between">
+        <span className="flex items-center gap-1">
+          <span>⚠️</span>
+          <span>Issue Reported:</span>
+        </span>
+        {needsExpansion && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-red-600 hover:text-red-800 transition-colors"
+            aria-label={isExpanded ? 'Show less' : 'Show more'}
+          >
+            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        )}
+      </p>
+      <p className={`whitespace-pre-wrap break-words ${!isExpanded && needsExpansion ? 'line-clamp-3' : ''}`}>
+        {reason}
+      </p>
+      {needsExpansion && !isExpanded && (
+        <button
+          onClick={() => setIsExpanded(true)}
+          className="text-red-700 hover:text-red-900 font-semibold mt-1 text-xs underline"
+        >
+          Read more
+        </button>
+      )}
+    </div>
+  )
 }
 
 const InvoiceUploadModal: React.FC<InvoiceUploadModalProps> = ({ isOpen, po, onClose, onUpload }) => {
@@ -40,10 +118,11 @@ const InvoiceUploadModal: React.FC<InvoiceUploadModalProps> = ({ isOpen, po, onC
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file && (file.type === 'application/pdf' || file.type === 'application/json')) {
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
+    if (file && allowedTypes.includes(file.type)) {
       setSelectedFile(file)
     } else {
-      alert('Please select a PDF or JSON file')
+      alert('Please select a PDF, PNG, or JPEG file')
     }
   }
 
@@ -51,10 +130,11 @@ const InvoiceUploadModal: React.FC<InvoiceUploadModalProps> = ({ isOpen, po, onC
     e.preventDefault()
     setDragOver(false)
     const file = e.dataTransfer.files[0]
-    if (file && (file.type === 'application/pdf' || file.type === 'application/json')) {
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
+    if (file && allowedTypes.includes(file.type)) {
       setSelectedFile(file)
     } else {
-      alert('Please select a PDF or JSON file')
+      alert('Please select a PDF, PNG, or JPEG file')
     }
   }
 
@@ -98,12 +178,12 @@ const InvoiceUploadModal: React.FC<InvoiceUploadModalProps> = ({ isOpen, po, onC
             Browse Files
             <input
               type="file"
-              accept=".pdf,.json"
+              accept=".pdf,.png,.jpg,.jpeg"
               onChange={handleFileSelect}
               className="hidden"
             />
           </label>
-          <p className="text-xs text-gray-500 mt-2">Supported formats: PDF, JSON</p>
+          <p className="text-xs text-gray-500 mt-2">Supported formats: PDF, PNG, JPEG</p>
         </div>
 
         {selectedFile && (
@@ -145,11 +225,11 @@ const getStatusBadge = (status: PurchaseOrder['status']) => {
     case 'Validating':
       return <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">Validating</span>
     case 'Validated':
-      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Validated</span>
+      return <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium">Verified</span>
     case 'Approved':
       return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Approved</span>
     case 'Rejected':
-      return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">Rejected</span>
+      return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">Ticket Raised</span>
     case 'Payment Received':
       return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">Payment Received</span>
     default:
@@ -262,24 +342,94 @@ export default function Invoices() {
           .filter(Boolean)
       )) as string[]
 
-      // Map invoice status to UI status
-      let uiStatus: PurchaseOrder['status'] = 'Received'
-      if (invoice.status === 'PENDING_VERIFICATION') {
-        uiStatus = invoice.vendorAttachment ? 'Validating' : 'Received'
-      } else if (invoice.status === 'APPROVED') {
-        uiStatus = 'Approved'
-      } else if (invoice.status === 'REJECTED') {
-        uiStatus = 'Rejected'
-      } else if (invoice.status === 'PAID') {
-        uiStatus = 'Payment Received'
+      // Check GRN status from dispatch items
+      let grnStatus: 'pending' | 'verified' | 'mismatch' | null = null
+      let grnRejectionReason: string | undefined = undefined
+      
+      for (const item of po.items) {
+        const dispatchItems = item.assignedOrderItem.dispatchItems
+        if (dispatchItems && dispatchItems.length > 0) {
+          for (const dispatchItem of dispatchItems) {
+            const grn = dispatchItem.dispatch?.goodsReceiptNote
+            if (grn) {
+              // Check GRN status (VERIFIED_OK, VERIFIED_MISMATCH, PENDING_VERIFICATION, PARTIALLY_VERIFIED)
+              if (grn.status === 'VERIFIED_OK') {
+                grnStatus = 'verified'
+              } else if (grn.status === 'VERIFIED_MISMATCH' || grn.status === 'PARTIALLY_VERIFIED') {
+                grnStatus = 'mismatch'
+                // Get the specific item mismatch details (check item statuses)
+                const grnItem = grn.items.find(gi => 
+                  gi.status === 'SHORTAGE_REPORTED' || 
+                  gi.status === 'DAMAGE_REPORTED' || 
+                  gi.status === 'QUANTITY_MISMATCH' ||
+                  gi.status === 'EXCESS_RECEIVED'
+                )
+                if (grnItem) {
+                  if (grnItem.damageReported) {
+                    grnRejectionReason = 'Items damaged during delivery'
+                  } else if (grnItem.discrepancyQuantity < 0) {
+                    grnRejectionReason = `Quantity shortage detected: ${Math.abs(grnItem.discrepancyQuantity)} units missing`
+                  } else if (grnItem.discrepancyQuantity > 0) {
+                    grnRejectionReason = `Excess quantity received: ${grnItem.discrepancyQuantity} units extra`
+                  } else {
+                    grnRejectionReason = 'Quantity mismatch detected'
+                  }
+                }
+                break
+              } else if (grn.status === 'PENDING_VERIFICATION') {
+                grnStatus = 'pending'
+              }
+            }
+          }
+          if (grnStatus === 'mismatch') break
+        }
       }
 
-      // Dispatch status mirrors invoice status
-      const dispatchStatus = uiStatus
+      // Map invoice status to UI status with GRN consideration
+      let uiStatus: PurchaseOrder['status'] = 'Received'
+      let dispatchStatus: PurchaseOrder['status'] = 'Received'
+      let finalRejectionReason = invoice.status === 'REJECTED' ? 'Invoice rejected by accounts team' : undefined
+      
+      if (invoice.status === 'PENDING_VERIFICATION') {
+        uiStatus = invoice.vendorAttachment ? 'Validating' : 'Received'
+        
+        // Update dispatch status based on GRN
+        if (grnStatus === 'verified') {
+          dispatchStatus = 'Validated'
+        } else if (grnStatus === 'mismatch') {
+          dispatchStatus = 'Rejected'
+          finalRejectionReason = grnRejectionReason || 'Dispatch verification failed'
+        } else if (grnStatus === 'pending') {
+          dispatchStatus = 'Dispatched'
+        } else {
+          dispatchStatus = uiStatus
+        }
+      } else if (invoice.status === 'APPROVED') {
+        uiStatus = 'Approved'
+        dispatchStatus = 'Validated'
+      } else if (invoice.status === 'REJECTED') {
+        uiStatus = 'Rejected'
+        dispatchStatus = 'Rejected'
+      } else if (invoice.status === 'PAID') {
+        uiStatus = 'Payment Received'
+        dispatchStatus = 'Validated'
+      }
 
       // Format date
       const dateObj = parseISO(po.createdAt)
       const formattedDate = format(dateObj, 'dd/MM/yyyy')
+
+      // Ensure we have BOTH file and URL for vendor invoice (strict validation)
+      const hasVendorInvoice = !!(invoice.vendorAttachment?.fileName && invoice.vendorAttachment?.s3Url)
+      const hasAccountsInvoice = !!(invoice.accountsAttachment?.fileName && invoice.accountsAttachment?.s3Url)
+
+      // Debug logging (remove in production)
+      console.log(`PO ${po.poNumber}:`, {
+        hasVendorInvoice,
+        hasAccountsInvoice,
+        vendorFileName: invoice.vendorAttachment?.fileName,
+        accountsFileName: invoice.accountsAttachment?.fileName
+      })
 
       return {
         id: invoice.id,
@@ -295,7 +445,12 @@ export default function Invoices() {
         invoiceUrl: invoice.vendorAttachment?.s3Url || invoice.accountsAttachment?.s3Url,
         invoiceId: invoice.id,
         dispatchStatus: dispatchStatus,
-        rejectionReason: invoice.status === 'REJECTED' ? 'Invoice rejected by accounts team' : undefined
+        rejectionReason: finalRejectionReason,
+        // Separate vendor and accounts invoices - ONLY set if both file and URL exist
+        vendorInvoiceFile: hasVendorInvoice ? invoice.vendorAttachment!.fileName : undefined,
+        vendorInvoiceUrl: hasVendorInvoice ? invoice.vendorAttachment!.s3Url : undefined,
+        accountsInvoiceFile: hasAccountsInvoice ? invoice.accountsAttachment!.fileName : undefined,
+        accountsInvoiceUrl: hasAccountsInvoice ? invoice.accountsAttachment!.s3Url : undefined
       }
     })
   }
@@ -677,33 +832,45 @@ export default function Invoices() {
                   </td>
                   <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex flex-col items-start gap-2">
-                      {/* Only show upload button for Rejected invoices */}
-                      {po.status === 'Rejected' && (
+                      {/* ALWAYS show upload button when ticket is raised (allows re-upload if wrong file) */}
+                      {(po.status === 'Rejected' || po.dispatchStatus === 'Rejected') && (
                         <button
                           onClick={() => handleUploadInvoice(po.id)}
-                          className="px-3 py-1 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs font-medium flex items-center gap-1"
+                          className="px-3 py-1.5 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs font-medium flex items-center gap-1.5 shadow-sm"
                         >
-                          <FileText size={12} />
-                          Re-upload Invoice
+                          <FileText size={13} />
+                          {po.vendorInvoiceFile ? 'Re-upload Your Invoice' : 'Upload Your Invoice'}
                         </button>
                       )}
 
-                      {/* Show view button if invoice exists */}
-                      {po.invoiceFile && po.invoiceUrl && (
+                      {/* Vendor Invoice - ONLY show if vendor has actually uploaded (strict check) */}
+                      {po.vendorInvoiceFile && po.vendorInvoiceUrl && po.vendorInvoiceUrl !== po.accountsInvoiceUrl && (
                         <button
-                          onClick={() => handleViewInvoice(po.invoiceUrl!, 'Vendor')}
-                          className="px-3 py-1 border border-[var(--color-accent)] text-[var(--color-accent)] rounded-md hover:bg-[var(--color-accent)] hover:text-white transition-colors text-xs font-medium flex items-center gap-1"
+                          onClick={() => {
+                            console.log('Viewing vendor invoice:', po.vendorInvoiceUrl)
+                            handleViewInvoice(po.vendorInvoiceUrl!, 'Your')
+                          }}
+                          className="px-3 py-1 bg-blue-50 border border-blue-300 text-blue-700 rounded-md hover:bg-blue-100 transition-colors text-xs font-medium flex items-center gap-1.5"
                         >
                           <FileText size={12} />
-                          View Invoice
+                          <span className="font-semibold">Your Invoice</span>
+                        </button>
+                      )}
+                      
+                      {/* Accounts Invoice - always show if exists */}
+                      {po.accountsInvoiceFile && po.accountsInvoiceUrl && (
+                        <button
+                          onClick={() => handleViewInvoice(po.accountsInvoiceUrl!, 'Accounts')}
+                          className="px-3 py-1 bg-gray-50 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors text-xs font-medium flex items-center gap-1.5"
+                        >
+                          <FileText size={12} />
+                          <span className="font-semibold">Accounts Invoice</span>
                         </button>
                       )}
 
-                      {/* Show rejection reason */}
-                      {po.status === 'Rejected' && po.rejectionReason && (
-                        <div className="text-xs text-red-600 max-w-[12rem]">
-                          {po.rejectionReason}
-                        </div>
+                      {/* Show rejection reason with expandable feature */}
+                      {(po.status === 'Rejected' || po.dispatchStatus === 'Rejected') && po.rejectionReason && (
+                        <RejectionReasonBox reason={po.rejectionReason} />
                       )}
                     </div>
                   </td>
@@ -744,34 +911,45 @@ export default function Invoices() {
               </div>
 
               <div className="flex flex-col gap-2">
-                {/* Only show upload button for Rejected invoices */}
-                {po.status === 'Rejected' && (
+                {/* ALWAYS show upload button when ticket is raised (allows re-upload if wrong file) */}
+                {(po.status === 'Rejected' || po.dispatchStatus === 'Rejected') && (
                   <button
                     onClick={() => handleUploadInvoice(po.id)}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2 shadow-sm"
                   >
-                    <FileText size={14} />
-                    <span>Re-upload Invoice</span>
+                    <FileText size={16} />
+                    <span>{po.vendorInvoiceFile ? 'Re-upload Your Invoice' : 'Upload Your Invoice'}</span>
                   </button>
                 )}
 
-                {/* Show view button if invoice exists */}
-                {po.invoiceFile && po.invoiceUrl && (
+                {/* Vendor Invoice - ONLY show if vendor has actually uploaded (strict check) */}
+                {po.vendorInvoiceFile && po.vendorInvoiceUrl && po.vendorInvoiceUrl !== po.accountsInvoiceUrl && (
                   <button
-                    onClick={() => handleViewInvoice(po.invoiceUrl!, 'Vendor')}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-[var(--color-accent)] text-[var(--color-accent)] rounded-md hover:bg-[var(--color-accent)] hover:text-white transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2"
+                    onClick={() => {
+                      console.log('Viewing vendor invoice:', po.vendorInvoiceUrl)
+                      handleViewInvoice(po.vendorInvoiceUrl!, 'Your')
+                    }}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-50 border border-blue-300 text-blue-700 rounded-md hover:bg-blue-100 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2"
                   >
                     <FileText size={14} />
-                    <span>View Invoice</span>
+                    <span className="font-semibold">View Your Invoice</span>
+                  </button>
+                )}
+                
+                {/* Accounts Invoice - always show if exists */}
+                {po.accountsInvoiceFile && po.accountsInvoiceUrl && (
+                  <button
+                    onClick={() => handleViewInvoice(po.accountsInvoiceUrl!, 'Accounts')}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-50 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2"
+                  >
+                    <FileText size={14} />
+                    <span className="font-semibold">View Accounts Invoice</span>
                   </button>
                 )}
 
-                {/* Show rejection reason */}
-                {po.status === 'Rejected' && po.rejectionReason && (
-                  <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 leading-relaxed">
-                    <p className="font-medium mb-0.5">Rejection Reason:</p>
-                    <p>{po.rejectionReason}</p>
-                  </div>
+                {/* Show rejection reason with expandable mobile version */}
+                {(po.status === 'Rejected' || po.dispatchStatus === 'Rejected') && po.rejectionReason && (
+                  <MobileRejectionReasonBox reason={po.rejectionReason} />
                 )}
               </div>
             </div>

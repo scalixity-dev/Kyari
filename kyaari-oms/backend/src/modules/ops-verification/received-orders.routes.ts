@@ -44,7 +44,11 @@ router.get('/:id',
  * @access  Private (Operations team)
  */
 router.post('/:id/verify', 
-  invalidateCache(['api:*:/api/ops/received-orders*', 'user:*:/api/dispatches/*']),
+  invalidateCache([
+    'api:*:/api/ops/received-orders*', 
+    'user:*:/api/dispatches/*',
+    'user:*:/api/invoices/uploads*'  // Invalidate vendor invoice cache
+  ]),
   (req, res) => receivedOrdersController.verifyOrder(req, res)
 );
 
@@ -54,7 +58,11 @@ router.post('/:id/verify',
  * @access  Private (Operations team)
  */
 router.post('/:id/raise-ticket', 
-  invalidateCache(['api:*:/api/ops/received-orders*', 'user:*:/api/dispatches/*']),
+  invalidateCache([
+    'api:*:/api/ops/received-orders*', 
+    'user:*:/api/dispatches/*',
+    'user:*:/api/invoices/uploads*'  // Invalidate vendor invoice cache
+  ]),
   (req, res) => receivedOrdersController.raiseTicket(req, res)
 );
 
