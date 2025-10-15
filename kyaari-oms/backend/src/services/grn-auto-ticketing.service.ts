@@ -167,8 +167,8 @@ export class GRNAutoTicketingService {
 
         return { grn: updatedGRN, ticket };
       }, {
-        maxWait: 10000, // Maximum time to wait for transaction to start (10 seconds)
-        timeout: 20000, // Maximum time for transaction to complete (20 seconds)
+        maxWait: 15000, // Maximum time to wait for transaction to start (15 seconds)
+        timeout: 30000, // Maximum time for transaction to complete (30 seconds)
       });
 
       logger.info('GRN verification processed successfully', {
@@ -588,8 +588,8 @@ export class GRNAutoTicketingService {
 
         return ticket;
       }, {
-        maxWait: 10000, // Maximum time to wait for transaction to start (10 seconds)
-        timeout: 15000, // Maximum time for transaction to complete (15 seconds)
+        maxWait: 15000, // Maximum time to wait for transaction to start (15 seconds)
+        timeout: 30000, // Maximum time for transaction to complete (30 seconds)
       });
 
       logger.info('Ticket status updated', {

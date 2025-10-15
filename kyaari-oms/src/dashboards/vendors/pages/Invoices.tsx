@@ -338,13 +338,15 @@ export default function Invoices() {
           .filter(Boolean)
       )) as string[]
 
-      // Check GRN status from dispatch items
+      // Check if there's any dispatch first
+      let hasDispatch = false
       let grnStatus: 'pending' | 'verified' | 'mismatch' | null = null
       let grnRejectionReason: string | undefined = undefined
       
       for (const item of po.items) {
         const dispatchItems = item.assignedOrderItem.dispatchItems
         if (dispatchItems && dispatchItems.length > 0) {
+          hasDispatch = true
           for (const dispatchItem of dispatchItems) {
             const grn = dispatchItem.dispatch?.goodsReceiptNote
             if (grn) {
@@ -389,26 +391,31 @@ export default function Invoices() {
       if (invoice.status === 'PENDING_VERIFICATION') {
         uiStatus = invoice.vendorAttachment ? 'Validating' : 'Received'
         
-        // Update dispatch status based on GRN
-        if (grnStatus === 'verified') {
-          dispatchStatus = 'Validated'
-        } else if (grnStatus === 'mismatch') {
-          dispatchStatus = 'Rejected'
-          finalRejectionReason = grnRejectionReason || 'Dispatch verification failed'
-        } else if (grnStatus === 'pending') {
-          dispatchStatus = 'Dispatched'
+        // Only update dispatch status based on GRN if there's actually a dispatch
+        if (hasDispatch) {
+          if (grnStatus === 'verified') {
+            dispatchStatus = 'Validated'
+          } else if (grnStatus === 'mismatch') {
+            dispatchStatus = 'Rejected'
+            finalRejectionReason = grnRejectionReason || 'Dispatch verification failed'
+          } else if (grnStatus === 'pending') {
+            dispatchStatus = 'Dispatched'
+          } else {
+            dispatchStatus = 'Dispatched' // Default to dispatched if no GRN status
+          }
         } else {
-          dispatchStatus = uiStatus
+          // No dispatch yet, keep as Received
+          dispatchStatus = 'Received'
         }
       } else if (invoice.status === 'APPROVED') {
         uiStatus = 'Approved'
-        dispatchStatus = 'Validated'
+        dispatchStatus = hasDispatch ? 'Validated' : 'Received'
       } else if (invoice.status === 'REJECTED') {
         uiStatus = 'Rejected'
-        dispatchStatus = 'Rejected'
+        dispatchStatus = hasDispatch ? 'Rejected' : 'Received'
       } else if (invoice.status === 'PAID') {
         uiStatus = 'Payment Received'
-        dispatchStatus = 'Validated'
+        dispatchStatus = hasDispatch ? 'Validated' : 'Received'
       }
 
       // Format date

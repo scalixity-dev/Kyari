@@ -447,56 +447,83 @@ export class ReceivedOrdersController {
         });
       }
 
-      // Update GRN and related items
-      const updatedGRN = await prisma.$transaction(async (tx) => {
-        // Update GRN status
-        const updated = await tx.goodsReceiptNote.update({
-          where: { id },
-          data: {
-            status: 'VERIFIED_OK',
-            verifiedById: userId,
-            verifiedAt: new Date(),
-            operatorRemarks: verificationNotes,
-          },
-        });
+      // Update GRN and related items with retry logic
+      let updatedGRN;
+      let retryCount = 0;
+      const maxRetries = 3;
 
-        // Update all GRN items to VERIFIED_OK
-        await tx.goodsReceiptItem.updateMany({
-          where: { goodsReceiptNoteId: id },
-          data: {
-            status: 'VERIFIED_OK',
-          },
-        });
+      while (retryCount < maxRetries) {
+        try {
+          updatedGRN = await prisma.$transaction(async (tx) => {
+            // Update GRN status
+            const updated = await tx.goodsReceiptNote.update({
+              where: { id },
+              data: {
+                status: 'VERIFIED_OK',
+                verifiedById: userId,
+                verifiedAt: new Date(),
+                operatorRemarks: verificationNotes,
+              },
+            });
 
-        // Update assignment status to VERIFIED_OK
-        const grnItemIds = grn.items.map((item) => item.id);
-        const assignmentIds = grn.items.map((item) => item.assignedOrderItemId);
+            // Update all GRN items to VERIFIED_OK
+            await tx.goodsReceiptItem.updateMany({
+              where: { goodsReceiptNoteId: id },
+              data: {
+                status: 'VERIFIED_OK',
+              },
+            });
 
-        await tx.assignedOrderItem.updateMany({
-          where: { id: { in: assignmentIds } },
-          data: {
-            status: 'VERIFIED_OK',
-          },
-        });
+            // Update assignment status to VERIFIED_OK
+            const assignmentIds = grn.items.map((item) => item.assignedOrderItemId);
 
-        // Create audit log
-        await tx.auditLog.create({
-          data: {
-            actorUserId: userId,
-            action: APP_CONSTANTS.AUDIT_ACTIONS.GRN_VERIFIED_OK,
-            entityType: 'GoodsReceiptNote',
-            entityId: id,
-            metadata: {
-              grnNumber: grn.grnNumber,
-              dispatchId: grn.dispatchId,
-              itemCount: grn.items.length,
-              verificationNotes,
-            },
-          },
-        });
+            if (assignmentIds.length > 0) {
+              await tx.assignedOrderItem.updateMany({
+                where: { id: { in: assignmentIds } },
+                data: {
+                  status: 'VERIFIED_OK',
+                },
+              });
+            }
 
-        return updated;
-      });
+            // Create audit log
+            await tx.auditLog.create({
+              data: {
+                actorUserId: userId,
+                action: APP_CONSTANTS.AUDIT_ACTIONS.GRN_VERIFIED_OK,
+                entityType: 'GoodsReceiptNote',
+                entityId: id,
+                metadata: {
+                  grnNumber: grn.grnNumber,
+                  dispatchId: grn.dispatchId,
+                  itemCount: grn.items.length,
+                  verificationNotes,
+                },
+              },
+            });
+
+            return updated;
+          }, {
+            timeout: 30000, // 30 seconds timeout
+            isolationLevel: 'ReadCommitted'
+          });
+          break; // Success, exit retry loop
+        } catch (error: any) {
+          retryCount++;
+          logger.warn(`Transaction attempt ${retryCount} failed for GRN verification`, {
+            error: error.message,
+            grnId: id,
+            retryCount
+          });
+
+          if (retryCount >= maxRetries) {
+            throw error; // Re-throw if max retries reached
+          }
+
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
 
       logger.info('Received order verified successfully', {
         grnId: id,
@@ -509,14 +536,26 @@ export class ReceivedOrdersController {
         data: updatedGRN,
         message: 'Order verified successfully',
       });
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Error verifying received order', {
-        error,
+        error: error.message,
+        code: error.code,
         orderId: req.params.id,
       });
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to verify order';
+      if (error.code === 'P2028') {
+        errorMessage = 'Database transaction timeout. Please try again.';
+      } else if (error.code === 'P2002') {
+        errorMessage = 'Duplicate entry detected. Please refresh and try again.';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Request timeout. Please try again.';
+      }
+      
       return res.status(500).json({
         success: false,
-        error: 'Failed to verify order',
+        error: errorMessage,
       });
     }
   }
@@ -693,14 +732,26 @@ export class ReceivedOrdersController {
         },
         message: 'Ticket raised successfully',
       });
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Error raising ticket for received order', {
-        error,
+        error: error.message,
+        code: error.code,
         orderId: req.params.id,
       });
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to raise ticket';
+      if (error.code === 'P2028') {
+        errorMessage = 'Database transaction timeout. Please try again.';
+      } else if (error.code === 'P2002') {
+        errorMessage = 'Duplicate entry detected. Please refresh and try again.';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Request timeout. Please try again.';
+      }
+      
       return res.status(500).json({
         success: false,
-        error: 'Failed to raise ticket',
+        error: errorMessage,
       });
     }
   }

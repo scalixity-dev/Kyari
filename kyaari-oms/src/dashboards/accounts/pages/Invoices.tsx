@@ -89,6 +89,19 @@ function AccountsInvoices() {
   }
 
   function handleUploadInvoice(orderId: string) {
+    const order = poOrders.find(o => o.id === orderId)
+    
+    // Validate that PO is created before allowing upload
+    if (!order) {
+      toast.error('Order not found')
+      return
+    }
+    
+    if (order.poStatus === 'Pending') {
+      toast.error('Please create PO for this order first before uploading invoice')
+      return
+    }
+    
     fileInputRefs.current[orderId]?.click()
   }
 
@@ -97,7 +110,16 @@ function AccountsInvoices() {
     if (file) {
       try {
         const order = poOrders.find(o => o.id === orderId)
-        if (!order) return
+        if (!order) {
+          toast.error('Order not found')
+          return
+        }
+        
+        // Double-check PO status (in case state changed)
+        if (order.poStatus === 'Pending') {
+          toast.error('Please create PO for this order first before uploading invoice')
+          return
+        }
 
         // Upload file to S3 and link to order
         await InvoiceApiService.uploadAndLinkInvoice(
