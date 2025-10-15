@@ -94,7 +94,7 @@ export default function AccountsProfileSettings() {
     <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2">
+        <h1 className="text-2xl sm:text-2xl font-bold text-[var(--color-heading)] mb-2">
           Profile & Settings
         </h1>
         <p className="text-sm sm:text-base text-[var(--color-primary)]">

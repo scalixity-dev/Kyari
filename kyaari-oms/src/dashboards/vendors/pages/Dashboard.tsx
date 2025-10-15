@@ -396,9 +396,9 @@ export default function Dashboard() {
           {/* Order Status & Fulfillment charts removed */}
 
           {/* Notifications & Quick Actions Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
             {/* Notifications Heading (outside the card) */}
-            <div className="lg:col-span-2 mb-0 flex flex-col">
+            <div className="lg:col-span-4 mb-0 flex flex-col">
               <h3 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)] font-[var(--font-heading)] mb-3">Recent Notification</h3>
 
               <div className="bg-white rounded-xl shadow-md border border-white/20 p-3 sm:p-4 md:p-5 flex-1 flex flex-col overflow-hidden">

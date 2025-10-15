@@ -161,7 +161,7 @@ function AccountsPaymentRelease() {
     <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6 lg:mb-8">
-        <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6">Payment Release</h2>
+        <h2 className="text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6">Payment Release</h2>
       </div>
 
       {/* Summary Cards */}

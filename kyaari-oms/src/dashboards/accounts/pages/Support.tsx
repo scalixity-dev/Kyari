@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Send, Paperclip, FileText, AlertTriangle, CheckSquare, Clock, Calendar as CalendarIcon } from 'lucide-react'
+import { Plus, Send, Paperclip, AlertTriangle, CheckSquare, Clock, Calendar as CalendarIcon } from 'lucide-react'
 import { CustomDropdown, KPICard } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { Pagination } from '../../../components/ui/Pagination'
@@ -209,10 +209,6 @@ export default function AccountsSupport() {
   const toCalendarRef = useRef<HTMLDivElement>(null)
   const [search, setSearch] = useState('')
 
-  // pagination
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
-
   // modal + drawer
   const [showNewTicket, setShowNewTicket] = useState(false)
   const [drawerTicket, setDrawerTicket] = useState<Ticket | null>(null)
@@ -230,6 +226,10 @@ export default function AccountsSupport() {
   const [chatAttachment, setChatAttachment] = useState<File | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   // analytics
   const openTickets = tickets.filter(t => t.status === 'Open').length
@@ -281,21 +281,6 @@ export default function AccountsSupport() {
   useEffect(() => {
     setCurrentPage(1)
   }, [filterIssue, filterStatus, filterPriority, dateFrom, dateTo, search])
-
-  // Close calendars when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (fromCalendarRef.current && !fromCalendarRef.current.contains(event.target as Node)) {
-        setShowFromCalendar(false)
-      }
-      if (toCalendarRef.current && !toCalendarRef.current.contains(event.target as Node)) {
-        setShowToCalendar(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   function addTicket() {
     if (!draftIssueTitle || !draftIssue || !draftPriority || !draftDescription) {
@@ -398,236 +383,247 @@ export default function AccountsSupport() {
     }
   }, [drawerTicket?.messages])
 
-  return (
-    <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
-      {/* Header */}
-      <div className="mb-4 sm:mb-6 lg:mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-[var(--color-heading)]">Account Support</h2>
-          <button
-            onClick={() => setShowNewTicket(true)}
-            className="bg-accent text-button-text rounded-full px-4 sm:px-5 py-2.5 min-h-[44px] border border-transparent flex items-center justify-center gap-2 whitespace-nowrap flex-shrink-0 w-full sm:w-auto"
-          >
-            <Plus size={18} className="sm:w-4 sm:h-4" />
-            <span className="text-sm sm:text-base">Raise New Ticket</span>
-          </button>
-        </div>
+  // Close calendars when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fromCalendarRef.current && !fromCalendarRef.current.contains(event.target as Node)) {
+        setShowFromCalendar(false)
+      }
+      if (toCalendarRef.current && !toCalendarRef.current.contains(event.target as Node)) {
+        setShowToCalendar(false)
+      }
+    }
 
-        {/* Analytics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 pt-6 sm:pt-8 pb-4 sm:pb-6 gap-6 sm:gap-8 xl:gap-6">
-          <KPICard 
-            title="Open Tickets" 
-            value={openTickets}
-            subtitle={`${openTickets} pending`}
-            icon={<FileText size={32} />}
-          />
-          <KPICard 
-            title="In Progress" 
-            value={inProgressTickets}
-            subtitle="Active tickets"
-            icon={<AlertTriangle size={32} />}
-          />
-          <KPICard 
-            title="Resolved This Week" 
-            value={resolvedThisWeek}
-            subtitle={`${resolvedThisWeek} completed`}
-            icon={<CheckSquare size={32} />}
-          />
-          <KPICard 
-            title="Avg Resolution Time" 
-            value={`${avgResolutionHours} hrs`}
-            subtitle="Response time"
-            icon={<Clock size={32} />}
-          />
-        </div>
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  return (
+    <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 lg:mb-10 gap-3">
+      <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)]">Account Support</h2>
+        <button
+          onClick={() => setShowNewTicket(true)}
+          className="bg-accent text-button-text rounded-xl px-4 py-2.5 border border-transparent flex items-center justify-center gap-2 w-full sm:w-auto min-h-[44px] sm:min-h-auto"
+        >
+          <Plus size={16} />
+          <span>Raise New Ticket</span>
+        </button>
+      </div>
+
+      {/* Analytics Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6 pt-6 sm:pt-8 pb-4 sm:pb-6">
+        <KPICard
+          title="Open Tickets"
+          value={openTickets}
+          subtitle="Awaiting response"
+          icon={<Clock size={32} />}
+        />
+        <KPICard
+          title="In Progress"
+          value={inProgressTickets}
+          subtitle="Being resolved"
+          icon={<AlertTriangle size={32} />}
+        />
+        <KPICard
+          title="Resolved This Week"
+          value={resolvedThisWeek}
+          subtitle="Completed tickets"
+          icon={<CheckSquare size={32} />}
+        />
+        <KPICard
+          title="Avg Resolution Time"
+          value={`${avgResolutionHours} hrs`}
+          subtitle="Average time"
+          icon={<Clock size={32} />}
+        />
       </div>
 
       {/* Filters */}
-      <div className="mb-4 sm:mb-6">
-        <div className="flex flex-col gap-3 sm:gap-4 bg-white border border-secondary/20 rounded-xl p-3 sm:p-4">
-          {/* First row: Dropdowns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-            <CustomDropdown
-              value={filterIssue}
-              onChange={(value) => setFilterIssue(value as IssueType | '')}
-              options={[
-                { value: '', label: 'Issue Type' },
-                { value: 'Invoice Mismatch', label: 'Invoice Mismatch' },
-                { value: 'Duplicate Entry', label: 'Duplicate Entry' },
-                { value: 'Payment Pending', label: 'Payment Pending' },
-                { value: 'Payment Delay', label: 'Payment Delay' },
-                { value: 'Others', label: 'Others' }
-              ]}
-              placeholder="Issue Type"
-              className="w-full"
-            />
-            <CustomDropdown
-              value={filterStatus}
-              onChange={(value) => setFilterStatus(value as TicketStatus | '')}
-              options={[
-                { value: '', label: 'Status' },
-                { value: 'Open', label: 'Open' },
-                { value: 'In Progress', label: 'In Progress' },
-                { value: 'Resolved', label: 'Resolved' }
-              ]}
-              placeholder="Status"
-              className="w-full"
-            />
-            <CustomDropdown
-              value={filterPriority}
-              onChange={(value) => setFilterPriority(value as TicketPriority | '')}
-              options={[
-                { value: '', label: 'Priority' },
-                { value: 'Low', label: 'Low' },
-                { value: 'Medium', label: 'Medium' },
-                { value: 'High', label: 'High' },
-                { value: 'Urgent', label: 'Urgent' }
-              ]}
-              placeholder="Priority"
-              className="w-full"
-            />
-            <div className="flex flex-col gap-2">
-              <div className="relative" ref={fromCalendarRef}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowFromCalendar(!showFromCalendar)
-                    setShowToCalendar(false)
-                  }}
-                  className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] flex items-center justify-between text-left"
-                >
-                  <span className={dateFromDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
-                    {dateFromDate ? format(dateFromDate, 'PPP') : 'From date'}
-                  </span>
-                  <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
-                </button>
-                {showFromCalendar && (
-                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
-                    <Calendar
-                      mode="single"
-                      selected={dateFromDate}
-                      onSelect={(date) => {
-                        setDateFromDate(date)
-                        setDateFrom(date ? format(date, 'yyyy-MM-dd') : '')
-                        setShowFromCalendar(false)
-                      }}
-                      initialFocus
-                      className="w-full"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="relative" ref={toCalendarRef}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowToCalendar(!showToCalendar)
-                    setShowFromCalendar(false)
-                  }}
-                  className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] flex items-center justify-between text-left"
-                >
-                  <span className={dateToDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
-                    {dateToDate ? format(dateToDate, 'PPP') : 'To date'}
-                  </span>
-                  <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
-                </button>
-                {showToCalendar && (
-                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
-                    <Calendar
-                      mode="single"
-                      selected={dateToDate}
-                      onSelect={(date) => {
-                        setDateToDate(date)
-                        setDateTo(date ? format(date, 'yyyy-MM-dd') : '')
-                        setShowToCalendar(false)
-                      }}
-                      initialFocus
-                      disabled={(date) => dateFromDate ? date < dateFromDate : false}
-                      className="w-full"
-                    />
-                  </div>
-                )}
-              </div>
+      <div className="flex flex-col gap-3 mb-6 bg-white border border-secondary/20 rounded-xl p-3 sm:p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <CustomDropdown
+            value={filterIssue}
+            onChange={(value) => setFilterIssue(value as IssueType | '')}
+            options={[
+              { value: '', label: 'Issue Type' },
+              { value: 'Invoice Mismatch', label: 'Invoice Mismatch' },
+              { value: 'Duplicate Entry', label: 'Duplicate Entry' },
+              { value: 'Payment Pending', label: 'Payment Pending' },
+              { value: 'Payment Delay', label: 'Payment Delay' },
+              { value: 'Others', label: 'Others' }
+            ]}
+            placeholder="Issue Type"
+            className="min-w-0"
+          />
+          <CustomDropdown
+            value={filterStatus}
+            onChange={(value) => setFilterStatus(value as TicketStatus | '')}
+            options={[
+              { value: '', label: 'Status' },
+              { value: 'Open', label: 'Open' },
+              { value: 'In Progress', label: 'In Progress' },
+              { value: 'Resolved', label: 'Resolved' }
+            ]}
+            placeholder="Status"
+            className="min-w-0"
+          />
+          <CustomDropdown
+            value={filterPriority}
+            onChange={(value) => setFilterPriority(value as TicketPriority | '')}
+            options={[
+              { value: '', label: 'Priority' },
+              { value: 'Low', label: 'Low' },
+              { value: 'Medium', label: 'Medium' },
+              { value: 'High', label: 'High' },
+              { value: 'Urgent', label: 'Urgent' }
+            ]}
+            placeholder="Priority"
+            className="min-w-0"
+          />
+          <div className="flex flex-col gap-2">
+            <div className="relative" ref={fromCalendarRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFromCalendar(!showFromCalendar)
+                  setShowToCalendar(false)
+                }}
+                className="w-full px-3 py-2.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-xl hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
+              >
+                <span className={dateFromDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                  {dateFromDate ? format(dateFromDate, 'PPP') : 'From date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+              </button>
+              {showFromCalendar && (
+                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={dateFromDate}
+                    onSelect={(date) => {
+                      setDateFromDate(date)
+                      setDateFrom(date ? format(date, 'yyyy-MM-dd') : '')
+                      setShowFromCalendar(false)
+                    }}
+                    initialFocus
+                    className="w-full"
+                  />
+                </div>
+              )}
             </div>
-          </div>
-          {/* Second row: Search and Reset */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <input 
-              placeholder="Search ticket / issue" 
-              value={search} 
-              onChange={e => setSearch(e.target.value)} 
-              className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full sm:flex-1 hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" 
-            />
-            <button 
-              onClick={resetFilters} 
-              className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 min-h-[44px] w-full sm:w-auto hover:bg-secondary hover:text-white transition-colors duration-200 whitespace-nowrap"
-            >
-              Reset Filters
-            </button>
-          </div>
-        </div>
-      </div>
 
-      {/* Table - Desktop view */}
-      <div className="hidden md:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
-        <div className="overflow-x-auto">
-          {/* Table head bar */}
-          <div className="bg-[#C3754C] text-white min-w-max">
-            <div className="flex gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-heading font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0]">
-              <div className="w-24 text-center flex-shrink-0">Ticket ID</div>
-              <div className="w-64 text-center flex-shrink-0">Issue Title</div>
-              <div className="w-40 text-center flex-shrink-0">Issue Type</div>
-              <div className="w-24 text-center flex-shrink-0">Priority</div>
-              <div className="w-28 text-center flex-shrink-0">Status</div>
-              <div className="w-32 text-center flex-shrink-0">Assigned To</div>
-              <div className="w-40 text-center flex-shrink-0">Created / Updated</div>
-              <div className="flex-1 min-w-[200px] text-center">Actions</div>
-            </div>
-          </div>
-
-          {/* Body */}
-          <div className="bg-white min-w-max">
-            <div className="py-2">
-              {paginatedTickets.length === 0 ? (
-                <div className="px-6 py-8 text-center text-gray-500">No tickets match current filters.</div>
-              ) : (
-                paginatedTickets.map((t) => (
-                  <div key={t.id} className="flex gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center hover:bg-gray-50">
-                    <div className="w-24 text-xs md:text-sm font-medium text-gray-800 text-center flex-shrink-0">{t.id}</div>
-                    <div className="w-64 text-xs md:text-sm text-gray-700 text-center truncate flex-shrink-0">{t.issueTitle}</div>
-                    <div className="w-40 text-xs md:text-sm text-gray-700 text-center truncate flex-shrink-0">{t.issueType}</div>
-                    <div className="w-24 flex items-center justify-center flex-shrink-0">
-                      {(() => {
-                        const st = PRIORITY_STYLES[t.priority]
-                        return (
-                          <span className="inline-block px-2 py-1 rounded-md text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
-                            {t.priority}
-                          </span>
-                        )
-                      })()}
-                    </div>
-                    <div className="w-28 flex items-center justify-center flex-shrink-0">
-                      {(() => {
-                        const st = STATUS_STYLES[t.status]
-                        return (
-                          <span className="inline-block px-2 py-1 rounded-md text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
-                            {t.status}
-                          </span>
-                        )
-                      })()}
-                    </div>
-                    <div className="w-32 text-xs md:text-sm text-gray-700 text-center truncate flex-shrink-0">{t.assignedTo}</div>
-                    <div className="w-40 text-xs text-gray-500 text-center whitespace-nowrap flex-shrink-0">{t.createdAt} / {t.updatedAt}</div>
-                    <div className="flex-1 min-w-[200px] flex gap-1 justify-center">
-                      <button onClick={() => setDrawerTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 py-1 text-xs hover:bg-secondary hover:text-white transition-colors whitespace-nowrap">View</button>
-                      <button onClick={() => resolveTicket(t)} className="bg-white text-green-600 border border-green-600 rounded-full px-2 py-1 text-xs hover:bg-green-600 hover:text-white transition-colors whitespace-nowrap">Resolve</button>
-                    </div>
-                  </div>
-                ))
+            <div className="relative" ref={toCalendarRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowToCalendar(!showToCalendar)
+                  setShowFromCalendar(false)
+                }}
+                className="w-full px-3 py-2.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-xl hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
+              >
+                <span className={dateToDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                  {dateToDate ? format(dateToDate, 'PPP') : 'To date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+              </button>
+              {showToCalendar && (
+                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={dateToDate}
+                    onSelect={(date) => {
+                      setDateToDate(date)
+                      setDateTo(date ? format(date, 'yyyy-MM-dd') : '')
+                      setShowToCalendar(false)
+                    }}
+                    initialFocus
+                    disabled={(date) => dateFromDate ? date < dateFromDate : false}
+                    className="w-full"
+                  />
+                </div>
               )}
             </div>
           </div>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input 
+            placeholder="Search ticket / issue" 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+            className="px-3 py-2.5 sm:py-2 rounded-xl border border-gray-300 text-xs sm:text-sm flex-1 hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto" 
+          />
+          <button 
+            onClick={resetFilters} 
+            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 sm:py-2 text-xs sm:text-sm whitespace-nowrap hover:bg-secondary hover:text-white transition-colors duration-200 min-h-[44px] sm:min-h-auto"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
+      {/* Account Support Tickets heading */}
+      <div className="mb-3 sm:mb-4">
+        <h2 className="text-base sm:text-lg md:text-xl font-semibold text-secondary">All Support Tickets</h2>
+      </div>
+
+      {/* Desktop/Tablet Table - Horizontal Scroll */}
+      <div className="hidden md:block rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] border-separate border-spacing-0 bg-white">
+            <thead>
+              <tr className="" style={{ background: 'var(--color-accent)' }}>
+                {['Ticket ID','Issue Title','Issue Type','Priority','Status','Assigned To','Created / Updated','Actions'].map(h => (
+                  <th key={h} className="text-left p-3 font-heading font-normal text-sm whitespace-nowrap sticky top-0" style={{ color: 'var(--color-button-text)', background: 'var(--color-accent)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedTickets.map((t) => (
+                <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
+                  <td className="p-3 font-semibold text-secondary text-sm whitespace-nowrap">{t.id}</td>
+                  <td className="p-3 text-sm min-w-[200px] max-w-[300px]" title={t.issueTitle}>
+                    <div className="truncate">{t.issueTitle}</div>
+                  </td>
+                  <td className="p-3 text-sm whitespace-nowrap">{t.issueType}</td>
+                  <td className="p-3 whitespace-nowrap">
+                    {(() => {
+                      const st = PRIORITY_STYLES[t.priority]
+                      return (
+                        <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
+                          {t.priority}
+                        </span>
+                      )
+                    })()}
+                  </td>
+                  <td className="p-3 whitespace-nowrap">
+                    {(() => {
+                      const st = STATUS_STYLES[t.status]
+                      return (
+                        <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
+                          {t.status}
+                        </span>
+                      )
+                    })()}
+                  </td>
+                  <td className="p-3 text-sm whitespace-nowrap">{t.assignedTo}</td>
+                  <td className="p-3 text-sm whitespace-nowrap">{t.createdAt} / {t.updatedAt}</td>
+                  <td className="p-3 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => setDrawerTicket(t)} className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95 whitespace-nowrap">View</button>
+                      <button onClick={() => resolveTicket(t)} className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 whitespace-nowrap">Resolve</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {paginatedTickets.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="p-6 text-center text-gray-500 text-sm">No tickets match current filters.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
         {filteredTickets.length > 0 && (
           <Pagination
@@ -641,70 +637,83 @@ export default function AccountsSupport() {
             variant="desktop"
           />
         )}
+        {/* Scroll hint for smaller screens */}
+        <div className="mt-2 text-xs text-gray-500 text-center md:block lg:hidden">
+          ← Scroll horizontally to view all columns →
+        </div>
       </div>
 
-      {/* Card View - Mobile */}
-      <div className="md:hidden space-y-3 sm:space-y-4">
-        {paginatedTickets.length > 0 ? (
-          paginatedTickets.map(t => (
-            <div key={t.id} className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-200">
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-secondary text-sm sm:text-base truncate">{t.id}</div>
-                  <div className="text-xs sm:text-sm text-gray-600 mt-0.5 truncate">{t.issueTitle}</div>
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {paginatedTickets.length === 0 ? (
+          <div className="rounded-xl p-4 border border-gray-200 bg-white text-center text-gray-500 text-sm">No tickets match current filters.</div>
+        ) : (
+          paginatedTickets.map((t) => (
+            <div key={t.id} className="rounded-xl p-4 border border-gray-200 bg-white shadow-sm">
+              <div className="flex items-start justify-between mb-3 gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-secondary text-base sm:text-lg">{t.id}</h3>
                 </div>
-                <div className="flex gap-1 flex-shrink-0">
-                  {(() => {
-                    const st = PRIORITY_STYLES[t.priority]
-                    return (
-                      <span className="inline-block px-1.5 sm:px-2 py-1 rounded-md text-[10px] sm:text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
-                        {t.priority}
-                      </span>
-                    )
-                  })()}
-                </div>
-              </div>
-
-              <div className="space-y-1.5 sm:space-y-2 mb-3">
-                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                  <span className="text-gray-500 flex-shrink-0">Issue Type:</span>
-                  <span className="font-medium truncate text-right">{t.issueType}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                  <span className="text-gray-500 flex-shrink-0">Status:</span>
+                <div className="flex-shrink-0">
                   {(() => {
                     const st = STATUS_STYLES[t.status]
                     return (
-                      <span className="inline-block px-2 sm:px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
+                      <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
                         {t.status}
                       </span>
                     )
                   })()}
                 </div>
-                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                  <span className="text-gray-500 flex-shrink-0">Assigned To:</span>
-                  <span className="font-medium truncate">{t.assignedTo}</span>
+              </div>
+
+              <div className="mb-3">
+                <p className="text-sm text-gray-600 line-clamp-2">{t.issueTitle}</p>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-sm">
+                <div>
+                  <span className="text-gray-500 block text-xs">Issue Type</span>
+                  <span className="font-medium text-gray-900">{t.issueType}</span>
                 </div>
-                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                  <span className="text-gray-500 flex-shrink-0">Created:</span>
-                  <span className="font-medium">{t.createdAt}</span>
+                <div>
+                  <span className="text-gray-500 block text-xs">Priority</span>
+                  <div className="mt-1">
+                    {(() => {
+                      const st = PRIORITY_STYLES[t.priority]
+                      return (
+                        <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
+                          {t.priority}
+                        </span>
+                      )
+                    })()}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                  <span className="text-gray-500 flex-shrink-0">Updated:</span>
-                  <span className="font-medium">{t.updatedAt}</span>
+                <div>
+                  <span className="text-gray-500 block text-xs">Assigned To</span>
+                  <span className="font-medium text-gray-900">{t.assignedTo}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block text-xs">Created</span>
+                  <span className="font-medium text-gray-900">{t.createdAt}</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
-                <button onClick={() => setDrawerTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 sm:px-3 py-2 min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm font-medium hover:bg-secondary hover:text-white transition-colors">View</button>
-                <button onClick={() => resolveTicket(t)} className="bg-white text-green-600 border border-green-600 rounded-full px-2 sm:px-3 py-2 min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm font-medium hover:bg-green-600 hover:text-white transition-colors">Resolve</button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button 
+                  onClick={() => setDrawerTicket(t)} 
+                  className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-3 py-2 text-xs font-medium hover:brightness-95 transition-all flex-1 sm:flex-initial"
+                >
+                  View
+                </button>
+                <button 
+                  onClick={() => resolveTicket(t)} 
+                  className="bg-blue-500 text-white rounded-md px-3 py-2 text-xs font-medium hover:bg-blue-600 transition-all flex-1 sm:flex-initial"
+                >
+                  Resolve
+                </button>
               </div>
             </div>
           ))
-        ) : (
-          <div className="bg-white rounded-xl p-6 text-center text-gray-500 text-sm sm:text-base">
-            No tickets match current filters.
-          </div>
         )}
         {filteredTickets.length > 0 && (
           <Pagination
@@ -722,19 +731,24 @@ export default function AccountsSupport() {
 
       {/* Raise Ticket Modal */}
       {showNewTicket && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-2xl rounded-2xl p-4 sm:p-5 max-h-[90vh] overflow-y-auto">
-            <div className="mb-3">
-              <h3 className="font-heading text-secondary font-normal text-lg sm:text-xl">Raise New Ticket</h3>
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white w-full max-w-2xl rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto animate-slide-up sm:animate-none">
+            <div className="mb-4 sm:mb-5">
+              <h3 className="font-heading text-secondary font-normal text-base sm:text-lg md:text-xl">Raise New Ticket</h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
               <div className="col-span-1 sm:col-span-2">
-                <label className="block text-sm font-medium mb-1 text-secondary">Issue Title</label>
-                <input value={draftIssueTitle} onChange={e => setDraftIssueTitle(e.target.value)} placeholder="Brief description of the issue" className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" />
+                <label className="block text-xs sm:text-sm font-medium mb-1.5 text-secondary">Issue Title</label>
+                <input 
+                  value={draftIssueTitle} 
+                  onChange={e => setDraftIssueTitle(e.target.value)} 
+                  placeholder="Brief description of the issue" 
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-lg border border-gray-300 text-xs sm:text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto" 
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1 text-secondary">Issue Type</label>
+                <label className="block text-xs sm:text-sm font-medium mb-1.5 text-secondary">Issue Type</label>
                 <CustomDropdown
                   value={draftIssue}
                   onChange={(value) => setDraftIssue(value as IssueType | '')}
@@ -750,7 +764,7 @@ export default function AccountsSupport() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1 text-secondary">Priority</label>
+                <label className="block text-xs sm:text-sm font-medium mb-1.5 text-secondary">Priority</label>
                 <CustomDropdown
                   value={draftPriority}
                   onChange={(value) => setDraftPriority(value as TicketPriority | '')}
@@ -765,25 +779,41 @@ export default function AccountsSupport() {
                 />
               </div>
               <div className="col-span-1 sm:col-span-2">
-                <label className="block text-sm font-medium mb-1 text-secondary">Attachments (Invoice/Screenshots)</label>
+                <label className="block text-xs sm:text-sm font-medium mb-1.5 text-secondary">Attachments (Invoice/Screenshots)</label>
                 <input 
                   type="file" 
                   onChange={e => setDraftFile(e.target.files?.[0] || null)} 
-                  className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" 
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-lg border border-gray-300 text-xs sm:text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto" 
                 />
                 {draftFile && (
-                  <div className="mt-1 text-xs text-gray-600">Selected: {draftFile.name}</div>
+                  <div className="mt-1.5 text-xs text-gray-600 truncate">Selected: {draftFile.name}</div>
                 )}
               </div>
               <div className="col-span-1 sm:col-span-2">
-                <label className="block text-sm font-medium mb-1 text-secondary">Description</label>
-                <textarea value={draftDescription} onChange={e => setDraftDescription(e.target.value)} rows={4} placeholder="Describe the issue in detail..." className="w-full px-2.5 py-2 rounded-lg border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 resize-none" />
+                <label className="block text-xs sm:text-sm font-medium mb-1.5 text-secondary">Description</label>
+                <textarea 
+                  value={draftDescription} 
+                  onChange={e => setDraftDescription(e.target.value)} 
+                  rows={4} 
+                  placeholder="Describe the issue in detail..." 
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-lg border border-gray-300 text-xs sm:text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 resize-none" 
+                />
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-end gap-2 mt-4">
-              <button onClick={() => setShowNewTicket(false)} className="bg-white text-secondary border border-secondary rounded-full px-3.5 py-2 text-sm w-full sm:w-auto">Cancel</button>
-              <button onClick={addTicket} className="bg-accent text-button-text rounded-full px-3.5 py-2 text-sm w-full sm:w-auto">Submit</button>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 mt-4 sm:mt-5">
+              <button 
+                onClick={() => setShowNewTicket(false)} 
+                className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 sm:py-2 text-xs sm:text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto hover:bg-secondary hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={addTicket} 
+                className="bg-accent text-button-text rounded-full px-4 py-2.5 sm:py-2 text-xs sm:text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto hover:opacity-90 transition-opacity"
+              >
+                Submit
+              </button>
             </div>
           </div>
         </div>
@@ -800,27 +830,27 @@ export default function AccountsSupport() {
             className={`absolute bottom-0 sm:top-0 sm:right-0 h-[90vh] sm:h-full w-full sm:w-[500px] bg-white shadow-xl flex flex-col transform transition-transform duration-300 ease-out ${isDrawerOpen ? 'translate-y-0 sm:translate-x-0' : 'translate-y-full sm:translate-y-0 sm:translate-x-full'} rounded-t-2xl sm:rounded-t-none`}
           >
             {/* Header */}
-            <div className="p-4 sm:p-5 border-b flex-shrink-0">
-              <div className="flex items-start justify-between mb-4">
+            <div className="p-4 sm:p-5 border-b flex-shrink-0 sticky top-0 bg-white z-10">
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
                 <div>
                   <div className="text-xs text-gray-500">Ticket</div>
-                  <div className="text-lg sm:text-xl font-semibold text-secondary">{drawerTicket.id}</div>
+                  <div className="text-base sm:text-lg md:text-xl font-semibold text-secondary">{drawerTicket.id}</div>
                 </div>
-                <button onClick={closeDrawer} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">✕</button>
+                <button onClick={closeDrawer} className="text-gray-500 hover:text-gray-700 text-2xl leading-none p-1 -mt-1 -mr-1">✕</button>
               </div>
 
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <div className="text-xs text-gray-500">Issue Title</div>
-                    <div className="font-medium text-sm">{drawerTicket.issueTitle}</div>
+                    <div className="text-xs text-gray-500 mb-1">Issue Title</div>
+                    <div className="font-medium text-xs sm:text-sm break-words">{drawerTicket.issueTitle}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Issue Type</div>
-                    <div className="font-medium text-sm">{drawerTicket.issueType}</div>
+                    <div className="text-xs text-gray-500 mb-1">Issue Type</div>
+                    <div className="font-medium text-xs sm:text-sm">{drawerTicket.issueType}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Priority</div>
+                    <div className="text-xs text-gray-500 mb-1">Priority</div>
                     <div>
                       {(() => {
                         const st = PRIORITY_STYLES[drawerTicket.priority]
@@ -829,7 +859,7 @@ export default function AccountsSupport() {
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Status</div>
+                    <div className="text-xs text-gray-500 mb-1">Status</div>
                     <div>
                       {(() => {
                         const st = STATUS_STYLES[drawerTicket.status]
@@ -841,38 +871,43 @@ export default function AccountsSupport() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <div className="text-xs text-gray-500">Assigned To</div>
-                    <div className="font-medium text-sm">{drawerTicket.assignedTo}</div>
+                    <div className="text-xs text-gray-500 mb-1">Assigned To</div>
+                    <div className="font-medium text-xs sm:text-sm">{drawerTicket.assignedTo}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Created / Updated</div>
-                    <div className="font-medium text-sm">{drawerTicket.createdAt} / {drawerTicket.updatedAt}</div>
+                    <div className="text-xs text-gray-500 mb-1">Created / Updated</div>
+                    <div className="font-medium text-xs sm:text-sm">{drawerTicket.createdAt} / {drawerTicket.updatedAt}</div>
                   </div>
                 </div>
               </div>
 
               <div className="flex gap-2 mt-4">
-                <button onClick={() => resolveTicket(drawerTicket)} className="bg-accent text-button-text rounded-full px-3 py-1.5 text-sm hover:opacity-90 transition-opacity">Mark as Resolved</button>
+                <button 
+                  onClick={() => resolveTicket(drawerTicket)} 
+                  className="bg-accent text-button-text rounded-full px-4 py-2 text-xs sm:text-sm hover:opacity-90 transition-opacity min-h-[40px] sm:min-h-auto"
+                >
+                  Mark as Resolved
+                </button>
               </div>
             </div>
 
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-gray-50">
-              <div className="text-sm font-medium text-gray-700 mb-3">Conversation</div>
+              <div className="text-xs sm:text-sm font-medium text-gray-700 mb-3">Conversation</div>
               <div className="space-y-3">
                 {drawerTicket.messages && drawerTicket.messages.length > 0 ? (
                   drawerTicket.messages.map(msg => (
                     <div key={msg.id} className={`flex ${msg.sender === 'accounts' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] sm:max-w-[75%] ${msg.sender === 'accounts' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'} rounded-2xl p-3 shadow-sm`}>
+                      <div className={`max-w-[85%] sm:max-w-[80%] md:max-w-[75%] ${msg.sender === 'accounts' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'} rounded-2xl p-3 shadow-sm`}>
                         <div className={`text-xs mb-1 ${msg.sender === 'accounts' ? 'text-blue-100' : 'text-gray-500'}`}>
                           {msg.senderName} • {msg.timestamp}
                         </div>
-                        <div className="text-sm leading-relaxed">{msg.text}</div>
+                        <div className="text-xs sm:text-sm leading-relaxed break-words">{msg.text}</div>
                         {msg.attachments && msg.attachments.length > 0 && (
                           <div className="mt-2 space-y-1">
                             {msg.attachments.map((att, idx) => (
                               <div key={idx} className={`text-xs flex items-center gap-1 ${msg.sender === 'accounts' ? 'text-blue-100' : 'text-blue-600'}`}>
-                                <Paperclip size={12} />
+                                <Paperclip size={12} className="flex-shrink-0" />
                                 <span className="truncate">{att.name}</span>
                               </div>
                             ))}
@@ -882,21 +917,21 @@ export default function AccountsSupport() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center text-gray-400 text-sm py-8">No messages yet. Start the conversation!</div>
+                  <div className="text-center text-gray-400 text-xs sm:text-sm py-8">No messages yet. Start the conversation!</div>
                 )}
                 <div ref={chatEndRef} />
               </div>
             </div>
 
             {/* Chat Input */}
-            <div className="p-3 sm:p-4 border-t bg-white flex-shrink-0">
+            <div className="p-3 sm:p-4 border-t bg-white flex-shrink-0 sticky bottom-0">
               {chatAttachment && (
                 <div className="mb-2 px-3 py-2 bg-gray-100 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-gray-700 min-w-0">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 min-w-0">
                     <Paperclip size={14} className="flex-shrink-0" />
                     <span className="truncate">{chatAttachment.name}</span>
                   </div>
-                  <button onClick={() => setChatAttachment(null)} className="text-gray-500 hover:text-gray-700 ml-2 flex-shrink-0">✕</button>
+                  <button onClick={() => setChatAttachment(null)} className="text-gray-500 hover:text-gray-700 ml-2 flex-shrink-0 p-1">✕</button>
                 </div>
               )}
               <div className="flex items-end gap-2">
@@ -908,10 +943,10 @@ export default function AccountsSupport() {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex-shrink-0 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="flex-shrink-0 p-2.5 sm:p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors min-h-[40px] sm:min-h-auto"
                   title="Attach file"
                 >
-                  <Paperclip size={16} />
+                  <Paperclip size={18} className="sm:w-4 sm:h-4" />
                 </button>
                 <textarea
                   value={messageText}
@@ -923,16 +958,16 @@ export default function AccountsSupport() {
                     }
                   }}
                   placeholder="Type your message..."
-                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="flex-1 min-w-0 px-3 py-2.5 sm:py-2 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm"
                   rows={2}
                 />
                 <button
                   onClick={sendMessage}
                   disabled={!messageText.trim()}
-                  className="flex-shrink-0 p-2 bg-accent text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex-shrink-0 p-2.5 sm:p-2 bg-accent text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed min-h-[40px] sm:min-h-auto"
                   title="Send message"
                 >
-                  <Send size={16} />
+                  <Send size={18} className="sm:w-4 sm:h-4" />
                 </button>
               </div>
               <div className="text-xs text-gray-500 mt-2 hidden sm:block">Press Enter to send, Shift+Enter for new line</div>
