@@ -2,6 +2,7 @@ import { app } from './app';
 import { env } from './config/env';
 import { logger } from './utils/logger';
 import { prisma } from './config/database';
+import { redisConfig } from './config/redis.config';
 import { SchedulerService } from './services/scheduler.service';
 
 const startServer = async () => {
@@ -9,6 +10,14 @@ const startServer = async () => {
     // Test database connection
     await prisma.$connect();
     logger.info('Database connected successfully');
+
+    // Initialize Redis if enabled
+    if (env.REDIS_ENABLED) {
+      await redisConfig.connect();
+      logger.info('Redis caching enabled');
+    } else {
+      logger.info('Redis caching disabled');
+    }
 
     // Initialize and start token cleanup scheduler
     const scheduler = SchedulerService.getInstance();
@@ -32,6 +41,12 @@ const startServer = async () => {
         logger.info('HTTP server closed');
         
         try {
+          // Disconnect Redis
+          if (env.REDIS_ENABLED) {
+            await redisConfig.disconnect();
+          }
+          
+          // Disconnect database
           await prisma.$disconnect();
           logger.info('Database disconnected');
           process.exit(0);

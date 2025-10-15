@@ -30,6 +30,13 @@ const envSchema = z.object({
   NOTIFICATION_BATCH_SIZE: z.string().transform(Number).default('500'),
   NOTIFICATION_RETRY_ATTEMPTS: z.string().transform(Number).default('3'),
   NOTIFICATION_TOKEN_EXPIRY_DAYS: z.string().transform(Number).default('30'),
+  
+  // Redis Configuration
+  REDIS_HOST: z.string().optional().default('localhost'),
+  REDIS_PORT: z.string().optional().default('6379'),
+  REDIS_PASSWORD: z.string().optional(),
+  REDIS_DB: z.string().optional().default('0'),
+  REDIS_ENABLED: z.string().transform((val) => val === 'true').default('false'),
 });
 
 const parsed = envSchema.safeParse(process.env);
