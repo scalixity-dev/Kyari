@@ -1,9 +1,24 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LineChart, Line, ResponsiveContainer, BarChart, Bar, Tooltip } from 'recharts'
+import { Pagination } from '../../../components'
 
 const sparkData = [
   { v: 78 }, { v: 82 }, { v: 85 }, { v: 80 }, { v: 88 }, { v: 90 }, { v: 92 }
+]
+
+// Mock vendor data
+const vendorsData = [
+  { id: 'greenleaf-farms', name: 'GreenLeaf Farms', fillRate: 94, sla: 90, avgInvoice: 3.5, avgTicket: 1.2 },
+  { id: 'happyplant-co', name: 'HappyPlant Co', fillRate: 91, sla: 86, avgInvoice: 4.2, avgTicket: 1.6 },
+  { id: 'bloomworks', name: 'BloomWorks', fillRate: 89, sla: 84, avgInvoice: 3.9, avgTicket: 2.0 },
+  { id: 'eco-greens', name: 'Eco Greens', fillRate: 92, sla: 88, avgInvoice: 3.7, avgTicket: 1.4 },
+  { id: 'valley-organics', name: 'Valley Organics', fillRate: 87, sla: 82, avgInvoice: 4.5, avgTicket: 2.2 },
+  { id: 'sunrise-farms', name: 'Sunrise Farms', fillRate: 93, sla: 91, avgInvoice: 3.3, avgTicket: 1.1 },
+  { id: 'pure-harvest', name: 'Pure Harvest', fillRate: 88, sla: 85, avgInvoice: 4.0, avgTicket: 1.8 },
+  { id: 'green-earth', name: 'Green Earth Co', fillRate: 90, sla: 87, avgInvoice: 3.8, avgTicket: 1.5 },
+  { id: 'natural-foods', name: 'Natural Foods Inc', fillRate: 86, sla: 83, avgInvoice: 4.3, avgTicket: 2.1 },
+  { id: 'golden-harvest', name: 'Golden Harvest', fillRate: 91, sla: 89, avgInvoice: 3.6, avgTicket: 1.3 },
 ]
 
 export default function VendorTracking() {
@@ -17,8 +32,23 @@ export default function VendorTracking() {
   const [accountsHover, setAccountsHover] = useState<number | null>(null)
   const [opsHover, setOpsHover] = useState<number | null>(null)
   
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const pageSize = 5
+  
+  const totalPages = Math.max(1, Math.ceil(vendorsData.length / pageSize))
+  const startIndex = (page - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, vendorsData.length)
+  const pageVendors = vendorsData.slice(startIndex, endIndex)
+  
   const handleVendorClick = (vendorId: string) => {
     navigate(`/admin/vendors/${vendorId}`)
+  }
+  
+  const getPerformanceColor = (value: number, threshold: { good: number; fair: number }) => {
+    if (value >= threshold.good) return 'text-green-600'
+    if (value >= threshold.fair) return 'text-yellow-600'
+    return 'text-red-600'
   }
 
   return (
@@ -103,135 +133,101 @@ export default function VendorTracking() {
         </div>
       </div>
 
-      <div className="bg-transparent rounded-xl border border-white/20">
-        <div>
+      <div className="bg-transparent rounded-xl">
+        <div className="mb-4">
           <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-[var(--color-heading)]">Vendor health overview</h2>
           <p className="text-sm text-gray-500 mb-4">Quick look at top vendors and their key metrics.</p>
         </div>
         
-  {/* Desktop Table View */}
-  <div className="hidden md:block bg-white rounded-xl overflow-hidden w-full shadow-md border border-gray-100">
-          <table className="w-full min-w-full table-fixed border-separate border-spacing-0">
-            <thead className="bg-[var(--color-accent)]">
-              <tr>
-                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Vendor</th>
-                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Fill rate</th>
-                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">SLA</th>
-                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Avg invoice (days)</th>
-                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Avg ticket (days)</th>
+        {/* Desktop Table View */}
+        <div className="hidden md:block bg-header-bg rounded-xl overflow-hidden">
+          <table className="w-full border-separate border-spacing-0">
+            <thead>
+              <tr style={{ background: 'var(--color-accent)' }}>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Vendor</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Fill rate</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>SLA</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Avg invoice (days)</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Avg ticket (days)</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              <tr 
-                className="hover:bg-gray-50 transition-colors cursor-pointer"
-                onClick={() => handleVendorClick('greenleaf-farms')}
-              >
-                <td className="px-4 lg:px-6 py-4 font-medium text-[var(--color-heading)]">GreenLeaf Farms</td>
-                <td className="px-4 lg:px-6 py-4 text-green-600 font-semibold">94%</td>
-                <td className="px-4 lg:px-6 py-4 text-green-600 font-semibold">90%</td>
-                <td className="px-4 lg:px-6 py-4">3.5</td>
-                <td className="px-4 lg:px-6 py-4">1.2</td>
-              </tr>
-              <tr 
-                className="hover:bg-gray-50 transition-colors cursor-pointer"
-                onClick={() => handleVendorClick('happyplant-co')}
-              >
-                <td className="px-4 lg:px-6 py-4 font-medium text-[var(--color-heading)]">HappyPlant Co</td>
-                <td className="px-4 lg:px-6 py-4 text-green-600 font-semibold">91%</td>
-                <td className="px-4 lg:px-6 py-4 text-yellow-600 font-semibold">86%</td>
-                <td className="px-4 lg:px-6 py-4">4.2</td>
-                <td className="px-4 lg:px-6 py-4">1.6</td>
-              </tr>
-              <tr 
-                className="hover:bg-gray-50 transition-colors cursor-pointer"
-                onClick={() => handleVendorClick('bloomworks')}
-              >
-                <td className="px-4 lg:px-6 py-4 font-medium text-[var(--color-heading)]">BloomWorks</td>
-                <td className="px-4 lg:px-6 py-4 text-yellow-600 font-semibold">89%</td>
-                <td className="px-4 lg:px-6 py-4 text-yellow-600 font-semibold">84%</td>
-                <td className="px-4 lg:px-6 py-4">3.9</td>
-                <td className="px-4 lg:px-6 py-4">2.0</td>
-              </tr>
+            <tbody>
+              {pageVendors.map((vendor) => (
+                <tr 
+                  key={vendor.id}
+                  className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors cursor-pointer"
+                  onClick={() => handleVendorClick(vendor.id)}
+                >
+                  <td className="p-3 font-semibold text-secondary">{vendor.name}</td>
+                  <td className={`p-3 text-sm font-semibold ${getPerformanceColor(vendor.fillRate, { good: 90, fair: 85 })}`}>
+                    {vendor.fillRate}%
+                  </td>
+                  <td className={`p-3 text-sm font-semibold ${getPerformanceColor(vendor.sla, { good: 88, fair: 83 })}`}>
+                    {vendor.sla}%
+                  </td>
+                  <td className="p-3 text-sm text-gray-700">{vendor.avgInvoice}</td>
+                  <td className="p-3 text-sm text-gray-700">{vendor.avgTicket}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
+          {/* Desktop Pagination */}
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={vendorsData.length}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setPage}
+            variant="desktop"
+            itemLabel="vendors"
+          />
         </div>
 
         {/* Mobile Card View */}
         <div className="md:hidden space-y-3">
-          <div 
-            className="border border-gray-200 rounded-lg p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors active:bg-gray-200"
-            onClick={() => handleVendorClick('greenleaf-farms')}
-          >
-            <div className="font-semibold text-[var(--color-heading)] text-base mb-3">GreenLeaf Farms</div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Fill Rate</div>
-                <div className="text-green-600 font-semibold">94%</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">SLA</div>
-                <div className="text-green-600 font-semibold">90%</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Avg Invoice</div>
-                <div className="font-medium">3.5 days</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Avg Ticket</div>
-                <div className="font-medium">1.2 days</div>
-              </div>
-            </div>
-          </div>
-          
-          <div 
-            className="border border-gray-200 rounded-lg p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors active:bg-gray-200"
-            onClick={() => handleVendorClick('happyplant-co')}
-          >
-            <div className="font-semibold text-[var(--color-heading)] text-base mb-3">HappyPlant Co</div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Fill Rate</div>
-                <div className="text-green-600 font-semibold">91%</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">SLA</div>
-                <div className="text-yellow-600 font-semibold">86%</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Avg Invoice</div>
-                <div className="font-medium">4.2 days</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Avg Ticket</div>
-                <div className="font-medium">1.6 days</div>
+          {pageVendors.map((vendor) => (
+            <div 
+              key={vendor.id}
+              className="rounded-xl p-4 border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => handleVendorClick(vendor.id)}
+            >
+              <div className="font-semibold text-secondary text-lg mb-3">{vendor.name}</div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div className="text-gray-500 block mb-1">Fill Rate</div>
+                  <div className={`font-semibold ${getPerformanceColor(vendor.fillRate, { good: 90, fair: 85 })}`}>
+                    {vendor.fillRate}%
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-500 block mb-1">SLA</div>
+                  <div className={`font-semibold ${getPerformanceColor(vendor.sla, { good: 88, fair: 83 })}`}>
+                    {vendor.sla}%
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-500 block mb-1">Avg Invoice</div>
+                  <div className="font-medium">{vendor.avgInvoice} days</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 block mb-1">Avg Ticket</div>
+                  <div className="font-medium">{vendor.avgTicket} days</div>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div 
-            className="border border-gray-200 rounded-lg p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors active:bg-gray-200"
-            onClick={() => handleVendorClick('bloomworks')}
-          >
-            <div className="font-semibold text-[var(--color-heading)] text-base mb-3">BloomWorks</div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Fill Rate</div>
-                <div className="text-yellow-600 font-semibold">89%</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">SLA</div>
-                <div className="text-yellow-600 font-semibold">84%</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Avg Invoice</div>
-                <div className="font-medium">3.9 days</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Avg Ticket</div>
-                <div className="font-medium">2.0 days</div>
-              </div>
-            </div>
-          </div>
+          ))}
+          {/* Mobile Pagination */}
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={vendorsData.length}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setPage}
+            variant="mobile"
+            itemLabel="vendors"
+          />
         </div>
       </div>
     </div>

@@ -86,18 +86,21 @@ interface PresetExportButtonProps {
   onExportPDF: () => void
   label?: string
   className?: string
+  buttonClassName?: string
 }
 
 export function CSVPDFExportButton({
   onExportCSV,
   onExportPDF,
   label = 'Export',
-  className = ''
+  className = '',
+  buttonClassName = ''
 }: PresetExportButtonProps) {
   return (
     <ExportButton
       label={label}
       className={className}
+      buttonClassName={buttonClassName}
       options={[
         {
           label: 'Export as CSV',
