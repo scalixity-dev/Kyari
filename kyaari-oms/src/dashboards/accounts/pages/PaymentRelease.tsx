@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Bell, X, AlertTriangle, CheckSquare, Wallet, Clock } from 'lucide-react'
 import { CustomDropdown, KPICard } from '../../../components'
+import { Pagination } from '../../../components/ui/Pagination'
 
 type PaymentStatus = 'Pending' | 'Released' | 'Overdue'
 type DeliveryVerified = 'Yes' | 'No' | 'Partial'
@@ -56,6 +57,10 @@ function AccountsPaymentRelease() {
   const [filterStatus, setFilterStatus] = useState<PaymentStatus | ''>('')
   const [filterDeliveryVerified, setFilterDeliveryVerified] = useState<DeliveryVerified | ''>('')
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+
   const filteredPayments = useMemo(() => {
     return payments.filter(p => {
       if (filterStatus && p.paymentStatus !== filterStatus) return false
@@ -64,9 +69,21 @@ function AccountsPaymentRelease() {
     })
   }, [payments, filterStatus, filterDeliveryVerified])
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredPayments.length)
+  const paginatedPayments = filteredPayments.slice(startIndex, endIndex)
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterStatus, filterDeliveryVerified])
+
   function resetFilters() {
     setFilterStatus('')
     setFilterDeliveryVerified('')
+    setCurrentPage(1)
   }
 
   function togglePaymentSelection(paymentId: string) {
@@ -271,10 +288,10 @@ function AccountsPaymentRelease() {
           {/* Body */}
           <div className="bg-white">
             <div className="py-2">
-              {filteredPayments.length === 0 ? (
+              {paginatedPayments.length === 0 ? (
                 <div className="px-6 py-8 text-center text-gray-500">No payment records match current filters.</div>
               ) : (
-                filteredPayments.map((payment) => {
+                paginatedPayments.map((payment) => {
                   const paymentStyle = PAYMENT_STATUS_STYLES[payment.paymentStatus]
                   const deliveryStyle = DELIVERY_VERIFIED_STYLES[payment.deliveryVerified]
                   const isSelected = selectedPayments.has(payment.id)
@@ -361,15 +378,28 @@ function AccountsPaymentRelease() {
               )}
             </div>
           </div>
+          {filteredPayments.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredPayments.length}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+              itemLabel="payments"
+              variant="desktop"
+            />
+          )}
         </div>
+      </div>
 
-        {/* Mobile Card View */}
-        <div className="lg:hidden">
-          {filteredPayments.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">No payment records match current filters.</div>
-          ) : (
-            <div className="space-y-4 p-3">
-              {filteredPayments.map((payment) => {
+      {/* Mobile Card View */}
+      <div className="lg:hidden">
+        {paginatedPayments.length === 0 ? (
+          <div className="p-6 text-center text-gray-500">No payment records match current filters.</div>
+        ) : (
+          <div className="space-y-4 p-3">
+            {paginatedPayments.map((payment) => {
                 const paymentStyle = PAYMENT_STATUS_STYLES[payment.paymentStatus]
                 const deliveryStyle = DELIVERY_VERIFIED_STYLES[payment.deliveryVerified]
                 const isSelected = selectedPayments.has(payment.id)
@@ -460,7 +490,18 @@ function AccountsPaymentRelease() {
               })}
             </div>
           )}
-        </div>
+        {filteredPayments.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredPayments.length}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setCurrentPage}
+            itemLabel="payments"
+            variant="mobile"
+          />
+        )}
       </div>
 
       {/* Mark as Released Modal */}

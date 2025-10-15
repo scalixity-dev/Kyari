@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Send, Paperclip, FileText, AlertTriangle, CheckSquare, Clock } from 'lucide-react'
+import { Plus, Send, Paperclip, FileText, AlertTriangle, CheckSquare, Clock, Calendar as CalendarIcon } from 'lucide-react'
 import { CustomDropdown, KPICard } from '../../../components'
+import { Calendar } from '../../../components/ui/calendar'
+import { Pagination } from '../../../components/ui/Pagination'
+import { format } from 'date-fns'
 
 type IssueType = 'Invoice Mismatch' | 'Duplicate Entry' | 'Payment Pending' | 'Payment Delay' | 'Others'
 type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent'
@@ -196,8 +199,19 @@ export default function AccountsSupport() {
   const [filterIssue, setFilterIssue] = useState<IssueType | ''>('')
   const [filterStatus, setFilterStatus] = useState<TicketStatus | ''>('')
   const [filterPriority, setFilterPriority] = useState<TicketPriority | ''>('')
-  const [filterDate, setFilterDate] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [dateFromDate, setDateFromDate] = useState<Date | undefined>()
+  const [dateToDate, setDateToDate] = useState<Date | undefined>()
+  const [showFromCalendar, setShowFromCalendar] = useState(false)
+  const [showToCalendar, setShowToCalendar] = useState(false)
+  const fromCalendarRef = useRef<HTMLDivElement>(null)
+  const toCalendarRef = useRef<HTMLDivElement>(null)
   const [search, setSearch] = useState('')
+
+  // pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   // modal + drawer
   const [showNewTicket, setShowNewTicket] = useState(false)
@@ -227,18 +241,61 @@ export default function AccountsSupport() {
     if (filterIssue && t.issueType !== filterIssue) return false
     if (filterStatus && t.status !== filterStatus) return false
     if (filterPriority && t.priority !== filterPriority) return false
-    if (filterDate && t.createdAt !== filterDate) return false
+    
+    // Date range filter
+    if (dateFrom || dateTo) {
+      const ticketDate = new Date(t.createdAt)
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom + 'T00:00:00')
+        if (ticketDate < fromDate) return false
+      }
+      if (dateTo) {
+        const toDate = new Date(dateTo + 'T23:59:59')
+        if (ticketDate > toDate) return false
+      }
+    }
+    
     if (search && !(t.id.toLowerCase().includes(search.toLowerCase()) || t.issueTitle.toLowerCase().includes(search.toLowerCase()))) return false
     return true
   })
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredTickets.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedTickets = filteredTickets.slice(startIndex, endIndex)
 
   function resetFilters() {
     setFilterIssue('')
     setFilterStatus('')
     setFilterPriority('')
-    setFilterDate('')
+    setDateFrom('')
+    setDateTo('')
+    setDateFromDate(undefined)
+    setDateToDate(undefined)
     setSearch('')
+    setCurrentPage(1)
   }
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterIssue, filterStatus, filterPriority, dateFrom, dateTo, search])
+
+  // Close calendars when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fromCalendarRef.current && !fromCalendarRef.current.contains(event.target as Node)) {
+        setShowFromCalendar(false)
+      }
+      if (toCalendarRef.current && !toCalendarRef.current.contains(event.target as Node)) {
+        setShowToCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   function addTicket() {
     if (!draftIssueTitle || !draftIssue || !draftPriority || !draftDescription) {
@@ -429,15 +486,70 @@ export default function AccountsSupport() {
               placeholder="Priority"
               className="w-full"
             />
-            <label className="sr-only" htmlFor="filterDate">Filter by date</label>
-            <input 
-              id="filterDate"
-              aria-label="Filter by date"
-              type="date" 
-              value={filterDate} 
-              onChange={e => setFilterDate(e.target.value)} 
-              className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" 
-            />
+            <div className="flex flex-col gap-2">
+              <div className="relative" ref={fromCalendarRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFromCalendar(!showFromCalendar)
+                    setShowToCalendar(false)
+                  }}
+                  className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] flex items-center justify-between text-left"
+                >
+                  <span className={dateFromDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                    {dateFromDate ? format(dateFromDate, 'PPP') : 'From date'}
+                  </span>
+                  <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+                </button>
+                {showFromCalendar && (
+                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                    <Calendar
+                      mode="single"
+                      selected={dateFromDate}
+                      onSelect={(date) => {
+                        setDateFromDate(date)
+                        setDateFrom(date ? format(date, 'yyyy-MM-dd') : '')
+                        setShowFromCalendar(false)
+                      }}
+                      initialFocus
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="relative" ref={toCalendarRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowToCalendar(!showToCalendar)
+                    setShowFromCalendar(false)
+                  }}
+                  className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] flex items-center justify-between text-left"
+                >
+                  <span className={dateToDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                    {dateToDate ? format(dateToDate, 'PPP') : 'To date'}
+                  </span>
+                  <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+                </button>
+                {showToCalendar && (
+                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                    <Calendar
+                      mode="single"
+                      selected={dateToDate}
+                      onSelect={(date) => {
+                        setDateToDate(date)
+                        setDateTo(date ? format(date, 'yyyy-MM-dd') : '')
+                        setShowToCalendar(false)
+                      }}
+                      initialFocus
+                      disabled={(date) => dateFromDate ? date < dateFromDate : false}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           {/* Second row: Search and Reset */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -477,10 +589,10 @@ export default function AccountsSupport() {
           {/* Body */}
           <div className="bg-white min-w-max">
             <div className="py-2">
-              {filteredTickets.length === 0 ? (
+              {paginatedTickets.length === 0 ? (
                 <div className="px-6 py-8 text-center text-gray-500">No tickets match current filters.</div>
               ) : (
-                filteredTickets.map((t) => (
+                paginatedTickets.map((t) => (
                   <div key={t.id} className="flex gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center hover:bg-gray-50">
                     <div className="w-24 text-xs md:text-sm font-medium text-gray-800 text-center flex-shrink-0">{t.id}</div>
                     <div className="w-64 text-xs md:text-sm text-gray-700 text-center truncate flex-shrink-0">{t.issueTitle}</div>
@@ -517,12 +629,24 @@ export default function AccountsSupport() {
             </div>
           </div>
         </div>
+        {filteredTickets.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTickets.length}
+            startIndex={startIndex}
+            endIndex={Math.min(endIndex, filteredTickets.length)}
+            onPageChange={setCurrentPage}
+            itemLabel="tickets"
+            variant="desktop"
+          />
+        )}
       </div>
 
       {/* Card View - Mobile */}
       <div className="md:hidden space-y-3 sm:space-y-4">
-        {filteredTickets.length > 0 ? (
-          filteredTickets.map(t => (
+        {paginatedTickets.length > 0 ? (
+          paginatedTickets.map(t => (
             <div key={t.id} className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-200">
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="min-w-0 flex-1">
@@ -581,6 +705,18 @@ export default function AccountsSupport() {
           <div className="bg-white rounded-xl p-6 text-center text-gray-500 text-sm sm:text-base">
             No tickets match current filters.
           </div>
+        )}
+        {filteredTickets.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTickets.length}
+            startIndex={startIndex}
+            endIndex={Math.min(endIndex, filteredTickets.length)}
+            onPageChange={setCurrentPage}
+            itemLabel="tickets"
+            variant="mobile"
+          />
         )}
       </div>
 

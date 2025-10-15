@@ -2,6 +2,7 @@ import { useState, useRef, useMemo, useEffect } from 'react'
 import { FileText, Upload, Search, ChevronDown, ChevronRight, Eye, X } from 'lucide-react'
 import { CustomDropdown } from '../../../components/CustomDropdown/CustomDropdown'
 import { JsonViewerModal } from '../../../components/JsonViewerModal'
+import { Pagination } from '../../../components/ui/Pagination'
 import { InvoiceApiService } from '../../../services/invoiceApi'
 import type { POOrder, POStatus } from '../../../services/invoiceApi'
 import toast from 'react-hot-toast'
@@ -488,46 +489,18 @@ function AccountsInvoices() {
             </div>
           </div>
 
-          {/* Pagination controls (desktop) */}
-          <div className="flex items-center justify-between px-3 xl:px-4 2xl:px-6 py-2.5 xl:py-3 bg-white border-t border-gray-100">
-            <div className="text-[10px] xl:text-xs 2xl:text-sm text-gray-500">
-              Showing {filteredOrders.length === 0 ? 0 : startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length}
-            </div>
-            <div className="flex items-center gap-1 xl:gap-1.5 2xl:gap-2">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="h-7 w-7 xl:h-8 xl:w-8 2xl:h-9 2xl:w-9 flex items-center justify-center rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors"
-                aria-label="Previous page"
-              >
-                <svg className="w-3.5 h-3.5 xl:w-4 xl:h-4 2xl:w-5 2xl:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setCurrentPage(p)}
-                  className={`min-w-7 h-7 xl:min-w-8 xl:h-8 2xl:min-w-9 2xl:h-9 px-1.5 xl:px-2 2xl:px-2.5 rounded-md border text-[10px] xl:text-xs 2xl:text-sm transition-colors ${currentPage === p ? 'bg-[var(--color-secondary)] text-white border-[var(--color-secondary)]' : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'}`}
-                >
-                  {p}
-                </button>
-              ))}
-              <button
-                onClick={() => {
-                  if (filteredOrders.length === 0) return
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }}
-                disabled={filteredOrders.length === 0 || currentPage === totalPages}
-                className="h-7 w-7 xl:h-8 xl:w-8 2xl:h-9 2xl:w-9 flex items-center justify-center rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors"
-                aria-label="Next page"
-              >
-                <svg className="w-3.5 h-3.5 xl:w-4 xl:h-4 2xl:w-5 2xl:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          </div>
+          {filteredOrders.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredOrders.length}
+              startIndex={startIndex}
+              endIndex={Math.min(endIndex, filteredOrders.length)}
+              onPageChange={setCurrentPage}
+              itemLabel="invoices"
+              variant="desktop"
+            />
+          )}
         </div>
 
         {/* Mobile Card View */}
@@ -664,31 +637,18 @@ function AccountsInvoices() {
               })
             )}
 
-          {/* Pagination controls (mobile) */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-            <div className="text-xs text-gray-500">
-              {filteredOrders.length === 0 ? 'No results' : `Showing ${startIndex + 1}-${Math.min(endIndex, filteredOrders.length)} of ${filteredOrders.length}`}
-            </div>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} 
-                disabled={currentPage === 1} 
-                className="h-8 px-3 rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 text-sm font-medium"
-              >
-                Prev
-              </button>
-            <button 
-              onClick={() => {
-                if (filteredOrders.length === 0) return
-                setCurrentPage((p) => Math.min(totalPages, p + 1))
-              }} 
-              disabled={filteredOrders.length === 0 || currentPage === totalPages} 
-              className="h-8 px-3 rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 text-sm font-medium"
-            >
-              Next
-            </button>
-            </div>
-          </div>
+          {filteredOrders.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredOrders.length}
+              startIndex={startIndex}
+              endIndex={Math.min(endIndex, filteredOrders.length)}
+              onPageChange={setCurrentPage}
+              itemLabel="invoices"
+              variant="mobile"
+            />
+          )}
         </div>
       </div>
       )}

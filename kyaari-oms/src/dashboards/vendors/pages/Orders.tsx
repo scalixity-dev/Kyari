@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { CheckSquare, X, AlertTriangle, Clock, FileText, ChevronDown, ChevronUp, Package } from 'lucide-react'
 import { AssignmentApiService } from '@/services/assignmentApi'
+import { KPICard } from '../../../components'
+import { Pagination } from '../../../components/ui/Pagination'
 import type { AssignmentOrder, AssignmentProduct } from '@/services/assignmentApi'
 
 type Product = AssignmentProduct
@@ -217,6 +219,8 @@ export default function Orders() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [selectedOrderNumber, setSelectedOrderNumber] = useState<string>('')
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set())
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   // Fetch assignments on component mount
   useEffect(() => {
@@ -342,6 +346,18 @@ export default function Orders() {
   const confirmedOrders = orders.filter(order => ['Confirmed', 'Partially Confirmed', 'PO Received', 'Mixed'].includes(order.overallStatus))
   const declinedOrders = orders.filter(order => order.overallStatus === 'Declined')
 
+  // Pagination calculations
+  const totalPages = Math.ceil(orders.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = Math.min(startIndex + itemsPerPage, orders.length)
+  const paginatedOrders = orders.slice(startIndex, endIndex)
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    // Reset expanded orders when changing pages
+    setExpandedOrders(new Set())
+  }
+
   return (
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header */}
@@ -371,41 +387,30 @@ export default function Orders() {
 
       {/* Summary KPI Cards (admin-style) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6">
-        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <Clock size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Pending Orders</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{pendingOrders.length}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Awaiting confirmation</div>
-        </div>
-
-        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <FileText size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Awaiting PO</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{waitingForPOOrders.length}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Pending purchase orders</div>
-        </div>
-
-        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <CheckSquare size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Confirmed</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{confirmedOrders.length}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Ready for dispatch</div>
-        </div>
-
-        <div className={`bg-[var(--color-happyplant-bg)] p-4 sm:p-6 pt-8 sm:pt-10 rounded-xl shadow-sm flex flex-col items-center text-center relative`}>
-          <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-16 sm:h-16 bg-[var(--color-accent)] rounded-full p-2 sm:p-3 flex items-center justify-center text-white shadow-md">
-            <X size={24} color="white" className="sm:w-8 sm:h-8" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 px-2">Declined</h3>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{declinedOrders.length}</div>
-          <div className="text-xs sm:text-sm text-gray-600 mt-1">Requires attention</div>
-        </div>
+        <KPICard
+          title="Pending Orders"
+          value={pendingOrders.length}
+          subtitle="Awaiting confirmation"
+          icon={<Clock size={32} />}
+        />
+        <KPICard
+          title="Awaiting PO"
+          value={waitingForPOOrders.length}
+          subtitle="Pending purchase orders"
+          icon={<FileText size={32} />}
+        />
+        <KPICard
+          title="Confirmed"
+          value={confirmedOrders.length}
+          subtitle="Ready for dispatch"
+          icon={<CheckSquare size={32} />}
+        />
+        <KPICard
+          title="Declined"
+          value={declinedOrders.length}
+          subtitle="Requires attention"
+          icon={<X size={32} />}
+        />
       </div>
 
       {/* Orders Header */}
@@ -430,7 +435,7 @@ export default function Orders() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {orders.map((order) => (
+              {paginatedOrders.map((order) => (
                 <React.Fragment key={order.id}>
                   <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleOrderExpansion(order.id)}>
                     <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
@@ -552,11 +557,23 @@ export default function Orders() {
               ))}
             </tbody>
           </table>
+          {orders.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={orders.length}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              onPageChange={handlePageChange}
+              itemLabel="orders"
+              variant="desktop"
+            />
+          )}
         </div>
 
         {/* Mobile Cards */}
         <div className="md:hidden divide-y divide-gray-200">
-          {orders.map((order) => (
+          {paginatedOrders.map((order) => (
             <div key={order.id} className="p-3 sm:p-4 md:p-5 bg-white">
               <div className="flex justify-between items-start mb-3 gap-2">
                 <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -645,6 +662,20 @@ export default function Orders() {
               </div>
             </div>
           ))}
+          {orders.length > 0 && (
+            <div className="bg-white border-t border-gray-200">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={orders.length}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                onPageChange={handlePageChange}
+                itemLabel="orders"
+                variant="mobile"
+              />
+            </div>
+          )}
         </div>
       </div>
 

@@ -344,17 +344,17 @@ function AccountsLayout() {
               </button>
 
               {showNotifications && (
-                <div className={`absolute right-0 mt-2 rounded-lg shadow-lg border border-gray-200 z-50 ${
+                <div className={`absolute right-0 mt-2 rounded-lg shadow-lg overflow-hidden z-50 ${
                   isMobile ? 'w-[calc(100vw-2rem)] max-w-sm -mr-4' : 'w-96'
                 } max-h-[500px]`} style={{ background: 'white' }}>
                   {/* Notifications Header */}
-                  <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Accounts Notifications</h3>
+                  <div className="px-4 py-3 flex items-center justify-between" style={{ background: '#C3754C' }}>
+                    <h3 className="font-semibold text-white">Notifications</h3>
                     <div className="flex items-center gap-2">
                       {unreadCount > 0 && (
                         <button
                           onClick={markAllAsRead}
-                          className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                          className="text-sm text-white hover:text-white/80 flex items-center gap-1"
                         >
                           <CheckSquare size={14} />
                           Mark all read
@@ -362,7 +362,7 @@ function AccountsLayout() {
                       )}
                       <button
                         onClick={() => setShowNotifications(false)}
-                        className="text-gray-400 hover:text-gray-600"
+                        className="text-white hover:text-white/80"
                       >
                         <X size={18} />
                       </button>
@@ -428,10 +428,10 @@ function AccountsLayout() {
 
                   {/* Notifications Footer */}
                   {notifications.length > 0 && (
-                    <div className="px-4 py-3 border-t border-gray-200">
+                    <div className="px-4 py-3" style={{ background: '#C3754C' }}>
                       <Link
                         to="/accounts/notifications"
-                        className="text-sm text-blue-600 hover:text-blue-800 flex items-center justify-center gap-1"
+                        className="text-sm text-white hover:text-white/80 flex items-center justify-center gap-1 font-medium"
                         onClick={() => setShowNotifications(false)}
                       >
                         View all notifications
