@@ -91,7 +91,8 @@ export default function TicketManagement() {
   const [filters, setFilters] = useState({
     status: 'all',
     vendor: '',
-    date: ''
+    date: '',
+    ticket: ''
   })
   const [dateCalendar, setDateCalendar] = useState<Date | undefined>()
   const [showDateCalendar, setShowDateCalendar] = useState(false)
@@ -175,10 +176,10 @@ export default function TicketManagement() {
 
   useEffect(() => {
     fetchTickets()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+ 
   }, [])
 
-  // Close calendar when clicking outside
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dateCalendarRef.current && !dateCalendarRef.current.contains(event.target as Node)) {
@@ -208,8 +209,22 @@ export default function TicketManagement() {
       filtered = filtered.filter(ticket => ticket.raisedOn === filters.date)
     }
 
+    if (filters.ticket) {
+      const q = filters.ticket.toLowerCase()
+      filtered = filtered.filter(ticket => ticket.ticketNumber.toLowerCase().includes(q))
+    }
+
     setFilteredTickets(filtered)
   }, [filters, tickets])
+
+  // Build vendor dropdown options from loaded tickets
+  const vendorOptions = React.useMemo(() => {
+    const names = Array.from(new Set(tickets.map(t => t.vendor.name).filter(Boolean)))
+    return [
+      { value: '', label: 'All Vendors' },
+      ...names.map(name => ({ value: name, label: name }))
+    ]
+  }, [tickets])
 
   const handleViewDetails = async (ticket: Ticket) => {
     setSelectedTicket(ticket)
@@ -349,8 +364,8 @@ export default function TicketManagement() {
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Ticket#</label>
             <input
               type="text"
-              value={filters.vendor}
-              onChange={(e) => setFilters({...filters, vendor: e.target.value})}
+              value={filters.ticket}
+              onChange={(e) => setFilters({ ...filters, ticket: e.target.value })}
               placeholder="Search ticket number"
               className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto mb-2"
             />
@@ -365,7 +380,7 @@ export default function TicketManagement() {
               </button>
               <button
                 onClick={() => {
-                  setFilters({status: 'all', vendor: '', date: ''})
+                  setFilters({ status: 'all', vendor: '', date: '', ticket: '' })
                   setDateCalendar(undefined)
                 }}
                 className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
@@ -393,12 +408,11 @@ export default function TicketManagement() {
 
           <div>
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Vendor</label>
-            <input
-              type="text"
+            <CustomDropdown
               value={filters.vendor}
-              onChange={(e) => setFilters({...filters, vendor: e.target.value})}
-              placeholder="Search vendor"
-              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
+              onChange={(value) => setFilters({ ...filters, vendor: value || '' })}
+              options={vendorOptions}
+              placeholder="All Vendors"
             />
           </div>
 
@@ -445,7 +459,7 @@ export default function TicketManagement() {
           </button>
           <button
             onClick={() => {
-              setFilters({status: 'all', vendor: '', date: ''})
+              setFilters({ status: 'all', vendor: '', date: '', ticket: '' })
               setDateCalendar(undefined)
             }}
             className="flex-1 px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px]"
