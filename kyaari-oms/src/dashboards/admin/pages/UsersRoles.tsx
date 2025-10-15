@@ -38,8 +38,8 @@ type MatrixRole = 'Admin' | 'Accounts' | 'Ops' | 'Vendor'
 function Badge({ label, color }: { label: string; color: string }) {
   return (
     <span
-      className="text-white rounded-full px-2.5 py-0.5 text-xs font-semibold"
-      style={{ background: color }}
+      className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold"
+      style={{ backgroundColor: color, color: '#fff' }}
     >
       {label}
     </span>
@@ -525,21 +525,21 @@ export default function UsersRoles() {
             <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-[var(--color-accent)]">
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Name</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Email</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Role</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Status</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Created Date</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
+                  <tr style={{ background: 'var(--color-accent)' }}>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Name</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Email</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Role</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Status</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Created Date</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {adminUsers.map((row) => (
-                    <tr key={row.id} className={'bg-white'}>
-                      <td className="p-3">{row.name}</td>
-                      <td className="p-3">{row.email}</td>
-                      <td className="p-3">{row.role}</td>
+                    <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white">
+                      <td className="p-3 font-semibold text-secondary">{row.name}</td>
+                      <td className="p-3 text-sm">{row.email}</td>
+                      <td className="p-3 text-sm">{row.role}</td>
                       <td className="p-3">
                         {row.status === 'Active' ? (
                           <Badge label="Active" color="#10B981" />
@@ -547,27 +547,30 @@ export default function UsersRoles() {
                           <Badge label="Inactive" color="#EF4444" />
                         )}
                       </td>
-                      <td className="p-3">{row.createdAt}</td>
-                      <td className="p-3 flex gap-2">
-                        <SecondaryButton
+                      <td className="p-3 text-sm">{row.createdAt}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-1.5">
+                        <button
                           onClick={() => openEditUserModal(row, 'admin')}
+                          className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 transition-colors"
                         >
                           Edit
-                        </SecondaryButton>
-                        <PrimaryButton
-                          className={row.status === 'Active' ? 'bg-orange-500' : 'bg-accent'}
+                        </button>
+                        <button
+                          className={`rounded-md px-2.5 py-1.5 text-xs text-white transition-colors ${row.status === 'Active' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-[var(--color-accent)] hover:brightness-95'}`}
                           onClick={() => handleDeactivateUser(row.id, 'admin')}
                         >
                           {row.status === 'Active' ? 'Deactivate' : 'Activate'}
-                        </PrimaryButton>
+                        </button>
                         {currentUser?.id !== row.id && (
-                          <PrimaryButton
-                            className="bg-red-600 hover:bg-red-700"
+                          <button
+                            className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 transition-colors"
                             onClick={() => openDeleteConfirmation(row.id, 'admin', row.name)}
                           >
                             Delete
-                          </PrimaryButton>
+                          </button>
                         )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -576,15 +579,15 @@ export default function UsersRoles() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="lg:hidden space-y-4">
+            <div className="lg:hidden space-y-3">
               {adminUsers.map((row) => (
-                <div key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                <div key={row.id} className="rounded-xl p-4 border border-gray-200 bg-white">
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-semibold text-secondary text-lg">{row.name}</h3>
                       <p className="text-sm text-gray-600 mt-1">{row.email}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
+                    <div>
                       {row.status === 'Active' ? (
                         <Badge label="Active" color="#10B981" />
                       ) : (
@@ -604,28 +607,26 @@ export default function UsersRoles() {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col gap-2">
-                    <div className="flex gap-2">
-                      <SecondaryButton
-                        onClick={() => openEditUserModal(row, 'admin')}
-                        className="flex-1 justify-center text-sm"
-                      >
-                        Edit
-                      </SecondaryButton>
-                      <PrimaryButton
-                        className={`flex-1 justify-center text-sm ${row.status === 'Active' ? 'bg-orange-500' : 'bg-accent'}`}
-                        onClick={() => handleDeactivateUser(row.id, 'admin')}
-                      >
-                        {row.status === 'Active' ? 'Deactivate' : 'Activate'}
-                      </PrimaryButton>
-                    </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => openEditUserModal(row, 'admin')}
+                      className="flex-1 bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className={`flex-1 rounded-md px-2.5 py-1.5 text-xs text-white transition-colors ${row.status === 'Active' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-[var(--color-accent)] hover:brightness-95'}`}
+                      onClick={() => handleDeactivateUser(row.id, 'admin')}
+                    >
+                      {row.status === 'Active' ? 'Deactivate' : 'Activate'}
+                    </button>
                     {currentUser?.id !== row.id && (
-                      <PrimaryButton
-                        className="w-full justify-center text-sm bg-red-600 hover:bg-red-700"
+                      <button
+                        className="w-full bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 transition-colors"
                         onClick={() => openDeleteConfirmation(row.id, 'admin', row.name)}
                       >
                         Delete User
-                      </PrimaryButton>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -702,21 +703,21 @@ export default function UsersRoles() {
             <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-[var(--color-accent)]">
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Name</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Email</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Role</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Status</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Created Date</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
+                  <tr style={{ background: 'var(--color-accent)' }}>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Name</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Email</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Role</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Status</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Created Date</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {accountsUsers.map((row) => (
-                    <tr key={row.id} className={'bg-white'}>
-                      <td className="p-3">{row.name}</td>
-                      <td className="p-3">{row.email}</td>
-                      <td className="p-3">{row.role}</td>
+                    <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white">
+                      <td className="p-3 font-semibold text-secondary">{row.name}</td>
+                      <td className="p-3 text-sm">{row.email}</td>
+                      <td className="p-3 text-sm">{row.role}</td>
                       <td className="p-3">
                         {row.status === 'Active' ? (
                           <Badge label="Active" color="#10B981" />
@@ -724,25 +725,28 @@ export default function UsersRoles() {
                           <Badge label="Inactive" color="#EF4444" />
                         )}
                       </td>
-                      <td className="p-3">{row.createdAt}</td>
-                      <td className="p-3 flex gap-2">
-                        <SecondaryButton
+                      <td className="p-3 text-sm">{row.createdAt}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-1.5">
+                        <button
                           onClick={() => openEditUserModal(row, 'accounts')}
+                          className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 transition-colors"
                         >
                           Edit
-                        </SecondaryButton>
-                        <PrimaryButton
-                          className={row.status === 'Active' ? 'bg-orange-500' : 'bg-accent'}
+                        </button>
+                        <button
+                          className={`rounded-md px-2.5 py-1.5 text-xs text-white transition-colors ${row.status === 'Active' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-[var(--color-accent)] hover:brightness-95'}`}
                           onClick={() => handleDeactivateUser(row.id, 'accounts')}
                         >
                           {row.status === 'Active' ? 'Deactivate' : 'Activate'}
-                        </PrimaryButton>
-                        <PrimaryButton
-                          className="bg-red-600 hover:bg-red-700"
+                        </button>
+                        <button
+                          className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 transition-colors"
                           onClick={() => openDeleteConfirmation(row.id, 'accounts', row.name)}
                         >
                           Delete
-                        </PrimaryButton>
+                        </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -751,15 +755,15 @@ export default function UsersRoles() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="lg:hidden space-y-4">
+            <div className="lg:hidden space-y-3">
               {accountsUsers.map((row) => (
-                <div key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                <div key={row.id} className="rounded-xl p-4 border border-gray-200 bg-white">
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-semibold text-secondary text-lg">{row.name}</h3>
                       <p className="text-sm text-gray-600 mt-1">{row.email}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
+                    <div>
                       {row.status === 'Active' ? (
                         <Badge label="Active" color="#10B981" />
                       ) : (
@@ -779,27 +783,25 @@ export default function UsersRoles() {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col gap-2">
-                    <div className="flex gap-2">
-                      <SecondaryButton
-                        onClick={() => openEditUserModal(row, 'accounts')}
-                        className="flex-1 justify-center text-sm"
-                      >
-                        Edit
-                      </SecondaryButton>
-                      <PrimaryButton
-                        className={`flex-1 justify-center text-sm ${row.status === 'Active' ? 'bg-orange-500' : 'bg-accent'}`}
-                        onClick={() => handleDeactivateUser(row.id, 'accounts')}
-                      >
-                        {row.status === 'Active' ? 'Deactivate' : 'Activate'}
-                      </PrimaryButton>
-                    </div>
-                    <PrimaryButton
-                      className="w-full justify-center text-sm bg-red-600 hover:bg-red-700"
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => openEditUserModal(row, 'accounts')}
+                      className="flex-1 bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className={`flex-1 rounded-md px-2.5 py-1.5 text-xs text-white transition-colors ${row.status === 'Active' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-[var(--color-accent)] hover:brightness-95'}`}
+                      onClick={() => handleDeactivateUser(row.id, 'accounts')}
+                    >
+                      {row.status === 'Active' ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button
+                      className="w-full bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 transition-colors"
                       onClick={() => openDeleteConfirmation(row.id, 'accounts', row.name)}
                     >
                       Delete User
-                    </PrimaryButton>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -877,21 +879,21 @@ export default function UsersRoles() {
             <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-[var(--color-accent)]">
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Name</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Email</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Role</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Status</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Created Date</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
+                  <tr style={{ background: 'var(--color-accent)' }}>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Name</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Email</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Role</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Status</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Created Date</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {opsUsers.map((row) => (
-                    <tr key={row.id} className={'bg-white'}>
-                      <td className="p-3">{row.name}</td>
-                      <td className="p-3">{row.email}</td>
-                      <td className="p-3">{row.role}</td>
+                    <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white">
+                      <td className="p-3 font-semibold text-secondary">{row.name}</td>
+                      <td className="p-3 text-sm">{row.email}</td>
+                      <td className="p-3 text-sm">{row.role}</td>
                       <td className="p-3">
                         {row.status === 'Active' ? (
                           <Badge label="Active" color="#10B981" />
@@ -899,21 +901,28 @@ export default function UsersRoles() {
                           <Badge label="Inactive" color="#EF4444" />
                         )}
                       </td>
-                      <td className="p-3">{row.createdAt}</td>
-                      <td className="p-3 flex gap-2">
-                        <SecondaryButton onClick={() => openEditUserModal(row, 'ops')}>Edit</SecondaryButton>
-                        <PrimaryButton
-                          className={row.status === 'Active' ? 'bg-orange-500' : 'bg-accent'}
+                      <td className="p-3 text-sm">{row.createdAt}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => openEditUserModal(row, 'ops')}
+                          className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className={`rounded-md px-2.5 py-1.5 text-xs text-white transition-colors ${row.status === 'Active' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-[var(--color-accent)] hover:brightness-95'}`}
                           onClick={() => handleDeactivateUser(row.id, 'ops')}
                         >
                           {row.status === 'Active' ? 'Deactivate' : 'Activate'}
-                        </PrimaryButton>
-                        <PrimaryButton
-                          className="bg-red-600 hover:bg-red-700"
+                        </button>
+                        <button
+                          className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 transition-colors"
                           onClick={() => openDeleteConfirmation(row.id, 'ops', row.name)}
                         >
                           Delete
-                        </PrimaryButton>
+                        </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -922,15 +931,15 @@ export default function UsersRoles() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="lg:hidden space-y-4">
+            <div className="lg:hidden space-y-3">
               {opsUsers.map((row) => (
-                <div key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                <div key={row.id} className="rounded-xl p-4 border border-gray-200 bg-white">
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-semibold text-secondary text-lg">{row.name}</h3>
                       <p className="text-sm text-gray-600 mt-1">{row.email}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
+                    <div>
                       {row.status === 'Active' ? (
                         <Badge label="Active" color="#10B981" />
                       ) : (
@@ -950,27 +959,25 @@ export default function UsersRoles() {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col gap-2">
-                    <div className="flex gap-2">
-                      <SecondaryButton
-                        onClick={() => openEditUserModal(row, 'ops')}
-                        className="flex-1 justify-center text-sm"
-                      >
-                        Edit
-                      </SecondaryButton>
-                      <PrimaryButton
-                        className={`flex-1 justify-center text-sm ${row.status === 'Active' ? 'bg-orange-500' : 'bg-accent'}`}
-                        onClick={() => handleDeactivateUser(row.id, 'ops')}
-                      >
-                        {row.status === 'Active' ? 'Deactivate' : 'Activate'}
-                      </PrimaryButton>
-                    </div>
-                    <PrimaryButton
-                      className="w-full justify-center text-sm bg-red-600 hover:bg-red-700"
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => openEditUserModal(row, 'ops')}
+                      className="flex-1 bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className={`flex-1 rounded-md px-2.5 py-1.5 text-xs text-white transition-colors ${row.status === 'Active' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-[var(--color-accent)] hover:brightness-95'}`}
+                      onClick={() => handleDeactivateUser(row.id, 'ops')}
+                    >
+                      {row.status === 'Active' ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button
+                      className="w-full bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 transition-colors"
                       onClick={() => openDeleteConfirmation(row.id, 'ops', row.name)}
                     >
                       Delete User
-                    </PrimaryButton>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1039,14 +1046,14 @@ export default function UsersRoles() {
             <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-[var(--color-accent)]">
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Company Name</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Email</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Phone</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">GST/PAN</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Status</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">SLA Score</th>
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
+                  <tr style={{ background: 'var(--color-accent)' }}>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Company Name</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Email</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Phone</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>GST/PAN</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Status</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>SLA Score</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1056,8 +1063,8 @@ export default function UsersRoles() {
                     const isSuspended = row.status === 'SUSPENDED'
                     
                     return (
-                      <tr key={row.id} className={'bg-white'}>
-                        <td className="p-3">{row.name}</td>
+                      <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white">
+                        <td className="p-3 font-semibold text-secondary">{row.name}</td>
                         <td className="p-3 text-sm">{row.email}</td>
                         <td className="p-3 text-sm">{row.contactPhone}</td>
                         <td className="p-3 text-sm">{row.gstOrPan}</td>
@@ -1070,27 +1077,34 @@ export default function UsersRoles() {
                             <Badge label="Pending" color="#F59E0B" />
                           )}
                         </td>
-                        <td className="p-3">{row.slaScore}%</td>
-                        <td className="p-3 flex gap-2">
+                        <td className="p-3 text-sm font-medium">{row.slaScore}%</td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1.5">
                           {isPending && (
-                            <PrimaryButton
+                            <button
                               onClick={() => handleApproveVendor(row.userId, row.name)}
-                              className="bg-green-600 hover:bg-green-700"
+                              className="bg-green-600 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-700 transition-colors"
                               disabled={loading}
                             >
                               Approve
-                            </PrimaryButton>
+                            </button>
                           )}
                           {isApproved && (
-                            <PrimaryButton
+                            <button
                               onClick={() => handleSuspendVendor(row.userId, row.name)}
-                              className="bg-orange-500 hover:bg-orange-600"
+                              className="bg-orange-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-orange-600 transition-colors"
                               disabled={loading}
                             >
                               Suspend
-                            </PrimaryButton>
+                            </button>
                           )}
-                          <SecondaryButton onClick={() => openKycModal(row)}>View Details</SecondaryButton>
+                          <button
+                            onClick={() => openKycModal(row)}
+                            className="bg-gray-100 text-gray-900 border border-gray-300 rounded-md px-2.5 py-1.5 text-xs hover:bg-gray-200 transition-colors"
+                          >
+                            View Details
+                          </button>
+                          </div>
                         </td>
                       </tr>
                     )
@@ -1100,21 +1114,21 @@ export default function UsersRoles() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="lg:hidden space-y-4">
+            <div className="lg:hidden space-y-3">
               {vendors.map((row) => {
                 const isApproved = row.status === 'ACTIVE' && row.verified
                 const isPending = row.status === 'PENDING' || !row.verified
                 const isSuspended = row.status === 'SUSPENDED'
 
                 return (
-                  <div key={row.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                  <div key={row.id} className="rounded-xl p-4 border border-gray-200 bg-white">
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <h3 className="font-semibold text-secondary text-lg">{row.name}</h3>
                         <p className="text-sm text-gray-600 mt-1">{row.email}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{row.contactPhone}</p>
                       </div>
-                      <div className="flex flex-col items-end gap-2">
+                      <div>
                         {isApproved ? (
                           <Badge label="Approved" color="#16A34A" />
                         ) : isSuspended ? (
@@ -1136,31 +1150,31 @@ export default function UsersRoles() {
                       </div>
                     </div>
                     
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {isPending && (
-                        <PrimaryButton
+                        <button
                           onClick={() => handleApproveVendor(row.userId, row.name)}
-                          className="w-full justify-center text-sm bg-green-600 hover:bg-green-700"
+                          className="flex-1 bg-green-600 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-700 transition-colors"
                           disabled={loading}
                         >
                           Approve Vendor
-                        </PrimaryButton>
+                        </button>
                       )}
                       {isApproved && (
-                        <PrimaryButton
+                        <button
                           onClick={() => handleSuspendVendor(row.userId, row.name)}
-                          className="w-full justify-center text-sm bg-orange-500 hover:bg-orange-600"
+                          className="flex-1 bg-orange-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-orange-600 transition-colors"
                           disabled={loading}
                         >
                           Suspend Vendor
-                        </PrimaryButton>
+                        </button>
                       )}
-                      <SecondaryButton 
+                      <button 
                         onClick={() => openKycModal(row)} 
-                        className="w-full justify-center text-sm"
+                        className="flex-1 bg-gray-100 text-gray-900 border border-gray-300 rounded-md px-2.5 py-1.5 text-xs hover:bg-gray-200 transition-colors"
                       >
                         View Details
-                      </SecondaryButton>
+                      </button>
                     </div>
                   </div>
                 )
@@ -1223,24 +1237,24 @@ export default function UsersRoles() {
             <div className="hidden md:block bg-header-bg rounded-xl overflow-hidden">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-[var(--color-accent)]">
-                    <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Role</th>
+                  <tr style={{ background: 'var(--color-accent)' }}>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Role</th>
                     {permissions.map((p) => (
-                      <th key={p} className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">{p}</th>
+                      <th key={p} className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>{p}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {matrixRoles.map((role) => (
-                    <tr key={role} className={'bg-white'}>
-                      <td className="p-3 font-semibold">{role}</td>
+                    <tr key={role} className="border-b border-gray-100 hover:bg-gray-50 bg-white">
+                      <td className="p-3 font-semibold text-secondary">{role}</td>
                       {permissions.map((perm) => (
                         <td key={perm} className="p-3">
                           <input
                             type="checkbox"
                             checked={roleMatrix[role][perm]}
                             onChange={() => togglePermission(role, perm)}
-                            className="scale-125 origin-center"
+                            className="scale-125 origin-center cursor-pointer"
                           />
                         </td>
                       ))}
@@ -1251,9 +1265,9 @@ export default function UsersRoles() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="md:hidden space-y-4">
+            <div className="md:hidden space-y-3">
               {matrixRoles.map((role) => (
-                <div key={role} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                <div key={role} className="rounded-xl p-4 border border-gray-200 bg-white">
                   <h3 className="font-semibold text-secondary text-lg mb-4">{role}</h3>
                   
                   <div className="grid grid-cols-2 gap-4">

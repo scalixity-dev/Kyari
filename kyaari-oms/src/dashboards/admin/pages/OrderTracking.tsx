@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
 import { LayoutDashboard, Package, Bell, Users, CheckSquare, FileText, Wallet, MapPin, Eye } from 'lucide-react';
-import { KPICard } from '../../../components';
+import { KPICard, Pagination } from '../../../components';
 
 // TypeScript types
 type Status = "Received" | "Assigned" | "Confirmed" | "Invoiced" | "Dispatched" | "Verified" | "Paid";
@@ -107,90 +107,127 @@ interface ListViewProps {
   onOrderClick?: (orderId: string) => void;
 }
 
-const ListView: React.FC<ListViewProps> = ({ orders, onOrderClick }) => (
-  <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
-    {/* Desktop Table View */}
-    <div className="hidden md:block overflow-x-auto w-full">
-      <table className="w-full min-w-full table-fixed border-separate border-spacing-0">
-        <thead className="bg-[var(--color-accent)] sticky top-0 z-10">
-          <tr>
-            <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">
-              Order ID
-            </th>
-            <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">
-              Vendor
-            </th>
-            <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">
-              Quantity
-            </th>
-            <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">
-              Status
-            </th>
-          </tr>
-        </thead>
-  <tbody className="bg-white divide-y divide-gray-200">
-          {orders.map((order) => (
-            <tr
-              key={order.id}
-              onClick={() => onOrderClick?.(order.id)}
-              className="hover:bg-gray-50 transition-colors cursor-pointer"
-            >
-              <td className="px-4 lg:px-6 py-4 font-medium text-[var(--color-heading)]">
-                {order.id}
-              </td>
-              <td className="px-4 lg:px-6 py-4 text-gray-700">
-                {order.vendor}
-              </td>
-              <td className="px-4 lg:px-6 py-4 text-gray-600">
-                {order.qty}
-              </td>
-              <td className="px-4 lg:px-6 py-4">
-                <span className={`
-                  inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-                  ${getStatusColor(order.status)}
-                `}>
-                  {order.status}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+const ListView: React.FC<ListViewProps> = ({ orders, onOrderClick }) => {
+  const [page, setPage] = React.useState(1);
+  const pageSize = 10;
+  
+  // Reset to first page when orders change
+  React.useEffect(() => {
+    setPage(1);
+  }, [orders]);
 
-    {/* Mobile Card View */}
-    <div className="md:hidden space-y-1">
-      {orders.map((order, index) => (
-        <div
-          key={order.id}
-          onClick={() => onOrderClick?.(order.id)}
-          className={`
-            p-4 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-100 transition-colors active:bg-gray-200
-            ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
-          `}
-        >
-          <div className="flex items-start justify-between mb-3">
-            <div className="font-semibold text-[var(--color-heading)] text-base">
-              {order.id}
+  const totalPages = Math.max(1, Math.ceil(orders.length / pageSize));
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, orders.length);
+  const pageOrders = orders.slice(startIndex, endIndex);
+
+  return (
+    <div className="bg-header-bg rounded-xl overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden md:block">
+        <table className="w-full border-separate border-spacing-0">
+          <thead>
+            <tr style={{ background: 'var(--color-accent)' }}>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                Order ID
+              </th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                Vendor
+              </th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                Quantity
+              </th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                Status
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {pageOrders.map((order) => (
+              <tr
+                key={order.id}
+                onClick={() => onOrderClick?.(order.id)}
+                className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors cursor-pointer"
+              >
+                <td className="p-3 font-semibold text-secondary">
+                  {order.id}
+                </td>
+                <td className="p-3 text-sm text-gray-700">
+                  {order.vendor}
+                </td>
+                <td className="p-3 text-sm text-gray-600">
+                  {order.qty}
+                </td>
+                <td className="p-3">
+                  <span className={`
+                    inline-block px-2.5 py-1 rounded-full text-xs font-semibold border
+                    ${getStatusColor(order.status)}
+                  `}>
+                    {order.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {/* Desktop Pagination */}
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={orders.length}
+          startIndex={startIndex}
+          endIndex={endIndex}
+          onPageChange={setPage}
+          variant="desktop"
+          itemLabel="orders"
+        />
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {pageOrders.map((order) => (
+          <div
+            key={order.id}
+            onClick={() => onOrderClick?.(order.id)}
+            className="rounded-xl p-4 border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="font-semibold text-secondary text-lg">
+                {order.id}
+              </div>
+              <span className={`
+                inline-block px-2.5 py-1 rounded-full text-xs font-semibold border flex-shrink-0
+                ${getStatusColor(order.status)}
+              `}>
+                {order.status}
+              </span>
             </div>
-            <span className={`
-              inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border flex-shrink-0
-              ${getStatusColor(order.status)}
-            `}>
-              {order.status}
-            </span>
+            <div className="text-sm text-gray-600 mb-3">
+              {order.vendor}
+            </div>
+            <div className="grid grid-cols-1 gap-2 text-sm">
+              <div>
+                <span className="text-gray-500">Quantity: </span>
+                <span className="font-medium">{order.qty}</span>
+              </div>
+            </div>
           </div>
-          <div className="text-gray-700 text-sm mb-2 leading-relaxed">
-            {order.vendor}
-          </div>
-          <div className="text-gray-600 text-sm">
-            <span className="font-medium">Quantity:</span> {order.qty}
-          </div>
-        </div>
-      ))}
+        ))}
+        {/* Mobile Pagination */}
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={orders.length}
+          startIndex={startIndex}
+          endIndex={endIndex}
+          onPageChange={setPage}
+          variant="mobile"
+          itemLabel="orders"
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface BoardColumnProps {
   status: Status;
@@ -365,7 +402,7 @@ const OrderTracking: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <div className={`${viewMode === 'board' ? 'bg-[var(--color-sharktank-bg)] border-0' : 'bg-white border border-gray-200'} rounded-lg shadow-sm`}>
+        <div className={`${viewMode === 'board' ? 'bg-[var(--color-sharktank-bg)]' : ''} rounded-lg`}>
           {viewMode === 'list' ? (
             <ListView orders={orders} onOrderClick={handleOrderClick} />
           ) : (

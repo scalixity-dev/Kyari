@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Plus, Upload, Search, FileText, ChevronDown, ChevronRight, Edit, Trash2 } from 'lucide-react'
-import { CustomDropdown, ConfirmationModal, CSVPDFExportButton } from '../../../components'
+import { CustomDropdown, ConfirmationModal, CSVPDFExportButton, Pagination } from '../../../components'
 import { orderApi, type OrderListItem, type CreateOrderRequest, type Order } from '../../../services/orderApi'
 import { vendorApi, type VendorListItem } from '../../../services/vendorApi'
 import toast from 'react-hot-toast'
@@ -562,6 +562,7 @@ export default function Orders() {
             <CSVPDFExportButton
               onExportCSV={handleExportCSV}
               onExportPDF={handleExportPDF}
+              buttonClassName="!py-2.5 !min-h-0 sm:text-base"
             />
         </div>
         </div>
@@ -805,6 +806,19 @@ export default function Orders() {
                 )}
               </tbody>
             </table>
+            {/* Pagination Controls */}
+            {total > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={total}
+                startIndex={(currentPage - 1) * itemsPerPage}
+                endIndex={Math.min(currentPage * itemsPerPage, total)}
+                onPageChange={setCurrentPage}
+                itemLabel="orders"
+                variant="desktop"
+              />
+            )}
           </div>
         </>
       )}
@@ -956,72 +970,6 @@ export default function Orders() {
               )
             })
           )}
-        </div>
-      )}
-
-      {/* Pagination Controls */}
-      {!isLoading && total > 0 && (
-        <div className="mt-6 bg-white border border-secondary/20 rounded-xl p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="text-sm text-gray-600 text-center sm:text-left">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, total)} of {total} orders
-            </div>
-            
-            <div className="flex items-center justify-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className={`px-3 py-2.5 rounded-lg border text-sm transition-colors ${
-                  currentPage === 1 
-                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
-                    : 'bg-white text-secondary border-secondary hover:bg-gray-50'
-                }`}
-              >
-                Previous
-              </button>
-              
-              <div className="flex gap-1 max-w-[200px] overflow-x-auto">
-                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                  let page: number;
-                  if (totalPages <= 5) {
-                    page = i + 1;
-                  } else if (currentPage <= 3) {
-                    page = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    page = totalPages - 4 + i;
-                  } else {
-                    page = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-2.5 rounded-lg border text-sm min-w-[44px] transition-colors ${
-                        currentPage === page
-                          ? 'bg-accent text-button-text border-accent'
-                          : 'bg-white text-secondary border-secondary hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  );
-                })}
-              </div>
-              
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className={`px-3 py-2.5 rounded-lg border text-sm transition-colors ${
-                  currentPage === totalPages 
-                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
-                    : 'bg-white text-secondary border-secondary hover:bg-gray-50'
-                }`}
-              >
-                Next
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

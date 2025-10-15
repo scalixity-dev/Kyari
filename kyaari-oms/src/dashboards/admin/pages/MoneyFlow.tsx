@@ -347,43 +347,46 @@ export default function MoneyFlow() {
               </div>
             </div>
 
-            {/* Table container styled to match screenshot - Hidden on mobile, visible on tablet+ */}
-            <div className="hidden md:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
-              {/* Table head bar */}
-              <div className="bg-[#C3754C] text-white">
-                <div className="grid grid-cols-[1.2fr_1.8fr_1.1fr_1.1fr_1.1fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-[var(--font-heading)] font-bold text-sm md:text-base lg:text-[18px] xl:text-[20px] leading-[100%] tracking-[0] text-center">
-                  <div>Invoice ID</div>
-                  <div>Vendor</div>
-                  <div>Amount</div>
-                  <div>Status</div>
-                  <div>Date</div>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="bg-white">
-                <div className="py-2">
-                  <div>
-                    {pageTransactions.length === 0 ? (
-                      <div className="px-6 py-8 text-center text-gray-500">No transactions found</div>
-                    ) : (
-                      pageTransactions.map((t) => (
-                        <div key={t.id} className="grid grid-cols-[1.2fr_1.8fr_1.1fr_1.1fr_1.1fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center text-center hover:bg-gray-50 font-bold">
-                          <div className="text-xs md:text-sm font-medium text-gray-800 truncate">{t.id}</div>
-                          <div className="text-xs md:text-sm text-gray-700 truncate">{t.vendor}</div>
-                          <div className="text-xs md:text-sm font-semibold text-gray-900">{t.amount}</div>
-                          <div className="flex items-center justify-center">
-                            <span className={`${t.status === 'Pending' ? 'bg-amber-50 text-amber-600' : t.status === 'Released' ? 'bg-green-50 text-green-600' : 'bg-sky-50 text-sky-600'} inline-block px-2 py-1 rounded-md text-xs font-semibold`}>
-                              {t.status}
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-500">{t.date}</div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
+            {/* Desktop Table - Hidden on mobile, visible on tablet+ */}
+            <div className="hidden md:block bg-header-bg rounded-xl overflow-hidden">
+              <table className="w-full border-separate border-spacing-0">
+                <thead>
+                  <tr style={{ background: 'var(--color-accent)' }}>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Invoice ID</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Vendor</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Amount</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Status</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500">No transactions found</td>
+                    </tr>
+                  ) : (
+                    pageTransactions.map((t) => (
+                      <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
+                        <td className="p-3 font-semibold text-secondary text-sm">{t.id}</td>
+                        <td className="p-3 text-sm text-gray-700">{t.vendor}</td>
+                        <td className="p-3 text-sm font-semibold text-secondary">{t.amount}</td>
+                        <td className="p-3">
+                          <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            t.status === 'Pending' 
+                              ? 'bg-amber-50 text-amber-600' 
+                              : t.status === 'Released' 
+                              ? 'bg-green-50 text-green-600' 
+                              : 'bg-sky-50 text-sky-600'
+                          }`}>
+                            {t.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-sm text-gray-500">{t.date}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
               {/* Pagination controls (desktop) */}
               <Pagination
                 currentPage={page}
@@ -393,27 +396,42 @@ export default function MoneyFlow() {
                 endIndex={endIndex}
                 onPageChange={setPage}
                 variant="desktop"
+                itemLabel="transactions"
               />
             </div>
 
-            {/* Mobile cards keep parity */}
-            <div className="md:hidden mt-3 space-y-3">
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
               {pageTransactions.length === 0 ? (
-                <div className="border border-gray-200 rounded-lg p-8 bg-white text-center text-gray-500">
+                <div className="rounded-xl p-4 border border-gray-200 bg-white text-center text-gray-500">
                   No transactions found
                 </div>
               ) : (
                 <>
                   {pageTransactions.map((t) => (
-                    <div key={t.id} className="border border-gray-200 rounded-lg p-3.5 sm:p-4 bg-white shadow-sm">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="font-semibold text-sm text-[color:var(--color-heading)]">{t.id}</div>
-                        <span className={`${t.status === 'Pending' ? 'bg-amber-50 text-amber-600' : t.status === 'Released' ? 'bg-green-50 text-green-600' : 'bg-sky-50 text-sky-600'} px-2 py-1 rounded-md font-semibold text-xs`}>{t.status}</span>
+                    <div key={t.id} className="rounded-xl p-4 border border-gray-200 bg-white">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="font-semibold text-secondary text-lg">{t.id}</div>
+                        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          t.status === 'Pending' 
+                            ? 'bg-amber-50 text-amber-600' 
+                            : t.status === 'Released' 
+                            ? 'bg-green-50 text-green-600' 
+                            : 'bg-sky-50 text-sky-600'
+                        }`}>
+                          {t.status}
+                        </span>
                       </div>
-                      <div className="text-sm text-gray-700 mb-1 font-medium">{t.vendor}</div>
-                      <div className="flex justify-between items-end">
-                        <div className="font-bold text-base text-[color:var(--color-heading)]">{t.amount}</div>
-                        <div className="text-xs text-gray-500">{t.date}</div>
+                      <div className="text-sm text-gray-600 mb-3">{t.vendor}</div>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-500 block">Amount</span>
+                          <span className="font-bold text-lg text-secondary">{t.amount}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-gray-500 block">Date</span>
+                          <span className="font-medium">{t.date}</span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -428,6 +446,7 @@ export default function MoneyFlow() {
                 endIndex={endIndex}
                 onPageChange={setPage}
                 variant="mobile"
+                itemLabel="transactions"
               />
             </div>
           </div>

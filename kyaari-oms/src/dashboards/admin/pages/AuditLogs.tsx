@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Calendar as CalendarIcon } from 'lucide-react'
-import { CustomDropdown, CSVPDFExportButton } from '../../../components'
+import { CustomDropdown, CSVPDFExportButton, Pagination } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
 
@@ -418,172 +418,80 @@ export default function AuditLogs() {
       </div>
 
       {/* Table Container */}
-  <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-
-        {/* Desktop Table */}
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full min-w-[800px]">
-            <thead style={{ backgroundColor: 'var(--color-accent)', borderTopLeftRadius: '0.5rem', borderTopRightRadius: '0.5rem' }} className="rounded-t-lg">
+      <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-[var(--color-accent)]">
+            <tr>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                <button
+                  onClick={handleSort}
+                  className="flex items-center gap-1 hover:text-gray-200"
+                >
+                  Timestamp
+                  <span className="text-gray-300">↕</span>
+                </button>
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                User
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                Role
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                Action
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                Module
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {paginatedLogs.length === 0 ? (
               <tr>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                  <button
-                    onClick={handleSort}
-                    className="flex items-center gap-1 hover:text-gray-700 min-h-[44px] lg:min-h-auto"
-                  >
-                    Timestamp
-                    <span className="text-gray-400">↕</span>
-                  </button>
-                </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                  Action
-                </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                  Module
-                </th>
+                <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                  No audit logs found
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-900">
-                    <div className="font-medium">{formatTimestamp(log.timestamp)}</div>
+            ) : (
+              paginatedLogs.map((log, index) => (
+                <tr key={log.id} className={index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100'}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatTimestamp(log.timestamp)}
                   </td>
-                  <td className="px-4 sm:px-6 py-4">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{log.user}</div>
-                      <div className="text-sm text-gray-500 break-all">{log.userEmail}</div>
-                    </div>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    <div className="font-medium">{log.user}</div>
+                    <div className="text-gray-500">{log.userEmail}</div>
                   </td>
-                  <td className="px-4 sm:px-6 py-4">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <span className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
                       {log.role}
                     </span>
                   </td>
-                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-900 max-w-xs">
-                    <div className="line-clamp-2">{log.action}</div>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {log.action}
                   </td>
-                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-700">
                       {log.module}
                     </span>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Card Layout */}
-        <div className="lg:hidden">
-          {paginatedLogs.map((log) => (
-            <div key={log.id} className="border-b border-gray-200 p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0 pr-3">
-                  <div className="text-sm font-medium text-gray-900 mb-1">{log.user}</div>
-                  <div className="text-xs text-gray-500 break-all">{log.userEmail}</div>
-                </div>
-                <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                  <span className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                    {log.role}
-                  </span>
-                  <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-700">
-                    {log.module}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="text-sm text-gray-900 mb-3 leading-relaxed">
-                {log.action}
-              </div>
-              
-              <div className="text-xs text-gray-500 font-medium">
-                {formatTimestamp(log.timestamp)}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center gap-2 order-2 sm:order-1">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-auto"
-              >
-                <span>←</span>
-                <span>Previous</span>
-              </button>
-              
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number
-                  if (totalPages <= 5) {
-                    pageNum = i + 1
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i
-                  } else {
-                    pageNum = currentPage - 2 + i
-                  }
-                  
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 sm:px-4 py-3 sm:py-2 text-sm rounded-md min-h-[44px] sm:min-h-auto ${
-                        currentPage === pageNum
-                          ? 'text-white'
-                          : 'text-gray-700 hover:bg-gray-50 border border-gray-300'
-                      }`}
-                      style={currentPage === pageNum ? { backgroundColor: 'var(--color-accent)' } : undefined}
-                    >
-                      {pageNum}
-                    </button>
-                  )
-                })}
-                {totalPages > 5 && currentPage < totalPages - 2 && (
-                  <>
-                    <span className="px-2 text-gray-500 text-sm">...</span>
-                    <button
-                      onClick={() => setCurrentPage(totalPages)}
-                      className={`px-3 sm:px-4 py-3 sm:py-2 text-sm rounded-md min-h-[44px] sm:min-h-auto ${
-                        currentPage === totalPages
-                          ? 'text-white'
-                          : 'text-gray-700 hover:bg-gray-50 border border-gray-300'
-                      }`}
-                      style={currentPage === totalPages ? { backgroundColor: 'var(--color-accent)' } : undefined}
-                    >
-                      {totalPages}
-                    </button>
-                  </>
-                )}
-              </div>
-              
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-auto"
-              >
-                <span>Next</span>
-                <span>→</span>
-              </button>
-            </div>
-            
-            <div className="text-sm text-gray-700 order-1 sm:order-2">
-              Page {currentPage} of {totalPages}
-            </div>
-          </div>
-        )}
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={filteredAndSortedLogs.length}
+        startIndex={(currentPage - 1) * itemsPerPage}
+        endIndex={Math.min(currentPage * itemsPerPage, filteredAndSortedLogs.length)}
+        onPageChange={setCurrentPage}
+        itemLabel="logs"
+      />
     </div>
   )
 }

@@ -28,7 +28,51 @@ This document defines the consistent styling patterns for all tables across the 
 
 ## 📊 Table Structure
 
-### Base Table
+### Complete Table with Pagination (Recommended Pattern)
+```tsx
+{/* Desktop Table Container - includes both table AND pagination */}
+<div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
+  <table className="w-full border-separate border-spacing-0">
+    <thead>
+      {/* table header */}
+    </thead>
+    <tbody>
+      {/* table body */}
+    </tbody>
+  </table>
+  
+  {/* Pagination attached to table - NOT in separate div */}
+  {total > 0 && (
+    <Pagination
+      currentPage={currentPage}
+      totalPages={totalPages}
+      totalItems={total}
+      startIndex={startIndex}
+      endIndex={endIndex}
+      onPageChange={setCurrentPage}
+      variant="desktop"
+    />
+  )}
+</div>
+
+{/* Mobile Cards Container */}
+<div className="lg:hidden space-y-3">
+  {/* mobile cards */}
+  
+  {/* Mobile pagination */}
+  <Pagination
+    currentPage={currentPage}
+    totalPages={totalPages}
+    totalItems={total}
+    startIndex={startIndex}
+    endIndex={endIndex}
+    onPageChange={setCurrentPage}
+    variant="mobile"
+  />
+</div>
+```
+
+### Base Table Options
 ```tsx
 <table className="w-full border-separate border-spacing-0">
   // OR
@@ -356,6 +400,33 @@ We have a standardized `Pagination` component to ensure uniform pagination styli
 
 **Location:** `src/components/Pagination/Pagination.tsx`
 
+### Important: Pagination Placement
+⚠️ **The pagination MUST be attached directly to the table container, not in a separate div.**
+
+**Correct Structure:**
+```tsx
+<div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
+  <table className="w-full border-separate border-spacing-0">
+    {/* table content */}
+  </table>
+  <Pagination {...props} />
+</div>
+```
+
+**Incorrect Structure (DO NOT USE):**
+```tsx
+<div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
+  <table className="w-full border-separate border-spacing-0">
+    {/* table content */}
+  </table>
+</div>
+
+{/* ❌ Separate div - WRONG! */}
+<div className="mt-6 bg-white border border-secondary/20 rounded-xl">
+  <Pagination {...props} />
+</div>
+```
+
 ### Usage
 
 ```tsx
@@ -529,6 +600,7 @@ When creating a new table, ensure:
 - [ ] Action buttons use `text-xs px-2.5 py-1.5 rounded-md`
 - [ ] Icons in buttons are `size={12}`
 - [ ] **Pagination uses the `<Pagination>` component** (both desktop and mobile variants)
+- [ ] **Pagination is inside the table container, NOT in a separate div**
 - [ ] Pagination active button uses `var(--color-accent)` background
 - [ ] Loading and empty states are implemented
 - [ ] Table has proper overflow handling (`overflow-hidden` or `overflow-x-auto`)

@@ -183,12 +183,12 @@ export default function Dashboard() {
         <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Actions Required Today</h2>
         
         {/* Mobile Card Layout */}
-        <div className="block sm:hidden space-y-3">
+        <div className="lg:hidden space-y-3">
           {taskData.map((task, idx) => (
-            <div key={idx} className="bg-white p-4 rounded-xl shadow-md border border-white/20">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-sm font-medium text-gray-900 capitalize">{task.description}</h3>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+            <div key={idx} className="rounded-xl p-4 border border-gray-200 bg-white">
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="font-semibold text-secondary text-lg capitalize">{task.description}</h3>
+                <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
                   task.urgency === 'high' ? 'bg-red-100 text-red-800' : 
                   task.urgency === 'medium' ? 'bg-yellow-100 text-yellow-800' : 
                   'bg-green-100 text-green-800'
@@ -196,40 +196,59 @@ export default function Dashboard() {
                   {task.urgency}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-bold text-gray-900">{task.count} items</span>
-                <div className="flex gap-2">
-                  <button className="px-3 py-1 bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md text-sm">Take action</button>
-                  <button className="px-3 py-1 border rounded-md text-sm">View</button>
+              <div className="grid grid-cols-1 gap-3 mb-4 text-sm">
+                <div>
+                  <span className="text-gray-500 block">Count</span>
+                  <span className="font-medium text-lg">{task.count} items</span>
                 </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95">
+                  Take action
+                </button>
+                <button className="bg-white text-gray-700 border border-gray-300 rounded-md px-2.5 py-1.5 text-xs hover:bg-gray-50">
+                  View
+                </button>
               </div>
             </div>
           ))}
         </div>
 
         {/* Desktop Table Layout */}
-        <div className="hidden sm:block bg-white rounded-xl shadow-md border border-white/20 overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-[var(--color-accent)]">
-              <tr>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--color-button-text)] uppercase tracking-wider">Task</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--color-button-text)] uppercase tracking-wider">Urgency</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--color-button-text)] uppercase tracking-wider">Count</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--color-button-text)] uppercase tracking-wider">Actions</th>
+        <div className="hidden lg:block bg-white rounded-xl overflow-hidden shadow-md border border-gray-200">
+          <table className="w-full border-separate border-spacing-0">
+            <thead>
+              <tr style={{ background: 'var(--color-accent)' }}>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Task</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Urgency</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Count</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {taskData.map((task, idx) => (
-                <tr key={idx}>
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{task.description}</td>
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={task.urgency === 'high' ? 'text-red-600 font-semibold' : task.urgency === 'medium' ? 'text-yellow-600 font-semibold' : 'text-green-600 font-semibold'}>{task.urgency}</span>
+                <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50 bg-white">
+                  <td className="p-3 capitalize">{task.description}</td>
+                  <td className="p-3">
+                    <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                      task.urgency === 'high' 
+                        ? 'bg-red-50 text-red-700 border-red-200' 
+                        : task.urgency === 'medium' 
+                        ? 'bg-yellow-50 text-yellow-700 border-yellow-200' 
+                        : 'bg-green-50 text-green-700 border-green-200'
+                    }`}>
+                      {task.urgency}
+                    </span>
                   </td>
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-semibold">{task.count}</td>
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex gap-2">
-                      <button className="px-3 py-1 bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md">Take action</button>
-                      <button className="px-3 py-1 border rounded-md">View</button>
+                  <td className="p-3 font-semibold text-secondary">{task.count}</td>
+                  <td className="p-3">
+                    <div className="flex items-center gap-1.5">
+                      <button className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95">
+                        Take action
+                      </button>
+                      <button className="bg-white text-gray-700 border border-gray-300 rounded-md px-2.5 py-1.5 text-xs hover:bg-gray-50">
+                        View
+                      </button>
                     </div>
                   </td>
                 </tr>
