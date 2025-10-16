@@ -12,9 +12,11 @@ import {
   PieChart,
   Pie,
   Cell,
-  
+  Sector,
+  LabelList,
 } from 'recharts'
 import { KPICard } from '../../../components'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../../../components/ui/chart"
 
 // task items will be rendered in a table below
 
@@ -23,6 +25,52 @@ import { KPICard } from '../../../components'
 export default function Dashboard() {
   // const navigate = useNavigate()
   const [fulfillmentPeriod, setFulfillmentPeriod] = React.useState<'daily'|'weekly'|'monthly'|'yearly'>('weekly')
+  const [activePieIndex, setActivePieIndex] = React.useState<number | undefined>(undefined)
+
+  const paymentChartData = [
+    { name: 'Completed', value: 60, count: 720, amount: 850000, fill: '#1D4D43' },
+    { name: 'Pending', value: 25, count: 300, amount: 234500, fill: '#C3754C' },
+    { name: 'Overdue', value: 15, count: 180, amount: 161100, fill: '#E05B4C' }
+  ]
+
+  // Chart config for bar chart
+  const fulfillmentChartConfig = {
+    value: {
+      label: "Fulfillment Rate",
+      color: "var(--color-secondary)",
+    },
+  }
+
+  // Custom render function for active pie sector (makes it bigger on hover with animation)
+  const renderActiveShape = (props: any) => {
+    const {
+      cx,
+      cy,
+      innerRadius,
+      outerRadius,
+      startAngle,
+      endAngle,
+      fill,
+    } = props
+
+    return (
+      <g>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 20} // Expand by 20px on hover
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+          style={{
+            filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.2))',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        />
+      </g>
+    )
+  }
 
   const fulfillmentDataSets = {
     daily: [
@@ -337,24 +385,51 @@ export default function Dashboard() {
                 <ResponsiveContainer width={320} height={320}>
                   <PieChart>
                     <Pie 
-                      dataKey="value" 
-                      data={[
-                        { name: 'Completed', value: 60 }, 
-                        { name: 'Overdue', value: 15 },
-                        { name: 'Pending', value: 25 }
-                      ]} 
+                      activeIndex={activePieIndex}
+                      activeShape={renderActiveShape}
+                      data={paymentChartData}
                       cx="50%" 
                       cy="50%" 
                       innerRadius={90} 
                       outerRadius={140} 
                       paddingAngle={2}
                       strokeWidth={0}
+                      dataKey="value"
+                      onMouseEnter={(_, index) => setActivePieIndex(index)}
+                      onMouseLeave={() => setActivePieIndex(undefined)}
+                      animationBegin={0}
+                      animationDuration={400}
+                      animationEasing="ease-in-out"
                     >
-                      <Cell key="cell-completed" fill="#1D4D43" />
-                      <Cell key="cell-overdue" fill="#E05B4C" />
-                      <Cell key="cell-pending" fill="#C3754C" />
+                      {paymentChartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.fill}
+                          style={{
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      ))}
                     </Pie>
-                    <Tooltip formatter={(value: any) => `${value}%`} />
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload
+                          return (
+                            <div className="rounded-lg border bg-white p-3 shadow-lg">
+                              <div className="font-semibold text-gray-900">{data.name}</div>
+                              <div className="text-sm text-gray-600 mt-1">
+                                <div>{data.value}% of total</div>
+                                <div>{data.count} payments</div>
+                                <div>₹{data.amount.toLocaleString()}</div>
+                              </div>
+                            </div>
+                          )
+                        }
+                        return null
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -377,10 +452,10 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={350}>
+            <ChartContainer config={fulfillmentChartConfig} className="h-[350px] w-full">
               <BarChart 
                 data={fulfillmentDataSets[fulfillmentPeriod]}
-                margin={{ top: 20, right: 10, left: -20, bottom: 5 }}
+                margin={{ top: 30, right: 10, left: -20, bottom: 5 }}
               >
                 <XAxis 
                   dataKey="name" 
@@ -394,15 +469,31 @@ export default function Dashboard() {
                   tick={{ fill: '#6b7280', fontSize: 12 }}
                   domain={[0, 100]}
                 />
-                <Tooltip />
+                <ChartTooltip 
+                  cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                  content={<ChartTooltipContent 
+                    formatter={(value) => [`${value}%`, "Fulfillment Rate"]}
+                    className="bg-white"
+                  />}
+                />
                 <Bar 
                   dataKey="value" 
                   fill="var(--color-secondary)" 
-                  radius={[4, 4, 0, 0]}
-                  barSize={40}
-                />
+                  radius={[8, 8, 0, 0]}
+                  barSize={45}
+                >
+                  <LabelList 
+                    dataKey="value" 
+                    position="top" 
+                    offset={8}
+                    className="fill-foreground"
+                    fontSize={13}
+                    fontWeight={600}
+                    formatter={(value: number) => `${value}%`}
+                  />
+                </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </div>
         </div>
       </div>

@@ -9,13 +9,19 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  LabelList
 } from 'recharts'
 import Button from '../../../components/Button/Button'
-import { FileText } from 'lucide-react'
+import { FileText, Calendar as CalendarIcon } from 'lucide-react'
 import jsPDF from 'jspdf'
 import * as XLSX from 'xlsx'
-import { CustomDropdown } from '../../../components'
+import { CustomDropdown, Pagination } from '../../../components'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../../../components/ui/chart"
+import { Calendar } from "../../../components/ui/calendar"
+import { Root as Popover, Content as PopoverContent, Trigger as PopoverTrigger } from '@radix-ui/react-popover'
+import { format } from "date-fns"
+import { cn } from "../../../lib/utils"
 
 // Sample data for charts
 const orderFulfillmentData = {
@@ -225,6 +231,11 @@ type FilterType = {
   status: string
 }
 
+type DateRange = {
+  from: Date | undefined
+  to: Date | undefined
+}
+
 export default function Analytics() {
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('Orders')
   const [filters, setFilters] = useState<FilterType>({
@@ -242,6 +253,16 @@ export default function Analytics() {
   const [vendorSearchTerm, setVendorSearchTerm] = useState<string>('')
   const [showVendorDropdown, setShowVendorDropdown] = useState<boolean>(false)
   const vendorDropdownRef = useRef<HTMLDivElement>(null)
+  
+  // Pagination state
+  const [reportPage, setReportPage] = useState(1)
+  const itemsPerPage = 10
+  
+  // Custom date range state
+  const [customDateRange, setCustomDateRange] = useState<DateRange>({
+    from: undefined,
+    to: undefined
+  })
 
   // Calculate metrics for the current view
   const getCurrentMetrics = () => {
@@ -265,13 +286,13 @@ export default function Analytics() {
   const getReportColumns = (metric: MetricType) => {
     switch (metric) {
       case 'Orders':
-        return ['Order ID', 'Vendor', 'Status', 'Date', 'Amount']
+        return ['Order ID', 'Vendor', 'Status', 'Date', 'Amount', 'City']
       case 'Payments':
-        return ['Invoice ID', 'Vendor', 'Amount', 'Status', 'Date']
+        return ['Invoice ID', 'Vendor', 'Amount', 'Status', 'Date', 'City']
       case 'Vendors':
         return ['Vendor ID', 'Name', 'City', 'Orders', 'Rating', 'Status']
       case 'Tickets':
-        return ['Ticket ID', 'Subject', 'Vendor', 'Status', 'Priority', 'Date']
+        return ['Ticket ID', 'Subject', 'Vendor', 'Status', 'Priority', 'Date', 'City']
       default:
         return []
     }
@@ -320,6 +341,7 @@ export default function Analytics() {
     if (filters.dateRange) {
       const now = new Date()
       let startDate: Date
+      let endDate: Date = now
       
       switch (filters.dateRange) {
         case 'last7days':
@@ -331,6 +353,15 @@ export default function Analytics() {
         case 'last90days':
           startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
           break
+        case 'custom':
+          // Use custom date range
+          if (customDateRange.from && customDateRange.to) {
+            startDate = customDateRange.from
+            endDate = customDateRange.to
+          } else {
+            startDate = new Date(0) // All time if custom range not properly set
+          }
+          break
         default:
           startDate = new Date(0) // All time
       }
@@ -339,13 +370,14 @@ export default function Analytics() {
         const itemObj = item as Record<string, unknown>
         if (itemObj.date) {
           const itemDate = new Date(itemObj.date as string)
-          return itemDate >= startDate
+          return itemDate >= startDate && itemDate <= endDate
         }
         return true
       })
     }
     
     setReportData(data)
+    setReportPage(1) // Reset to first page when generating new report
     setShowReport(true)
   }
 
@@ -469,8 +501,10 @@ export default function Analytics() {
       vendor: '',
       status: ''
     })
+    setCustomDateRange({ from: undefined, to: undefined }) // Clear custom date range
     setShowReport(false)
     setReportData([])
+    setReportPage(1) // Reset pagination
   }
 
   // Filter vendors based on search term
@@ -623,15 +657,55 @@ export default function Analytics() {
             {/* Chart Section */}
             <div className="lg:col-span-2">
               <div className="h-48 sm:h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={fulfillmentView === 'weekly' ? orderFulfillmentData.weekly[selectedMonth as keyof typeof orderFulfillmentData.weekly] : orderFulfillmentData.monthly}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="period" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="fulfilled" fill="var(--color-secondary)" />
+                <ChartContainer
+                  config={{
+                    fulfilled: {
+                      label: "Fulfilled Orders : ",
+                      color: "hsl(var(--chart-1))",
+                    },
+                  }}
+                  className="w-full h-full"
+                >
+                  <BarChart 
+                    data={fulfillmentView === 'weekly' ? orderFulfillmentData.weekly[selectedMonth as keyof typeof orderFulfillmentData.weekly] : orderFulfillmentData.monthly}
+                    margin={{ top: 20, right: 20, left: 10, bottom: 20 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis 
+                      dataKey="period"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                    />
+                    <ChartTooltip 
+                      content={<ChartTooltipContent />}
+                      cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                      wrapperStyle={{
+                        backgroundColor: 'white',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Bar 
+                      dataKey="fulfilled" 
+                      fill="var(--color-secondary)" 
+                      radius={[8, 8, 0, 0]}
+                    >
+                      <LabelList
+                        dataKey="fulfilled"
+                        position="top"
+                        offset={12}
+                        className="fill-foreground"
+                        fontSize={12}
+                      />
+                    </Bar>
                   </BarChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </div>
             </div>
             
@@ -842,58 +916,89 @@ export default function Analytics() {
             ) : (
               // All Vendors Overview
               <>
-                {/* Key Metrics */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
-                  <div className="text-center">
-                    <div className="text-xl sm:text-2xl font-bold text-red-600">12</div>
-                    <p className="text-xs sm:text-sm text-gray-600">Total Breaches</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-xl sm:text-2xl font-bold text-orange-600">13.3%</div>
-                    <p className="text-xs sm:text-sm text-gray-600">Breach Rate</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-xl sm:text-2xl font-bold text-blue-600">3.6 hrs</div>
-                    <p className="text-xs sm:text-sm text-gray-600">Avg Delay</p>
-                  </div>
-                </div>
-
-                {/* Chart */}
-                <div className="h-24 sm:h-32 mb-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={slaBreachesData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={20}
-                        outerRadius={35}
-                        dataKey="value"
-                      >
-                        {slaBreachesData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Legend */}
-                <div className="flex flex-col sm:flex-row sm:justify-center sm:space-x-4 space-y-2 sm:space-y-0 mb-4">
-                  {slaBreachesData.map((item, index) => (
-                    <div key={index} className="flex items-center">
-                      <div 
-                        className="w-3 h-3 rounded-full mr-2" 
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-xs sm:text-sm text-gray-600">{item.name}: {item.value}%</span>
+                {/* Content and Chart Grid */}
+                <div className="grid grid-cols-3 gap-4 sm:gap-6">
+                  {/* Left Column - Content (1 column) */}
+                  <div className="col-span-3 lg:col-span-1 space-y-4">
+                    {/* Key Metrics */}
+                    <div className="space-y-3">
+                      <div className="text-center p-3 bg-red-50 rounded-lg">
+                        <div className="text-2xl font-bold text-red-600">12</div>
+                        <p className="text-xs text-gray-600">Total Breaches</p>
+                      </div>
+                      <div className="text-center p-3 bg-orange-50 rounded-lg">
+                        <div className="text-2xl font-bold text-orange-600">13.3%</div>
+                        <p className="text-xs text-gray-600">Breach Rate</p>
+                      </div>
+                      <div className="text-center p-3 bg-blue-50 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">3.6 hrs</div>
+                        <p className="text-xs text-gray-600">Avg Delay</p>
+                      </div>
                     </div>
-                  ))}
+
+                    {/* Legend */}
+                    <div className="space-y-2 border-t pt-3">
+                      {slaBreachesData.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div 
+                              className="w-3 h-3 rounded-full mr-2" 
+                              style={{ backgroundColor: item.color }}
+                            />
+                            <span className="text-sm text-gray-600">{item.name}</span>
+                          </div>
+                          <span className="text-sm font-semibold text-gray-900">{item.value}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Right Column - Chart (2 columns) */}
+                  <div className="col-span-3 lg:col-span-2">
+                    <ChartContainer
+                      config={{
+                        onTime: {
+                          label: "On Time",
+                          color: "var(--color-secondary)",
+                        },
+                        breaches: {
+                          label: "Breaches",
+                          color: "#EF4444",
+                        },
+                      }}
+                      className="w-full h-full min-h-[250px]"
+                    >
+                      <PieChart>
+                        <ChartTooltip 
+                          content={<ChartTooltipContent />}
+                          wrapperStyle={{
+                            backgroundColor: 'white',
+                            borderRadius: '8px',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                          }}
+                        />
+                        <Pie
+                          data={slaBreachesData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={100}
+                          dataKey="value"
+                          nameKey="name"
+                          label={({ name, value }) => `${name}: ${value}%`}
+                          labelLine={true}
+                        >
+                          {slaBreachesData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ChartContainer>
+                  </div>
                 </div>
 
                 {/* Top Breaching Vendors */}
-                <div className="border-t pt-4">
+                <div className="border-t pt-4 mt-4">
                   <h4 className="text-sm font-medium text-gray-700 mb-3">Top Breaching Vendors</h4>
                   <div className="space-y-2">
                     {allVendorSlaDetails
@@ -928,54 +1033,89 @@ export default function Analytics() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
             <h3 className="text-base sm:text-lg font-semibold text-heading mb-4">Ticket Resolution Stats</h3>
             
-            {/* Key Metrics */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-blue-600">100</div>
-                <p className="text-xs sm:text-sm text-gray-600">Total Tickets</p>
-              </div>
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-green-600">75</div>
-                <p className="text-xs sm:text-sm text-gray-600">Resolved</p>
-              </div>
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-orange-600">4.2 hrs</div>
-                <p className="text-xs sm:text-sm text-gray-600">Avg Resolution</p>
-              </div>
-            </div>
-
-            {/* Chart */}
-            <div className="h-24 sm:h-32 mb-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={ticketResolutionData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={20}
-                    outerRadius={35}
-                    dataKey="value"
-                  >
-                    {ticketResolutionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Legend */}
-            <div className="flex flex-col sm:flex-row sm:justify-center sm:space-x-4 space-y-2 sm:space-y-0 mb-4">
-              {ticketResolutionData.map((item, index) => (
-                <div key={index} className="flex items-center">
-                  <div 
-                    className="w-3 h-3 rounded-full mr-2" 
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-xs sm:text-sm text-gray-600">{item.name}: {item.value}%</span>
+            {/* Content and Chart Grid */}
+            <div className="grid grid-cols-3 gap-4 sm:gap-6 mb-6">
+              {/* Left Column - Content (1 column) */}
+              <div className="col-span-3 lg:col-span-1 space-y-4">
+                {/* Key Metrics */}
+                <div className="space-y-3">
+                  <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">100</div>
+                    <p className="text-xs text-gray-600">Total Tickets</p>
+                  </div>
+                  <div className="text-center p-3 bg-green-50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">75</div>
+                    <p className="text-xs text-gray-600">Resolved</p>
+                  </div>
+                  <div className="text-center p-3 bg-orange-50 rounded-lg">
+                    <div className="text-2xl font-bold text-orange-600">4.2 hrs</div>
+                    <p className="text-xs text-gray-600">Avg Resolution</p>
+                  </div>
                 </div>
-              ))}
+
+                {/* Legend */}
+                <div className="space-y-2 border-t pt-3">
+                  {ticketResolutionData.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div 
+                          className="w-3 h-3 rounded-full mr-2" 
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-sm text-gray-600">{item.name}</span>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900">{item.value}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right Column - Chart (2 columns) */}
+              <div className="col-span-3 lg:col-span-2">
+                <ChartContainer
+                  config={{
+                    resolved: {
+                      label: "Resolved on Time",
+                      color: "var(--color-secondary)",
+                    },
+                    overdue: {
+                      label: "Overdue",
+                      color: "#F59E0B",
+                    },
+                    pending: {
+                      label: "Pending",
+                      color: "#EF4444",
+                    },
+                  }}
+                  className="w-full h-full min-h-[250px]"
+                >
+                  <PieChart>
+                    <ChartTooltip 
+                      content={<ChartTooltipContent />}
+                      wrapperStyle={{
+                        backgroundColor: 'white',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Pie
+                      data={ticketResolutionData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      dataKey="value"
+                      nameKey="name"
+                      label={({ name, value }) => `${name}: ${value}%`}
+                      labelLine={true}
+                    >
+                      {ticketResolutionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+              </div>
             </div>
 
             {/* Priority Breakdown */}
@@ -1027,49 +1167,64 @@ export default function Analytics() {
               </p>
             </div>
             
-            <div className="h-36 sm:h-48 mb-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={paymentAgingData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+            <div className="h-64 sm:h-80 mb-4">
+              <ChartContainer
+                config={{
+                  amount: {
+                    label: "Amount Pending",
+                    color: "hsl(var(--chart-1))",
+                  },
+                }}
+                className="w-full h-full"
+              >
+                <BarChart 
+                  data={paymentAgingData}
+                  margin={{ top: 20, right: 20, left: 10, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
                   <XAxis 
                     dataKey="bucket" 
                     tick={{ fontSize: 10, fontFamily: 'Quicksand' }}
-                    axisLine={{ stroke: '#D1D5DB' }}
-                    tickLine={{ stroke: '#D1D5DB' }}
+                    tickLine={false}
+                    axisLine={false}
                     angle={-45}
                     textAnchor="end"
                     height={60}
                   />
                   <YAxis 
                     tick={{ fontSize: 10, fontFamily: 'Quicksand' }}
-                    axisLine={{ stroke: '#D1D5DB' }}
-                    tickLine={{ stroke: '#D1D5DB' }}
+                    tickLine={false}
+                    axisLine={false}
                     tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
                   />
-                  <Tooltip 
-                    formatter={(value) => [
-                      `₹${Number(value).toLocaleString()}`,
-                      'Amount Pending'
-                    ]}
-                    labelFormatter={(label) => `Bucket: ${label}`}
-                    contentStyle={{
-                      backgroundColor: '#F9FAFB',
-                      border: '1px solid #E5E7EB',
+                  <ChartTooltip 
+                    content={<ChartTooltipContent />}
+                    cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                    wrapperStyle={{
+                      backgroundColor: 'white',
                       borderRadius: '8px',
-                      fontFamily: 'Quicksand'
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
                     }}
                   />
                   <Bar 
                     dataKey="amount" 
-                    radius={[4, 4, 0, 0]}
+                    radius={[8, 8, 0, 0]}
                   >
                     {paymentAgingData.map((_, index) => {
                       const colors = ['#1D4D43', '#C3754C', '#E57373', '#B71C1C']
                       return <Cell key={`cell-${index}`} fill={colors[index]} />
                     })}
+                    <LabelList
+                      dataKey="amount"
+                      position="top"
+                      offset={12}
+                      className="fill-foreground"
+                      fontSize={10}
+                      formatter={(value: number) => `₹${(value / 1000).toFixed(0)}k`}
+                    />
                   </Bar>
                 </BarChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             </div>
             
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
@@ -1157,11 +1312,86 @@ export default function Analytics() {
                 { value: '', label: 'All Time' },
                 { value: 'last7days', label: 'Last 7 Days' },
                 { value: 'last30days', label: 'Last 30 Days' },
-                { value: 'last90days', label: 'Last 90 Days' }
+                { value: 'last90days', label: 'Last 90 Days' },
+                { value: 'custom', label: 'Custom Range' }
               ]}
               placeholder="All Time"
             />
           </div>
+          
+          {/* Custom Date Range Picker */}
+          {filters.dateRange === 'custom' && (
+            <div className="sm:col-span-2 lg:col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select Date Range</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "w-full max-w-xs flex items-center justify-start text-left font-normal px-3 py-2 border rounded-md text-sm min-h-[44px] sm:min-h-[40px] bg-white hover:bg-gray-50 transition-colors shadow-sm",
+                      !customDateRange?.from && "text-gray-400"
+                    )}
+                    style={{ borderColor: 'var(--color-secondary)' }}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0 text-[var(--color-secondary)]" />
+                    <span className="truncate text-gray-700">
+                      {customDateRange?.from ? (
+                        customDateRange.to ? (
+                          <>
+                            {format(customDateRange.from, "MMM dd, yyyy")} - {format(customDateRange.to, "MMM dd, yyyy")}
+                          </>
+                        ) : (
+                          format(customDateRange.from, "MMM dd, yyyy")
+                        )
+                      ) : (
+                        "Pick a date range"
+                      )}
+                    </span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="w-auto p-0 bg-white border-gray-200" 
+                  align="start" 
+                  sideOffset={8}
+                  style={{ backgroundColor: 'white' }}
+                >
+                  <div className="bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={customDateRange?.from}
+                      selected={customDateRange}
+                      onSelect={(range) => setCustomDateRange(range as DateRange)}
+                      numberOfMonths={2}
+                      classNames={{
+                        months: "flex flex-col sm:flex-row gap-4 p-4 bg-white",
+                        month: "bg-white",
+                        caption: "flex justify-center pt-1 relative items-center bg-white",
+                        caption_label: "text-sm font-medium text-gray-900",
+                        nav: "space-x-1 flex items-center",
+                        nav_button: cn(
+                          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 rounded-md hover:bg-gray-100"
+                        ),
+                        table: "w-full border-collapse space-y-1 bg-white",
+                        head_row: "flex",
+                        head_cell: "text-gray-500 rounded-md w-9 font-normal text-[0.8rem]",
+                        row: "flex w-full mt-2",
+                        cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
+                        day: cn(
+                          "h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-md hover:bg-gray-100 transition-colors"
+                        ),
+                        day_selected: "bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent)] hover:text-white focus:bg-[var(--color-accent)] focus:text-white",
+                        day_today: "bg-gray-100 text-gray-900 font-semibold",
+                        day_outside: "text-gray-400 opacity-50",
+                        day_disabled: "text-gray-300 opacity-50",
+                        day_range_middle: "aria-selected:bg-[var(--color-accent)]/20 aria-selected:text-gray-900",
+                        day_hidden: "invisible",
+                      }}
+                    />
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
@@ -1229,12 +1459,26 @@ export default function Analytics() {
           </button>
           {showReport && (
             <>
-              <Button onClick={handleExportPDF} className="bg-gray-600 hover:bg-gray-700 min-h-[44px] sm:min-h-auto">
+              <button
+                onClick={handleExportPDF}
+                className="px-4 py-3 sm:py-2 rounded-md font-medium text-sm min-h-[44px] sm:min-h-auto hover:brightness-95 transition-all"
+                style={{ 
+                  backgroundColor: 'var(--color-secondary)', 
+                  color: 'var(--color-button-text)' 
+                }}
+              >
                 Export PDF
-              </Button>
-              <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 min-h-[44px] sm:min-h-auto">
+              </button>
+              <button
+                onClick={handleExportExcel}
+                className="px-4 py-3 sm:py-2 rounded-md font-medium text-sm min-h-[44px] sm:min-h-auto hover:brightness-95 transition-all"
+                style={{ 
+                  backgroundColor: 'var(--color-accent)', 
+                  color: 'var(--color-button-text)' 
+                }}
+              >
                 Export Excel
-              </Button>
+              </button>
             </>
           )}
         </div>
@@ -1267,88 +1511,130 @@ export default function Analytics() {
               </div>
             ) : (
               <>
-                {/* Mobile Card View */}
-                <div className="lg:hidden space-y-3">
-                  {reportData.map((row, index) => {
-                    const rowObj = row as Record<string, unknown>
-                    const columns = getReportColumns(selectedMetric)
-                    return (
-                      <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                        <div className="space-y-2">
-                          {columns.map((column, colIndex) => {
-                            const key = Object.keys(rowObj).find(k => 
-                              k.toLowerCase().includes(column.toLowerCase().replace(' ', '').replace('id', ''))
-                            )
-                            const value = key ? rowObj[key] : ''
-                            
-                            return (
-                              <div key={colIndex} className="flex justify-between items-start">
-                                <span className="text-sm font-medium text-gray-600 flex-shrink-0 mr-3">
-                                  {column}:
-                                </span>
-                                <span className="text-sm text-gray-900 text-right">
-                                  {typeof value === 'string' && (value.includes('CONFIRMED') || value.includes('PAID') || value.includes('PAYMENT_DONE') || value.includes('ACTIVE') || value.includes('RESOLVED') || value.includes('DISPATCHED') || value.includes('PENDING') || value.includes('OVERDUE') || value.includes('OPEN') || value.includes('IN_PROGRESS')) ? (
-                                    <span 
-                                      className="inline-flex px-2 py-1 text-xs font-semibold rounded-full border"
-                                      style={{
-                                        backgroundColor: getStatusColor(value).bg,
-                                        color: getStatusColor(value).color,
-                                        borderColor: getStatusColor(value).border,
-                                      }}
-                                    >
-                                      {value === 'PAYMENT_DONE' ? 'Paid' : value.replace('_', ' ')}
-                                    </span>
-                                  ) : (
-                                    String(value)
-                                  )}
-                                </span>
+                {/* Pagination calculations */}
+                {(() => {
+                  const totalPages = Math.ceil(reportData.length / itemsPerPage)
+                  const startIndex = (reportPage - 1) * itemsPerPage
+                  const endIndex = Math.min(startIndex + itemsPerPage, reportData.length)
+                  const paginatedData = reportData.slice(startIndex, endIndex)
+                  
+                  return (
+                    <>
+                      {/* Mobile Card View */}
+                      <div className="lg:hidden space-y-3">
+                        {paginatedData.map((row, index) => {
+                          const rowObj = row as Record<string, unknown>
+                          const columns = getReportColumns(selectedMetric)
+                          return (
+                            <div key={index} className="rounded-xl p-4 border border-gray-200 bg-white">
+                              <div className="space-y-2">
+                                {columns.map((column, colIndex) => {
+                                  const key = Object.keys(rowObj).find(k => 
+                                    k.toLowerCase().includes(column.toLowerCase().replace(' ', '').replace('id', ''))
+                                  )
+                                  const value = key ? rowObj[key] : ''
+                                  
+                                  return (
+                                    <div key={colIndex} className="flex justify-between items-start">
+                                      <span className="text-sm text-gray-500 flex-shrink-0 mr-3">
+                                        {column}:
+                                      </span>
+                                      <span className="text-sm font-medium text-right">
+                                        {typeof value === 'string' && (value.includes('CONFIRMED') || value.includes('PAID') || value.includes('PAYMENT_DONE') || value.includes('ACTIVE') || value.includes('RESOLVED') || value.includes('DISPATCHED') || value.includes('PENDING') || value.includes('OVERDUE') || value.includes('OPEN') || value.includes('IN_PROGRESS')) ? (
+                                          <span 
+                                            className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
+                                            style={{
+                                              backgroundColor: getStatusColor(value).bg,
+                                              color: getStatusColor(value).color,
+                                              borderColor: getStatusColor(value).border,
+                                            }}
+                                          >
+                                            {value === 'PAYMENT_DONE' ? 'Paid' : value.replace('_', ' ')}
+                                          </span>
+                                        ) : (
+                                          String(value)
+                                        )}
+                                      </span>
+                                    </div>
+                                  )
+                                })}
                               </div>
-                            )
-                          })}
-                        </div>
+                            </div>
+                          )
+                        })}
+                        
+                        {/* Mobile Pagination */}
+                        {reportData.length > 0 && (
+                          <Pagination
+                            currentPage={reportPage}
+                            totalPages={totalPages}
+                            totalItems={reportData.length}
+                            startIndex={startIndex}
+                            endIndex={endIndex}
+                            onPageChange={setReportPage}
+                            variant="mobile"
+                          />
+                        )}
                       </div>
-                    )
-                  })}
-                </div>
 
-                {/* Desktop Table View */}
-                <div className="hidden lg:block overflow-x-auto">
-                  <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        {getReportColumns(selectedMetric).map((column, index) => (
-                          <th key={index} className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {column}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {reportData.map((row, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          {Object.values(row as Record<string, unknown>).map((value: unknown, cellIndex) => (
-                            <td key={cellIndex} className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {typeof value === 'string' && (value.includes('CONFIRMED') || value.includes('PAID') || value.includes('PAYMENT_DONE') || value.includes('ACTIVE') || value.includes('RESOLVED') || value.includes('DISPATCHED') || value.includes('PENDING') || value.includes('OVERDUE') || value.includes('OPEN') || value.includes('IN_PROGRESS')) ? (
-                                <span 
-                                  className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full border"
-                                  style={{
-                                    backgroundColor: getStatusColor(value).bg,
-                                    color: getStatusColor(value).color,
-                                    borderColor: getStatusColor(value).border,
-                                  }}
+                      {/* Desktop Table View */}
+                      <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
+                        <table className="w-full border-separate border-spacing-0">
+                          <thead>
+                            <tr className="" style={{ background: 'var(--color-accent)' }}>
+                              {getReportColumns(selectedMetric).map((column, index) => (
+                                <th 
+                                  key={index} 
+                                  className="text-left p-3 font-heading font-normal" 
+                                  style={{ color: 'var(--color-button-text)' }}
                                 >
-                                  {value === 'PAYMENT_DONE' ? 'Paid' : value.replace('_', ' ')}
-                                </span>
-                              ) : (
-                                String(value)
-                              )}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                                  {column}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {paginatedData.map((row, index) => (
+                              <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 bg-white">
+                                {Object.values(row as Record<string, unknown>).map((value: unknown, cellIndex) => (
+                                  <td key={cellIndex} className="p-3">
+                                    {typeof value === 'string' && (value.includes('CONFIRMED') || value.includes('PAID') || value.includes('PAYMENT_DONE') || value.includes('ACTIVE') || value.includes('RESOLVED') || value.includes('DISPATCHED') || value.includes('PENDING') || value.includes('OVERDUE') || value.includes('OPEN') || value.includes('IN_PROGRESS')) ? (
+                                      <span 
+                                        className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
+                                        style={{
+                                          backgroundColor: getStatusColor(value).bg,
+                                          color: getStatusColor(value).color,
+                                          borderColor: getStatusColor(value).border,
+                                        }}
+                                      >
+                                        {value === 'PAYMENT_DONE' ? 'Paid' : value.replace('_', ' ')}
+                                      </span>
+                                    ) : (
+                                      String(value)
+                                    )}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        
+                        {/* Desktop Pagination */}
+                        {reportData.length > 0 && (
+                          <Pagination
+                            currentPage={reportPage}
+                            totalPages={totalPages}
+                            totalItems={reportData.length}
+                            startIndex={startIndex}
+                            endIndex={endIndex}
+                            onPageChange={setReportPage}
+                            variant="desktop"
+                          />
+                        )}
+                      </div>
+                    </>
+                  )
+                })()}
               </>
             )}
           </div>

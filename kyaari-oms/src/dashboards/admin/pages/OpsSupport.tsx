@@ -1,7 +1,9 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { Plus, Send, Paperclip, FileText, AlertTriangle, Clock } from 'lucide-react'
+import { Plus, Send, Paperclip, FileText, AlertTriangle, Clock, Calendar as CalendarIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { CustomDropdown, KPICard } from '../../../components'
+import { CustomDropdown, KPICard, Pagination } from '../../../components'
+import { Calendar } from '../../../components/ui/calendar'
+import { format } from 'date-fns'
 
 type IssueType = 'Mismatch' | 'Missing Item' | 'Damaged Item' | 'Escalation' | 'Others'
 type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent'
@@ -143,11 +145,32 @@ export default function OpsSupport() {
   const [filterIssue, setFilterIssue] = useState<IssueType | ''>('')
   const [filterStatus, setFilterStatus] = useState<TicketStatus | ''>('')
   const [filterPriority, setFilterPriority] = useState<TicketPriority | ''>('')
-  const [filterDate, setFilterDate] = useState('')
+  const [dateFrom, setDateFrom] = useState<Date>()
+  const [dateTo, setDateTo] = useState<Date>()
+  const [showFromCalendar, setShowFromCalendar] = useState(false)
+  const [showToCalendar, setShowToCalendar] = useState(false)
   const [search, setSearch] = useState('')
 
   const [showNewTicket, setShowNewTicket] = useState(false)
   const [drawerTicket, setDrawerTicket] = useState<Ticket | null>(null)
+  
+  const fromCalendarRef = useRef<HTMLDivElement>(null)
+  const toCalendarRef = useRef<HTMLDivElement>(null)
+
+  // Close calendars when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fromCalendarRef.current && !fromCalendarRef.current.contains(event.target as Node)) {
+        setShowFromCalendar(false)
+      }
+      if (toCalendarRef.current && !toCalendarRef.current.contains(event.target as Node)) {
+        setShowToCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   const [draftOrderId, setDraftOrderId] = useState('')
@@ -175,7 +198,8 @@ export default function OpsSupport() {
       if (filterIssue && t.issue !== filterIssue) return false
       if (filterStatus && t.status !== filterStatus) return false
       if (filterPriority && t.priority !== filterPriority) return false
-      if (filterDate && t.createdAt !== filterDate) return false
+      if (dateFrom && new Date(t.createdAt) < dateFrom) return false
+      if (dateTo && new Date(t.createdAt) > dateTo) return false
       if (search) {
         const q = search.toLowerCase()
         const hit = t.id.toLowerCase().includes(q) || t.orderId.toLowerCase().includes(q) || t.store.toLowerCase().includes(q)
@@ -183,13 +207,30 @@ export default function OpsSupport() {
       }
       return true
     })
-  }, [tickets, filterIssue, filterStatus, filterPriority, filterDate, search])
+  }, [tickets, filterIssue, filterStatus, filterPriority, dateFrom, dateTo, search])
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
+  const totalPages = Math.ceil(filteredTickets.length / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, filteredTickets.length)
+
+  const paginatedTickets = useMemo(() => {
+    return filteredTickets.slice(startIndex, endIndex)
+  }, [filteredTickets, startIndex, endIndex])
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterIssue, filterStatus, filterPriority, dateFrom, dateTo, search])
 
   function resetFilters() {
     setFilterIssue('')
     setFilterStatus('')
     setFilterPriority('')
-    setFilterDate('')
+    setDateFrom(undefined)
+    setDateTo(undefined)
     setSearch('')
   }
 
@@ -334,7 +375,7 @@ export default function OpsSupport() {
           </div>
           <button
             onClick={() => setShowNewTicket(true)}
-            className="bg-accent text-button-text rounded-full px-4 sm:px-5 py-2.5 min-h-[44px] border border-transparent flex items-center justify-center gap-2 whitespace-nowrap flex-shrink-0 w-full sm:w-auto"
+            className="bg-accent text-button-text rounded-xl px-4 sm:px-5 py-2.5 min-h-[44px] border border-transparent flex items-center justify-center gap-2 whitespace-nowrap flex-shrink-0 w-full sm:w-auto"
           >
             <Plus size={18} className="sm:w-4 sm:h-4" />
             <span className="text-sm sm:text-base">Raise New Ticket</span>
@@ -416,12 +457,67 @@ export default function OpsSupport() {
               placeholder="Priority"
               className="w-full"
             />
-            <input 
-              type="date" 
-              value={filterDate} 
-              onChange={e => setFilterDate(e.target.value)} 
-              className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" 
-            />
+            <div className="flex flex-col gap-2">
+              <div className="relative" ref={fromCalendarRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFromCalendar(!showFromCalendar)
+                    setShowToCalendar(false)
+                  }}
+                  className="w-full px-3 py-3 text-sm border border-gray-300 rounded-xl hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] flex items-center justify-between text-left"
+                >
+                  <span className={dateFrom ? "text-gray-900" : "text-gray-500"}>
+                    {dateFrom ? format(dateFrom, "PPP") : "From date"}
+                  </span>
+                  <CalendarIcon className="h-4 w-4 text-gray-500" />
+                </button>
+                {showFromCalendar && (
+                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full">
+                    <Calendar
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={(date) => {
+                        setDateFrom(date)
+                        setShowFromCalendar(false)
+                      }}
+                      initialFocus
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="relative" ref={toCalendarRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowToCalendar(!showToCalendar)
+                    setShowFromCalendar(false)
+                  }}
+                  className="w-full px-3 py-3 text-sm border border-gray-300 rounded-xl hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] flex items-center justify-between text-left"
+                >
+                  <span className={dateTo ? "text-gray-900" : "text-gray-500"}>
+                    {dateTo ? format(dateTo, "PPP") : "To date"}
+                  </span>
+                  <CalendarIcon className="h-4 w-4 text-gray-500" />
+                </button>
+                {showToCalendar && (
+                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full">
+                    <Calendar
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={(date) => {
+                        setDateTo(date)
+                        setShowToCalendar(false)
+                      }}
+                      initialFocus
+                      disabled={(date) => dateFrom ? date < dateFrom : false}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           {/* Second row: Search and Reset */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -433,7 +529,7 @@ export default function OpsSupport() {
             />
             <button 
               onClick={resetFilters} 
-              className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 min-h-[44px] w-full sm:w-auto hover:bg-secondary hover:text-white transition-colors duration-200 whitespace-nowrap"
+              className="bg-white text-secondary border border-secondary rounded-xl px-4 py-2 min-h-[44px] w-full sm:w-auto hover:bg-secondary hover:text-white transition-colors duration-200 whitespace-nowrap"
             >
               Reset Filters
             </button>
@@ -442,92 +538,136 @@ export default function OpsSupport() {
       </div>
 
       {/* Table - Desktop view (hidden on mobile) */}
-      <div className="hidden md:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
-        <div className="overflow-x-auto">
-          {/* Table head bar */}
-          <div className="bg-[#C3754C] text-white min-w-max">
-            <div className="flex gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-heading font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0]">
-              <div className="w-24 text-center flex-shrink-0">Ticket ID</div>
-              <div className="w-36 text-center flex-shrink-0">Store Name</div>
-              <div className="w-28 text-center flex-shrink-0">Order ID</div>
-              <div className="w-32 text-center flex-shrink-0">Issue Type</div>
-              <div className="w-24 text-center flex-shrink-0">Priority</div>
-              <div className="w-32 text-center flex-shrink-0">Status</div>
-              <div className="w-28 text-center flex-shrink-0">Assigned To</div>
-              <div className="w-28 text-center whitespace-nowrap flex-shrink-0">Created Date</div>
-              <div className="flex-1 min-w-[320px] text-center">Actions</div>
-            </div>
-          </div>
-
-          {/* Body */}
-          <div className="bg-white min-w-max">
-            <div className="py-2">
-              {filteredTickets.length === 0 ? (
-                <div className="px-6 py-8 text-center text-gray-500">No tickets match current filters.</div>
-              ) : (
-                filteredTickets.map((t) => (
-                  <div key={t.id} className="flex gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center hover:bg-gray-50">
-                    <div className="w-24 text-xs md:text-sm font-medium text-gray-800 text-center flex-shrink-0">{t.id}</div>
-                    <div className="w-36 text-xs md:text-sm text-gray-700 text-center truncate flex-shrink-0">{t.store}</div>
-                    <div className="w-28 text-xs md:text-sm text-center flex-shrink-0">
-                      <Link to={`/admin/orders/${t.orderId}`} className="underline text-blue-700 hover:text-blue-900">{t.orderId}</Link>
+      <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
+        <table className="w-full border-separate border-spacing-0">
+          <thead>
+            <tr style={{ background: 'var(--color-accent)' }}>
+              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Ticket ID</th>
+              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Store Name</th>
+              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Order ID</th>
+              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Issue Type</th>
+              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Priority</th>
+              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Status</th>
+              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Assigned To</th>
+              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Created Date</th>
+              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedTickets.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="p-6 text-center text-gray-500">
+                  No tickets match current filters.
+                </td>
+              </tr>
+            ) : (
+              paginatedTickets.map((t) => (
+                <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
+                  <td className="p-3 font-semibold text-secondary text-sm">{t.id}</td>
+                  <td className="p-3 text-sm text-gray-900">{t.store}</td>
+                  <td className="p-3 text-sm">
+                    <Link to={`/admin/orders/${t.orderId}`} className="underline text-blue-700 hover:text-blue-900">
+                      {t.orderId}
+                    </Link>
+                  </td>
+                  <td className="p-3 text-sm text-gray-900">{t.issue}</td>
+                  <td className="p-3">
+                    {(() => {
+                      const st = PRIORITY_STYLES[t.priority]
+                      return (
+                        <span 
+                          className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
+                          style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}
+                        >
+                          {t.priority}
+                        </span>
+                      )
+                    })()}
+                  </td>
+                  <td className="p-3">
+                    {(() => {
+                      const st = STATUS_STYLES[t.status]
+                      return (
+                        <span 
+                          className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
+                          style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}
+                        >
+                          {t.status}
+                        </span>
+                      )
+                    })()}
+                  </td>
+                  <td className="p-3 text-sm text-gray-900">{t.assignedTo}</td>
+                  <td className="p-3 text-xs text-gray-500">{t.createdAt}</td>
+                  <td className="p-3">
+                    <div className="flex items-center gap-1.5">
+                      <button 
+                        onClick={() => setDrawerTicket(t)} 
+                        className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95"
+                      >
+                        View
+                      </button>
+                      <button 
+                        onClick={() => assignTicket(t)} 
+                        className="bg-purple-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-purple-600"
+                      >
+                        Assign
+                      </button>
+                      <button 
+                        onClick={() => setTickets(prev => prev.map(x => x.id === t.id ? { ...x, status: 'Under Review', updatedAt: new Date().toISOString().split('T')[0] } : x))} 
+                        className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600"
+                      >
+                        Review
+                      </button>
+                      <button 
+                        onClick={() => resolveTicket(t)} 
+                        className="bg-green-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-600"
+                      >
+                        Resolve
+                      </button>
+                      <button 
+                        onClick={() => escalateTicket(t)} 
+                        className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600"
+                      >
+                        Escalate
+                      </button>
                     </div>
-                    <div className="w-32 text-xs md:text-sm text-gray-700 text-center truncate flex-shrink-0">{t.issue}</div>
-                    <div className="w-24 flex items-center justify-center flex-shrink-0">
-                      {(() => {
-                        const st = PRIORITY_STYLES[t.priority]
-                        return (
-                          <span className="inline-block px-2 py-1 rounded-md text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
-                            {t.priority}
-                          </span>
-                        )
-                      })()}
-                    </div>
-                    <div className="w-32 flex items-center justify-center flex-shrink-0">
-                      {(() => {
-                        const st = STATUS_STYLES[t.status]
-                        return (
-                          <span className="inline-block px-2 py-1 rounded-md text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
-                            {t.status}
-                          </span>
-                        )
-                      })()}
-                    </div>
-                    <div className="w-28 text-xs md:text-sm text-gray-700 text-center truncate flex-shrink-0">{t.assignedTo}</div>
-                    <div className="w-28 text-xs text-gray-500 text-center whitespace-nowrap flex-shrink-0">{t.createdAt}</div>
-                    <div className="flex-1 min-w-[320px] flex gap-1 justify-center">
-                      <button onClick={() => setDrawerTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 py-1 text-xs hover:bg-secondary hover:text-white transition-colors whitespace-nowrap">View</button>
-                      <button onClick={() => assignTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 py-1 text-xs hover:bg-secondary hover:text-white transition-colors whitespace-nowrap">Assign</button>
-                      <button onClick={() => setTickets(prev => prev.map(x => x.id === t.id ? { ...x, status: 'Under Review', updatedAt: new Date().toISOString().split('T')[0] } : x))} className="bg-white text-blue-600 border border-blue-600 rounded-full px-2 py-1 text-xs hover:bg-blue-600 hover:text-white transition-colors whitespace-nowrap">Review</button>
-                      <button onClick={() => resolveTicket(t)} className="bg-white text-green-600 border border-green-600 rounded-full px-2 py-1 text-xs hover:bg-green-600 hover:text-white transition-colors whitespace-nowrap">Resolve</button>
-                      <button onClick={() => escalateTicket(t)} className="bg-white text-red-600 border border-red-600 rounded-full px-2 py-1 text-xs hover:bg-red-600 hover:text-white transition-colors whitespace-nowrap">Escalate</button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+        
+        {filteredTickets.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTickets.length}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setCurrentPage}
+            itemLabel="tickets"
+            variant="desktop"
+          />
+        )}
       </div>
 
       {/* Card View - Mobile (visible on mobile and tablet) */}
-      <div className="md:hidden space-y-3 sm:space-y-4">
-        {filteredTickets.length > 0 ? (
-          filteredTickets.map(t => (
-            <div key={t.id} className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-200">
+      <div className="lg:hidden space-y-3 sm:space-y-4">
+        {paginatedTickets.length > 0 ? (
+          paginatedTickets.map(t => (
+            <div key={t.id} className="bg-white rounded-xl p-4 border border-gray-200">
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-secondary text-sm sm:text-base truncate">{t.id}</div>
-                  <div className="text-xs sm:text-sm text-gray-600 mt-0.5 truncate">{t.store}</div>
-                  <div className="text-xs sm:text-sm text-blue-700 mt-0.5">
-                    <Link to={`/admin/orders/${t.orderId}`} className="underline hover:text-blue-900">{t.orderId}</Link>
-                  </div>
+                  <h3 className="font-semibold text-secondary text-lg">{t.id}</h3>
+                  <div className="text-sm text-gray-600 mt-1">{t.store}</div>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
                   {(() => {
                     const st = PRIORITY_STYLES[t.priority]
                     return (
-                      <span className="inline-block px-1.5 sm:px-2 py-1 rounded-md text-[10px] sm:text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
+                      <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
                         {t.priority}
                       </span>
                     )
@@ -535,51 +675,66 @@ export default function OpsSupport() {
                 </div>
               </div>
 
-              <div className="space-y-1.5 sm:space-y-2 mb-3">
-                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                  <span className="text-gray-500 flex-shrink-0">Issue:</span>
-                  <span className="font-medium truncate text-right">{t.issue}</span>
+              <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                <div>
+                  <span className="text-gray-500 block">Order ID</span>
+                  <Link to={`/admin/orders/${t.orderId}`} className="font-medium underline text-blue-700 hover:text-blue-900">{t.orderId}</Link>
                 </div>
-                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                  <span className="text-gray-500 flex-shrink-0">Status:</span>
+                <div>
+                  <span className="text-gray-500 block">Issue</span>
+                  <span className="font-medium">{t.issue}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block">Status</span>
                   {(() => {
                     const st = STATUS_STYLES[t.status]
                     return (
-                      <span className="inline-block px-2 sm:px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
+                      <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
                         {t.status}
                       </span>
                     )
                   })()}
                 </div>
-                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                  <span className="text-gray-500 flex-shrink-0">Assigned To:</span>
-                  <span className="font-medium truncate">{t.assignedTo}</span>
+                <div>
+                  <span className="text-gray-500 block">Assigned To</span>
+                  <span className="font-medium">{t.assignedTo}</span>
                 </div>
-                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                  <span className="text-gray-500 flex-shrink-0">SLA:</span>
+                <div>
+                  <span className="text-gray-500 block">SLA</span>
                   <span className="font-medium">{t.slaHours} hrs</span>
                 </div>
-                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                  <span className="text-gray-500 flex-shrink-0">Created:</span>
+                <div>
+                  <span className="text-gray-500 block">Created</span>
                   <span className="font-medium">{t.createdAt}</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
-                <button onClick={() => setDrawerTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 sm:px-3 py-2 min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm font-medium hover:bg-secondary hover:text-white transition-colors">View</button>
-                <button onClick={() => assignTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 sm:px-3 py-2 min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm font-medium hover:bg-secondary hover:text-white transition-colors">Assign</button>
-                <button onClick={() => setTickets(prev => prev.map(x => x.id === t.id ? { ...x, status: 'Under Review', updatedAt: new Date().toISOString().split('T')[0] } : x))} className="bg-white text-blue-600 border border-blue-600 rounded-full px-2 sm:px-3 py-2 min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm font-medium hover:bg-blue-600 hover:text-white transition-colors">Review</button>
-                <button onClick={() => resolveTicket(t)} className="bg-white text-green-600 border border-green-600 rounded-full px-2 sm:px-3 py-2 min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm font-medium hover:bg-green-600 hover:text-white transition-colors">Resolve</button>
-              </div>
-              <div className="mt-2">
-                <button onClick={() => escalateTicket(t)} className="bg-white text-red-600 border border-red-600 rounded-full px-2 sm:px-3 py-2 min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm font-medium hover:bg-red-600 hover:text-white transition-colors w-full">Escalate</button>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => setDrawerTicket(t)} className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95">View</button>
+                <button onClick={() => assignTicket(t)} className="bg-purple-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-purple-600">Assign</button>
+                <button onClick={() => setTickets(prev => prev.map(x => x.id === t.id ? { ...x, status: 'Under Review', updatedAt: new Date().toISOString().split('T')[0] } : x))} className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600">Review</button>
+                <button onClick={() => resolveTicket(t)} className="bg-green-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-600">Resolve</button>
+                <button onClick={() => escalateTicket(t)} className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600">Escalate</button>
               </div>
             </div>
           ))
         ) : (
-          <div className="bg-white rounded-xl p-6 text-center text-gray-500 text-sm sm:text-base">
+          <div className="bg-white rounded-xl p-6 text-center text-gray-500">
             No tickets match current filters.
           </div>
+        )}
+
+        {filteredTickets.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTickets.length}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setCurrentPage}
+            itemLabel="tickets"
+            variant="mobile"
+          />
         )}
       </div>
 
