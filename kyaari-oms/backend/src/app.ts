@@ -18,6 +18,7 @@ import { notificationRoutes } from './modules/notifications/notification.routes'
 import invoiceRoutes from './modules/invoices/invoice.routes';
 import dispatchRoutes from './routes/dispatch.routes';
 import grnRoutes from './routes/grn.routes';
+import paymentRoutes from './modules/payments/payment.routes';
 import ticketRoutes from './modules/tickets/ticket.routes';
 import { errorHandler, notFoundHandler, rateLimiter } from './middlewares/error.middleware';
 import { logger } from './utils/logger';
@@ -108,6 +109,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/dispatches', dispatchRoutes);
 app.use('/api/grn', grnRoutes);
+app.use('/api/payments', paymentRoutes);
 app.use('/api/tickets', ticketRoutes);
 
 // 404 handler

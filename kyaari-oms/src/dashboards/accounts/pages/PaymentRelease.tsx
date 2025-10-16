@@ -1,24 +1,13 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Bell, X, AlertTriangle, CheckSquare, Wallet, Clock } from 'lucide-react'
 import { CustomDropdown, KPICard } from '../../../components'
+import { PaymentsApi, type PaymentListItem } from '../../../services/paymentsApi'
 import { Pagination } from '../../../components/ui/Pagination'
 
 type PaymentStatus = 'Pending' | 'Released' | 'Overdue'
 type DeliveryVerified = 'Yes' | 'No' | 'Partial'
 
-type PaymentRecord = {
-  id: string
-  vendor: string
-  orderId: string
-  invoiceNumber: string
-  invoiceAmount: number
-  deliveryVerified: DeliveryVerified
-  paymentStatus: PaymentStatus
-  invoiceDate: string
-  dueDate: string
-  releaseDate?: string
-  referenceId?: string
-}
+type PaymentRecord = PaymentListItem
 
 const PAYMENT_STATUS_STYLES: Record<PaymentStatus, { bg: string; color: string; border: string }> = {
   'Pending': { bg: '#FEF9C3', color: '#92400E', border: '#FEF08A' },
@@ -32,18 +21,7 @@ const DELIVERY_VERIFIED_STYLES: Record<DeliveryVerified, { bg: string; color: st
   'Partial': { bg: '#FEF9C3', color: '#92400E', border: '#FEF08A' },
 }
 
-const INITIAL_PAYMENTS: PaymentRecord[] = [
-  { id: 'PAY-001', vendor: 'GreenLeaf Co', orderId: 'VO-2301', invoiceNumber: 'INV-GLC-2301', invoiceAmount: 45000, deliveryVerified: 'Yes', paymentStatus: 'Released', invoiceDate: '2025-09-18', dueDate: '2025-09-25', releaseDate: '2025-09-24', referenceId: 'UTR-1234567890' },
-  { id: 'PAY-002', vendor: 'Clay Works', orderId: 'VO-2304', invoiceNumber: 'INV-CW-2304', invoiceAmount: 19200, deliveryVerified: 'Yes', paymentStatus: 'Pending', invoiceDate: '2025-09-21', dueDate: '2025-09-28' },
-  { id: 'PAY-003', vendor: 'Urban Roots', orderId: 'VO-2302', invoiceNumber: 'INV-UR-2302', invoiceAmount: 12500, deliveryVerified: 'Yes', paymentStatus: 'Pending', invoiceDate: '2025-09-19', dueDate: '2025-09-26' },
-  { id: 'PAY-004', vendor: 'Plantify', orderId: 'VO-2303', invoiceNumber: 'INV-PLT-2303', invoiceAmount: 8750, deliveryVerified: 'Partial', paymentStatus: 'Pending', invoiceDate: '2025-09-20', dueDate: '2025-09-27' },
-  { id: 'PAY-005', vendor: 'EcoGarden Solutions', orderId: 'VO-2305', invoiceNumber: 'INV-EGS-2305', invoiceAmount: 35000, deliveryVerified: 'No', paymentStatus: 'Pending', invoiceDate: '2025-09-22', dueDate: '2025-09-29' },
-  { id: 'PAY-006', vendor: 'Flower Garden', orderId: 'VO-2306', invoiceNumber: 'INV-FG-2306', invoiceAmount: 28500, deliveryVerified: 'Yes', paymentStatus: 'Overdue', invoiceDate: '2025-09-15', dueDate: '2025-09-22' },
-  { id: 'PAY-007', vendor: 'Urban Roots', orderId: 'VO-2307', invoiceNumber: 'INV-UR-2307', invoiceAmount: 15750, deliveryVerified: 'Yes', paymentStatus: 'Released', invoiceDate: '2025-09-17', dueDate: '2025-09-24', releaseDate: '2025-09-23', referenceId: 'UTR-9876543210' },
-  { id: 'PAY-008', vendor: 'Plantify', orderId: 'VO-2308', invoiceNumber: 'INV-PLT-2308', invoiceAmount: 22000, deliveryVerified: 'Yes', paymentStatus: 'Overdue', invoiceDate: '2025-09-14', dueDate: '2025-09-21' },
-  { id: 'PAY-009', vendor: 'Clay Works', orderId: 'VO-2309', invoiceNumber: 'INV-CW-2309', invoiceAmount: 16800, deliveryVerified: 'Yes', paymentStatus: 'Pending', invoiceDate: '2025-09-23', dueDate: '2025-09-30' },
-  { id: 'PAY-010', vendor: 'GreenLeaf Co', orderId: 'VO-2310', invoiceNumber: 'INV-GLC-2310', invoiceAmount: 52000, deliveryVerified: 'Yes', paymentStatus: 'Released', invoiceDate: '2025-09-16', dueDate: '2025-09-23', releaseDate: '2025-09-22', referenceId: 'UTR-5555666677' },
-]
+const INITIAL_PAYMENTS: PaymentRecord[] = []
 
 function AccountsPaymentRelease() {
   const [payments, setPayments] = useState<PaymentRecord[]>(INITIAL_PAYMENTS)
@@ -52,6 +30,10 @@ function AccountsPaymentRelease() {
   const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false)
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState<PaymentRecord | null>(null)
+  const [isEditAmountOpen, setIsEditAmountOpen] = useState(false)
+  const [amountEditPayment, setAmountEditPayment] = useState<PaymentRecord | null>(null)
+  const [invoiceViewerOpen, setInvoiceViewerOpen] = useState(false)
+  const [viewerPayment, setViewerPayment] = useState<PaymentRecord | null>(null)
 
   // Filters
   const [filterStatus, setFilterStatus] = useState<PaymentStatus | ''>('')
@@ -79,6 +61,24 @@ function AccountsPaymentRelease() {
   useEffect(() => {
     setCurrentPage(1)
   }, [filterStatus, filterDeliveryVerified])
+
+  // Load payments from API on filter/page change
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await PaymentsApi.list({
+          status: filterStatus,
+          deliveryVerified: filterDeliveryVerified,
+          page: currentPage,
+          limit: itemsPerPage,
+        })
+        setPayments(res.data.items)
+      } catch (e) {
+        console.error('Failed to load payments', e)
+      }
+    }
+    load()
+  }, [filterStatus, filterDeliveryVerified, currentPage])
 
   function resetFilters() {
     setFilterStatus('')
@@ -115,6 +115,16 @@ function AccountsPaymentRelease() {
   function handleSendNotification(payment: PaymentRecord) {
     setSelectedPayment(payment)
     setIsNotifyModalOpen(true)
+  }
+
+  function handleEditAmount(payment: PaymentRecord) {
+    setAmountEditPayment(payment)
+    setIsEditAmountOpen(true)
+  }
+
+  function handleUpdateDeliveryStatus(payment: PaymentRecord) {
+    setAmountEditPayment(payment)
+    setIsEditAmountOpen(true)
   }
 
   function handleBulkRelease() {
@@ -297,6 +307,8 @@ function AccountsPaymentRelease() {
                   const isSelected = selectedPayments.has(payment.id)
                   const canRelease = payment.paymentStatus !== 'Released' && payment.deliveryVerified === 'Yes'
                   const isReleased = payment.paymentStatus === 'Released'
+                  const canEditAmount = payment.deliveryVerified !== 'Yes'
+                  const isPartialDelivery = payment.deliveryVerified === 'Partial'
 
                   return (
                     <div key={payment.id} className="grid grid-cols-[0.5fr_1.5fr_1fr_1.2fr_1fr_1fr_1.2fr_1.5fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center text-center hover:bg-gray-50 font-bold">
@@ -363,6 +375,30 @@ function AccountsPaymentRelease() {
                           <CheckSquare size={12} />
                           <span>Release</span>
                         </button>
+                        {isPartialDelivery ? (
+                          <button 
+                            onClick={() => handleUpdateDeliveryStatus(payment)}
+                            className="bg-orange-100 text-orange-700 rounded-full px-3 py-1.5 text-xs flex items-center gap-1 hover:bg-orange-200"
+                            title="Review partial delivery and update status"
+                          >
+                            <Wallet size={12} />
+                            <span>Review Partial</span>
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => handleEditAmount(payment)}
+                            disabled={!canEditAmount}
+                            className={`rounded-full px-3 py-1.5 text-xs flex items-center gap-1 ${
+                              canEditAmount 
+                                ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' 
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                            title={canEditAmount ? 'Edit invoice amount (mismatch/partial)' : 'Amount editable only for mismatch/partial'}
+                          >
+                            <Wallet size={12} />
+                            <span>Edit Amount</span>
+                          </button>
+                        )}
                         <button 
                           onClick={() => handleSendNotification(payment)}
                           className="bg-blue-100 text-blue-700 rounded-full px-3 py-1.5 text-xs flex items-center gap-1 hover:bg-blue-200"
@@ -405,6 +441,8 @@ function AccountsPaymentRelease() {
                 const isSelected = selectedPayments.has(payment.id)
                 const canRelease = payment.paymentStatus !== 'Released' && payment.deliveryVerified === 'Yes'
                 const isReleased = payment.paymentStatus === 'Released'
+                const canEditAmount = payment.deliveryVerified !== 'Yes'
+                const isPartialDelivery = payment.deliveryVerified === 'Partial'
 
                 return (
                   <div key={payment.id} className={`border rounded-xl p-4 ${isSelected ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'}`}>
@@ -476,6 +514,28 @@ function AccountsPaymentRelease() {
                         <CheckSquare size={12} />
                         <span>Release</span>
                       </button>
+                      {isPartialDelivery ? (
+                        <button 
+                          onClick={() => handleUpdateDeliveryStatus(payment)}
+                          className="flex-1 bg-orange-100 text-orange-700 rounded-full px-3 py-2 text-xs flex items-center justify-center gap-1 hover:bg-orange-200"
+                          title="Review partial delivery and update status"
+                        >
+                          <Wallet size={12} />
+                          <span>Review</span>
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => handleEditAmount(payment)}
+                          disabled={!canEditAmount}
+                          className={`flex-1 bg-purple-100 text-purple-700 rounded-full px-3 py-2 text-xs flex items-center justify-center gap-1 ${
+                            canEditAmount ? 'hover:bg-purple-200' : 'cursor-not-allowed opacity-60'
+                          }`}
+                          title={canEditAmount ? 'Edit invoice amount (mismatch/partial)' : 'Amount editable only for mismatch/partial'}
+                        >
+                          <Wallet size={12} />
+                          <span>Edit</span>
+                        </button>
+                      )}
                       <button 
                         onClick={() => handleSendNotification(payment)}
                         className="flex-1 bg-blue-100 text-blue-700 rounded-full px-3 py-2 text-xs flex items-center justify-center gap-1 hover:bg-blue-200"
@@ -509,15 +569,19 @@ function AccountsPaymentRelease() {
         <MarkAsReleasedModal 
           payment={selectedPayment}
           onClose={() => setIsReleaseModalOpen(false)}
-          onConfirm={(referenceId: string) => {
-            setPayments(prev => prev.map(p => 
-              p.id === selectedPayment.id 
-                ? { ...p, paymentStatus: 'Released' as PaymentStatus, releaseDate: new Date().toISOString().split('T')[0], referenceId }
-                : p
-            ))
-            alert(`Payment released successfully for ${selectedPayment.vendor}!\nReference ID: ${referenceId}`)
+          onConfirm={async (referenceId: string) => {
+            await PaymentsApi.release(selectedPayment.id, referenceId)
+            // reload list with current filters/page
+            const res = await PaymentsApi.list({
+              status: filterStatus,
+              deliveryVerified: filterDeliveryVerified,
+              page: currentPage,
+              limit: itemsPerPage,
+            })
+            setPayments(res.data.items)
             setIsReleaseModalOpen(false)
           }}
+          onShowInvoices={() => { setViewerPayment(selectedPayment); setInvoiceViewerOpen(true) }}
         />
       )}
 
@@ -532,6 +596,40 @@ function AccountsPaymentRelease() {
           }}
         />
       )}
+
+      {/* Edit Amount Modal */}
+      {isEditAmountOpen && amountEditPayment && (
+        <EditAmountModal
+          payment={amountEditPayment}
+          onClose={() => setIsEditAmountOpen(false)}
+          onConfirm={async (newAmount: number, reason: string, deliveryStatus?: 'Yes' | 'No' | 'Partial') => {
+            await PaymentsApi.editAmount(amountEditPayment.id, newAmount, reason)
+            
+            // Update delivery status if provided
+            if (deliveryStatus) {
+              await PaymentsApi.updateDeliveryStatus(amountEditPayment.id, deliveryStatus)
+            }
+            
+            const res = await PaymentsApi.list({
+              status: filterStatus,
+              deliveryVerified: filterDeliveryVerified,
+              page: currentPage,
+              limit: itemsPerPage,
+            })
+            setPayments(res.data.items)
+            setIsEditAmountOpen(false)
+          }}
+          onShowInvoices={() => { setViewerPayment(amountEditPayment); setInvoiceViewerOpen(true) }}
+        />
+      )}
+
+      {/* Side-by-side Invoices Viewer Modal */}
+      {invoiceViewerOpen && viewerPayment && (
+        <InvoiceSideBySideModal
+          payment={viewerPayment}
+          onClose={() => { setInvoiceViewerOpen(false); setViewerPayment(null) }}
+        />
+      )}
     </div>
   )
 }
@@ -539,11 +637,13 @@ function AccountsPaymentRelease() {
 function MarkAsReleasedModal({ 
   payment, 
   onClose, 
-  onConfirm 
+  onConfirm,
+  onShowInvoices
 }: { 
   payment: PaymentRecord
   onClose: () => void
   onConfirm: (referenceId: string) => void
+  onShowInvoices: () => void
 }) {
   const [referenceId, setReferenceId] = useState('')
   const [releaseDate, setReleaseDate] = useState(new Date().toISOString().split('T')[0])
@@ -577,6 +677,19 @@ function MarkAsReleasedModal({
             <strong>Amount:</strong> ₹{payment.invoiceAmount.toLocaleString('en-IN')}
           </div>
         </div>
+
+        {(payment.accountsInvoiceUrl || payment.vendorInvoiceUrl) && (
+          <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="text-xs sm:text-sm text-gray-800 font-medium mb-2">Invoices</div>
+            <button
+              type="button"
+              onClick={onShowInvoices}
+              className="text-xs sm:text-sm text-accent hover:text-secondary underline"
+            >
+              Show invoices
+            </button>
+          </div>
+        )}
 
         <div className="space-y-4">
           <div>
@@ -730,4 +843,190 @@ function SendNotificationModal({
 }
 
 export default AccountsPaymentRelease
+
+function EditAmountModal({
+  payment,
+  onClose,
+  onConfirm,
+  onShowInvoices
+}: {
+  payment: PaymentRecord
+  onClose: () => void
+  onConfirm: (newAmount: number, reason: string, deliveryStatus?: 'Yes' | 'No' | 'Partial') => void
+  onShowInvoices: () => void
+}) {
+  const [newAmount, setNewAmount] = useState<number>(payment.invoiceAmount)
+  const [reason, setReason] = useState('')
+  const [deliveryStatus, setDeliveryStatus] = useState<'Yes' | 'No' | 'Partial'>(payment.deliveryVerified)
+  const [updateDeliveryStatus, setUpdateDeliveryStatus] = useState(false)
+
+  const isValid = newAmount > 0
+  const isPartialDelivery = payment.deliveryVerified === 'Partial'
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white w-full max-w-lg rounded-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-heading text-secondary text-lg sm:text-2xl">
+            {isPartialDelivery ? 'Review Partial Delivery' : 'Edit Invoice Amount'}
+          </h3>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100">
+            <X size={20} className="text-gray-500" />
+          </button>
+        </div>
+
+        <div className={`mb-4 p-3 sm:p-4 rounded-lg border ${isPartialDelivery ? 'bg-orange-50 border-orange-200' : 'bg-yellow-50 border-yellow-200'}`}>
+          <div className="text-xs sm:text-sm text-gray-700 mb-2">
+            <strong>Vendor:</strong> {payment.vendor}
+          </div>
+          <div className="text-xs sm:text-sm text-gray-700 mb-2">
+            <strong>Invoice:</strong> {payment.invoiceNumber} ({payment.orderId})
+          </div>
+          <div className="text-xs sm:text-sm text-gray-700 mb-2">
+            <strong>Current Amount:</strong> ₹{payment.invoiceAmount.toLocaleString('en-IN')}
+          </div>
+          <div className="text-xs sm:text-sm text-gray-700">
+            <strong>Delivery Status:</strong> <span className={`px-2 py-1 rounded text-xs font-semibold ${isPartialDelivery ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700'}`}>
+              {payment.deliveryVerified}
+            </span>
+          </div>
+          {isPartialDelivery && (
+            <div className="text-xs sm:text-sm text-orange-700 mt-2 font-medium">
+              ⚠️ Vendor delivered partial items and uploaded new invoice. Review and update amount accordingly.
+            </div>
+          )}
+        </div>
+
+        {(payment.accountsInvoiceUrl || payment.vendorInvoiceUrl) && (
+          <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <button
+              type="button"
+              onClick={onShowInvoices}
+              className="text-xs sm:text-sm text-accent hover:text-secondary underline"
+            >
+              Show invoices
+            </button>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">New Amount *</label>
+            <input
+              type="number"
+              min="0"
+              value={Number.isNaN(newAmount) ? '' : newAmount}
+              onChange={(e) => setNewAmount(parseFloat(e.target.value) || 0)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
+              placeholder="Enter revised invoice amount"
+            />
+            {!isValid && (
+              <p className="text-xs text-red-600 mt-1">Please enter a valid amount greater than 0.</p>
+            )}
+          </div>
+
+          {isPartialDelivery && (
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                <input
+                  type="checkbox"
+                  checked={updateDeliveryStatus}
+                  onChange={(e) => setUpdateDeliveryStatus(e.target.checked)}
+                  className="mr-2"
+                />
+                Update delivery status to complete
+              </label>
+              {updateDeliveryStatus && (
+                <div className="ml-6">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">New Delivery Status</label>
+                  <select
+                    value={deliveryStatus}
+                    onChange={(e) => setDeliveryStatus(e.target.value as 'Yes' | 'No' | 'Partial')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
+                  >
+                    <option value="Yes">Yes - Fully Delivered</option>
+                    <option value="No">No - Not Delivered</option>
+                    <option value="Partial">Partial - Partially Delivered</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Change to "Yes" to enable payment release</p>
+                  <p className="text-xs text-blue-600 mt-1">Note: This will update the GRN status to reflect the delivery verification.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Reason (optional)</label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
+              placeholder={isPartialDelivery ? "Add context (e.g., partial delivery confirmed, revised invoice amount)" : "Add context (e.g., quantity mismatch, damaged items, revised invoice)"}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-end gap-2 mt-6">
+          <button 
+            onClick={onClose} 
+            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 hover:bg-gray-50 text-sm order-2 sm:order-1"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => isValid && onConfirm(newAmount, reason, updateDeliveryStatus ? deliveryStatus : undefined)}
+            disabled={!isValid}
+            className="bg-accent text-button-text rounded-full px-4 py-2 hover:opacity-90 flex items-center justify-center gap-2 text-sm order-1 sm:order-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <CheckSquare size={16} />
+            <span>{isPartialDelivery ? 'Save & Update Status' : 'Save Amount'}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function InvoiceSideBySideModal({
+  payment,
+  onClose
+}: {
+  payment: PaymentRecord
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4">
+      <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[95vh] flex flex-col shadow-2xl">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <h3 className="text-base sm:text-lg font-semibold text-secondary">Invoices</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto p-3 sm:p-4 bg-gray-50">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-2">
+              <div className="text-xs font-medium text-gray-700 mb-1">Accounts Invoice</div>
+              {payment.accountsInvoiceUrl ? (
+                <iframe src={payment.accountsInvoiceUrl} className="w-full h-[70vh] rounded" title="Accounts Invoice" />
+              ) : (
+                <div className="text-xs text-gray-400">Not uploaded</div>
+              )}
+            </div>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-2">
+              <div className="text-xs font-medium text-gray-700 mb-1">Vendor Invoice</div>
+              {payment.vendorInvoiceUrl ? (
+                <iframe src={payment.vendorInvoiceUrl} className="w-full h-[70vh] rounded" title="Vendor Invoice" />
+              ) : (
+                <div className="text-xs text-gray-400">Not uploaded</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 
