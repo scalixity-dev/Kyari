@@ -174,6 +174,18 @@ export default function Reports() {
 
   const handleExportPDF = () => {
     const rows = filteredVendors
+    const escapeHTML = (s: unknown) =>
+      String(s ?? '').replace(
+        /[&<>"']/g,
+        (m) =>
+          ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+          }[m] as string)
+      )
     const html = `
       <html>
         <head>
@@ -201,14 +213,20 @@ export default function Reports() {
               </tr>
             </thead>
             <tbody>
-              ${rows.map(r => `<tr>
-                <td>${r.vendorName}</td>
-                <td>${r.vendorId}</td>
+              ${rows
+                .map(
+                  (r) => `<tr>
+                <td>${escapeHTML(r.vendorName)}</td>
+                <td>${escapeHTML(r.vendorId)}</td>
                 <td>${r.totalOrders}</td>
                 <td>${r.mismatchOrders}</td>
                 <td>${r.mismatchPercentage}%</td>
-                <td>${getPerformanceLabel(r.mismatchPercentage)}</td>
-              </tr>`).join('')}
+                <td>${escapeHTML(
+                  getPerformanceLabel(r.mismatchPercentage)
+                )}</td>
+              </tr>`
+                )
+                .join('')}
             </tbody>
           </table>
         </body>
@@ -223,13 +241,26 @@ export default function Reports() {
     iframe.style.border = '0'
     document.body.appendChild(iframe)
     const doc = iframe.contentWindow?.document
-    if (!doc) { document.body.removeChild(iframe); return }
-    doc.open(); doc.write(html); doc.close()
-    const cleanup = () => { if (iframe.parentNode) document.body.removeChild(iframe) }
+    if (!doc) {
+      document.body.removeChild(iframe)
+      return
+    }
+    doc.open()
+    doc.write(html)
+    doc.close()
+    const cleanup = () => {
+      if (iframe.parentNode) document.body.removeChild(iframe)
+    }
     iframe.contentWindow?.addEventListener('afterprint', cleanup, { once: true })
-    setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(cleanup, 1500) }, 250)
+    setTimeout(
+      () => {
+        iframe.contentWindow?.focus()
+        iframe.contentWindow?.print()
+        setTimeout(cleanup, 1500)
+      },
+      250
+    )
   }
-
   return (
     <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
