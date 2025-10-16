@@ -254,9 +254,46 @@ export default function Notifications() {
       {/* Notification Controls (custom) */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => setSelectedType('critical')} className="bg-[#FFEAEA] text-[#BE123C] px-4 py-2 rounded-lg shadow-sm text-sm font-medium">Critical</button>
-          <button onClick={() => setSelectedType('info')} className="bg-[#E6F5FF] text-[#0369A1] px-4 py-2 rounded-lg shadow-sm text-sm font-medium">Information</button>
-          <button onClick={() => setSelectedType('reminder')} className="bg-[#FFF6E6] text-[#C2410C] px-4 py-2 rounded-lg shadow-sm text-sm font-medium">Reminder</button>
+          <button 
+            onClick={() => setSelectedType('all')} 
+            className={`px-4 py-2 rounded-lg shadow-sm text-sm font-medium transition-all ${
+              selectedType === 'all' 
+                ? 'bg-[var(--color-accent)] text-white' 
+                : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            All Notifications
+          </button>
+          <button 
+            onClick={() => setSelectedType('critical')} 
+            className={`px-4 py-2 rounded-lg shadow-sm text-sm font-medium transition-all ${
+              selectedType === 'critical'
+                ? 'bg-[#BE123C] text-white'
+                : 'bg-[#FFEAEA] text-[#BE123C] hover:bg-[#FFDBDB]'
+            }`}
+          >
+            Critical
+          </button>
+          <button 
+            onClick={() => setSelectedType('info')} 
+            className={`px-4 py-2 rounded-lg shadow-sm text-sm font-medium transition-all ${
+              selectedType === 'info'
+                ? 'bg-[#0369A1] text-white'
+                : 'bg-[#E6F5FF] text-[#0369A1] hover:bg-[#D0EBFF]'
+            }`}
+          >
+            Information
+          </button>
+          <button 
+            onClick={() => setSelectedType('reminder')} 
+            className={`px-4 py-2 rounded-lg shadow-sm text-sm font-medium transition-all ${
+              selectedType === 'reminder'
+                ? 'bg-[#C2410C] text-white'
+                : 'bg-[#FFF6E6] text-[#C2410C] hover:bg-[#FFEFD0]'
+            }`}
+          >
+            Reminder
+          </button>
           {mutedVendors.length > 0 && (
             <span className="ml-2 text-sm text-gray-500">Muted: {mutedVendors.length}</span>
           )}
