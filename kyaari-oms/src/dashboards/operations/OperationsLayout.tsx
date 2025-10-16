@@ -203,7 +203,7 @@ function OperationsLayout() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--color-happyplant-bg)', width: '100%', minHeight: '100vh', boxSizing: 'border-box', overflowX: 'hidden' }}>
+    <div className="min-h-screen" style={{ background: 'var(--color-sharktank-bg)', width: '100%', minHeight: '100vh', boxSizing: 'border-box', overflowX: 'hidden' }}>
       {/* Mobile Overlay */}
       {isMobile && sidebarOpen && (
         <div 

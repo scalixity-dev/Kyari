@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react'
-import { ChevronUp as TrendingUpIcon, ChevronDown as TrendingDownIcon, AlertTriangle, Wallet, Clock, CheckSquare, X, Package, BarChart3 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { ChevronUp as TrendingUpIcon, AlertTriangle, Wallet, Clock, CheckSquare, X, Package, BarChart3, Calendar as CalendarIcon } from 'lucide-react'
 import { 
   LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts'
+import { KPICard } from '../../../components'
+import { CSVPDFExportButton } from '../../../components/ui/export-button'
+import { Calendar } from '../../../components/ui/calendar'
+import { format } from 'date-fns'
 
 interface PerformanceData {
   fillRate: number
@@ -103,50 +107,170 @@ const orderFulfillmentData = [
   { week: 'Week 4', delivered: 29, rejected: 6, pending: 4 }
 ]
 
-interface MetricCardProps {
-  title: string
-  value: string | number
-  change?: number
-  trend?: 'up' | 'down'
-  icon: React.ElementType
-  color: string
-  suffix?: string
-  description?: string
-}
-
-const MetricCard: React.FC<MetricCardProps> = ({ 
-  title, value, change, trend, icon: Icon, color, suffix = '', description 
-}) => {
-  return (
-    <div className="bg-white p-6 rounded-xl shadow-md border border-white/20">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon className="w-6 h-6 text-white" />
-        </div>
-        {change !== undefined && (
-          <div className={`flex items-center gap-1 text-sm font-medium ${
-            trend === 'up' ? 'text-green-600' : 'text-red-600'
-          }`}>
-            {trend === 'up' ? <TrendingUpIcon size={16} /> : <TrendingDownIcon size={16} />}
-            {Math.abs(change)}%
-          </div>
-        )}
-      </div>
-      <div className="mb-1">
-        <span className="text-2xl font-bold text-[var(--color-primary)]">
-          {typeof value === 'number' && value > 1000 ? value.toLocaleString() : value}
-          {suffix}
-        </span>
-      </div>
-      <h3 className="text-sm font-medium text-gray-600 mb-1">{title}</h3>
-      {description && (
-        <p className="text-xs text-gray-500">{description}</p>
-      )}
-    </div>
-  )
-}
-
 export default function Performance() {
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const toCSV = (rows: Array<Record<string, unknown>>, headerOrder?: string[]) => {
+    if (!rows || rows.length === 0) return ''
+    const headers = headerOrder && headerOrder.length > 0
+      ? headerOrder
+      : Array.from(new Set(rows.flatMap((r) => Object.keys(r))))
+
+    const escapeCSV = (value: unknown) => {
+      const s = value === undefined || value === null ? '' : String(value)
+      return s.includes(',') || s.includes('"') || s.includes('\n')
+        ? '"' + s.replace(/"/g, '""') + '"'
+        : s
+    }
+
+    const lines: string[] = [headers.join(',')]
+    for (const row of rows) {
+      lines.push(
+        headers
+          .map((h) => escapeCSV((row as Record<string, unknown>)[h]))
+          .join(',')
+      )
+    }
+    return lines.join('\n')
+  }
+  const handleExportCSV = () => {
+    const { fillRateData, paymentData } = getDataForTimeRange()
+
+    const kpiRows = [
+      { metric: 'Fill Rate (%)', value: performanceData.fillRate },
+      { metric: 'Rejection Rate (%)', value: performanceData.rejectionRate },
+      { metric: 'SLA Breaches', value: performanceData.slaBreaches },
+      { metric: 'Pending Payments', value: performanceData.pendingPayments },
+      { metric: 'Released Payments', value: performanceData.releasedPayments },
+      { metric: 'Total Orders', value: performanceData.totalOrders },
+      { metric: 'Completed Orders', value: performanceData.completedOrders },
+      { metric: 'Rejected Orders', value: performanceData.rejectedOrders }
+    ]
+
+    const fillRateRows = fillRateData.map((d) => ({ period: d.period, fillRate: d.fillRate, rejectionRate: d.rejectionRate }))
+    const paymentRows = paymentData.map((d) => ({ period: d.period, pending: d.pending, released: d.released }))
+
+    const sections = [
+      ['# KPI Snapshot', toCSV(kpiRows, ['metric', 'value'])],
+      ['# Fill Rate & Rejection Trend', toCSV(fillRateRows, ['period', 'fillRate', 'rejectionRate'])],
+      ['# Payment Summary', toCSV(paymentRows, ['period', 'pending', 'released'])]
+    ]
+
+    const content = sections.map(([title, csv]) => [title, csv].filter(Boolean).join('\n')).join('\n\n')
+    const filename = `performance_${useCustomDateRange ? 'custom' : timeRange}_${new Date().toISOString().slice(0,10)}.csv`
+    downloadFile(content, filename, 'text/csv;charset=utf-8;')
+  }
+
+  const handleExportPDF = () => {
+    const { fillRateData, paymentData } = getDataForTimeRange()
+
+    const html = `
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Performance Report</title>
+          <style>
+            body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Arial; padding: 16px; color: #111827; }
+            h1 { font-size: 20px; margin: 0 0 12px 0; }
+            h2 { font-size: 16px; margin: 16px 0 8px 0; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; }
+            th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; }
+            thead { background: #f9fafb; }
+            .muted { color: #6b7280; font-size: 12px; }
+            .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+          </style>
+        </head>
+        <body>
+          <h1>Performance Report</h1>
+          <div class="muted">Generated on ${new Date().toLocaleString()}</div>
+          <div class="muted" style="margin-top:6px">${useCustomDateRange ? `Custom Range: ${new Date(dateRange.from).toLocaleDateString()} — ${new Date(dateRange.to).toLocaleDateString()}` : `Time Range: ${timeRange}`}</div>
+
+          <div class="card">
+            <h2>KPI Snapshot</h2>
+            <table>
+              <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+              <tbody>
+                <tr><td>Fill Rate (%)</td><td>${performanceData.fillRate}</td></tr>
+                <tr><td>Rejection Rate (%)</td><td>${performanceData.rejectionRate}</td></tr>
+                <tr><td>SLA Breaches</td><td>${performanceData.slaBreaches}</td></tr>
+                <tr><td>Pending Payments</td><td>${performanceData.pendingPayments}</td></tr>
+                <tr><td>Released Payments</td><td>${performanceData.releasedPayments}</td></tr>
+                <tr><td>Total Orders</td><td>${performanceData.totalOrders}</td></tr>
+                <tr><td>Completed Orders</td><td>${performanceData.completedOrders}</td></tr>
+                <tr><td>Rejected Orders</td><td>${performanceData.rejectedOrders}</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <h2>Fill Rate & Rejection Trend</h2>
+            <table>
+              <thead><tr><th>Period</th><th>Fill Rate</th><th>Rejection Rate</th></tr></thead>
+              <tbody>
+                ${fillRateData.map((d) => `<tr><td>${d.period}</td><td>${d.fillRate}</td><td>${d.rejectionRate}</td></tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <h2>Payment Summary</h2>
+            <table>
+              <thead><tr><th>Period</th><th>Pending</th><th>Released</th></tr></thead>
+              <tbody>
+                ${paymentData.map((d) => `<tr><td>${d.period}</td><td>${d.pending}</td><td>${d.released}</td></tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </body>
+      </html>
+    `
+    // Print in the same window via an offscreen iframe
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    document.body.appendChild(iframe)
+
+    const iframeDoc = iframe.contentWindow?.document
+    if (!iframeDoc) {
+      document.body.removeChild(iframe)
+      return
+    }
+    iframeDoc.open()
+    iframeDoc.write(html)
+    iframeDoc.close()
+
+    const cleanup = () => {
+      if (iframe.parentNode) {
+        document.body.removeChild(iframe)
+      }
+    }
+
+    // Attempt cleanup after printing inside the iframe context
+    iframe.contentWindow?.addEventListener('afterprint', cleanup, { once: true })
+
+    // Trigger print once content is ready
+    setTimeout(() => {
+      iframe.contentWindow?.focus()
+      iframe.contentWindow?.print()
+      // Fallback cleanup in case afterprint doesn't fire
+      setTimeout(cleanup, 1500)
+    }, 250)
+  }
+
   const [timeRange, setTimeRange] = useState<'1W' | '1M' | '3M' | '6M' | '1Y'>('3M')
   const [dateRange, setDateRange] = useState({
     from: '2025-05-01',
@@ -154,6 +278,12 @@ export default function Performance() {
   })
   const [useCustomDateRange, setUseCustomDateRange] = useState(false)
   const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
+  const [dateFromDate, setDateFromDate] = useState<Date | undefined>()
+  const [dateToDate, setDateToDate] = useState<Date | undefined>()
+  const [showFromCalendar, setShowFromCalendar] = useState(false)
+  const [showToCalendar, setShowToCalendar] = useState(false)
+  const fromCalendarRef = useRef<HTMLDivElement>(null)
+  const toCalendarRef = useRef<HTMLDivElement>(null)
 
   // Hook to detect screen size
   useEffect(() => {
@@ -170,6 +300,21 @@ export default function Performance() {
     checkScreenSize()
     window.addEventListener('resize', checkScreenSize)
     return () => window.removeEventListener('resize', checkScreenSize)
+  }, [])
+
+  // Close calendars when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fromCalendarRef.current && !fromCalendarRef.current.contains(event.target as Node)) {
+        setShowFromCalendar(false)
+      }
+      if (toCalendarRef.current && !toCalendarRef.current.contains(event.target as Node)) {
+        setShowToCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   // Get responsive chart height based on screen size
@@ -301,72 +446,124 @@ export default function Performance() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header */}
-      <div className="mb-6 lg:mb-8">
-        <h1 className="text-2xl sm:text-3xl text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Performance Analytics</h1>
-        <p className="text-[var(--color-primary)] text-sm sm:text-base">Track your vendor performance metrics and insights</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h2 className="text-lg sm:text-xl md:text-2xl text-[var(--color-heading)] mb-0 sm:mb-0 font-[var(--font-heading)]">Performance Analytics</h2>
       </div>
 
       {/* Time Range Selector */}
-      <div className="flex flex-col lg:flex-row gap-4 mb-6 lg:mb-8">
-        <div className="flex gap-2 flex-wrap">
-          {(['1W', '1M', '3M', '6M', '1Y'] as const).map((range) => (
-            <button
-              key={range}
-              onClick={() => {
-                setTimeRange(range)
-                setUseCustomDateRange(false)
-              }}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                timeRange === range && !useCustomDateRange
-                  ? 'bg-[var(--color-accent)] text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {range}
-            </button>
-          ))}
+      <div className="flex flex-wrap items-stretch gap-3 mb-6 lg:mb-8">
+        {(['1W', '1M', '3M', '6M', '1Y'] as const).map((range) => (
           <button
-            onClick={() => setUseCustomDateRange(true)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              useCustomDateRange
+            key={range}
+            onClick={() => {
+              setTimeRange(range)
+              setUseCustomDateRange(false)
+            }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors h-[42px] ${
+              timeRange === range && !useCustomDateRange
                 ? 'bg-[var(--color-accent)] text-white'
                 : 'bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
-            Custom Range
+            {range}
           </button>
+        ))}
+        <button
+          onClick={() => setUseCustomDateRange(true)}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors h-[42px] ${
+            useCustomDateRange
+              ? 'bg-[var(--color-accent)] text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          Custom Range
+        </button>
+
+        {/* Export button placed just right of Custom Range */}
+        <div className="flex items-center">
+          <CSVPDFExportButton
+            onExportCSV={handleExportCSV}
+            onExportPDF={handleExportPDF}
+            buttonClassName="min-h-[42px]"
+          />
         </div>
 
         {/* Date Range Filter */}
         {useCustomDateRange && (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-white p-4 rounded-lg shadow-md border border-white/20">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">From:</label>
-              <input
-                type="date"
-                value={dateRange.from}
-                onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
-              />
+          <>
+            <div className="relative" ref={fromCalendarRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFromCalendar(!showFromCalendar)
+                  setShowToCalendar(false)
+                }}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:border-[var(--color-accent)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/20 focus:outline-none transition-all duration-200 h-[42px] flex items-center justify-between text-left bg-white min-w-[180px]"
+              >
+                <span className={dateFromDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                  {dateFromDate ? format(dateFromDate, 'MMM dd, yyyy') : 'From date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+              </button>
+              {showFromCalendar && (
+                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg min-w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={dateFromDate}
+                    onSelect={(date) => {
+                      setDateFromDate(date)
+                      setShowFromCalendar(false)
+                    }}
+                    initialFocus
+                    className="w-full"
+                  />
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">To:</label>
-              <input
-                type="date"
-                value={dateRange.to}
-                onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
-              />
+
+            <div className="relative" ref={toCalendarRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowToCalendar(!showToCalendar)
+                  setShowFromCalendar(false)
+                }}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:border-[var(--color-accent)] focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/20 focus:outline-none transition-all duration-200 h-[42px] flex items-center justify-between text-left bg-white min-w-[180px]"
+              >
+                <span className={dateToDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                  {dateToDate ? format(dateToDate, 'MMM dd, yyyy') : 'To date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+              </button>
+              {showToCalendar && (
+                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg min-w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={dateToDate}
+                    onSelect={(date) => {
+                      setDateToDate(date)
+                      setShowToCalendar(false)
+                    }}
+                    initialFocus
+                    disabled={(date) => dateFromDate ? date < dateFromDate : false}
+                    className="w-full"
+                  />
+                </div>
+              )}
             </div>
             <button
               onClick={() => {
-                // Force re-render by updating a dummy state or just log for now
-                console.log('Filtering data from', dateRange.from, 'to', dateRange.to)
-                // In a real app, you might trigger an API call here
+                if (dateFromDate && dateToDate) {
+                  setDateRange({
+                    from: format(dateFromDate, 'yyyy-MM-dd'),
+                    to: format(dateToDate, 'yyyy-MM-dd')
+                  })
+                }
               }}
-              className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-accent)]/90 transition-colors"
+              disabled={!dateFromDate || !dateToDate}
+              className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-accent)]/90 transition-colors whitespace-nowrap h-[42px] disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               Apply Filter
             </button>
@@ -374,65 +571,128 @@ export default function Performance() {
               onClick={() => {
                 setUseCustomDateRange(false)
                 setTimeRange('3M')
+                setDateFromDate(undefined)
+                setDateToDate(undefined)
+                setShowFromCalendar(false)
+                setShowToCalendar(false)
               }}
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors"
+              className="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors whitespace-nowrap h-[42px]"
             >
               Reset
             </button>
-          </div>
+          </>
         )}
       </div>
 
       {/* Active Filter Indicator */}
-      {useCustomDateRange && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800">
-            <span className="font-medium">Showing data from:</span> {new Date(dateRange.from).toLocaleDateString('en-GB')} 
-            <span className="mx-2">to</span> {new Date(dateRange.to).toLocaleDateString('en-GB')}
+      {useCustomDateRange && dateRange.from && dateRange.to && (
+        <div className="mb-4 p-4 rounded-lg border border-[#C4B5A0] shadow-sm" style={{ backgroundColor: '#ECDDC9' }}>
+          <p className="text-sm text-[#5C4A3A]">
+            <span className="font-semibold">Showing data from:</span> {new Date(dateRange.from).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} 
+            <span className="mx-2 font-medium">to</span> {new Date(dateRange.to).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
           </p>
         </div>
       )}
 
       {/* Key Performance Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
-        <MetricCard
-          title="Fill Rate"
-          value={performanceData.fillRate}
-          suffix="%"
-          change={2.8}
-          trend="up"
-          icon={CheckSquare}
-          color="bg-green-500"
-          description="Orders successfully fulfilled"
-        />
-        
-        <MetricCard
-          title="Rejection Rate"
-          value={performanceData.rejectionRate}
-          suffix="%"
-          change={1.2}
-          trend="down"
-          icon={X}
-          color="bg-red-500"
-          description="Orders rejected or declined"
-        />
-        
-        <MetricCard
-          title="SLA Breaches"
-          value={performanceData.slaBreaches}
-          change={0}
-          icon={AlertTriangle}
-          color="bg-yellow-500"
-          description="This month's SLA violations"
-        />
-        
-        <MetricCard
-          title="Payment Status"
-          value={`₹${(performanceData.pendingPayments / 1000).toFixed(0)}K`}
-          icon={Wallet}
-          color="bg-blue-500"
-          description={`₹${(performanceData.releasedPayments / 1000).toFixed(0)}K released this month`}
-        />
+      <div className="mb-6 lg:mb-8">
+        <h2 className="text-lg sm:text-xl md:text-2xl text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Key Metrics</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mt-8">
+          <KPICard
+            title="Fill Rate"
+            value={`${performanceData.fillRate}%`}
+            icon={<CheckSquare size={32} />}
+            subtitle="Orders successfully fulfilled"
+          />
+          
+          <KPICard
+            title="Rejection Rate"
+            value={`${performanceData.rejectionRate}%`}
+            icon={<X size={32} />}
+            subtitle="Orders rejected or declined"
+          />
+          
+          <KPICard
+            title="SLA Breaches"
+            value={performanceData.slaBreaches.toString()}
+            icon={<AlertTriangle size={32} />}
+            subtitle="This month's SLA violations"
+          />
+          
+          <KPICard
+            title="Payment Status"
+            value={`₹${(performanceData.pendingPayments / 1000).toFixed(0)}K`}
+            icon={<Wallet size={32} />}
+            subtitle={`₹${(performanceData.releasedPayments / 1000).toFixed(0)}K released`}
+          />
+        </div>
+      </div>
+
+      {/* Performance Insights & Goals */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6 mb-6 lg:mb-8">
+        {/* Performance Insights */}
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+          <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-4">Performance Insights</h3>
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+              <div>
+                <p className="text-sm font-medium text-gray-800">Excellent Fill Rate</p>
+                <p className="text-xs text-gray-600">Your 92.5% fill rate is above industry average of 88%</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
+              <div>
+                <p className="text-sm font-medium text-gray-800">SLA Improvement Needed</p>
+                <p className="text-xs text-gray-600">Focus on order confirmation times to reduce SLA breaches</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+              <div>
+                <p className="text-sm font-medium text-gray-800">Payment Processing</p>
+                <p className="text-xs text-gray-600">₹45.6K pending payments, expected release in 3-5 days</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Performance Goals */}
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+          <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-4">Performance Goals</h3>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700">Fill Rate Target</span>
+                <span className="text-sm text-gray-600">92.5% / 95%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-green-500 h-2 rounded-full" style={{ width: '97.4%' }}></div>
+              </div>
+            </div>
+            
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700">Rejection Rate Target</span>
+                <span className="text-sm text-gray-600">4.2% / 3%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-red-500 h-2 rounded-full" style={{ width: '71.4%' }}></div>
+              </div>
+            </div>
+            
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700">SLA Compliance</span>
+                <span className="text-sm text-gray-600">97% / 100%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '97%' }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Charts Row */}
@@ -632,72 +892,6 @@ export default function Performance() {
         </div>
       </div>
 
-      {/* Performance Insights */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
-        {/* Performance Insights */}
-        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-          <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-4">Performance Insights</h3>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-              <div>
-                <p className="text-sm font-medium text-gray-800">Excellent Fill Rate</p>
-                <p className="text-xs text-gray-600">Your 92.5% fill rate is above industry average of 88%</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
-              <div>
-                <p className="text-sm font-medium text-gray-800">SLA Improvement Needed</p>
-                <p className="text-xs text-gray-600">Focus on order confirmation times to reduce SLA breaches</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-              <div>
-                <p className="text-sm font-medium text-gray-800">Payment Processing</p>
-                <p className="text-xs text-gray-600">₹45.6K pending payments, expected release in 3-5 days</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Performance Goals */}
-        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-          <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-4">Performance Goals</h3>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Fill Rate Target</span>
-                <span className="text-sm text-gray-600">92.5% / 95%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-500 h-2 rounded-full" style={{ width: '97.4%' }}></div>
-              </div>
-            </div>
-            
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Rejection Rate Target</span>
-                <span className="text-sm text-gray-600">4.2% / 3%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-red-500 h-2 rounded-full" style={{ width: '71.4%' }}></div>
-              </div>
-            </div>
-            
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">SLA Compliance</span>
-                <span className="text-sm text-gray-600">97% / 100%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '97%' }}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
