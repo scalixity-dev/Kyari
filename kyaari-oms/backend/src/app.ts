@@ -20,6 +20,7 @@ import dispatchRoutes from './routes/dispatch.routes';
 import grnRoutes from './routes/grn.routes';
 import paymentRoutes from './modules/payments/payment.routes';
 import ticketRoutes from './modules/tickets/ticket.routes';
+import globalSearchRoutes from './modules/global-search/global-search.routes';
 import { errorHandler, notFoundHandler, rateLimiter } from './middlewares/error.middleware';
 import { logger } from './utils/logger';
 
@@ -111,6 +112,7 @@ app.use('/api/dispatches', dispatchRoutes);
 app.use('/api/grn', grnRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/tickets', ticketRoutes);
+app.use('/api/global-search', globalSearchRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
