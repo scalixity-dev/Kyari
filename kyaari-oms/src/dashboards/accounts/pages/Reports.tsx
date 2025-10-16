@@ -96,14 +96,20 @@ function AccountsReports() {
     const headers = headerOrder && headerOrder.length > 0
       ? headerOrder
       : Array.from(new Set(rows.flatMap((r) => Object.keys(r))))
-    const escape = (val: unknown) => {
+    const escapeCSV = (val: unknown) => {
       const s = val === undefined || val === null ? '' : String(val)
       return s.includes(',') || s.includes('"') || s.includes('\n')
         ? '"' + s.replace(/"/g, '""') + '"'
         : s
     }
     const lines = [headers.join(',')]
-    for (const row of rows) lines.push(headers.map((h) => escape((row as Record<string, unknown>)[h])).join(','))
+    for (const row of rows) {
+      lines.push(
+        headers
+          .map((h) => escapeCSV((row as Record<string, unknown>)[h]))
+          .join(',')
+      )
+    }
     return lines.join('\n')
   }
 
