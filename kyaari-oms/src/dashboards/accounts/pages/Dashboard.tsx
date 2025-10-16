@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { FileText, AlertTriangle, Wallet, MapPin, Bell, X } from 'lucide-react'
+import { useState } from 'react'
+import { FileText, AlertTriangle, Wallet, MapPin, Bell, X, Plus } from 'lucide-react'
 import Button from '../../../components/Button/Button'
 import { KPICard } from '../../../components'
 
@@ -150,11 +150,11 @@ function AccountsDashboard() {
         <h3 className="text-lg sm:text-xl text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">Quick Actions</h3>
         <div className="flex flex-col sm:flex-row flex-wrap gap-3">
           <Button onClick={() => setShowInvoiceModal(true)} className="inline-flex items-center justify-center gap-2 rounded-xl w-full sm:w-auto">
-            <span>➕</span>
+            <Plus size={16} />
             <span>Generate Invoice</span>
           </Button>
           <Button onClick={() => setShowPaymentModal(true)} className="inline-flex items-center justify-center gap-2 rounded-xl w-full sm:w-auto">
-            <span>✔️</span>
+            <Wallet size={16} />
             <span>Mark Payment Released</span>
           </Button>
         </div>

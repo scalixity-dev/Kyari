@@ -77,35 +77,44 @@ export default function ProfileSettings() {
   ]
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-happyplant-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
+    <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-[var(--font-heading)] text-[var(--color-heading)] mb-2">Profile & Settings</h1>
-        <p className="text-sm sm:text-base text-[var(--color-primary)]">Manage your vendor profile, users, and preferences</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 sm:mb-0 font-[var(--font-heading)]">Profile & Settings</h2>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="bg-white rounded-xl shadow-md border border-white/20 mb-4 sm:mb-6">
-        <div className="flex border-b border-gray-200 overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-3 sm:py-4 font-medium transition-colors whitespace-nowrap min-w-0 ${
-                activeTab === tab.id
-                  ? 'text-[var(--color-accent)] border-b-2 border-[var(--color-accent)]'
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              <tab.icon size={16} className="sm:w-[18px] sm:h-[18px]" />
-              <span className="text-sm sm:text-base">{tab.label}</span>
-            </button>
-          ))}
+      {/* Tabs */}
+      <div className="mb-6 overflow-x-auto">
+        <div className="relative min-w-max">
+          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[var(--color-accent)] rounded-full opacity-80"></div>
+          <div className="relative flex gap-2 sm:gap-4">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                  className={`
+                    px-5 py-2.5 font-semibold outline-none whitespace-nowrap text-sm sm:text-base transition-all duration-200
+                    rounded-t-xl rounded-b-none min-h-[44px] flex items-center gap-2
+                    ${isActive 
+                      ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-[0_4px_12px_rgba(0,0,0,0.08)]' 
+                      : 'bg-transparent text-[var(--color-secondary)] hover:text-[var(--color-heading)]'}
+                  `}
+                >
+                  <tab.icon size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  {tab.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
+      </div>
 
-        {/* Company Details Tab */}
+      {/* Tab Content */}
+      <div>
         {activeTab === 'company' && (
-          <div className="p-4 sm:p-6">
+          <div className="bg-white rounded-xl shadow-md border border-white/20 p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
               <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">Company Information</h2>
               <button
@@ -267,9 +276,8 @@ export default function ProfileSettings() {
 
         {/* User Management removed */}
 
-        {/* Notifications Tab */}
         {activeTab === 'notifications' && (
-          <div className="p-4 sm:p-6">
+          <div className="bg-white rounded-xl shadow-md border border-white/20 p-4 sm:p-6">
             <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6">Notification Preferences</h2>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
@@ -431,8 +439,6 @@ export default function ProfileSettings() {
           </div>
         )}
       </div>
-
-      {/* AddUserModal removed (user management removed) */}
     </div>
   )
 }

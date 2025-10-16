@@ -10,6 +10,7 @@ import {
   Line
 } from 'recharts'
 import { KPICard } from '../../../components'
+import { CSVPDFExportButton } from '../../../components/ui/export-button'
 import { Pagination } from '../../../components/ui/Pagination'
 
 type PaymentAgingRecord = {
@@ -77,6 +78,109 @@ const PAYMENT_MONTHLY_DATA = [
 
 
 function AccountsReports() {
+  // --- Export helpers ---
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const toCSV = (rows: Array<Record<string, unknown>>, headerOrder?: string[]) => {
+    if (!rows || rows.length === 0) return ''
+    const headers = headerOrder && headerOrder.length > 0
+      ? headerOrder
+      : Array.from(new Set(rows.flatMap((r) => Object.keys(r))))
+    const escapeCSV = (val: unknown) => {
+      const s = val === undefined || val === null ? '' : String(val)
+      return s.includes(',') || s.includes('"') || s.includes('\n')
+        ? '"' + s.replace(/"/g, '""') + '"'
+        : s
+    }
+    const lines = [headers.join(',')]
+    for (const row of rows) {
+      lines.push(
+        headers
+          .map((h) => escapeCSV((row as Record<string, unknown>)[h]))
+          .join(',')
+      )
+    }
+    return lines.join('\n')
+  }
+
+  // Payment Aging export
+  const handleAgingExportCSV = () => {
+    const rows = filteredPaymentAging.map(r => ({
+      vendor: r.vendor,
+      outstandingAmount: r.outstandingAmount,
+      avgDaysPending: r.avgDaysPending,
+      oldestInvoiceDate: r.oldestInvoiceDate,
+      oldestInvoiceDays: r.oldestInvoiceDays
+    }))
+    const csv = toCSV(rows, ['vendor', 'outstandingAmount', 'avgDaysPending', 'oldestInvoiceDate', 'oldestInvoiceDays'])
+    downloadFile(csv, `payment_aging_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;')
+  }
+
+  const handleAgingExportPDF = () => {
+    const rows = filteredPaymentAging
+    const html = `
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Vendor Payment Aging</title>
+          <style>
+            body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 16px; color:#111827 }
+            h1 { font-size:18px; margin:0 0 12px }
+            table { width:100%; border-collapse:collapse; font-size:12px; background:#fff }
+            th, td { text-align:left; padding:8px; border-bottom:1px solid #e5e7eb }
+            thead { background:#f9fafb }
+          </style>
+        </head>
+        <body>
+          <h1>Vendor Payment Aging</h1>
+          <table>
+            <thead>
+              <tr>
+                <th>Vendor</th>
+                <th>Outstanding Amount</th>
+                <th>Avg Days Pending</th>
+                <th>Oldest Invoice</th>
+                <th>Oldest Days</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(r => `<tr>
+                <td>${r.vendor}</td>
+                <td>₹${r.outstandingAmount.toLocaleString('en-IN')}</td>
+                <td>${r.avgDaysPending}</td>
+                <td>${r.oldestInvoiceDate}</td>
+                <td>${r.oldestInvoiceDays}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    document.body.appendChild(iframe)
+    const doc = iframe.contentWindow?.document
+    if (!doc) { document.body.removeChild(iframe); return }
+    doc.open(); doc.write(html); doc.close()
+    const cleanup = () => { if (iframe.parentNode) document.body.removeChild(iframe) }
+    iframe.contentWindow?.addEventListener('afterprint', cleanup, { once: true })
+    setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(cleanup, 1500) }, 250)
+  }
   const [timeRange, setTimeRange] = useState<TimeRange>('weekly')
   
   // Payment Aging Filters
@@ -355,6 +459,15 @@ function AccountsReports() {
           )}
         </div>
 
+        {/* Export actions (right-aligned) */}
+        <div className="mb-3 flex justify-end">
+          <CSVPDFExportButton
+            onExportCSV={handleAgingExportCSV}
+            onExportPDF={handleAgingExportPDF}
+            buttonClassName="min-h-[42px]"
+          />
+        </div>
+
         <div className="rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
           {/* Desktop Table View - Hidden on Mobile */}
           <div className="hidden md:block overflow-x-auto">
@@ -577,6 +690,40 @@ function AccountsReports() {
               </button>
             </div>
           )}
+        </div>
+
+        {/* Export actions (right-aligned) */}
+        <div className="mb-3 flex justify-end">
+          <CSVPDFExportButton
+            onExportCSV={() => {
+              const rows = filteredCompliance.map(r => ({ vendor: r.vendor, totalInvoices: r.totalInvoices, compliantPercentage: r.compliantPercentage, issuesFound: r.issuesFound }))
+              const csv = toCSV(rows, ['vendor','totalInvoices','compliantPercentage','issuesFound'])
+              downloadFile(csv, `compliance_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;')
+            }}
+            onExportPDF={() => {
+              const rows = filteredCompliance
+              const html = `
+                <html><head><meta charset="utf-8" />
+                <title>Invoice vs PO Compliance</title>
+                <style>body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;padding:16px;color:#111827}h1{font-size:18px;margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:12px;background:#fff}th,td{text-align:left;padding:8px;border-bottom:1px solid #e5e7eb}thead{background:#f9fafb}</style>
+                </head><body>
+                <h1>Invoice vs PO Compliance</h1>
+                <table><thead><tr><th>Vendor</th><th>Total Invoices</th><th>Compliant %</th><th>Issues Found</th></tr></thead><tbody>
+                ${rows.map(r => `<tr><td>${r.vendor}</td><td>${r.totalInvoices}</td><td>${r.compliantPercentage}%</td><td>${r.issuesFound}</td></tr>`).join('')}
+                </tbody></table>
+                </body></html>`
+              const iframe = document.createElement('iframe')
+              iframe.style.position='fixed'; iframe.style.right='0'; iframe.style.bottom='0'; iframe.style.width='0'; iframe.style.height='0'; iframe.style.border='0'
+              document.body.appendChild(iframe)
+              const doc = iframe.contentWindow?.document
+              if (!doc) { document.body.removeChild(iframe); return }
+              doc.open(); doc.write(html); doc.close()
+              const cleanup = () => { if (iframe.parentNode) document.body.removeChild(iframe) }
+              iframe.contentWindow?.addEventListener('afterprint', cleanup, { once: true })
+              setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(cleanup, 1500) }, 250)
+            }}
+            buttonClassName="min-h-[42px]"
+          />
         </div>
         
         {/* Overall Compliance KPI */}
@@ -881,6 +1028,40 @@ function AccountsReports() {
               </button>
             </div>
           )}
+        </div>
+
+        {/* Export actions (right-aligned) */}
+        <div className="mb-3 flex justify-end">
+          <CSVPDFExportButton
+            onExportCSV={() => {
+              const rows = filteredSLABreaches.map(r => ({ slaType: r.slaType, breachCount: r.breachCount, avgDelayDays: r.avgDelayDays }))
+              const csv = toCSV(rows, ['slaType','breachCount','avgDelayDays'])
+              downloadFile(csv, `sla_breaches_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;')
+            }}
+            onExportPDF={() => {
+              const rows = filteredSLABreaches
+              const html = `
+                <html><head><meta charset="utf-8" />
+                <title>SLA Breaches</title>
+                <style>body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;padding:16px;color:#111827}h1{font-size:18px;margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:12px;background:#fff}th,td{text-align:left;padding:8px;border-bottom:1px solid #e5e7eb}thead{background:#f9fafb}</style>
+                </head><body>
+                <h1>SLA Breaches</h1>
+                <table><thead><tr><th>SLA Type</th><th>Breaches</th><th>Avg Delay (Days)</th></tr></thead><tbody>
+                ${rows.map(r => `<tr><td>${r.slaType}</td><td>${r.breachCount}</td><td>${r.avgDelayDays}</td></tr>`).join('')}
+                </tbody></table>
+                </body></html>`
+              const iframe = document.createElement('iframe')
+              iframe.style.position='fixed'; iframe.style.right='0'; iframe.style.bottom='0'; iframe.style.width='0'; iframe.style.height='0'; iframe.style.border='0'
+              document.body.appendChild(iframe)
+              const doc = iframe.contentWindow?.document
+              if (!doc) { document.body.removeChild(iframe); return }
+              doc.open(); doc.write(html); doc.close()
+              const cleanup = () => { if (iframe.parentNode) document.body.removeChild(iframe) }
+              iframe.contentWindow?.addEventListener('afterprint', cleanup, { once: true })
+              setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(cleanup, 1500) }, 250)
+            }}
+            buttonClassName="min-h-[42px]"
+          />
         </div>
         
         {/* Full-width table with visual bars */}
