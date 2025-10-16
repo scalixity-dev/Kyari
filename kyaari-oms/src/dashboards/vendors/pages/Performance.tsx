@@ -126,7 +126,7 @@ export default function Performance() {
       ? headerOrder
       : Array.from(new Set(rows.flatMap((r) => Object.keys(r))))
 
-    const escape = (value: unknown) => {
+    const escapeCSV = (value: unknown) => {
       const s = value === undefined || value === null ? '' : String(value)
       return s.includes(',') || s.includes('"') || s.includes('\n')
         ? '"' + s.replace(/"/g, '""') + '"'
@@ -135,7 +135,11 @@ export default function Performance() {
 
     const lines: string[] = [headers.join(',')]
     for (const row of rows) {
-      lines.push(headers.map((h) => escape((row as Record<string, unknown>)[h])).join(','))
+      lines.push(
+        headers
+          .map((h) => escapeCSV((row as Record<string, unknown>)[h]))
+          .join(',')
+      )
     }
     return lines.join('\n')
   }
