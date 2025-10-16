@@ -1,6 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { LineChart, Line, ResponsiveContainer, BarChart, Bar, Tooltip, XAxis, YAxis } from 'recharts'
+import { useState, useMemo } from 'react'
+import { BarChart, Bar,  XAxis, YAxis, AreaChart, Area, CartesianGrid } from 'recharts'
 import { BarChart3, Clock, FileText, Package, CheckSquare, AlertTriangle } from 'lucide-react'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../../../components/ui/chart"
+import { Pagination } from '../../../components'
 
 // TypeScript types
 interface VendorMetrics {
@@ -135,9 +138,20 @@ const getStatusColor = (status: string): string => {
 export default function VendorDetails() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
 
   // Get vendor details or fallback
   const vendor = id ? mockVendorDetails[id] : null
+
+  // Pagination calculations
+  const totalPages = Math.ceil(mockOrders.length / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, mockOrders.length)
+  const paginatedOrders = useMemo(() => 
+    mockOrders.slice(startIndex, endIndex),
+    [startIndex, endIndex]
+  )
 
   if (!vendor) {
     return (
@@ -171,7 +185,7 @@ export default function VendorDetails() {
       </button>
 
       {/* Header */}
-      <div className="py-4 sm:py-6 lg:py-8">
+      <div className="mb-9">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">{vendor.name}</h1>
         <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium">Detailed performance metrics and order history</p>
       </div>
@@ -243,127 +257,226 @@ export default function VendorDetails() {
         {/* Performance Trends Chart */}
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
           <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-3 sm:mb-4">Performance Trends</h3>
-          <div className="h-48 sm:h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={trendData}
-                margin={{ top: 20, right: 20, left: 10, bottom: 20 }}
-              >
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip 
-                  formatter={(value: any, name: string) => [
+          <ChartContainer 
+            config={{
+              fillRate: {
+                label: "Fill Rate",
+                color: "var(--color-secondary)",
+              },
+              slaCompliance: {
+                label: "SLA Compliance",
+                color: "var(--color-accent)",
+              },
+            }}
+            className="h-48 sm:h-64 w-full"
+          >
+            <AreaChart
+              data={trendData}
+              margin={{ top: 20, right: 20, left: -20, bottom: 20 }}
+            >
+              <defs>
+                <linearGradient id="fillFillRate" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-secondary)" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="var(--color-secondary)" stopOpacity={0.1} />
+                </linearGradient>
+                <linearGradient id="fillSlaCompliance" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0.1} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
+              <XAxis 
+                dataKey="month" 
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis 
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                domain={[75, 100]}
+              />
+              <ChartTooltip 
+                cursor={{ stroke: '#cbd5e1', strokeWidth: 1 }}
+                content={<ChartTooltipContent 
+                  formatter={(value, name) => [
                     `${value}%`, 
                     name === 'fillRate' ? 'Fill Rate' : 'SLA Compliance'
                   ]}
-                />
-                <Line 
-                  dataKey="fillRate" 
-                  stroke="var(--color-secondary)" 
-                  strokeWidth={2} 
-                  dot={{ r: 3 }}
-                  name="fillRate"
-                />
-                <Line 
-                  dataKey="slaCompliance" 
-                  stroke="#6366f1" 
-                  strokeWidth={2} 
-                  dot={{ r: 3 }}
-                  name="slaCompliance"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+                  className="bg-white"
+                />}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="fillRate" 
+                stroke="var(--color-secondary)" 
+                strokeWidth={2}
+                fill="url(#fillFillRate)"
+                fillOpacity={1}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="slaCompliance" 
+                stroke="var(--color-accent)" 
+                strokeWidth={2}
+                fill="url(#fillSlaCompliance)"
+                fillOpacity={1}
+              />
+            </AreaChart>
+          </ChartContainer>
         </div>
 
         {/* Processing Times Chart */}
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
           <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-3 sm:mb-4">Processing Times</h3>
-          <div className="h-48 sm:h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={processingData}
-                margin={{ top: 20, right: 20, left: 10, bottom: 20 }}
-              >
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip 
-                  formatter={(value: any, name: string) => [
+          <ChartContainer 
+            config={{
+              invoiceDays: {
+                label: "Invoice Processing",
+                color: "var(--color-secondary)",
+              },
+              ticketDays: {
+                label: "Ticket Resolution",
+                color: "var(--color-accent)",
+              },
+            }}
+            className="h-48 sm:h-64 w-full"
+          >
+            <BarChart
+              data={processingData}
+              margin={{ top: 20, right: 20, left: -20, bottom: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
+              <XAxis 
+                dataKey="month" 
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis 
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <ChartTooltip 
+                cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                content={<ChartTooltipContent 
+                  formatter={(value, name) => [
                     `${value}d`, 
                     name === 'invoiceDays' ? 'Invoice Processing' : 'Ticket Resolution'
                   ]}
-                />
-                <Bar dataKey="invoiceDays" fill="#f97316" name="invoiceDays" />
-                <Bar dataKey="ticketDays" fill="#8b5cf6" name="ticketDays" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+                  className="bg-white"
+                />}
+              />
+              <Bar dataKey="invoiceDays" fill="var(--color-secondary)" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="ticketDays" fill="var(--color-accent)" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ChartContainer>
         </div>
       </div>
 
       {/* Recent Orders Table */}
-      <div className="bg-transparent rounded-xl border border-white/20">
-        <div className="py-4 sm:py-5">
-          <h3 className="text-base sm:text-xl font-semibold text-[var(--color-heading)] mb-2 sm:mb-3">Recent Orders</h3>
-          <p className="text-sm text-gray-500 mb-4">Latest order activity and status</p>
+      <div className="mb-4 sm:mb-6">
+        <div className="mb-3 sm:mb-4">
+          <h3 className="text-base sm:text-xl font-semibold text-[var(--color-heading)] mb-1 sm:mb-2">Recent Orders</h3>
+          <p className="text-sm text-gray-500">Latest order activity and status</p>
         </div>
         
         {/* Desktop Table */}
-        <div className="hidden md:block bg-white rounded-xl overflow-hidden w-full shadow-md border border-gray-100">
-          <table className="w-full min-w-full table-fixed border-separate border-spacing-0">
-            <thead className="bg-[var(--color-accent)]">
-              <tr>
-                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Order Number</th>
-                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Date</th>
-                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Status</th>
-                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Items</th>
-                <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">Amount</th>
+        <div className="hidden lg:block bg-white rounded-xl overflow-hidden shadow-md border border-gray-100">
+          <table className="w-full border-separate border-spacing-0">
+            <thead>
+              <tr className="" style={{ background: 'var(--color-accent)' }}>
+                <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+                  Order Number
+                </th>
+                <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+                  Date
+                </th>
+                <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+                  Status
+                </th>
+                <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+                  Items
+                </th>
+                <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+                  Amount
+                </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {mockOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 lg:px-6 py-4 font-medium text-[var(--color-heading)]">{order.orderNumber}</td>
-                  <td className="px-4 lg:px-6 py-4 text-gray-600 text-sm">{order.date}</td>
-                  <td className="px-4 lg:px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+            <tbody>
+              {paginatedOrders.map((order) => (
+                <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
+                  <td className="p-3 font-semibold text-[var(--color-secondary)]">{order.orderNumber}</td>
+                  <td className="p-3 text-sm text-gray-600">{order.date}</td>
+                  <td className="p-3">
+                    <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
                       {order.status}
                     </span>
                   </td>
-                  <td className="px-4 lg:px-6 py-4 text-gray-600 text-sm">{order.items}</td>
-                  <td className="px-4 lg:px-6 py-4 font-medium text-sm">{formatINR(order.amount)}</td>
+                  <td className="p-3 text-sm text-gray-600">{order.items}</td>
+                  <td className="p-3 text-sm font-medium text-gray-900">{formatINR(order.amount)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          
+          {/* Desktop Pagination */}
+          {mockOrders.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={mockOrders.length}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+              itemLabel="orders"
+              variant="desktop"
+            />
+          )}
         </div>
 
         {/* Mobile Cards */}
-        <div className="md:hidden space-y-3">
-          {mockOrders.map((order) => (
-            <div key={order.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-              <div className="flex justify-between items-start mb-3">
-                <h4 className="font-semibold text-[var(--color-heading)] text-base">{order.orderNumber}</h4>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${getStatusColor(order.status)}`}>
+        <div className="lg:hidden space-y-3">
+          {paginatedOrders.map((order) => (
+            <div key={order.id} className="rounded-xl p-4 border border-gray-200 bg-white">
+              <div className="flex items-start justify-between mb-3">
+                <h4 className="font-semibold text-[var(--color-secondary)] text-lg">{order.orderNumber}</h4>
+                <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
                   {order.status}
                 </span>
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Date:</span>
-                  <span className="text-sm font-medium">{order.date}</span>
+              <div className="grid grid-cols-2 gap-3 mb-2 text-sm">
+                <div>
+                  <span className="text-gray-500 block">Date</span>
+                  <span className="font-medium">{order.date}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Items:</span>
-                  <span className="text-sm font-medium">{order.items}</span>
+                <div>
+                  <span className="text-gray-500 block">Items</span>
+                  <span className="font-medium">{order.items}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Amount:</span>
-                  <span className="text-base font-bold text-[var(--color-heading)]">{formatINR(order.amount)}</span>
-                </div>
+              </div>
+              <div className="pt-2 border-t border-gray-100">
+                <span className="text-gray-500 text-sm block mb-1">Amount</span>
+                <span className="text-base font-bold text-[var(--color-heading)]">{formatINR(order.amount)}</span>
               </div>
             </div>
           ))}
+          
+          {/* Mobile Pagination */}
+          {mockOrders.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={mockOrders.length}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+              itemLabel="orders"
+              variant="mobile"
+            />
+          )}
         </div>
       </div>
     </div>

@@ -4,8 +4,6 @@ import { Wallet, FileText, Users, Search, ChevronDown } from 'lucide-react'
 import { CSVPDFExportButton, Pagination } from '../../../components'
 import {
   ResponsiveContainer,
-  LineChart as RechartsLineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -13,9 +11,12 @@ import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
-  Legend
+  AreaChart,
+  Area,
+  Sector
 } from 'recharts'
 import { KPICard } from '../../../components'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../../../components/ui/chart"
 
 type TrendRange = 'Weekly' | 'Monthly' | 'Yearly'
 
@@ -31,6 +32,17 @@ function LineChart({ data, range, onChangeRange }: { data: LineChartData; range:
     pending: data.pending[i] ?? 0,
     cleared: data.cleared[i] ?? 0
   }))
+
+  const chartConfig = {
+    cleared: {
+      label: "Cleared",
+      color: "var(--color-secondary)",
+    },
+    pending: {
+      label: "Pending",
+      color: "var(--color-accent)",
+    },
+  }
 
   return (
     <div className="bg-white p-3 sm:p-4 md:p-5 rounded-lg shadow-md border border-white/10">
@@ -48,72 +60,195 @@ function LineChart({ data, range, onChangeRange }: { data: LineChartData; range:
           ))}
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={300} className="sm:!h-[360px]">
-        <RechartsLineChart data={chartData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
-          <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} />
-          <YAxis tickFormatter={(val) => `₹${Number(val / 1000).toLocaleString()}k`} tick={{ fontSize: 10 }} />
-          <Tooltip formatter={(value: number | string) => `₹${Number(value).toLocaleString()}`} />
-          <Legend wrapperStyle={{ fontSize: '14px', paddingTop: 8 }} />
-          <Line type="monotone" dataKey="cleared" name="Cleared" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
-          <Line type="monotone" dataKey="pending" name="Pending" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
-        </RechartsLineChart>
-      </ResponsiveContainer>
+      <ChartContainer config={chartConfig} className="h-[300px] sm:h-[360px] w-full">
+        <AreaChart data={chartData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="fillCleared" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="var(--color-secondary)" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="var(--color-secondary)" stopOpacity={0.1} />
+            </linearGradient>
+            <linearGradient id="fillPending" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0.1} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
+          <XAxis 
+            dataKey="name" 
+            tick={{ fill: '#64748b', fontSize: 11 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis 
+            tickFormatter={(val) => `₹${Number(val / 1000).toLocaleString()}k`} 
+            tick={{ fontSize: 10 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <ChartTooltip 
+            cursor={{ stroke: '#cbd5e1', strokeWidth: 1 }}
+            content={<ChartTooltipContent 
+              formatter={(value) => [`₹${Number(value).toLocaleString()}`, ""]}
+              className="bg-white"
+            />}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="cleared" 
+            stroke="var(--color-secondary)" 
+            strokeWidth={2}
+            fill="url(#fillCleared)"
+            fillOpacity={1}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="pending" 
+            stroke="var(--color-accent)" 
+            strokeWidth={2}
+            fill="url(#fillPending)"
+            fillOpacity={1}
+          />
+        </AreaChart>
+      </ChartContainer>
     </div>
   )
 }
 
 function PieChart({ pending, cleared }: { pending: number; cleared: number }) {
-  const data = [
-    { name: 'Pending', value: pending },
-    { name: 'Cleared', value: cleared }
-  ]
-  const colors = ['#dd6b20', '#48bb78']
+  const [activePieIndex, setActivePieIndex] = React.useState<number | undefined>(undefined)
+  
   const total = pending + cleared
+  const pendingPercent = total ? Math.round((pending / total) * 100) : 0
+  const clearedPercent = total ? Math.round((cleared / total) * 100) : 0
+
+  const pieChartData = [
+    { name: 'Pending', value: pendingPercent, count: pending, fill: 'var(--color-accent)' },
+    { name: 'Cleared', value: clearedPercent, count: cleared, fill: 'var(--color-secondary)' }
+  ]
+
+  // Custom render function for active pie sector (makes it bigger on hover with animation)
+  const renderActiveShape = (props: any) => {
+    const {
+      cx,
+      cy,
+      innerRadius,
+      outerRadius,
+      startAngle,
+      endAngle,
+      fill,
+    } = props
+
+    return (
+      <g>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 15} // Expand by 15px on hover
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+          style={{
+            filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.2))',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        />
+      </g>
+    )
+  }
 
   return (
-    <div className="bg-white p-3 sm:p-4 md:p-6 rounded-xl shadow-md border border-white/20">
-      <div className="text-center text-base sm:text-lg font-semibold text-[color:var(--color-heading)] mb-3 sm:mb-4">Pending vs Cleared</div>
-      <ResponsiveContainer width="100%" height={200} className="sm:!h-[220px]">
-        <RechartsPieChart>
-          <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="45%" outerRadius="70%" paddingAngle={2} label={false}>
-            {data.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-            ))}
-          </Pie>
-          <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '11px' }} />
-          <Tooltip formatter={(value: number | string) => `${value}`} />
-        </RechartsPieChart>
-      </ResponsiveContainer>
+    <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+      <h3 className="text-base sm:text-lg font-semibold text-[color:var(--color-heading)] mb-4 sm:mb-6">Pending vs Cleared</h3>
       
-      {/* Enhanced invoice breakdown similar to Dashboard */}
-      <div className="mt-3 sm:mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
-          <div className="text-xs sm:text-sm text-gray-500 font-medium">Total Invoices</div>
-          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{total}</div>
-          <div className="text-xs sm:text-sm text-gray-400">This period</div>
-        </div>
-        <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
-          <div className="text-xs sm:text-sm text-gray-500 font-medium">Processing Rate</div>
-          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{total ? Math.round((cleared / total) * 100) : 0}%</div>
-          <div className="text-xs sm:text-sm text-gray-400">Completion rate</div>
-        </div>
-      </div>
+      {/* Two column layout: Left for content, Right for pie chart */}
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+        {/* Left side: Content */}
+        <div className="flex-1 w-full">
+          {/* Summary Stats */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div>
+              <div className="text-sm text-gray-500 mb-2 font-medium">Total Invoices</div>
+              <div className="text-3xl sm:text-4xl font-extrabold text-gray-900">{total}</div>
+              <div className="text-xs sm:text-sm text-gray-400 mt-1">This period</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500 mb-2 font-medium">Processing Rate</div>
+              <div className="text-3xl sm:text-4xl font-extrabold text-gray-900">{clearedPercent}%</div>
+              <div className="text-xs sm:text-sm text-gray-400 mt-1">Completion rate</div>
+            </div>
+          </div>
 
-      <div className="mt-3 sm:mt-4 space-y-3 sm:space-y-0 sm:grid sm:grid-cols-1 lg:grid-cols-2 sm:gap-3">
-        <div className="flex items-center gap-3 text-sm text-gray-700 font-medium">
-          <span className="w-3 h-3 rounded-sm bg-[var(--color-warning)] block flex-shrink-0" />
-          <div className="min-w-0">
-            <div className="font-semibold text-sm">Pending</div>
-            <div className="text-xs sm:text-sm text-gray-400 truncate">{pending} invoices</div>
+          {/* Legend */}
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <span className="w-4 h-4 rounded-full block flex-shrink-0 mt-0.5" style={{ background: 'var(--color-accent)' }} />
+              <div>
+                <div className="text-sm font-semibold text-gray-700 mb-0.5">Pending</div>
+                <div className="text-xs text-gray-500">{pending} invoices • {pendingPercent}%</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="w-4 h-4 rounded-full block flex-shrink-0 mt-0.5" style={{ background: 'var(--color-secondary)' }} />
+              <div>
+                <div className="text-sm font-semibold text-gray-700 mb-0.5">Cleared</div>
+                <div className="text-xs text-gray-500">{cleared} invoices • {clearedPercent}%</div>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-sm text-gray-700 font-medium">
-          <span className="w-3 h-3 rounded-sm bg-[var(--color-success)] block flex-shrink-0" />
-          <div className="min-w-0">
-            <div className="font-semibold text-sm">Cleared</div>
-            <div className="text-xs sm:text-sm text-gray-400 truncate">{cleared} invoices</div>
-          </div>
+
+        {/* Right side: Interactive Donut Chart - Centered */}
+        <div className="flex-shrink-0 flex items-center justify-center w-full lg:w-auto">
+          <ResponsiveContainer width={280} height={280}>
+            <RechartsPieChart>
+              <Pie 
+                activeIndex={activePieIndex}
+                activeShape={renderActiveShape}
+                data={pieChartData}
+                cx="50%" 
+                cy="50%" 
+                innerRadius={75} 
+                outerRadius={115} 
+                paddingAngle={2}
+                strokeWidth={0}
+                dataKey="value"
+                onMouseEnter={(_, index) => setActivePieIndex(index)}
+                onMouseLeave={() => setActivePieIndex(undefined)}
+                animationBegin={0}
+                animationDuration={400}
+                animationEasing="ease-in-out"
+              >
+                {pieChartData.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.fill}
+                    style={{
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      cursor: 'pointer'
+                    }}
+                  />
+                ))}
+              </Pie>
+              <Tooltip 
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload
+                    return (
+                      <div className="rounded-lg border bg-white p-3 shadow-lg">
+                        <div className="font-semibold text-gray-900">{data.name}</div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          <div>{data.value}% of total</div>
+                          <div>{data.count} invoices</div>
+                        </div>
+                      </div>
+                    )
+                  }
+                  return null
+                }}
+              />
+            </RechartsPieChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
@@ -184,7 +319,7 @@ export default function MoneyFlow() {
   const [statusOpen, setStatusOpen] = React.useState(false)
   const [sortOpen, setSortOpen] = React.useState(false)
   const [page, setPage] = React.useState(1)
-  const pageSize = 5
+  const pageSize = 10
 
   const filteredTransactions = transactions
     .filter((t) => {
@@ -450,54 +585,6 @@ export default function MoneyFlow() {
               />
             </div>
           </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-6">
-        <div className="bg-white p-3 sm:p-4 md:p-5 rounded-lg shadow-md border border-white/10">
-          <h3 className="mt-0 mb-3 sm:mb-4 text-base sm:text-lg font-semibold text-[color:var(--color-heading)]">Reconciliation Summary</h3>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-            <div className="text-center sm:text-left">
-              <div className="text-xs sm:text-sm text-gray-500 mb-1">Cleared invoices</div>
-              <div className="text-xl sm:text-2xl font-bold text-[color:var(--color-heading)]">{cleared}</div>
-            </div>
-            <div className="text-center sm:text-left">
-              <div className="text-xs sm:text-sm text-gray-500 mb-1">Mismatched invoices</div>
-              <div className="text-xl sm:text-2xl font-bold text-amber-600">2</div>
-            </div>
-          </div>
-          <div className="mt-3 sm:mt-4 p-3 bg-blue-50 rounded-lg">
-            <div className="text-xs sm:text-sm text-blue-700 leading-relaxed">
-              <strong>Quick notes:</strong> Review mismatched invoices and update payment statuses accordingly.
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-3 sm:p-4 md:p-5 rounded-lg shadow-md border border-white/10">
-          <h3 className="mt-0 mb-3 sm:mb-4 text-base sm:text-lg font-semibold text-[color:var(--color-heading)]">Recent Activity</h3>
-          <div className="space-y-2.5 sm:space-y-3">
-            <div className="flex items-start gap-2.5 sm:gap-3 p-2 sm:p-2.5 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></div>
-              <div className="min-w-0">
-                <div className="text-xs sm:text-sm font-medium leading-tight">Released payment INV-1005</div>
-                <div className="text-xs text-gray-500 mt-0.5">to HappyPlant Co • 09/12</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2.5 sm:gap-3 p-2 sm:p-2.5 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-amber-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></div>
-              <div className="min-w-0">
-                <div className="text-xs sm:text-sm font-medium leading-tight">Validation flagged mismatch</div>
-                <div className="text-xs text-gray-500 mt-0.5">on INV-1004 • 09/11</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2.5 sm:gap-3 p-2 sm:p-2.5 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></div>
-              <div className="min-w-0">
-                <div className="text-xs sm:text-sm font-medium leading-tight">Approved INV-1003</div>
-                <div className="text-xs text-gray-500 mt-0.5">for SharkTank Ltd • 09/08</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

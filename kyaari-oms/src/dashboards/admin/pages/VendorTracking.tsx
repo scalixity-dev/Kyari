@@ -1,11 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LineChart, Line, ResponsiveContainer, BarChart, Bar, Tooltip } from 'recharts'
-import { Pagination } from '../../../components'
-
-const sparkData = [
-  { v: 78 }, { v: 82 }, { v: 85 }, { v: 80 }, { v: 88 }, { v: 90 }, { v: 92 }
-]
+import { BarChart3, FileText, Clock } from 'lucide-react'
+import { Pagination, KPICard } from '../../../components'
 
 // Mock vendor data
 const vendorsData = [
@@ -28,13 +24,10 @@ export default function VendorTracking() {
   const vendorPerformance = { fillRate: 92, slaCompliance: 88 }
   const accounts = { avgInvoiceDays: 3.8 }
   const ops = { avgTicketDays: 1.6 }
-  const [vendorHover, setVendorHover] = useState<number | null>(null)
-  const [accountsHover, setAccountsHover] = useState<number | null>(null)
-  const [opsHover, setOpsHover] = useState<number | null>(null)
   
   // Pagination state
   const [page, setPage] = useState(1)
-  const pageSize = 5
+  const pageSize = 10
   
   const totalPages = Math.max(1, Math.ceil(vendorsData.length / pageSize))
   const startIndex = (page - 1) * pageSize
@@ -55,82 +48,28 @@ export default function VendorTracking() {
     <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
       
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Vendor Tracking</h1>
-        <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium mb-6">Performance, accounts and ops insights for vendors</p>
+        <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium mb-9">Performance, accounts and ops insights for vendors</p>
      
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
-        <div className="bg-white p-4 sm:p-5 rounded-xl shadow-md border border-white/20">
-          <div className="text-xs font-semibold text-gray-500 uppercase mb-3">Vendor Performance</div>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 sm:gap-0">
-            <div className="flex-1">
-              <div className="text-3xl sm:text-4xl font-bold text-[var(--color-primary)]">{vendorPerformance.fillRate}% {vendorHover !== null && <span className="text-sm text-gray-500">({vendorHover}%)</span>}</div>
-              <div className="text-sm text-gray-400">Fill rate</div>
-            </div>
-            <div className="flex-1 text-left sm:text-right">
-              <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{vendorPerformance.slaCompliance}%</div>
-              <div className="text-sm text-gray-400">SLA compliance</div>
-            </div>
-          </div>
-          <div className="w-full h-12 sm:h-16 mb-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={sparkData}
-                onMouseMove={(state: any) => {
-                  if (state && state.activePayload && state.activePayload.length) setVendorHover(state.activePayload[0].payload.v)
-                  else setVendorHover(null)
-                }}
-                onMouseLeave={() => setVendorHover(null)}
-              >
-                <Tooltip formatter={(value: any) => `${value}%`} />
-                <Line dataKey="v" stroke="var(--color-secondary)" strokeWidth={2} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 sm:p-5 rounded-xl shadow-md border border-white/20">
-          <div className="text-xs font-semibold text-gray-500 uppercase mb-3">Accounts</div>
-          <div className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)] mb-1">{accounts.avgInvoiceDays}d {accountsHover !== null && <span className="text-sm text-gray-500">({accountsHover}d)</span>}</div>
-          <div className="text-sm text-gray-400 mb-4">Avg invoice processing time</div>
-          <div className="h-16 sm:h-20">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={[{ v: 4 }, { v: 3 }, { v: 5 }, { v: 3 }, { v: 4 }]}
-                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
-                onMouseMove={(state: any) => {
-                  if (state && state.activePayload && state.activePayload.length) setAccountsHover(state.activePayload[0].payload.v)
-                  else setAccountsHover(null)
-                }}
-                onMouseLeave={() => setAccountsHover(null)}
-              >
-                <Tooltip formatter={(value: any) => `${value}d`} />
-                <Bar dataKey="v" fill="#6366f1" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 sm:p-5 rounded-xl shadow-md border border-white/20">
-          <div className="text-xs font-semibold text-gray-500 uppercase mb-3">Operations</div>
-          <div className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)] mb-1">{ops.avgTicketDays}d {opsHover !== null && <span className="text-sm text-gray-500">({opsHover}d)</span>}</div>
-          <div className="text-sm text-gray-400 mb-4">Avg ticket resolution time</div>
-          <div className="h-16 sm:h-20">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={[{ v: 2 }, { v: 1 }, { v: 2 }, { v: 1 }, { v: 1.5 }]}
-                margin={{ top: 4, right: 4, left: 4, bottom: 4 }}
-                onMouseMove={(state: any) => {
-                  if (state && state.activePayload && state.activePayload.length) setOpsHover(state.activePayload[0].payload.v)
-                  else setOpsHover(null)
-                }}
-                onMouseLeave={() => setOpsHover(null)}
-              >
-                <Tooltip formatter={(value: any) => `${value}d`} />
-                <Line dataKey="v" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        <KPICard
+          title="Vendor Performance"
+          value={`${vendorPerformance.fillRate}%`}
+          subtitle={`Fill rate • SLA: ${vendorPerformance.slaCompliance}%`}
+          icon={<BarChart3 size={32} />}
+        />
+        <KPICard
+          title="Accounts"
+          value={`${accounts.avgInvoiceDays}d`}
+          subtitle="Avg invoice processing time"
+          icon={<FileText size={32} />}
+        />
+        <KPICard
+          title="Operations"
+          value={`${ops.avgTicketDays}d`}
+          subtitle="Avg ticket resolution time"
+          icon={<Clock size={32} />}
+        />
       </div>
 
       <div className="bg-transparent rounded-xl">

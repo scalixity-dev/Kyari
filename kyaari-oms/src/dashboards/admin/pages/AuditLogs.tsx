@@ -418,8 +418,8 @@ export default function AuditLogs() {
       </div>
 
       {/* Table Container */}
-      <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="min-w-full divide-y divide-gray-200">
+      <div className="overflow-x-auto rounded-lg shadow-sm">
+        <table className="min-w-full">
           <thead className="bg-[var(--color-accent)]">
             <tr>
               <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
@@ -445,7 +445,7 @@ export default function AuditLogs() {
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white">
             {paginatedLogs.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
@@ -453,8 +453,8 @@ export default function AuditLogs() {
                 </td>
               </tr>
             ) : (
-              paginatedLogs.map((log, index) => (
-                <tr key={log.id} className={index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100'}>
+              paginatedLogs.map((log) => (
+                <tr key={log.id} className="bg-white hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {formatTimestamp(log.timestamp)}
                   </td>
