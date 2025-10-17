@@ -556,7 +556,7 @@ export default function AccountsSupport() {
           />
           <button 
             onClick={resetFilters} 
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 sm:py-2 text-xs sm:text-sm whitespace-nowrap hover:bg-secondary hover:text-white transition-colors duration-200 min-h-[44px] sm:min-h-auto"
+            className="bg-white text-secondary border border-secondary rounded-xl px-4 py-2.5 sm:py-2 text-xs sm:text-sm whitespace-nowrap hover:bg-secondary hover:text-white transition-colors duration-200 min-h-[44px] sm:min-h-auto"
           >
             Reset
           </button>
