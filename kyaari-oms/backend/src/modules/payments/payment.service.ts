@@ -1,6 +1,8 @@
 import { prisma } from '../../config/database';
 import s3Service from '../../services/s3.service';
-import { GRNStatus, GRNItemStatus } from '@prisma/client';
+import { GRNStatus, GRNItemStatus, NotificationPriority } from '@prisma/client';
+import { notificationService } from '../notifications/notification.service';
+import { logger } from '../../utils/logger';
 
 type DeliveryVerified = 'Yes' | 'No' | 'Partial';
 type PaymentStatusUI = 'Pending' | 'Released' | 'Overdue';
@@ -160,7 +162,22 @@ export class PaymentService {
   }
 
   static async releasePayment(purchaseOrderId: string, referenceId: string, processedById: string) {
-    const po = await prisma.purchaseOrder.findUnique({ where: { id: purchaseOrderId } });
+    const po = await prisma.purchaseOrder.findUnique({ 
+      where: { id: purchaseOrderId },
+      include: {
+        vendor: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
+        }
+      }
+    });
     if (!po) return null;
 
     const processedAt = new Date();
@@ -181,6 +198,41 @@ export class PaymentService {
         processedAt,
       },
     });
+
+    // Send notification about payment release
+    try {
+      await notificationService.sendNotificationToUser(
+        po.vendor.user.id,
+        {
+          title: 'Payment Released',
+          body: `Payment of ₹${po.totalAmount.toFixed(2)} for PO #${po.poNumber} has been released. Reference: ${referenceId}`,
+          priority: NotificationPriority.URGENT,
+          data: {
+            purchaseOrderId,
+            poNumber: po.poNumber,
+            amount: po.totalAmount.toString(),
+            referenceId,
+            paymentId: payment.id
+          }
+        }
+      );
+
+      logger.info('Payment release notification sent successfully', {
+        purchaseOrderId,
+        vendorId: po.vendor.id,
+        amount: po.totalAmount,
+        referenceId
+      });
+
+    } catch (notificationError) {
+      // Don't fail the payment release if notification fails
+      logger.warn('Failed to send payment release notification', {
+        purchaseOrderId,
+        vendorId: po.vendor.id,
+        error: notificationError instanceof Error ? notificationError.message : 'Unknown error'
+      });
+    }
+
     return payment;
   }
 

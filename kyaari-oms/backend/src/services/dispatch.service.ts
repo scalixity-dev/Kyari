@@ -2,7 +2,9 @@ import { prisma } from '../config/database';
 import { CreateDispatchRequest, DispatchResponse } from '../modules/dispatch/dispatch.dto';
 import { APP_CONSTANTS } from '../config/constants';
 import s3Service, { MulterFile } from './s3.service';
-import { DispatchStatus, AssignmentStatus } from '@prisma/client';
+import { DispatchStatus, AssignmentStatus, NotificationPriority } from '@prisma/client';
+import { notificationService } from '../modules/notifications/notification.service';
+import { logger } from '../utils/logger';
 
 class DispatchService {
   /**
@@ -140,6 +142,17 @@ class DispatchService {
       maxWait: 10000, // Maximum time to wait for transaction to start (10 seconds)
       timeout: 15000, // Maximum time for transaction to complete (15 seconds)
     });
+
+    // Send notification about dispatch creation
+    try {
+      await this.sendDispatchCreatedNotification(dispatch);
+    } catch (notificationError) {
+      // Don't fail the dispatch creation if notification fails
+      logger.warn('Failed to send dispatch creation notification', {
+        dispatchId: dispatch.id,
+        error: notificationError instanceof Error ? notificationError.message : 'Unknown error'
+      });
+    }
 
     return this.formatDispatchResponse(dispatch);
   }
@@ -466,6 +479,52 @@ class DispatchService {
       createdAt: dispatch.createdAt.toISOString(),
       updatedAt: dispatch.updatedAt.toISOString(),
     };
+  }
+
+  /**
+   * Send notification about dispatch creation
+   */
+  private async sendDispatchCreatedNotification(dispatch: any) {
+    try {
+      // Get order numbers for the dispatch
+      const orderNumbers = Array.from(new Set(
+        dispatch.items.map((item: any) => item.assignedOrderItem.orderItem.order.orderNumber)
+      ));
+
+      // Get vendor information
+      const vendorName = dispatch.vendor?.user?.companyName || 'Unknown Vendor';
+
+      // Send notification to OPERATIONS role about new dispatch
+      await notificationService.sendNotificationToRole(
+        ['OPERATIONS'],
+        {
+          title: 'New Dispatch Created',
+          body: `${vendorName} has dispatched orders: ${orderNumbers.join(', ')}. AWB: ${dispatch.awbNumber}`,
+          priority: NotificationPriority.NORMAL,
+          data: {
+            dispatchId: dispatch.id,
+            awbNumber: dispatch.awbNumber,
+            vendorId: dispatch.vendorId,
+            orderNumbers: orderNumbers.join(','),
+            logisticsPartner: dispatch.logisticsPartner
+          }
+        }
+      );
+
+      logger.info('Dispatch creation notification sent successfully', {
+        dispatchId: dispatch.id,
+        awbNumber: dispatch.awbNumber,
+        orderNumbers,
+        vendorName
+      });
+
+    } catch (error) {
+      logger.error('Error sending dispatch creation notification', {
+        dispatchId: dispatch.id,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw error;
+    }
   }
 }
 
