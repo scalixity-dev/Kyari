@@ -34,7 +34,7 @@ type SLABreachRecord = {
   avgDelayDays: number
 }
 
-type TimeRange = 'weekly' | 'monthly'
+type TimeRange = 'weekly' | 'monthly' | 'yearly'
 
 // Mock data
 const PAYMENT_AGING_DATA: PaymentAgingRecord[] = [
@@ -74,6 +74,13 @@ const PAYMENT_MONTHLY_DATA = [
   { period: 'Jul', released: 3800000, pending: 520000 },
   { period: 'Aug', released: 3500000, pending: 380000 },
   { period: 'Sep', released: 4100000, pending: 703000 },
+]
+
+const PAYMENT_YEARLY_DATA = [
+  { period: '2022', released: 38500000, pending: 5200000 },
+  { period: '2023', released: 42800000, pending: 6100000 },
+  { period: '2024', released: 45200000, pending: 5900000 },
+  { period: '2025', released: 31700000, pending: 4100000 },
 ]
 
 
@@ -186,18 +193,15 @@ function AccountsReports() {
   // Payment Aging Filters
   const [agingVendorFilter, setAgingVendorFilter] = useState('')
   const [agingStatusFilter, setAgingStatusFilter] = useState<string>('all')
-  const [isAgingFilterOpen, setIsAgingFilterOpen] = useState(false)
   
   // Compliance Filters
   const [complianceVendorFilter, setComplianceVendorFilter] = useState('')
   const [complianceFilter, setComplianceFilter] = useState<string>('all')
-  const [isComplianceFilterOpen, setIsComplianceFilterOpen] = useState(false)
   
   // SLA Filters
   const [slaTypeFilter, setSlaTypeFilter] = useState<string>('all')
   const [slaBreachSeverity, setSlaBreachSeverity] = useState<string>('all')
   const [slaDelaySeverity, setSlaDelaySeverity] = useState<string>('all')
-  const [isSlaFilterOpen, setIsSlaFilterOpen] = useState(false)
 
   // Pagination for each table
   const [agingCurrentPage, setAgingCurrentPage] = useState(1)
@@ -210,7 +214,11 @@ function AccountsReports() {
     const totalOutstanding = PAYMENT_AGING_DATA.reduce((sum, item) => sum + item.outstandingAmount, 0)
     const avgCompliance = Math.round(COMPLIANCE_DATA.reduce((sum, item) => sum + item.compliantPercentage, 0) / COMPLIANCE_DATA.length)
     const totalBreaches = SLA_BREACH_DATA.reduce((sum, item) => sum + item.breachCount, 0)
-    const currentData = timeRange === 'weekly' ? PAYMENT_WEEKLY_DATA : PAYMENT_MONTHLY_DATA
+    const currentData = timeRange === 'weekly' 
+      ? PAYMENT_WEEKLY_DATA 
+      : timeRange === 'monthly' 
+        ? PAYMENT_MONTHLY_DATA 
+        : PAYMENT_YEARLY_DATA
     const paymentsReleased = currentData[currentData.length - 1]?.released || 0
     const pendingPayments = currentData[currentData.length - 1]?.pending || 0
 
@@ -330,7 +338,11 @@ function AccountsReports() {
     setSlaCurrentPage(1)
   }, [slaTypeFilter, slaBreachSeverity, slaDelaySeverity])
 
-  const paymentChartData = timeRange === 'weekly' ? PAYMENT_WEEKLY_DATA : PAYMENT_MONTHLY_DATA
+  const paymentChartData = timeRange === 'weekly' 
+    ? PAYMENT_WEEKLY_DATA 
+    : timeRange === 'monthly' 
+      ? PAYMENT_MONTHLY_DATA 
+      : PAYMENT_YEARLY_DATA
 
   return (
     <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
@@ -382,47 +394,42 @@ function AccountsReports() {
         <div className="mb-4 bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[var(--color-heading)] text-base sm:text-lg font-medium flex items-center gap-2">
-              <Clock size={18} className="sm:w-5 sm:h-5" />
               Filters
             </h3>
-            <button
-              onClick={() => setIsAgingFilterOpen(!isAgingFilterOpen)}
-              className="text-xs sm:text-sm text-[var(--color-accent)] underline min-h-[44px] px-2 -mx-2"
-            >
-              {isAgingFilterOpen ? 'Hide' : 'Show'} Filters
-            </button>
+            <CSVPDFExportButton
+              onExportCSV={handleAgingExportCSV}
+              onExportPDF={handleAgingExportPDF}
+              buttonClassName="min-h-[42px]"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="lg:col-span-1">
+              <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Vendor</label>
+              <input
+                type="text"
+                value={agingVendorFilter}
+                onChange={e => setAgingVendorFilter(e.target.value)}
+                placeholder="Search vendor..."
+                className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
+              />
+            </div>
+
+            <div className="lg:col-span-1">
+              <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Payment Status</label>
+              <select
+                value={agingStatusFilter}
+                onChange={e => setAgingStatusFilter(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
+              >
+                <option value="all">All Status</option>
+                <option value="overdue">Overdue (&gt;30 days)</option>
+                <option value="warning">Warning (15-30 days)</option>
+                <option value="good">Good (&lt;15 days)</option>
+              </select>
+            </div>
           </div>
 
-          {isAgingFilterOpen && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div className="lg:col-span-1">
-                <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Vendor</label>
-                <input
-                  type="text"
-                  value={agingVendorFilter}
-                  onChange={e => setAgingVendorFilter(e.target.value)}
-                  placeholder="Search vendor..."
-                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
-                />
-              </div>
-
-              <div className="lg:col-span-1">
-                <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Payment Status</label>
-                <select
-                  value={agingStatusFilter}
-                  onChange={e => setAgingStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
-                >
-                  <option value="all">All Status</option>
-                  <option value="overdue">Overdue (&gt;30 days)</option>
-                  <option value="warning">Warning (15-30 days)</option>
-                  <option value="good">Good (&lt;15 days)</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {isAgingFilterOpen && (agingVendorFilter || agingStatusFilter !== 'all') && (
+          {(agingVendorFilter || agingStatusFilter !== 'all') && (
             <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
               <div className="flex flex-wrap gap-2">
                 {agingVendorFilter && (
@@ -459,14 +466,7 @@ function AccountsReports() {
           )}
         </div>
 
-        {/* Export actions (right-aligned) */}
-        <div className="mb-3 flex justify-end">
-          <CSVPDFExportButton
-            onExportCSV={handleAgingExportCSV}
-            onExportPDF={handleAgingExportPDF}
-            buttonClassName="min-h-[42px]"
-          />
-        </div>
+        
 
         <div className="rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
           {/* Desktop Table View - Hidden on Mobile */}
@@ -615,47 +615,67 @@ function AccountsReports() {
         <div className="mb-4 bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[var(--color-heading)] text-base sm:text-lg font-medium flex items-center gap-2">
-              <Clock size={18} className="sm:w-5 sm:h-5" />
               Filters
             </h3>
-            <button
-              onClick={() => setIsComplianceFilterOpen(!isComplianceFilterOpen)}
-              className="text-xs sm:text-sm text-[var(--color-accent)] underline min-h-[44px] px-2 -mx-2"
-            >
-              {isComplianceFilterOpen ? 'Hide' : 'Show'} Filters
-            </button>
+            <CSVPDFExportButton
+              onExportCSV={() => {
+                const rows = filteredCompliance.map(r => ({ vendor: r.vendor, totalInvoices: r.totalInvoices, compliantPercentage: r.compliantPercentage, issuesFound: r.issuesFound }))
+                const csv = toCSV(rows, ['vendor','totalInvoices','compliantPercentage','issuesFound'])
+                downloadFile(csv, `compliance_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;')
+              }}
+              onExportPDF={() => {
+                const rows = filteredCompliance
+                const html = `
+                  <html><head><meta charset="utf-8" />
+                  <title>Invoice vs PO Compliance</title>
+                  <style>body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;padding:16px;color:#111827}h1{font-size:18px;margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:12px;background:#fff}th,td{text-align:left;padding:8px;border-bottom:1px solid #e5e7eb}thead{background:#f9fafb}</style>
+                  </head><body>
+                  <h1>Invoice vs PO Compliance</h1>
+                  <table><thead><tr><th>Vendor</th><th>Total Invoices</th><th>Compliant %</th><th>Issues Found</th></tr></thead><tbody>
+                  ${rows.map(r => `<tr><td>${r.vendor}</td><td>${r.totalInvoices}</td><td>${r.compliantPercentage}%</td><td>${r.issuesFound}</td></tr>`).join('')}
+                  </tbody></table>
+                  </body></html>`
+                const iframe = document.createElement('iframe')
+                iframe.style.position='fixed'; iframe.style.right='0'; iframe.style.bottom='0'; iframe.style.width='0'; iframe.style.height='0'; iframe.style.border='0'
+                document.body.appendChild(iframe)
+                const doc = iframe.contentWindow?.document
+                if (!doc) { document.body.removeChild(iframe); return }
+                doc.open(); doc.write(html); doc.close()
+                const cleanup = () => { if (iframe.parentNode) document.body.removeChild(iframe) }
+                iframe.contentWindow?.addEventListener('afterprint', cleanup, { once: true })
+                setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(cleanup, 1500) }, 250)
+              }}
+              buttonClassName="min-h-[42px]"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="lg:col-span-1">
+              <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Vendor</label>
+              <input
+                type="text"
+                value={complianceVendorFilter}
+                onChange={e => setComplianceVendorFilter(e.target.value)}
+                placeholder="Search vendor..."
+                className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
+              />
+            </div>
+
+            <div className="lg:col-span-1">
+              <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Compliance Level</label>
+              <select
+                value={complianceFilter}
+                onChange={e => setComplianceFilter(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
+              >
+                <option value="all">All Levels</option>
+                <option value="high">High (≥95%)</option>
+                <option value="medium">Medium (85-94%)</option>
+                <option value="low">Low (&lt;85%)</option>
+              </select>
+            </div>
           </div>
 
-          {isComplianceFilterOpen && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              <div className="lg:col-span-1">
-                <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Vendor</label>
-                <input
-                  type="text"
-                  value={complianceVendorFilter}
-                  onChange={e => setComplianceVendorFilter(e.target.value)}
-                  placeholder="Search vendor..."
-                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px]"
-                />
-              </div>
-
-              <div className="lg:col-span-1">
-                <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Compliance Level</label>
-                <select
-                  value={complianceFilter}
-                  onChange={e => setComplianceFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
-                >
-                  <option value="all">All Levels</option>
-                  <option value="high">High (≥95%)</option>
-                  <option value="medium">Medium (85-94%)</option>
-                  <option value="low">Low (&lt;85%)</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {isComplianceFilterOpen && (complianceVendorFilter || complianceFilter !== 'all') && (
+          {(complianceVendorFilter || complianceFilter !== 'all') && (
             <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
               <div className="flex flex-wrap gap-2">
                 {complianceVendorFilter && (
@@ -692,66 +712,16 @@ function AccountsReports() {
           )}
         </div>
 
-        {/* Export actions (right-aligned) */}
-        <div className="mb-3 flex justify-end">
-          <CSVPDFExportButton
-            onExportCSV={() => {
-              const rows = filteredCompliance.map(r => ({ vendor: r.vendor, totalInvoices: r.totalInvoices, compliantPercentage: r.compliantPercentage, issuesFound: r.issuesFound }))
-              const csv = toCSV(rows, ['vendor','totalInvoices','compliantPercentage','issuesFound'])
-              downloadFile(csv, `compliance_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;')
-            }}
-            onExportPDF={() => {
-              const rows = filteredCompliance
-              const html = `
-                <html><head><meta charset="utf-8" />
-                <title>Invoice vs PO Compliance</title>
-                <style>body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;padding:16px;color:#111827}h1{font-size:18px;margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:12px;background:#fff}th,td{text-align:left;padding:8px;border-bottom:1px solid #e5e7eb}thead{background:#f9fafb}</style>
-                </head><body>
-                <h1>Invoice vs PO Compliance</h1>
-                <table><thead><tr><th>Vendor</th><th>Total Invoices</th><th>Compliant %</th><th>Issues Found</th></tr></thead><tbody>
-                ${rows.map(r => `<tr><td>${r.vendor}</td><td>${r.totalInvoices}</td><td>${r.compliantPercentage}%</td><td>${r.issuesFound}</td></tr>`).join('')}
-                </tbody></table>
-                </body></html>`
-              const iframe = document.createElement('iframe')
-              iframe.style.position='fixed'; iframe.style.right='0'; iframe.style.bottom='0'; iframe.style.width='0'; iframe.style.height='0'; iframe.style.border='0'
-              document.body.appendChild(iframe)
-              const doc = iframe.contentWindow?.document
-              if (!doc) { document.body.removeChild(iframe); return }
-              doc.open(); doc.write(html); doc.close()
-              const cleanup = () => { if (iframe.parentNode) document.body.removeChild(iframe) }
-              iframe.contentWindow?.addEventListener('afterprint', cleanup, { once: true })
-              setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(cleanup, 1500) }, 250)
-            }}
-            buttonClassName="min-h-[42px]"
-          />
-        </div>
+        
         
         {/* Overall Compliance KPI */}
-        <div className="mb-4">
-          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs sm:text-sm font-semibold text-[var(--color-primary)] uppercase tracking-wide mb-2">
-                  Overall Compliance Rate
-                </h3>
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--color-heading)]">
-                  {summaryMetrics.avgCompliance}%
-                </div>
-              </div>
-              <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 flex items-center justify-center rounded-full bg-green-100">
-                <CheckSquare size={32} className="sm:w-10 sm:h-10 lg:w-12 lg:h-12" color="#16a34a" />
-              </div>
-            </div>
-            <div className="mt-3 sm:mt-4 flex items-center gap-2">
-              <div className="flex-1 bg-gray-200 rounded-full h-2 sm:h-3">
-                <div
-                  className="bg-green-600 h-2 sm:h-3 rounded-full transition-all"
-                  style={{ width: `${summaryMetrics.avgCompliance}%` }}
-                />
-              </div>
-              <span className="text-xs sm:text-sm text-gray-600 font-medium">{summaryMetrics.avgCompliance}%</span>
-            </div>
-          </div>
+        <div className="mb-4 py-6">
+          <KPICard
+            title="Overall Compliance Rate"
+            value={`${summaryMetrics.avgCompliance}%`}
+            subtitle="Invoice-PO compliance rate"
+            icon={<CheckSquare size={32} />}
+          />
         </div>
 
         {/* Compliance Table */}
@@ -924,65 +894,86 @@ function AccountsReports() {
         <div className="mb-4 bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[var(--color-heading)] text-base sm:text-lg font-medium flex items-center gap-2">
-              <Clock size={18} className="sm:w-5 sm:h-5" />
+              
               Filters
             </h3>
-            <button
-              onClick={() => setIsSlaFilterOpen(!isSlaFilterOpen)}
-              className="text-xs sm:text-sm text-[var(--color-accent)] underline min-h-[44px] px-2 -mx-2"
-            >
-              {isSlaFilterOpen ? 'Hide' : 'Show'} Filters
-            </button>
+            <CSVPDFExportButton
+              onExportCSV={() => {
+                const rows = filteredSLABreaches.map(r => ({ slaType: r.slaType, breachCount: r.breachCount, avgDelayDays: r.avgDelayDays }))
+                const csv = toCSV(rows, ['slaType','breachCount','avgDelayDays'])
+                downloadFile(csv, `sla_breaches_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;')
+              }}
+              onExportPDF={() => {
+                const rows = filteredSLABreaches
+                const html = `
+                  <html><head><meta charset="utf-8" />
+                  <title>SLA Breaches</title>
+                  <style>body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;padding:16px;color:#111827}h1{font-size:18px;margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:12px;background:#fff}th,td{text-align:left;padding:8px;border-bottom:1px solid #e5e7eb}thead{background:#f9fafb}</style>
+                  </head><body>
+                  <h1>SLA Breaches</h1>
+                  <table><thead><tr><th>SLA Type</th><th>Breaches</th><th>Avg Delay (Days)</th></tr></thead><tbody>
+                  ${rows.map(r => `<tr><td>${r.slaType}</td><td>${r.breachCount}</td><td>${r.avgDelayDays}</td></tr>`).join('')}
+                  </tbody></table>
+                  </body></html>`
+                const iframe = document.createElement('iframe')
+                iframe.style.position='fixed'; iframe.style.right='0'; iframe.style.bottom='0'; iframe.style.width='0'; iframe.style.height='0'; iframe.style.border='0'
+                document.body.appendChild(iframe)
+                const doc = iframe.contentWindow?.document
+                if (!doc) { document.body.removeChild(iframe); return }
+                doc.open(); doc.write(html); doc.close()
+                const cleanup = () => { if (iframe.parentNode) document.body.removeChild(iframe) }
+                iframe.contentWindow?.addEventListener('afterprint', cleanup, { once: true })
+                setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(cleanup, 1500) }, 250)
+              }}
+              buttonClassName="min-h-[42px]"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="lg:col-span-1">
+              <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">SLA Type</label>
+              <select
+                value={slaTypeFilter}
+                onChange={e => setSlaTypeFilter(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
+              >
+                <option value="all">All SLA Types</option>
+                <option value="Invoice Validation">Invoice Validation</option>
+                <option value="Payment Release">Payment Release</option>
+                <option value="Delivery Confirmation">Delivery Confirmation</option>
+                <option value="Vendor Response Time">Vendor Response Time</option>
+              </select>
+            </div>
+
+            <div className="lg:col-span-1">
+              <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Breach Severity</label>
+              <select
+                value={slaBreachSeverity}
+                onChange={e => setSlaBreachSeverity(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
+              >
+                <option value="all">All Severities</option>
+                <option value="high">High (≥12 breaches)</option>
+                <option value="medium">Medium (8-11 breaches)</option>
+                <option value="low">Low (&lt;8 breaches)</option>
+              </select>
+            </div>
+
+            <div className="lg:col-span-1">
+              <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Delay Severity</label>
+              <select
+                value={slaDelaySeverity}
+                onChange={e => setSlaDelaySeverity(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
+              >
+                <option value="all">All Delays</option>
+                <option value="critical">Critical (&gt;5 days)</option>
+                <option value="moderate">Moderate (3-5 days)</option>
+                <option value="minor">Minor (≤3 days)</option>
+              </select>
+            </div>
           </div>
 
-          {isSlaFilterOpen && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              <div className="lg:col-span-1">
-                <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">SLA Type</label>
-                <select
-                  value={slaTypeFilter}
-                  onChange={e => setSlaTypeFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
-                >
-                  <option value="all">All SLA Types</option>
-                  <option value="Invoice Validation">Invoice Validation</option>
-                  <option value="Payment Release">Payment Release</option>
-                  <option value="Delivery Confirmation">Delivery Confirmation</option>
-                  <option value="Vendor Response Time">Vendor Response Time</option>
-                </select>
-              </div>
-
-              <div className="lg:col-span-1">
-                <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Breach Severity</label>
-                <select
-                  value={slaBreachSeverity}
-                  onChange={e => setSlaBreachSeverity(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
-                >
-                  <option value="all">All Severities</option>
-                  <option value="high">High (≥12 breaches)</option>
-                  <option value="medium">Medium (8-11 breaches)</option>
-                  <option value="low">Low (&lt;8 breaches)</option>
-                </select>
-              </div>
-
-              <div className="lg:col-span-1">
-                <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Delay Severity</label>
-                <select
-                  value={slaDelaySeverity}
-                  onChange={e => setSlaDelaySeverity(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
-                >
-                  <option value="all">All Delays</option>
-                  <option value="critical">Critical (&gt;5 days)</option>
-                  <option value="moderate">Moderate (3-5 days)</option>
-                  <option value="minor">Minor (≤3 days)</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {isSlaFilterOpen && (slaTypeFilter !== 'all' || slaBreachSeverity !== 'all' || slaDelaySeverity !== 'all') && (
+          {(slaTypeFilter !== 'all' || slaBreachSeverity !== 'all' || slaDelaySeverity !== 'all') && (
             <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
               <div className="flex flex-wrap gap-2">
                 {slaTypeFilter !== 'all' && (
@@ -1030,39 +1021,7 @@ function AccountsReports() {
           )}
         </div>
 
-        {/* Export actions (right-aligned) */}
-        <div className="mb-3 flex justify-end">
-          <CSVPDFExportButton
-            onExportCSV={() => {
-              const rows = filteredSLABreaches.map(r => ({ slaType: r.slaType, breachCount: r.breachCount, avgDelayDays: r.avgDelayDays }))
-              const csv = toCSV(rows, ['slaType','breachCount','avgDelayDays'])
-              downloadFile(csv, `sla_breaches_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;')
-            }}
-            onExportPDF={() => {
-              const rows = filteredSLABreaches
-              const html = `
-                <html><head><meta charset="utf-8" />
-                <title>SLA Breaches</title>
-                <style>body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;padding:16px;color:#111827}h1{font-size:18px;margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:12px;background:#fff}th,td{text-align:left;padding:8px;border-bottom:1px solid #e5e7eb}thead{background:#f9fafb}</style>
-                </head><body>
-                <h1>SLA Breaches</h1>
-                <table><thead><tr><th>SLA Type</th><th>Breaches</th><th>Avg Delay (Days)</th></tr></thead><tbody>
-                ${rows.map(r => `<tr><td>${r.slaType}</td><td>${r.breachCount}</td><td>${r.avgDelayDays}</td></tr>`).join('')}
-                </tbody></table>
-                </body></html>`
-              const iframe = document.createElement('iframe')
-              iframe.style.position='fixed'; iframe.style.right='0'; iframe.style.bottom='0'; iframe.style.width='0'; iframe.style.height='0'; iframe.style.border='0'
-              document.body.appendChild(iframe)
-              const doc = iframe.contentWindow?.document
-              if (!doc) { document.body.removeChild(iframe); return }
-              doc.open(); doc.write(html); doc.close()
-              const cleanup = () => { if (iframe.parentNode) document.body.removeChild(iframe) }
-              iframe.contentWindow?.addEventListener('afterprint', cleanup, { once: true })
-              setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(cleanup, 1500) }, 250)
-            }}
-            buttonClassName="min-h-[42px]"
-          />
-        </div>
+        {/* Export actions (moved into header above) */}
         
         {/* Full-width table with visual bars */}
         <div className="rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
@@ -1235,38 +1194,19 @@ function AccountsReports() {
         </h2>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-6 mb-4 sm:mb-6">
-          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20 border-t-4 border-t-green-600">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded-lg bg-green-100">
-                <CheckSquare size={24} className="sm:w-8 sm:h-8" color="#16a34a" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-xs font-semibold text-[var(--color-primary)] uppercase tracking-wide mb-1">
-                  Payments Released This {timeRange === 'weekly' ? 'Week' : 'Month'}
-                </h3>
-                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-heading)] break-words">
-                  ₹{summaryMetrics.paymentsReleased.toLocaleString('en-IN')}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20 border-t-4 border-t-orange-600">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded-lg bg-orange-100">
-                <Clock size={24} className="sm:w-8 sm:h-8" color="#ea580c" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-xs font-semibold text-[var(--color-primary)] uppercase tracking-wide mb-1">
-                  Pending Payments
-                </h3>
-                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-heading)] break-words">
-                  ₹{summaryMetrics.pendingPayments.toLocaleString('en-IN')}
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-6 mb-4 sm:mb-6 py-6">
+          <KPICard
+            title={`Payments Released This ${timeRange === 'weekly' ? 'Week' : 'Month'}`}
+            value={`₹${summaryMetrics.paymentsReleased.toLocaleString('en-IN')}`}
+            subtitle=""
+            icon={<CheckSquare size={32} />}
+          />
+          <KPICard
+            title="Pending Payments"
+            value={`₹${summaryMetrics.pendingPayments.toLocaleString('en-IN')}`}
+            subtitle=""
+            icon={<Clock size={32} />}
+          />
         </div>
 
         {/* Chart with Toggle */}
@@ -1293,6 +1233,16 @@ function AccountsReports() {
                 }`}
               >
                 Monthly
+              </button>
+              <button
+                onClick={() => setTimeRange('yearly')}
+                className={`flex-1 sm:flex-none px-4 py-2.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all min-h-[44px] sm:min-h-0 ${
+                  timeRange === 'yearly'
+                    ? 'bg-[var(--color-accent)] text-[var(--color-button-text)] shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 active:bg-gray-200'
+                }`}
+              >
+                Yearly
               </button>
             </div>
           </div>

@@ -26,7 +26,6 @@ const INITIAL_PAYMENTS: PaymentRecord[] = []
 function AccountsPaymentRelease() {
   const [payments, setPayments] = useState<PaymentRecord[]>(INITIAL_PAYMENTS)
   const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set())
-  const [isFilterOpen, setIsFilterOpen] = useState(true)
   const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false)
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState<PaymentRecord | null>(null)
@@ -204,56 +203,47 @@ function AccountsPaymentRelease() {
       <div className="mb-4 bg-white border border-secondary/20 rounded-xl p-3 sm:p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-heading text-secondary text-base sm:text-lg font-medium">Filters</h3>
-          <button
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="text-xs sm:text-sm text-secondary underline"
-          >
-            {isFilterOpen ? 'Hide' : 'Show'} Filters
-          </button>
         </div>
-
-        {isFilterOpen && (
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
-            <div className="flex-1 min-w-0">
-              <label className="block text-xs sm:text-sm font-medium mb-2 text-secondary">Payment Status</label>
-              <CustomDropdown
-                value={filterStatus}
-                onChange={(value) => setFilterStatus(value as PaymentStatus | '')}
-                options={[
-                  { value: '', label: 'All Statuses' },
-                  { value: 'Pending', label: 'Pending' },
-                  { value: 'Overdue', label: 'Overdue' },
-                  { value: 'Released', label: 'Released' }
-                ]}
-                placeholder="All Statuses"
-              />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <label className="block text-xs sm:text-sm font-medium mb-2 text-secondary">Delivery Verified</label>
-              <CustomDropdown
-                value={filterDeliveryVerified}
-                onChange={(value) => setFilterDeliveryVerified(value as DeliveryVerified | '')}
-                options={[
-                  { value: '', label: 'All' },
-                  { value: 'Yes', label: 'Yes' },
-                  { value: 'No', label: 'No' },
-                  { value: 'Partial', label: 'Partial' }
-                ]}
-                placeholder="All"
-              />
-            </div>
-
-            <div className="flex justify-end sm:justify-start">
-              <button 
-                onClick={resetFilters} 
-                className="bg-white text-secondary border border-secondary rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-50 transition-colors duration-200"
-              >
-                Reset
-              </button>
-            </div>
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
+          <div className="flex-1 min-w-0">
+            <label className="block text-xs sm:text-sm font-medium mb-2 text-secondary">Payment Status</label>
+            <CustomDropdown
+              value={filterStatus}
+              onChange={(value) => setFilterStatus(value as PaymentStatus | '')}
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'Pending', label: 'Pending' },
+                { value: 'Overdue', label: 'Overdue' },
+                { value: 'Released', label: 'Released' }
+              ]}
+              placeholder="All Statuses"
+            />
           </div>
-        )}
+
+          <div className="flex-1 min-w-0">
+            <label className="block text-xs sm:text-sm font-medium mb-2 text-secondary">Delivery Verified</label>
+            <CustomDropdown
+              value={filterDeliveryVerified}
+              onChange={(value) => setFilterDeliveryVerified(value as DeliveryVerified | '')}
+              options={[
+                { value: '', label: 'All' },
+                { value: 'Yes', label: 'Yes' },
+                { value: 'No', label: 'No' },
+                { value: 'Partial', label: 'Partial' }
+              ]}
+              placeholder="All"
+            />
+          </div>
+
+          <div className="flex justify-end sm:justify-start">
+            <button 
+              onClick={resetFilters} 
+              className="bg-white text-secondary border border-secondary rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-50 transition-colors duration-200"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Bulk Actions */}

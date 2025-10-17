@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { FileText, CheckSquare, X, Clock, Calendar as CalendarIcon, ChevronDown, ChevronUp } from 'lucide-react'
 import { CustomDropdown, KPICard } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
@@ -290,16 +290,7 @@ export default function Invoices() {
   const [imageLoadError, setImageLoadError] = useState(false)
 
   // Fetch invoices from API
-  useEffect(() => {
-    fetchInvoices()
-  }, [])
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [statusFilter, poSearch, linkedOrderSearch, dateFrom, dateTo])
-
-  const fetchInvoices = async () => {
+  const fetchInvoices = useCallback(async () => {
     try {
       setLoading(true)
       const response = await InvoiceApiService.getVendorInvoicesDetailed({
@@ -315,7 +306,18 @@ export default function Invoices() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchInvoices()
+  }, [fetchInvoices])
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [statusFilter, poSearch, linkedOrderSearch, dateFrom, dateTo])
+
+  // moved into useCallback above
 
   // Transform backend invoice data to UI PurchaseOrder format
   const transformInvoicesToPOs = (invoices: VendorInvoiceDetailed[]): PurchaseOrder[] => {
@@ -596,7 +598,7 @@ export default function Invoices() {
         <>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6 py-6">
         <KPICard
           title="New POs"
           value={receivedPOs.length}
@@ -672,7 +674,7 @@ export default function Invoices() {
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Status</label>
             <CustomDropdown
               value={statusFilter === 'All' ? '' : statusFilter}
-              onChange={(value) => { setStatusFilter((value || 'All') as any); setCurrentPage(1) }}
+              onChange={(value) => { setStatusFilter((value as PurchaseOrder['status']) || 'All'); setCurrentPage(1) }}
               options={[
                 { value: '', label: 'All Statuses' },
                 { value: 'Received', label: 'Received' },
@@ -799,16 +801,16 @@ export default function Invoices() {
       <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
         {/* Desktop Table */}
         <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[var(--color-accent)]">
-              <tr>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">PO Number</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Date</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Linked Orders</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Items</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Qty</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Dispatch Status</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Actions</th>
+          <table className="w-full border-separate border-spacing-0">
+            <thead>
+              <tr className="bg-[var(--color-accent)]">
+                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">PO Number</th>
+                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Date</th>
+                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Linked Orders</th>
+                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Items</th>
+                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Qty</th>
+                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Dispatch Status</th>
+                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">

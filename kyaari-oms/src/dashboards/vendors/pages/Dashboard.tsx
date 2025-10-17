@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Package, CheckSquare, AlertTriangle, Wallet, Bell, Eye, FileText, BarChart3, X, Clock } from 'lucide-react'
 import { KPICard } from '../../../components'
 // Recharts removed — charts taken out from vendor dashboard
@@ -213,6 +213,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false)
   // chart state removed
   const [allNotifications, setAllNotifications] = useState<NotificationProps[]>([
@@ -363,6 +364,15 @@ export default function Dashboard() {
     )
   }
 
+  useEffect(() => {
+    const state = location.state as { openNotifications?: boolean } | null
+    if (state?.openNotifications) {
+      setNotificationsModalOpen(true)
+      // clear the state so back/forward doesn't keep reopening
+      navigate('/vendors', { replace: true })
+    }
+  }, [location.state, navigate])
+
   return (
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       
@@ -419,7 +429,7 @@ export default function Dashboard() {
                 <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
                   <button 
                     onClick={() => setNotificationsModalOpen(true)}
-                    className="text-sm sm:text-base text-[var(--color-accent)] hover:text-[var(--color-accent)]/80 font-medium"
+                    className="text-sm sm:text-base text-[var(--color-accent)] hover:text-[var(--color-accent)]/80 font-medium cursor-pointer"
                   >
                     View all notifications →
                   </button>
@@ -443,10 +453,10 @@ export default function Dashboard() {
                       <button
                         key={index}
                         onClick={action.onClick}
-                        className={`${bgColorClass} text-white p-3 sm:p-4 rounded-xl shadow-md flex flex-col sm:flex-row lg:flex-col items-center justify-center gap-2 sm:gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all w-full flex-1 lg:flex-none min-h-[80px] sm:min-h-[100px]`}
+                        className={`${bgColorClass} text-white p-3 sm:p-4 rounded-xl shadow-md flex flex-col sm:flex-row lg:flex-col items-center justify-center gap-2 sm:gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all w-full flex-1 lg:flex-none min-h-[80px] sm:min-h-[100px] cursor-pointer`}
                       >
                         <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-lg bg-white/20 flex-shrink-0">
-                          {React.isValidElement(action.icon) ? React.cloneElement(action.icon as React.ReactElement<any>, { size: 20 }) : action.icon}
+                          {React.isValidElement(action.icon) ? React.cloneElement(action.icon as React.ReactElement<{ size?: number }>, { size: 20 }) : action.icon}
                         </div>
                         <span className="font-semibold text-xs sm:text-sm text-center leading-tight">{action.title}</span>
                       </button>
