@@ -248,7 +248,8 @@ export default function Notifications() {
   <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h2 className="font-heading text-secondary text-2xl sm:text-3xl lg:text-4xl font-semibold">Notifications</h2>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Notifications</h1>
+        <p className="text-sm sm:text-base text-gray-600">Stay updated with system alerts and messages</p>
       </div>
 
       {/* Notification Controls (custom) */}

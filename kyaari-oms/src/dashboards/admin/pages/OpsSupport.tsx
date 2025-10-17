@@ -369,9 +369,10 @@ export default function OpsSupport() {
     <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
       <div className="mb-4 sm:mb-6 lg:mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-[var(--color-heading)]">OPS Support</h2>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">OPS Support</h1>
+            <p className="text-sm sm:text-base text-gray-600">Manage operations tickets and store escalations</p>
           </div>
           <button
             onClick={() => setShowNewTicket(true)}
@@ -539,18 +540,19 @@ export default function OpsSupport() {
 
       {/* Table - Desktop view (hidden on mobile) */}
       <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
-        <table className="w-full border-separate border-spacing-0">
-          <thead>
-            <tr style={{ background: 'var(--color-accent)' }}>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Ticket ID</th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Store Name</th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Order ID</th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Issue Type</th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Priority</th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Status</th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Assigned To</th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Created Date</th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>Actions</th>
+        <div className="overflow-x-auto">
+          <table className="w-full border-separate border-spacing-0">
+            <thead>
+              <tr style={{ background: 'var(--color-accent)' }}>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Ticket ID</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Store Name</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Order ID</th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Issue Type</th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Priority</th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Status</th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Assigned To</th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Created Date</th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -638,6 +640,7 @@ export default function OpsSupport() {
             )}
           </tbody>
         </table>
+        </div>
         
         {filteredTickets.length > 0 && (
           <Pagination

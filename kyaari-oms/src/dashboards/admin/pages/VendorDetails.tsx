@@ -1,9 +1,16 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useMemo } from 'react'
 import { BarChart, Bar,  XAxis, YAxis, AreaChart, Area, CartesianGrid } from 'recharts'
-import { BarChart3, Clock, FileText, Package, CheckSquare, AlertTriangle } from 'lucide-react'
+import { BarChart3, Clock, FileText, Package, CheckSquare, AlertTriangle, Filter } from 'lucide-react'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../../../components/ui/chart"
-import { Pagination } from '../../../components'
+import { Pagination, CustomDropdown, CSVPDFExportButton } from '../../../components'
+
+interface FilterState {
+  orderNumber: string;
+  status: string;
+  amountMin: string;
+  amountMax: string;
+}
 
 // TypeScript types
 interface VendorMetrics {
@@ -140,17 +147,37 @@ export default function VendorDetails() {
   const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
+  
+  // Filter state
+  const [showFilters, setShowFilters] = useState(false)
+  const [filters, setFilters] = useState<FilterState>({
+    orderNumber: '',
+    status: '',
+    amountMin: '',
+    amountMax: ''
+  })
 
   // Get vendor details or fallback
   const vendor = id ? mockVendorDetails[id] : null
+  
+  // Filter logic
+  const filteredOrders = useMemo(() => {
+    return mockOrders.filter(order => {
+      if (filters.orderNumber && !order.orderNumber.toLowerCase().includes(filters.orderNumber.toLowerCase())) return false
+      if (filters.status && order.status !== filters.status) return false
+      if (filters.amountMin && order.amount < parseInt(filters.amountMin)) return false
+      if (filters.amountMax && order.amount > parseInt(filters.amountMax)) return false
+      return true
+    })
+  }, [filters])
 
   // Pagination calculations
-  const totalPages = Math.ceil(mockOrders.length / pageSize)
+  const totalPages = Math.ceil(filteredOrders.length / pageSize)
   const startIndex = (currentPage - 1) * pageSize
-  const endIndex = Math.min(startIndex + pageSize, mockOrders.length)
+  const endIndex = Math.min(startIndex + pageSize, filteredOrders.length)
   const paginatedOrders = useMemo(() => 
-    mockOrders.slice(startIndex, endIndex),
-    [startIndex, endIndex]
+    filteredOrders.slice(startIndex, endIndex),
+    [filteredOrders, startIndex, endIndex]
   )
 
   if (!vendor) {
@@ -173,6 +200,57 @@ export default function VendorDetails() {
   const handleBackClick = () => {
     navigate('/admin/tracking/vendors')
   }
+  
+  const handleFilterChange = (key: keyof FilterState, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }))
+    setCurrentPage(1) // Reset to first page when filter changes
+  }
+  
+  const handleResetFilters = () => {
+    setFilters({
+      orderNumber: '',
+      status: '',
+      amountMin: '',
+      amountMax: ''
+    })
+    setCurrentPage(1)
+  }
+  
+  const handleExportCSV = () => {
+    const headers = ['Order Number', 'Date', 'Status', 'Items', 'Amount (INR)']
+    const csvContent = [
+      headers.join(','),
+      ...filteredOrders.map(order => [
+        order.orderNumber,
+        order.date,
+        order.status,
+        order.items,
+        order.amount
+      ].join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vendor-orders-${id}-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const handleExportPDF = () => {
+    const content = filteredOrders.map(order => 
+      `${order.orderNumber} | ${order.date} | ${order.status} | Items: ${order.items} | ${formatINR(order.amount)}`
+    ).join('\n')
+    
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vendor-orders-${id}-${new Date().toISOString().split('T')[0]}.txt`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
@@ -186,8 +264,8 @@ export default function VendorDetails() {
 
       {/* Header */}
       <div className="mb-9">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">{vendor.name}</h1>
-        <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium">Detailed performance metrics and order history</p>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">{vendor.name}</h1>
+        <p className="text-sm sm:text-base text-gray-600">Detailed performance metrics and order history</p>
       </div>
 
       {/* KPI Cards (status-card style) */}
@@ -378,10 +456,93 @@ export default function VendorDetails() {
 
       {/* Recent Orders Table */}
       <div className="mb-4 sm:mb-6">
-        <div className="mb-3 sm:mb-4">
-          <h3 className="text-base sm:text-xl font-semibold text-[var(--color-heading)] mb-1 sm:mb-2">Recent Orders</h3>
-          <p className="text-sm text-gray-500">Latest order activity and status</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 sm:mb-4">
+          <div>
+            <h3 className="text-base sm:text-xl font-semibold text-[var(--color-heading)] mb-1 sm:mb-2">Recent Orders</h3>
+            <p className="text-sm text-gray-500">Latest order activity and status</p>
+          </div>
+          
+          {/* Filter and Export Buttons */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors min-h-[44px] sm:min-h-auto w-full sm:w-auto"
+            >
+              <Filter size={16} className="flex-shrink-0" />
+              <span className="text-sm">Filter</span>
+            </button>
+            <CSVPDFExportButton
+              onExportCSV={handleExportCSV}
+              onExportPDF={handleExportPDF}
+            />
+          </div>
         </div>
+        
+        {/* Filter Section */}
+        {showFilters && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Order Number</label>
+                <input
+                  type="text"
+                  value={filters.orderNumber}
+                  onChange={(e) => handleFilterChange('orderNumber', e.target.value)}
+                  placeholder="Search order..."
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <CustomDropdown
+                  value={filters.status}
+                  onChange={(value) => handleFilterChange('status', value)}
+                  options={[
+                    { value: '', label: 'All Status' },
+                    { value: 'Pending', label: 'Pending' },
+                    { value: 'Processing', label: 'Processing' },
+                    { value: 'Completed', label: 'Completed' },
+                    { value: 'Cancelled', label: 'Cancelled' }
+                  ]}
+                  placeholder="All Status"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Amount Range (₹)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={filters.amountMin}
+                    onChange={(e) => handleFilterChange('amountMin', e.target.value)}
+                    placeholder="Min"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px]"
+                  />
+                  <input
+                    type="number"
+                    value={filters.amountMax}
+                    onChange={(e) => handleFilterChange('amountMax', e.target.value)}
+                    placeholder="Max"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Actions</label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={handleResetFilters}
+                    className="px-4 py-2 border border-secondary rounded-md text-secondary font-medium hover:bg-gray-50 text-sm min-h-[44px]"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Desktop Table */}
         <div className="hidden lg:block bg-white rounded-xl overflow-hidden shadow-md border border-gray-100">
@@ -423,11 +584,11 @@ export default function VendorDetails() {
           </table>
           
           {/* Desktop Pagination */}
-          {mockOrders.length > 0 && (
+          {filteredOrders.length > 0 && (
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              totalItems={mockOrders.length}
+              totalItems={filteredOrders.length}
               startIndex={startIndex}
               endIndex={endIndex}
               onPageChange={setCurrentPage}
@@ -465,11 +626,11 @@ export default function VendorDetails() {
           ))}
           
           {/* Mobile Pagination */}
-          {mockOrders.length > 0 && (
+          {filteredOrders.length > 0 && (
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              totalItems={mockOrders.length}
+              totalItems={filteredOrders.length}
               startIndex={startIndex}
               endIndex={endIndex}
               onPageChange={setCurrentPage}

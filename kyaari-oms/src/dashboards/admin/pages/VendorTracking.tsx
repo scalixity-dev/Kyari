@@ -1,7 +1,15 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BarChart3, FileText, Clock } from 'lucide-react'
-import { Pagination, KPICard } from '../../../components'
+import { BarChart3, FileText, Clock, Filter } from 'lucide-react'
+import { Pagination, KPICard, CSVPDFExportButton } from '../../../components'
+
+interface FilterState {
+  vendor: string;
+  fillRateMin: string;
+  fillRateMax: string;
+  slaMin: string;
+  slaMax: string;
+}
 
 // Mock vendor data
 const vendorsData = [
@@ -29,10 +37,32 @@ export default function VendorTracking() {
   const [page, setPage] = useState(1)
   const pageSize = 10
   
-  const totalPages = Math.max(1, Math.ceil(vendorsData.length / pageSize))
+  // Filter state
+  const [showFilters, setShowFilters] = useState(false)
+  const [filters, setFilters] = useState<FilterState>({
+    vendor: '',
+    fillRateMin: '',
+    fillRateMax: '',
+    slaMin: '',
+    slaMax: ''
+  })
+  
+  // Filter logic
+  const filteredVendors = useMemo(() => {
+    return vendorsData.filter(vendor => {
+      if (filters.vendor && !vendor.name.toLowerCase().includes(filters.vendor.toLowerCase())) return false
+      if (filters.fillRateMin && vendor.fillRate < parseInt(filters.fillRateMin)) return false
+      if (filters.fillRateMax && vendor.fillRate > parseInt(filters.fillRateMax)) return false
+      if (filters.slaMin && vendor.sla < parseInt(filters.slaMin)) return false
+      if (filters.slaMax && vendor.sla > parseInt(filters.slaMax)) return false
+      return true
+    })
+  }, [filters])
+  
+  const totalPages = Math.max(1, Math.ceil(filteredVendors.length / pageSize))
   const startIndex = (page - 1) * pageSize
-  const endIndex = Math.min(startIndex + pageSize, vendorsData.length)
-  const pageVendors = vendorsData.slice(startIndex, endIndex)
+  const endIndex = Math.min(startIndex + pageSize, filteredVendors.length)
+  const pageVendors = filteredVendors.slice(startIndex, endIndex)
   
   const handleVendorClick = (vendorId: string) => {
     navigate(`/admin/vendors/${vendorId}`)
@@ -43,13 +73,66 @@ export default function VendorTracking() {
     if (value >= threshold.fair) return 'text-yellow-600'
     return 'text-red-600'
   }
+  
+  const handleFilterChange = (key: keyof FilterState, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }))
+    setPage(1) // Reset to first page when filter changes
+  }
+  
+  const handleResetFilters = () => {
+    setFilters({
+      vendor: '',
+      fillRateMin: '',
+      fillRateMax: '',
+      slaMin: '',
+      slaMax: ''
+    })
+    setPage(1)
+  }
+  
+  const handleExportCSV = () => {
+    const headers = ['Vendor', 'Fill Rate (%)', 'SLA (%)', 'Avg Invoice (days)', 'Avg Ticket (days)']
+    const csvContent = [
+      headers.join(','),
+      ...filteredVendors.map(vendor => [
+        `"${vendor.name}"`,
+        vendor.fillRate,
+        vendor.sla,
+        vendor.avgInvoice,
+        vendor.avgTicket
+      ].join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vendors-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const handleExportPDF = () => {
+    const content = filteredVendors.map(vendor => 
+      `${vendor.name} | Fill Rate: ${vendor.fillRate}% | SLA: ${vendor.sla}% | Avg Invoice: ${vendor.avgInvoice}d | Avg Ticket: ${vendor.avgTicket}d`
+    ).join('\n')
+    
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vendors-${new Date().toISOString().split('T')[0]}.txt`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
-      
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-2 font-[var(--font-heading)]">Vendor Tracking</h1>
-        <p className="text-sm sm:text-base lg:text-lg text-[var(--color-primary)] font-medium mb-9">Performance, accounts and ops insights for vendors</p>
-     
+      {/* Page Header */}
+      <div className="mb-6 sm:mb-10">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Vendor Tracking</h1>
+        <p className="text-sm sm:text-base text-gray-600">Monitor vendor performance and health metrics</p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
         <KPICard
@@ -73,10 +156,105 @@ export default function VendorTracking() {
       </div>
 
       <div className="bg-transparent rounded-xl">
-        <div className="mb-4">
-          <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-[var(--color-heading)]">Vendor health overview</h2>
-          <p className="text-sm text-gray-500 mb-4">Quick look at top vendors and their key metrics.</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-[var(--color-heading)]">Vendor health overview</h2>
+            <p className="text-sm text-gray-500">Quick look at top vendors and their key metrics.</p>
+          </div>
+          
+          {/* Filter and Export Buttons */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors min-h-[44px] sm:min-h-auto w-full sm:w-auto"
+            >
+              <Filter size={16} className="flex-shrink-0" />
+              <span className="text-sm">Filter</span>
+            </button>
+            <CSVPDFExportButton
+              onExportCSV={handleExportCSV}
+              onExportPDF={handleExportPDF}
+            />
+          </div>
         </div>
+        
+        {/* Filter Section */}
+        {showFilters && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Vendor Name</label>
+                <input
+                  type="text"
+                  value={filters.vendor}
+                  onChange={(e) => handleFilterChange('vendor', e.target.value)}
+                  placeholder="Search vendor..."
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Fill Rate Range (%)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={filters.fillRateMin}
+                    onChange={(e) => handleFilterChange('fillRateMin', e.target.value)}
+                    placeholder="Min"
+                    min="0"
+                    max="100"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px]"
+                  />
+                  <input
+                    type="number"
+                    value={filters.fillRateMax}
+                    onChange={(e) => handleFilterChange('fillRateMax', e.target.value)}
+                    placeholder="Max"
+                    min="0"
+                    max="100"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">SLA Range (%)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={filters.slaMin}
+                    onChange={(e) => handleFilterChange('slaMin', e.target.value)}
+                    placeholder="Min"
+                    min="0"
+                    max="100"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px]"
+                  />
+                  <input
+                    type="number"
+                    value={filters.slaMax}
+                    onChange={(e) => handleFilterChange('slaMax', e.target.value)}
+                    placeholder="Max"
+                    min="0"
+                    max="100"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Actions</label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={handleResetFilters}
+                    className="px-4 py-2 border border-secondary rounded-md text-secondary font-medium hover:bg-gray-50 text-sm min-h-[44px]"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Desktop Table View */}
         <div className="hidden md:block bg-header-bg rounded-xl overflow-hidden">
@@ -114,7 +292,7 @@ export default function VendorTracking() {
           <Pagination
             currentPage={page}
             totalPages={totalPages}
-            totalItems={vendorsData.length}
+            totalItems={filteredVendors.length}
             startIndex={startIndex}
             endIndex={endIndex}
             onPageChange={setPage}
@@ -160,7 +338,7 @@ export default function VendorTracking() {
           <Pagination
             currentPage={page}
             totalPages={totalPages}
-            totalItems={vendorsData.length}
+            totalItems={filteredVendors.length}
             startIndex={startIndex}
             endIndex={endIndex}
             onPageChange={setPage}

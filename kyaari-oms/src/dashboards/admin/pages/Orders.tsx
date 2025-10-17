@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
-import { Plus, Upload, Search, FileText, ChevronDown, ChevronRight, Edit, Trash2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Upload, Search, FileText, ChevronDown, ChevronRight, Edit, Trash2, Calendar as CalendarIcon } from 'lucide-react'
 import { CustomDropdown, ConfirmationModal, CSVPDFExportButton, Pagination } from '../../../components'
+import { Calendar } from '../../../components/ui/calendar'
+import { format } from 'date-fns'
 import { orderApi, type OrderListItem, type CreateOrderRequest, type Order } from '../../../services/orderApi'
 import { vendorApi, type VendorListItem } from '../../../services/vendorApi'
 import toast from 'react-hot-toast'
@@ -57,6 +59,12 @@ export default function Orders() {
   const [filterVendorId, setFilterVendorId] = useState('')
   const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('')
   const [filterSearch, setFilterSearch] = useState('')
+  const [filterFromDate, setFilterFromDate] = useState<Date | undefined>()
+  const [filterToDate, setFilterToDate] = useState<Date | undefined>()
+  const [showFromCalendar, setShowFromCalendar] = useState(false)
+  const [showToCalendar, setShowToCalendar] = useState(false)
+  const fromCalendarRef = useRef<HTMLDivElement>(null)
+  const toCalendarRef = useRef<HTMLDivElement>(null)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -141,10 +149,29 @@ export default function Orders() {
     }
   }, [filterStatus, filterVendorId, filterSearch])
 
+  // Close calendars when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fromCalendarRef.current && !fromCalendarRef.current.contains(event.target as Node)) {
+        setShowFromCalendar(false)
+      }
+      if (toCalendarRef.current && !toCalendarRef.current.contains(event.target as Node)) {
+        setShowToCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   function resetFilters() {
     setFilterVendorId('')
     setFilterStatus('')
     setFilterSearch('')
+    setFilterFromDate(undefined)
+    setFilterToDate(undefined)
+    setShowFromCalendar(false)
+    setShowToCalendar(false)
     setCurrentPage(1)
   }
 
@@ -534,9 +561,15 @@ export default function Orders() {
 
   return (
     <div className="p-4 sm:p-6 font-sans text-primary min-h-[calc(100vh-4rem)] w-full" style={{ background: 'var(--color-sharktank-bg)' }}>
+      {/* Page Header */}
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Orders</h1>
+        <p className="text-sm sm:text-base text-gray-600">Manage and track all customer orders</p>
+      </div>
+
       <div className="flex flex-col gap-4 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="font-heading text-secondary text-xl sm:text-2xl font-semibold">Orders</h2>
+        <div></div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <button
               onClick={() => setIsAddModalOpen(true)}
@@ -598,7 +631,7 @@ export default function Orders() {
 
       {isFilterOpen && (
         <div className="mb-6 bg-white border border-secondary/20 rounded-xl p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
             <input
               type="text"
               value={filterSearch}
@@ -622,6 +655,70 @@ export default function Orders() {
               placeholder="Vendor ID (optional)"
               className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" 
             />
+            
+            {/* From Date Picker */}
+            <div className="relative" ref={fromCalendarRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFromCalendar(!showFromCalendar)
+                  setShowToCalendar(false)
+                }}
+                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-xl hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 flex items-center justify-between text-left bg-white"
+              >
+                <span className={filterFromDate ? 'text-gray-900' : 'text-gray-500'}>
+                  {filterFromDate ? format(filterFromDate, 'MMM dd, yyyy') : 'From date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+              </button>
+              {showFromCalendar && (
+                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg left-0 right-0">
+                  <Calendar
+                    mode="single"
+                    selected={filterFromDate}
+                    onSelect={(date) => {
+                      setFilterFromDate(date)
+                      setShowFromCalendar(false)
+                    }}
+                    initialFocus
+                    disabled={(date) => filterToDate ? date > filterToDate : false}
+                    className="w-full"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* To Date Picker */}
+            <div className="relative" ref={toCalendarRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowToCalendar(!showToCalendar)
+                  setShowFromCalendar(false)
+                }}
+                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-xl hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 flex items-center justify-between text-left bg-white"
+              >
+                <span className={filterToDate ? 'text-gray-900' : 'text-gray-500'}>
+                  {filterToDate ? format(filterToDate, 'MMM dd, yyyy') : 'To date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+              </button>
+              {showToCalendar && (
+                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg left-0 right-0">
+                  <Calendar
+                    mode="single"
+                    selected={filterToDate}
+                    onSelect={(date) => {
+                      setFilterToDate(date)
+                      setShowToCalendar(false)
+                    }}
+                    initialFocus
+                    disabled={(date) => filterFromDate ? date < filterFromDate : false}
+                    className="w-full"
+                  />
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex justify-center sm:justify-end">
             <button 
@@ -1002,11 +1099,11 @@ export default function Orders() {
                     className="px-3 py-2.5 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors whitespace-nowrap"
                     title="Generate new order number"
                   >
-                    🔄 New
+                    <Plus className="inline w-4 h-4 mr-1" /> New
                   </button>
                   )}
                 </div>
-                {!editingOrderId && <p className="text-xs text-gray-500 mt-1">Auto-generated (click 🔄 to regenerate)</p>}
+                {!editingOrderId && <p className="text-xs text-gray-500 mt-1">Auto-generated (click icon to regenerate)</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">

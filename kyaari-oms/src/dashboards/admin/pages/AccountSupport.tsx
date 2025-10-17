@@ -349,8 +349,11 @@ export default function AccountSupport() {
     <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
       <div className="mb-4 sm:mb-6 lg:mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-[var(--color-heading)]">Account Support</h2>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Account Support</h1>
+            <p className="text-sm sm:text-base text-gray-600">Manage payment and invoice-related tickets</p>
+          </div>
           <button
             onClick={() => setShowNewTicket(true)}
             className="bg-accent text-button-text rounded-xl px-4 sm:px-5 py-2.5 min-h-[44px] border border-transparent flex items-center justify-center gap-2 whitespace-nowrap flex-shrink-0 w-full sm:w-auto"
@@ -517,37 +520,38 @@ export default function AccountSupport() {
 
       {/* Table - Desktop view */}
       <div className="hidden lg:block bg-white rounded-xl overflow-hidden shadow-md border border-gray-100">
-        <table className="w-full border-separate border-spacing-0">
-          <thead>
-            <tr className="" style={{ background: 'var(--color-accent)' }}>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
-                Ticket ID
-              </th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
-                Invoice ID
-              </th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-separate border-spacing-0">
+            <thead>
+              <tr className="" style={{ background: 'var(--color-accent)' }}>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                  Ticket ID
+                </th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                  Invoice ID
+                </th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
                 Vendor Name
               </th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
                 Issue Type
               </th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
                 Amount
               </th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
                 Priority
               </th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
                 Status
               </th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
                 Assigned To
               </th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
                 Created / Updated
               </th>
-              <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
                 Actions
               </th>
             </tr>
@@ -630,6 +634,7 @@ export default function AccountSupport() {
             )}
           </tbody>
         </table>
+        </div>
         
         {/* Desktop Pagination */}
         {filteredTickets.length > 0 && (
