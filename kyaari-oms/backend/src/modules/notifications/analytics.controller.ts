@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { notificationService } from './notification.service';
 import { deviceTokenService } from './deviceToken.service';
 import { logger } from '../../utils/logger';
+import { prisma } from '../../config/database';
 
 /**
  * Analytics Controller for Notification System
@@ -262,6 +263,164 @@ export class NotificationAnalyticsController {
       return res.status(500).json({
         success: false,
         message: 'Failed to cleanup expired tokens'
+      });
+    }
+  };
+
+  /**
+   * Broadcast notification to all users
+   * POST /api/notifications/broadcast
+   * @access Admin only
+   */
+  static broadcastNotification = async (req: Request, res: Response) => {
+    try {
+      const { title, message, priority, data } = req.body;
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'User not authenticated'
+        });
+      }
+
+      // Validate required fields
+      if (!title || !message) {
+        return res.status(400).json({
+          success: false,
+          error: 'Title and message are required'
+        });
+      }
+
+      // Create notification for all users
+      // First get all users, then send to them
+      // For now, we'll use a simple approach - get all users from the database
+      const allUsers = await prisma.user.findMany({
+        select: { id: true }
+      });
+
+      const userIds = allUsers.map((user: { id: string }) => user.id);
+
+      const notification = await notificationService.sendNotificationToUsers(
+        userIds,
+        {
+          title,
+          body: message,
+          priority: priority || 'medium',
+          data: data || {},
+        },
+        {}
+      );
+
+      logger.info('Broadcast notification sent', {
+        totalUsers: notification.totalUsers,
+        totalNotifications: notification.totalNotifications,
+        title,
+        priority: priority || 'medium',
+        sentBy: userId
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          totalUsers: notification.totalUsers,
+          totalNotifications: notification.totalNotifications,
+          title,
+          message,
+          priority: priority || 'medium'
+        },
+        message: 'Broadcast notification sent successfully'
+      });
+
+    } catch (error) {
+      logger.error('Failed to send broadcast notification', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId: req.user?.userId
+      });
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to send broadcast notification'
+      });
+    }
+  };
+
+  /**
+   * Broadcast notification to users with specific role
+   * POST /api/notifications/broadcast/role
+   * @access Admin only
+   */
+  static broadcastToRole = async (req: Request, res: Response) => {
+    try {
+      const { title, message, role, priority, data } = req.body;
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'User not authenticated'
+        });
+      }
+
+      // Validate required fields
+      if (!title || !message || !role) {
+        return res.status(400).json({
+          success: false,
+          error: 'Title, message, and role are required'
+        });
+      }
+
+      // Validate role
+      const validRoles = ['ADMIN', 'OPERATIONS', 'VENDOR', 'ACCOUNTS'];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid role. Must be one of: ' + validRoles.join(', ')
+        });
+      }
+
+      // Create notification for role
+      const notification = await notificationService.sendNotificationToRole(
+        [role],
+        {
+          title,
+          body: message,
+          priority: priority || 'medium',
+          data: data || {},
+        },
+        {}
+      );
+
+      logger.info('Role-based broadcast notification sent', {
+        totalUsers: notification.totalUsers,
+        totalNotifications: notification.totalNotifications,
+        title,
+        role,
+        priority: priority || 'medium',
+        sentBy: userId
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          totalUsers: notification.totalUsers,
+          totalNotifications: notification.totalNotifications,
+          title,
+          message,
+          role,
+          priority: priority || 'medium'
+        },
+        message: `Broadcast notification sent to all ${role} users`
+      });
+
+    } catch (error) {
+      logger.error('Failed to send role-based broadcast notification', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        role: req.body.role,
+        userId: req.user?.userId
+      });
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to send role-based broadcast notification'
       });
     }
   };

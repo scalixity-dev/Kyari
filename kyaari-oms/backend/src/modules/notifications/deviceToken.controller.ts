@@ -16,7 +16,7 @@ import { logger } from '../../utils/logger';
 
 // Validation schemas
 const registerTokenSchema = z.object({
-  token: z.string().min(140).max(200),
+  token: z.string().min(140).max(500), // Increased max length for modern FCM tokens
   deviceType: z.nativeEnum(DeviceType).optional().default(DeviceType.WEB),
   metadata: z.object({
     userAgent: z.string().optional(),
@@ -30,7 +30,7 @@ const registerTokenSchema = z.object({
 });
 
 const removeTokenSchema = z.object({
-  token: z.string().min(140).max(200)
+  token: z.string().min(140).max(500) // Increased max length for modern FCM tokens
 });
 
 export class DeviceTokenController {
@@ -60,6 +60,14 @@ export class DeviceTokenController {
       }
 
       const { token, deviceType, metadata } = validation.data;
+
+      // Log token info for debugging (only first/last 20 chars for security)
+      logger.info('Registering device token', {
+        userId,
+        tokenLength: token.length,
+        tokenPreview: `${token.substring(0, 20)}...${token.substring(token.length - 20)}`,
+        deviceType
+      });
 
       // Add client IP and enhanced metadata
       const enhancedMetadata = {
@@ -376,6 +384,57 @@ export class DeviceTokenController {
       return res.status(500).json({
         success: false,
         error: 'Health check failed'
+      });
+    }
+  }
+
+  /**
+   * Unregister a device token by tokenId
+   * DELETE /api/notifications/tokens/:tokenId
+   */
+  async unregisterToken(req: Request, res: Response) {
+    try {
+      const { tokenId } = req.params;
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'User not authenticated'
+        });
+      }
+
+      // Note: removeToken expects (userId, token), but we have tokenId
+      // We'll need to get the token by ID first or create a new service method
+      const result = await deviceTokenService.removeTokenById(tokenId, userId);
+
+      if (!result) {
+        return res.status(404).json({
+          success: false,
+          error: 'Token not found'
+        });
+      }
+
+      logger.info('Device token unregistered successfully', {
+        tokenId,
+        userId
+      });
+
+      return res.json({
+        success: true,
+        message: 'Device token unregistered successfully'
+      });
+
+    } catch (error) {
+      logger.error('Failed to unregister device token', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        tokenId: req.params.tokenId,
+        userId: req.user?.userId
+      });
+
+      return res.status(500).json({
+        success: false,
+        error: 'Internal server error'
       });
     }
   }
