@@ -95,7 +95,12 @@ export async function getFCMToken(): Promise<string | null> {
     });
 
     if (token) {
-      console.log('✅ FCM token obtained successfully:', token.substring(0, 20) + '...');
+      if (import.meta.env.DEV) {
+        const masked = `${token.slice(0, 6)}…${token.slice(-4)}`;
+        console.log('✅ FCM token obtained successfully:', masked);
+      } else {
+        console.log('✅ FCM token obtained successfully');
+      }
       return token;
     } else {
       console.warn('⚠️ No FCM token available');
