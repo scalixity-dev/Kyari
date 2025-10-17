@@ -227,7 +227,7 @@ export default function Dashboard() {
      
 
       {/* Task Center */}
-      <div className="mb-6 lg:mb-8 py-10">
+      <div className="mb-6 lg:mb-8">
         <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Actions Required Today</h2>
         
         {/* Mobile Card Layout */}

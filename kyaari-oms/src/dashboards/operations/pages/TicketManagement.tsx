@@ -104,7 +104,6 @@ export default function TicketManagement() {
   const [newComment, setNewComment] = useState('')
   const [newStatus, setNewStatus] = useState<'open' | 'under-review' | 'resolved'>('open')
   const [newAttachment, setNewAttachment] = useState<File | null>(null)
-  const [loading, setLoading] = useState<boolean>(false)
   const [pagination, setPagination] = useState<{ page: number; limit: number; total: number }>({ page: 1, limit: 20, total: 0 })
   const [viewingAttachment, setViewingAttachment] = useState<{ url: string; type: 'image' | 'pdf' | 'unknown'; name: string } | null>(null)
 
@@ -154,7 +153,6 @@ export default function TicketManagement() {
 
   const fetchTickets = async () => {
     try {
-      setLoading(true)
       const res = await TicketApi.list({
         status: filters.status as any,
         vendor: filters.vendor || undefined,
@@ -169,8 +167,6 @@ export default function TicketManagement() {
       setPagination(res.data.pagination)
     } catch (e) {
       console.error('Failed to load tickets', e)
-    } finally {
-      setLoading(false)
     }
   }
 
