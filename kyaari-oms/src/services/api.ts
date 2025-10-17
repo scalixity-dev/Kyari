@@ -374,6 +374,27 @@ export class ApiService {
   static clearAuthData(): void {
     TokenManager.clearAll()
   }
+
+  // Device Token Registration for Push Notifications
+  static async registerDeviceToken(fcmToken: string, deviceType: 'WEB' | 'MOBILE' = 'WEB', metadata?: any): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await api.post('/api/users/me/device-tokens', {
+        token: fcmToken,
+        deviceType,
+        metadata: {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          browserName: 'Web',
+          timestamp: new Date().toISOString(),
+          ...metadata
+        }
+      })
+      return { success: true, message: response.data.message }
+    } catch (error: any) {
+      console.error('Failed to register device token:', error)
+      return { success: false, message: error.message || 'Failed to register device token' }
+    }
+  }
 }
 
 // Export token manager for direct access if needed
