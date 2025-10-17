@@ -43,7 +43,7 @@ export function initializeFirebase(): boolean {
     }
 
     // Load service account credentials
-    let serviceAccount: admin.ServiceAccount;
+    let serviceAccount: any;
     try {
       serviceAccount = require(serviceAccountPath);
     } catch (error) {
@@ -54,14 +54,20 @@ export function initializeFirebase(): boolean {
       return false;
     }
 
-    // Validate service account structure
-    if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
-      logger.error('Invalid Firebase service account key structure');
+    // Validate service account structure (check snake_case keys from JSON file)
+    if (!serviceAccount.project_id || !serviceAccount.client_email || !serviceAccount.private_key) {
+      logger.error('Invalid Firebase service account key structure', {
+        hasProjectId: !!serviceAccount.project_id,
+        hasClientEmail: !!serviceAccount.client_email,
+        hasPrivateKey: !!serviceAccount.private_key,
+        actualKeys: Object.keys(serviceAccount),
+        serviceAccountType: typeof serviceAccount
+      });
       return false;
     }
 
     // Check for mock credentials (development safety)
-    if (serviceAccount.privateKey.includes('MOCK_PRIVATE_KEY_FOR_DEVELOPMENT_ONLY')) {
+    if (serviceAccount.private_key && serviceAccount.private_key.includes('MOCK_PRIVATE_KEY_FOR_DEVELOPMENT_ONLY')) {
       logger.warn('Using mock Firebase credentials - notifications will be simulated only');
       
       // In development with mock credentials, create a mock app
