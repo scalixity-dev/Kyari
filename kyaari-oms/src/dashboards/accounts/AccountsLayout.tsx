@@ -1,9 +1,10 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, FileText, Wallet, BarChart3, Bell, Search,Users, Menu, X, Clock, CheckSquare } from 'lucide-react'
+import { LayoutDashboard, Package, FileText, Wallet, BarChart3, Bell, Users, Menu, X, Clock, CheckSquare } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
 import kyariLogo from '../../assets/kyariLogo.webp'
+import { MegaSearch } from '../../components'
 
 type NotificationType = 'payment' | 'invoice' | 'order' | 'vendor' | 'support'
 
@@ -89,7 +90,6 @@ function AccountsLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { logout, user } = useAuth()
-  const [search, setSearch] = useState('')
   const [showProfile, setShowProfile] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>(sampleNotifications)
@@ -146,11 +146,6 @@ function AccountsLayout() {
     }
   }, [sidebarOpen, isMobile])
 
-  function handleSearchSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!search) return
-    navigate(`/accounts/search?q=${encodeURIComponent(search)}`)
-  }
 
   function handleLogout() {
     logout()
@@ -311,21 +306,11 @@ function AccountsLayout() {
           {!isMobile && <div className="flex-1" />}
 
           <div className="flex items-center gap-4">
-            <form onSubmit={handleSearchSubmit} className={`flex items-center gap-3 ${isMobile ? 'flex-1 mx-3' : 'w-80'}`}>
-              <div className={`relative ${isMobile ? 'w-full' : 'w-full'}`}>
-                <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-secondary)' }}>
-                  <Search size={18} />
-                </div>
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={isMobile ? "Search..." : "Mega Search"}
-                  className={`pl-11 pr-3 h-9 rounded-md bg-white text-[var(--color-secondary)] placeholder-[var(--color-secondary)] outline-none transition-all ${
-                    isMobile ? 'w-full' : 'w-full'
-                  }`}
-                />
-              </div>
-            </form>
+            <MegaSearch 
+              isMobile={isMobile} 
+              userRole="ACCOUNTS" 
+              placeholder="Mega Search"
+            />
 
             <div className="flex items-center gap-4">
             <div className="relative" ref={notificationsRef}>
