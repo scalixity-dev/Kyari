@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react'
-import { FileText, CheckSquare, X, Clock, Package, MapPin, AlertTriangle } from 'lucide-react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { FileText, CheckSquare, X, Clock, Package, MapPin, AlertTriangle, Calendar as CalendarIcon } from 'lucide-react'
 import DispatchApiService, { type DispatchResponse } from '../../../services/dispatchApi'
-import { InvoiceApiService } from '../../../services/invoiceApi'
+import { InvoiceApiService, type VendorInvoiceDetailed, type VendorPurchaseOrderItem } from '../../../services/invoiceApi'
 import toast from 'react-hot-toast'
 import { format, parseISO } from 'date-fns'
-import { KPICard } from '../../../components'
+import { CustomDropdown, KPICard } from '../../../components'
+import { Pagination } from '../../../components/ui/Pagination'
+import { Calendar } from '../../../components/ui/calendar'
 
 interface DispatchOrder {
   id: string
@@ -255,42 +257,44 @@ export default function Dispatch() {
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<DispatchOrder | null>(null)
 
-  // Fetch dispatches on mount
-  useEffect(() => {
-    fetchDispatchesAndInvoices()
-  }, [])
+  // Filters
+  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<DispatchOrder['status'] | ''>('')
+  const [verificationFilter, setVerificationFilter] = useState<NonNullable<DispatchOrder['storeVerification']> | ''>('')
+  const [dateFrom, setDateFrom] = useState('') // yyyy-mm-dd
+  const [dateTo, setDateTo] = useState('')
+  const [dateFromDate, setDateFromDate] = useState<Date | undefined>()
+  const [dateToDate, setDateToDate] = useState<Date | undefined>()
+  const [showFromCalendar, setShowFromCalendar] = useState(false)
+  const [showToCalendar, setShowToCalendar] = useState(false)
+  const fromCalendarRef = useRef<HTMLDivElement>(null)
+  const toCalendarRef = useRef<HTMLDivElement>(null)
 
-  const fetchDispatchesAndInvoices = async () => {
+  // Pagination
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const itemsPerPage = 10
+
+  // Fetch dispatches on mount
+  const fetchDispatchesAndInvoices = useCallback(async () => {
     try {
       setLoading(true)
-      
-      // Fetch both dispatches and invoices in parallel
       const [dispatchResponse, invoiceResponse] = await Promise.all([
         DispatchApiService.getMyDispatches({ limit: 100 }),
         InvoiceApiService.getVendorInvoicesDetailed({ limit: 100 })
       ])
 
-      // Transform existing dispatches
       const existingDispatches = transformDispatchesToUI(dispatchResponse.data.dispatches)
-      
-      // Create "Ready for Dispatch" orders from invoices created by accounts team
-      // These are orders where accounts has created invoice/PO, ready for vendor to dispatch
       const readyToDispatch = invoiceResponse.data.invoices
-        .filter(invoice => {
-          // Check if any assignment item is NOT yet dispatched
-          const hasUndispatchedItems = invoice.purchaseOrder.items.some((item: any) => {
+        .filter((invoice) => {
+          return invoice.purchaseOrder.items.some((item) => {
             const assignmentStatus = item.assignedOrderItem.status
-            // Include if status is INVOICED or VENDOR_CONFIRMED (not DISPATCHED yet)
-            return assignmentStatus === 'INVOICED' || 
-                   assignmentStatus === 'VENDOR_CONFIRMED_FULL' || 
+            return assignmentStatus === 'INVOICED' ||
+                   assignmentStatus === 'VENDOR_CONFIRMED_FULL' ||
                    assignmentStatus === 'VENDOR_CONFIRMED_PARTIAL'
           })
-          
-          return hasUndispatchedItems
         })
-        .map(invoice => transformInvoiceToDispatchOrder(invoice))
+        .map((invoice) => transformInvoiceToDispatchOrder(invoice))
 
-      // Combine both lists
       const allOrders = [...readyToDispatch, ...existingDispatches]
       setDispatchOrders(allOrders)
     } catch (error) {
@@ -299,19 +303,30 @@ export default function Dispatch() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchDispatchesAndInvoices()
+  }, [fetchDispatchesAndInvoices])
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [statusFilter, verificationFilter, searchQuery, dateFrom, dateTo])
+
+  
 
   // Transform invoice to dispatch order (for Ready for Dispatch status)
-  const transformInvoiceToDispatchOrder = (invoice: any): DispatchOrder => {
+  const transformInvoiceToDispatchOrder = (invoice: VendorInvoiceDetailed): DispatchOrder => {
     const po = invoice.purchaseOrder
-    const items = po.items.map((item: any) => item.assignedOrderItem.orderItem.productName).join(', ')
-    const quantity = po.items.reduce((sum: number, item: any) => sum + item.quantity, 0)
+    const items = po.items.map((item: VendorPurchaseOrderItem) => item.assignedOrderItem.orderItem.productName).join(', ')
+    const quantity = po.items.reduce((sum: number, item: VendorPurchaseOrderItem) => sum + item.quantity, 0)
     const orderNumbers = Array.from(new Set(
-      po.items.map((item: any) => item.assignedOrderItem.orderItem.order?.clientOrderId || item.assignedOrderItem.orderItem.order?.orderNumber)
+      po.items.map((item: VendorPurchaseOrderItem) => item.assignedOrderItem.orderItem.order?.clientOrderId || item.assignedOrderItem.orderItem.order?.orderNumber)
     )).filter(Boolean).join(', ')
     
     // Extract assignment IDs and quantities for dispatch creation
-    const assignmentItems = po.items.map((item: any) => ({
+    const assignmentItems = po.items.map((item: VendorPurchaseOrderItem) => ({
       assignmentId: item.assignedOrderItem.id,
       quantity: item.quantity
     }))
@@ -493,6 +508,58 @@ export default function Dispatch() {
   const inTransit = dispatchOrders.filter(order => order.status === 'In Transit')
   const delivered = dispatchOrders.filter(order => ['Delivered - Verified', 'Delivered - Mismatch', 'Received by Store'].includes(order.status))
 
+  // Apply filters and search
+  const parseOrderDate = (d: string) => {
+    const parts = d.split('/')
+    if (parts.length !== 3) return null
+    const [dd, mm, yyyy] = parts.map(Number)
+    return new Date(yyyy, mm - 1, dd)
+  }
+
+  // Close calendars when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fromCalendarRef.current && !fromCalendarRef.current.contains(event.target as Node)) {
+        setShowFromCalendar(false)
+      }
+      if (toCalendarRef.current && !toCalendarRef.current.contains(event.target as Node)) {
+        setShowToCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const filteredOrders = dispatchOrders.filter(order => {
+    const matchesSearch = searchQuery.trim().length === 0 ||
+      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.poNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.items.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const matchesStatus = !statusFilter || order.status === statusFilter
+    const matchesVerification = !verificationFilter || order.storeVerification === verificationFilter
+
+    // Date range filter (order.date is DD/MM/YYYY)
+    const oDate = parseOrderDate(order.date)
+    if (dateFrom) {
+      const from = new Date(dateFrom + 'T00:00:00')
+      if (!oDate || oDate < from) return false
+    }
+    if (dateTo) {
+      const to = new Date(dateTo + 'T23:59:59')
+      if (!oDate || oDate > to) return false
+    }
+
+    return matchesSearch && matchesStatus && matchesVerification
+  })
+
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / itemsPerPage))
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = Math.min(filteredOrders.length, startIndex + itemsPerPage)
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
+
   return (
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden bg-[var(--color-sharktank-bg)]">
       {/* Header */}
@@ -520,7 +587,7 @@ export default function Dispatch() {
         <>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6 py-6">
         <KPICard
           title="Ready for Dispatch"
           value={readyForDispatch.length}
@@ -547,78 +614,180 @@ export default function Dispatch() {
         />
       </div>
 
-      {/* Status Flow Indicator */}
-      <div className="bg-white rounded-xl shadow-md border border-white/20 p-4 sm:p-6 mb-6 sm:mb-8">
-        <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-3 sm:mb-4">Order Status Flow</h3>
-        
-        {/* Mobile & Tablet View (Vertical) */}
-        <div className="md:hidden flex flex-col gap-2 items-center max-w-xs  mx-auto">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0">1</div>
-            <span className="text-xs sm:text-sm font-medium">Confirmed</span>
-          </div>
-          <div className="w-px h-6 bg-gray-300 ml-4 sm:ml-5"></div>
-          
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0">2</div>
-            <span className="text-xs sm:text-sm font-medium">PO Generated</span>
-          </div>
-          <div className="w-px h-6 bg-gray-300 ml-4 sm:ml-5"></div>
-          
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0">3</div>
-            <span className="text-xs sm:text-sm font-medium">Invoice Uploaded</span>
-          </div>
-          <div className="w-px h-6 bg-gray-300 ml-4 sm:ml-5"></div>
-          
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-500 text-white flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0">4</div>
-            <span className="text-xs sm:text-sm font-medium">Dispatch Marked</span>
-          </div>
-          <div className="w-px h-6 bg-gray-300 ml-4 sm:ml-5"></div>
-          
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-500 text-white flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0">5</div>
-            <span className="text-xs sm:text-sm font-medium">Store Verified</span>
-          </div>
-        </div>
-
-        {/* Desktop View (Horizontal) */}
-        <div className="hidden md:flex items-center justify-between gap-2 lg:gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium flex-shrink-0">1</div>
-            <span className="text-xs lg:text-sm font-medium whitespace-nowrap">Confirmed</span>
-          </div>
-          <div className="flex-1 h-px bg-gray-300 min-w-[20px]"></div>
-          
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium flex-shrink-0">2</div>
-            <span className="text-xs lg:text-sm font-medium whitespace-nowrap">PO Generated</span>
-          </div>
-          <div className="flex-1 h-px bg-gray-300 min-w-[20px]"></div>
-          
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium flex-shrink-0">3</div>
-            <span className="text-xs lg:text-sm font-medium whitespace-nowrap">Invoice Uploaded</span>
-          </div>
-          <div className="flex-1 h-px bg-gray-300 min-w-[20px]"></div>
-          
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-medium flex-shrink-0">4</div>
-            <span className="text-xs lg:text-sm font-medium whitespace-nowrap">Dispatch Marked</span>
-          </div>
-          <div className="flex-1 h-px bg-gray-300 min-w-[20px]"></div>
-          
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-medium flex-shrink-0">5</div>
-            <span className="text-xs lg:text-sm font-medium whitespace-nowrap">Store Verified</span>
-          </div>
-        </div>
-      </div>
+      
 
       {/* Dispatch Orders Heading */}
       <div className="mb-3 sm:mb-4">
-        <h2 className="text-base sm:text-lg md:text-xl font-semibold text-[var(--color-heading)]">Dispatch Orders</h2>
+        <div className="flex flex-col gap-3">
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-[var(--color-heading)]">Dispatch Orders</h2>
+
+          {/* Filters */}
+          <div className="bg-white rounded-xl shadow-md border border-white/20 p-3 sm:p-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Search</label>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => { setCurrentPage(1); setSearchQuery(e.target.value) }}
+                  placeholder="Search order, PO, or item"
+                  className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
+                />
+
+                <div className="hidden sm:flex sm:flex-row sm:items-center gap-2 mt-2">
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
+                    style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
+                  >
+                    Apply
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSearchQuery('')
+                      setStatusFilter('')
+                      setVerificationFilter('')
+                      setDateFrom('')
+                      setDateTo('')
+                      setDateFromDate(undefined)
+                      setDateToDate(undefined)
+                      setCurrentPage(1)
+                    }}
+                    className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
+                    style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+
+              {/* Status filter */}
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Status</label>
+                <CustomDropdown
+                  value={statusFilter}
+                  onChange={(value) => { setCurrentPage(1); setStatusFilter((value as DispatchOrder['status']) || '') }}
+                  options={[
+                    { value: '', label: 'All Statuses' },
+                    { value: 'Ready for Dispatch', label: 'Ready for Dispatch' },
+                    { value: 'Dispatch Marked', label: 'Dispatch Marked' },
+                    { value: 'In Transit', label: 'In Transit' },
+                    { value: 'Delivered - Verified', label: 'Delivered - Verified' },
+                    { value: 'Delivered - Mismatch', label: 'Delivered - Mismatch' },
+                    { value: 'Received by Store', label: 'Received by Store' },
+                  ]}
+                  placeholder="All Statuses"
+                />
+              </div>
+
+              {/* Verification filter */}
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Store Verification</label>
+                <CustomDropdown
+                  value={verificationFilter}
+                  onChange={(value) => { setCurrentPage(1); setVerificationFilter((value as DispatchOrder['storeVerification']) || '') }}
+                  options={[
+                    { value: '', label: 'All Verifications' },
+                    { value: 'Pending', label: 'Pending' },
+                    { value: 'OK', label: 'OK' },
+                    { value: 'Mismatch', label: 'Mismatch' },
+                  ]}
+                  placeholder="All Verifications"
+                />
+              </div>
+
+              {/* Date Range */}
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Date Range</label>
+                <div className="flex flex-col gap-2">
+                  <div className="relative" ref={fromCalendarRef}>
+                    <button
+                      type="button"
+                      onClick={() => { setShowFromCalendar(!showFromCalendar); setShowToCalendar(false) }}
+                      className="w-full px-3 py-2.5 sm:py-3 text-xs sm:text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
+                    >
+                      <span className={dateFromDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                        {dateFromDate ? format(dateFromDate, 'PPP') : 'From date'}
+                      </span>
+                      <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+                    </button>
+                    {showFromCalendar && (
+                      <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                        <Calendar
+                          mode="single"
+                          selected={dateFromDate}
+                          onSelect={(date) => {
+                            setDateFromDate(date)
+                            setDateFrom(date ? format(date, 'yyyy-MM-dd') : '')
+                            setShowFromCalendar(false)
+                          }}
+                          initialFocus
+                          className="w-full"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative" ref={toCalendarRef}>
+                    <button
+                      type="button"
+                      onClick={() => { setShowToCalendar(!showToCalendar); setShowFromCalendar(false) }}
+                      className="w-full px-3 py-2.5 sm:py-3 text-xs sm:text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
+                    >
+                      <span className={dateToDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                        {dateToDate ? format(dateToDate, 'PPP') : 'To date'}
+                      </span>
+                      <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+                    </button>
+                    {showToCalendar && (
+                      <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                        <Calendar
+                          mode="single"
+                          selected={dateToDate}
+                          onSelect={(date) => {
+                            setDateToDate(date)
+                            setDateTo(date ? format(date, 'yyyy-MM-dd') : '')
+                            setShowToCalendar(false)
+                          }}
+                          initialFocus
+                          disabled={(date) => (dateFromDate ? date < dateFromDate : false)}
+                          className="w-full"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile-only Filter Actions */}
+            <div className="flex sm:hidden gap-2 pt-4 mt-2">
+              <button
+                onClick={() => setCurrentPage(1)}
+                className="flex-1 px-4 py-2.5 rounded-md text-white font-medium text-sm min-h-[44px]"
+                style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
+              >
+                Apply Filters
+              </button>
+              <button
+                onClick={() => {
+                  setSearchQuery('')
+                  setStatusFilter('')
+                  setVerificationFilter('')
+                  setDateFrom('')
+                  setDateTo('')
+                  setDateFromDate(undefined)
+                  setDateToDate(undefined)
+                  setCurrentPage(1)
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px]"
+                style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Dispatch Orders Table */}
@@ -626,20 +795,20 @@ export default function Dispatch() {
         
         {/* Desktop Table */}
         <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[var(--color-accent)]">
-              <tr>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Order</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">PO Number</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Items</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Qty</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Store Verification</th>
-                <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Actions</th>
+          <table className="w-full border-separate border-spacing-0">
+            <thead>
+              <tr className="bg-[var(--color-accent)]">
+                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Order</th>
+                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">PO Number</th>
+                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Items</th>
+                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Qty</th>
+                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Status</th>
+                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Store Verification</th>
+                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {dispatchOrders.map((order) => (
+              {paginatedOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50">
                   <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                     <div>
@@ -702,7 +871,7 @@ export default function Dispatch() {
 
         {/* Mobile Cards */}
         <div className="lg:hidden divide-y divide-gray-200">
-          {dispatchOrders.map((order) => (
+          {paginatedOrders.map((order) => (
             <div key={order.id} className="p-3 sm:p-4 md:p-5">
               <div className="flex justify-between items-start mb-3 gap-3">
                 <div className="flex-1 min-w-0">
@@ -762,6 +931,38 @@ export default function Dispatch() {
             </div>
           ))}
         </div>
+
+        {/* Pagination Controls inside card for rounded look */}
+        {filteredOrders.length > 0 && (
+          <>
+            {/* Desktop */}
+            <div className="hidden lg:block">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredOrders.length}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                onPageChange={setCurrentPage}
+                itemLabel="orders"
+                variant="desktop"
+              />
+            </div>
+            {/* Mobile */}
+            <div className="lg:hidden">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredOrders.length}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                onPageChange={setCurrentPage}
+                itemLabel="orders"
+                variant="mobile"
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Dispatch Modal */}

@@ -3,6 +3,7 @@ import { FileText, Upload, Search, ChevronDown, ChevronRight, Eye, X } from 'luc
 import { CustomDropdown } from '../../../components/CustomDropdown/CustomDropdown'
 import { JsonViewerModal } from '../../../components/JsonViewerModal'
 import { Pagination } from '../../../components/ui/Pagination'
+import { Loader } from '../../../components/Loader'
 import { InvoiceApiService } from '../../../services/invoiceApi'
 import type { POOrder, POStatus } from '../../../services/invoiceApi'
 import toast from 'react-hot-toast'
@@ -37,6 +38,9 @@ function AccountsInvoices() {
   const [jsonViewerOpen, setJsonViewerOpen] = useState(false)
   const [currentJsonData, setCurrentJsonData] = useState<Record<string, unknown> | null>(null)
   const [currentInvoiceNumber, setCurrentInvoiceNumber] = useState<string>('')
+  
+  // JSON loading states
+  const [jsonLoadingStates, setJsonLoadingStates] = useState<Set<string>>(new Set())
 
   // Fetch PO orders on mount
   useEffect(() => {
@@ -149,6 +153,23 @@ function AccountsInvoices() {
     setImageLoadError(false)
   }
 
+  // Helper functions for JSON loading states
+  function setJsonLoading(orderId: string, isLoading: boolean) {
+    setJsonLoadingStates(prev => {
+      const newSet = new Set(prev)
+      if (isLoading) {
+        newSet.add(orderId)
+      } else {
+        newSet.delete(orderId)
+      }
+      return newSet
+    })
+  }
+
+  function isJsonLoading(orderId: string): boolean {
+    return jsonLoadingStates.has(orderId)
+  }
+
   // Detect file type from URL
   function getFileType(url: string): 'pdf' | 'image' | 'unknown' {
     const lowerUrl = url.toLowerCase()
@@ -175,6 +196,8 @@ function AccountsInvoices() {
   async function handleGeneratePO(order: POOrder, format: 'pdf' | 'json') {
     try {
       if (format === 'json') {
+        setJsonLoading(order.id, true)
+        
         // Generate invoice in JSON format with separate orderId and vendorId
         const invoice = await InvoiceApiService.generateInvoice({
           orderId: order.orderId, // Use the actual order ID
@@ -203,11 +226,16 @@ function AccountsInvoices() {
       }
     } catch (error) {
       console.error('Failed to generate PO:', error)
+      toast.error('Failed to generate invoice')
+    } finally {
+      setJsonLoading(order.id, false)
     }
   }
 
   async function handleViewPO(orderId: string) {
     try {
+      setJsonLoading(orderId, true)
+      
       const order = poOrders.find(o => o.id === orderId)
       if (!order?.invoiceId) {
         toast.error('No invoice data available for this order')
@@ -224,6 +252,8 @@ function AccountsInvoices() {
     } catch (error) {
       console.error('Failed to view invoice JSON:', error)
       toast.error('Failed to load invoice data')
+    } finally {
+      setJsonLoading(orderId, false)
     }
   }
 
@@ -302,7 +332,7 @@ function AccountsInvoices() {
       {/* Loading State */}
       {loading && (
         <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-accent)]"></div>
+          <Loader size="xl" color="primary" />
         </div>
       )}
 
@@ -478,19 +508,29 @@ function AccountsInvoices() {
                           {canGeneratePO ? (
                             <button 
                               onClick={() => handleGeneratePO(order, 'json')}
-                              className="rounded-md px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 text-[9px] xl:text-[10px] 2xl:text-xs flex items-center gap-0.5 bg-secondary text-white hover:opacity-90 whitespace-nowrap flex-shrink-0"
+                              disabled={isJsonLoading(order.id)}
+                              className="rounded-md px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 text-[9px] xl:text-[10px] 2xl:text-xs flex items-center gap-0.5 bg-secondary text-white hover:opacity-90 whitespace-nowrap flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Generate PO (JSON)"
                             >
-                              <FileText size={10} className="flex-shrink-0" />
+                              {isJsonLoading(order.id) ? (
+                                <Loader size="xs" color="white" className="flex-shrink-0" />
+                              ) : (
+                                <FileText size={10} className="flex-shrink-0" />
+                              )}
                               <span>JSON</span>
                             </button>
                           ) : (
                             <button 
                               onClick={() => handleViewPO(order.id)}
-                              className="rounded-md px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 text-[9px] xl:text-[10px] 2xl:text-xs flex items-center gap-0.5 bg-secondary text-white hover:opacity-90 whitespace-nowrap flex-shrink-0"
+                              disabled={isJsonLoading(order.id)}
+                              className="rounded-md px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 text-[9px] xl:text-[10px] 2xl:text-xs flex items-center gap-0.5 bg-secondary text-white hover:opacity-90 whitespace-nowrap flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                               title="View Purchase Order"
                             >
-                              <Eye size={10} className="flex-shrink-0" />
+                              {isJsonLoading(order.id) ? (
+                                <Loader size="xs" color="white" className="flex-shrink-0" />
+                              ) : (
+                                <Eye size={10} className="flex-shrink-0" />
+                              )}
                               <span>JSON</span>
                             </button>
                           )}
@@ -639,17 +679,27 @@ function AccountsInvoices() {
                     {canGeneratePO ? (
                       <button 
                         onClick={() => handleGeneratePO(order, 'json')}
-                        className="flex-1 rounded-full px-3 py-2 text-sm flex items-center justify-center gap-1 bg-secondary text-white hover:opacity-90"
+                        disabled={isJsonLoading(order.id)}
+                        className="flex-1 rounded-full px-3 py-2 text-sm flex items-center justify-center gap-1 bg-secondary text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <FileText size={14} />
+                        {isJsonLoading(order.id) ? (
+                          <Loader size="sm" color="white" />
+                        ) : (
+                          <FileText size={14} />
+                        )}
                         <span>JSON</span>
                       </button>
                     ) : (
                       <button 
                         onClick={() => handleViewPO(order.id)}
-                        className="flex-1 rounded-full px-3 py-2 text-sm flex items-center justify-center gap-1 bg-secondary text-white hover:opacity-90"
+                        disabled={isJsonLoading(order.id)}
+                        className="flex-1 rounded-full px-3 py-2 text-sm flex items-center justify-center gap-1 bg-secondary text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Eye size={14} />
+                        {isJsonLoading(order.id) ? (
+                          <Loader size="sm" color="white" />
+                        ) : (
+                          <Eye size={14} />
+                        )}
                         <span>JSON</span>
                       </button>
                     )}
@@ -683,7 +733,7 @@ function AccountsInvoices() {
           aria-modal="true"
           aria-labelledby="invoice-modal-title"
         >
-          <div className="bg-white rounded-2xl w-full max-w-[95vw] sm:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl max-h-[95vh] flex flex-col shadow-2xl">
+          <div className="bg-white rounded-2xl w-full max-w-[90vw] sm:max-w-3xl xl:max-w-4xl 2xl:max-w-5xl max-h-[95vh] flex flex-col shadow-2xl transform translate-x-6 sm:translate-x-8 xl:translate-x-16">
             {/* Header - Fixed */}
             <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 xl:px-7 xl:py-5 2xl:px-8 2xl:py-6 border-b border-gray-200 flex-shrink-0">
               <h3 id="invoice-modal-title" className="font-heading text-secondary font-normal text-lg sm:text-xl xl:text-2xl 2xl:text-3xl">

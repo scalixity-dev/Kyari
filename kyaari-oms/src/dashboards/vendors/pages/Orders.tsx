@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react'
-import { CheckSquare, X, AlertTriangle, Clock, FileText, ChevronDown, ChevronUp, Package } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { CheckSquare, X, AlertTriangle, Clock, FileText, ChevronDown, ChevronUp, Package, Calendar as CalendarIcon } from 'lucide-react'
 import { AssignmentApiService } from '@/services/assignmentApi'
-import { KPICard } from '../../../components'
+import { KPICard, CustomDropdown } from '../../../components'
 import { Pagination } from '../../../components/ui/Pagination'
 import type { AssignmentOrder, AssignmentProduct } from '@/services/assignmentApi'
+import { Calendar } from '../../../components/ui/calendar'
+import { format } from 'date-fns'
 
 type Product = AssignmentProduct
 type Order = AssignmentOrder
@@ -222,10 +224,27 @@ export default function Orders() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
+  // Filters (mirroring Invoices)
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Confirmed' | 'Partially Confirmed' | 'Declined' | 'Waiting for PO' | 'PO Received' | 'Mixed'>('All')
+  const [orderSearch, setOrderSearch] = useState('')
+  const [dateFrom, setDateFrom] = useState('') // yyyy-mm-dd
+  const [dateTo, setDateTo] = useState('')
+  const [dateFromDate, setDateFromDate] = useState<Date | undefined>()
+  const [dateToDate, setDateToDate] = useState<Date | undefined>()
+  const [showFromCalendar, setShowFromCalendar] = useState(false)
+  const [showToCalendar, setShowToCalendar] = useState(false)
+  const fromCalendarRef = useRef<HTMLDivElement>(null)
+  const toCalendarRef = useRef<HTMLDivElement>(null)
+
   // Fetch assignments on component mount
   useEffect(() => {
     loadAssignments()
   }, [])
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [statusFilter, orderSearch, dateFrom, dateTo])
 
   const loadAssignments = async () => {
     try {
@@ -346,11 +365,52 @@ export default function Orders() {
   const confirmedOrders = orders.filter(order => ['Confirmed', 'Partially Confirmed', 'PO Received', 'Mixed'].includes(order.overallStatus))
   const declinedOrders = orders.filter(order => order.overallStatus === 'Declined')
 
+  const parseOrderDate = (d: string) => {
+    // date formatted as DD/MM/YYYY
+    const parts = d.split('/')
+    if (parts.length !== 3) return null
+    const [dd, mm, yyyy] = parts.map(Number)
+    return new Date(yyyy, mm - 1, dd)
+  }
+
+  // Close calendars when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fromCalendarRef.current && !fromCalendarRef.current.contains(event.target as Node)) {
+        setShowFromCalendar(false)
+      }
+      if (toCalendarRef.current && !toCalendarRef.current.contains(event.target as Node)) {
+        setShowToCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const filteredOrders = orders.filter(order => {
+    if (statusFilter !== 'All' && order.overallStatus !== statusFilter) return false
+
+    if (orderSearch.trim() && !order.orderNumber.toLowerCase().includes(orderSearch.trim().toLowerCase())) return false
+
+    const oDate = parseOrderDate(order.date)
+    if (dateFrom) {
+      const from = new Date(dateFrom + 'T00:00:00')
+      if (!oDate || oDate < from) return false
+    }
+    if (dateTo) {
+      const to = new Date(dateTo + 'T23:59:59')
+      if (!oDate || oDate > to) return false
+    }
+
+    return true
+  })
+
   // Pagination calculations
-  const totalPages = Math.ceil(orders.length / itemsPerPage)
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = Math.min(startIndex + itemsPerPage, orders.length)
-  const paginatedOrders = orders.slice(startIndex, endIndex)
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredOrders.length)
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
@@ -386,7 +446,7 @@ export default function Orders() {
         <>
 
       {/* Summary KPI Cards (admin-style) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-16 sm:gap-4 mb-6 py-6">
         <KPICard
           title="Pending Orders"
           value={pendingOrders.length}
@@ -420,18 +480,172 @@ export default function Orders() {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 pb-3 sm:pb-4 mb-4 sm:mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Order#</label>
+            <input
+              type="text"
+              value={orderSearch}
+              onChange={(e) => setOrderSearch(e.target.value)}
+              placeholder="Search order number"
+              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto mb-2"
+            />
+
+            <div className="hidden sm:flex sm:flex-row sm:items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(1)}
+                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
+                style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
+              >
+                Apply
+              </button>
+              <button
+                onClick={() => {
+                  setStatusFilter('All')
+                  setOrderSearch('')
+                  setDateFrom('')
+                  setDateTo('')
+                  setDateFromDate(undefined)
+                  setDateToDate(undefined)
+                  setCurrentPage(1)
+                }}
+                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
+                style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Status</label>
+            <CustomDropdown
+              value={statusFilter === 'All' ? '' : statusFilter}
+              onChange={(value) => { setStatusFilter((value || 'All') as typeof statusFilter); setCurrentPage(1) }}
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'Pending', label: 'Pending' },
+                { value: 'Confirmed', label: 'Confirmed' },
+                { value: 'Partially Confirmed', label: 'Partially Confirmed' },
+                { value: 'Declined', label: 'Declined' },
+                { value: 'Waiting for PO', label: 'Waiting for PO' },
+                { value: 'PO Received', label: 'PO Received' },
+                { value: 'Mixed', label: 'Mixed' }
+              ]}
+              placeholder="All Statuses"
+            />
+          </div>
+
+          <div className="lg:col-span-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Date Range</label>
+            <div className="flex flex-col gap-2 sm:grid sm:grid-cols-2 sm:gap-2">
+              <div className="relative" ref={fromCalendarRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFromCalendar(!showFromCalendar)
+                    setShowToCalendar(false)
+                  }}
+                  className="w-full px-3 py-2.5 sm:py-3 text-xs sm:text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
+                >
+                  <span className={dateFromDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                    {dateFromDate ? format(dateFromDate, 'PPP') : 'From date'}
+                  </span>
+                  <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+                </button>
+                {showFromCalendar && (
+                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                    <Calendar
+                      mode="single"
+                      selected={dateFromDate}
+                      onSelect={(date) => {
+                        setDateFromDate(date)
+                        setDateFrom(date ? format(date, 'yyyy-MM-dd') : '')
+                        setShowFromCalendar(false)
+                      }}
+                      initialFocus
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="relative" ref={toCalendarRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowToCalendar(!showToCalendar)
+                    setShowFromCalendar(false)
+                  }}
+                  className="w-full px-3 py-2.5 sm:py-3 text-xs sm:text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
+                >
+                  <span className={dateToDate ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                    {dateToDate ? format(dateToDate, 'PPP') : 'To date'}
+                  </span>
+                  <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+                </button>
+                {showToCalendar && (
+                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                    <Calendar
+                      mode="single"
+                      selected={dateToDate}
+                      onSelect={(date) => {
+                        setDateToDate(date)
+                        setDateTo(date ? format(date, 'yyyy-MM-dd') : '')
+                        setShowToCalendar(false)
+                      }}
+                      initialFocus
+                      disabled={(date) => (dateFromDate ? date < dateFromDate : false)}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile-only Filter Actions */}
+        <div className="flex sm:hidden gap-2 pt-4 mt-2 border-t border-gray-200">
+          <button
+            onClick={() => setCurrentPage(1)}
+            className="flex-1 px-4 py-2.5 rounded-md text-white font-medium text-sm min-h-[44px]"
+            style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
+          >
+            Apply Filters
+          </button>
+          <button
+            onClick={() => {
+              setStatusFilter('All')
+              setOrderSearch('')
+              setDateFrom('')
+              setDateTo('')
+              setDateFromDate(undefined)
+              setDateToDate(undefined)
+              setCurrentPage(1)
+            }}
+            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px]"
+            style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
       {/* Orders Table Container */}
       <div className="bg-header-bg rounded-xl overflow-hidden">
         {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full border-separate border-spacing-0">
             <thead>
-              <tr className="" style={{ background: 'var(--color-accent)' }}>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Order Details</th>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Customer</th>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Products</th>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Status</th>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Actions</th>
+              <tr className="bg-[var(--color-accent)]">
+                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Order Details</th>
+                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Customer</th>
+                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Products</th>
+                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Status</th>
+                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">

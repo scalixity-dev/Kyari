@@ -91,6 +91,7 @@ function OperationsLayout() {
   const [showProfile, setShowProfile] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>(sampleNotifications)
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const notificationsRef = useRef<HTMLDivElement>(null)
@@ -143,7 +144,6 @@ function OperationsLayout() {
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [sidebarOpen, isMobile])
-
 
   function handleLogout() {
     logout()
@@ -329,13 +329,13 @@ function OperationsLayout() {
                   isMobile ? 'w-[calc(100vw-2rem)] max-w-sm -mr-4' : 'w-96'
                 } max-h-[500px]`} style={{ background: 'white' }}>
                   {/* Notifications Header */}
-                  <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Notifications</h3>
+                  <div className="px-4 py-3 flex items-center justify-between" style={{ background: '#C3754C' }}>
+                    <h3 className="font-semibold text-white">Notifications</h3>
                     <div className="flex items-center gap-2">
                       {unreadCount > 0 && (
                         <button
                           onClick={markAllAsRead}
-                          className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                          className="text-sm text-white hover:text-white/80 flex items-center gap-1"
                         >
                           <CheckSquare size={14} />
                           Mark all read
@@ -343,7 +343,7 @@ function OperationsLayout() {
                       )}
                       <button
                         onClick={() => setShowNotifications(false)}
-                        className="text-gray-400 hover:text-gray-600"
+                        className="text-white hover:text-white/80"
                       >
                         <X size={18} />
                       </button>
@@ -408,14 +408,13 @@ function OperationsLayout() {
 
                   {/* Notifications Footer */}
                   {notifications.length > 0 && (
-                    <div className="px-4 py-3 border-t border-gray-200">
-                      <Link
-                        to="/operations/notifications"
-                        className="text-sm text-blue-600 hover:text-blue-800 flex items-center justify-center gap-1"
-                        onClick={() => setShowNotifications(false)}
+                    <div className="px-4 py-3" style={{ background: '#C3754C' }}>
+                      <button
+                        className="text-sm text-white hover:text-white/80 flex items-center justify-center gap-1 w-full cursor-pointer"
+                        onClick={() => { setShowNotifications(false); setShowNotificationsModal(true) }}
                       >
                         View all notifications
-                      </Link>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -456,10 +455,101 @@ function OperationsLayout() {
 
         {/* main footer removed per user request */}
       </main>
+
+      {/* Global Notifications Modal */}
+      {showNotificationsModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl w-full max-w-2xl md:max-w-3xl max-h-[90vh] sm:max-h-[85vh] flex flex-col">
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl sm:rounded-t-xl" style={{ borderColor: '#E4E4E4' }}>
+              <div className="flex items-center gap-2">
+                <Bell className="w-5 h-5" />
+                <h2 className="text-base sm:text-lg md:text-xl font-semibold" style={{ color: 'var(--color-heading)' }}>All Notifications</h2>
+                {notifications.some(n => !n.isRead) && (
+                  <span className="px-2 py-0.5 bg-red-500 text-white rounded-full text-xs font-medium">
+                    {notifications.filter(n => !n.isRead).length} new
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {notifications.some(n => !n.isRead) && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="px-3 py-1.5 text-xs sm:text-sm rounded-lg hover:bg-blue-50"
+                    style={{ color: 'var(--color-accent)' }}
+                  >
+                    Mark all as read
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowNotificationsModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
+                  <Bell className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mb-3 sm:mb-4" />
+                  <p className="text-gray-500 text-center text-sm sm:text-base">No notifications yet</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {notifications.map((notification) => {
+                    const IconComponent = getNotificationIcon(notification.type)
+                    return (
+                      <div key={notification.id} className={`p-3 sm:p-4 ${!notification.isRead ? 'bg-blue-50' : ''}`}>
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 rounded-full flex-shrink-0 ${
+                            notification.type === 'order' ? 'bg-green-100 text-green-600' :
+                            notification.type === 'ticket' ? 'bg-orange-100 text-orange-600' :
+                            notification.type === 'system' ? 'bg-blue-100 text-blue-600' :
+                            'bg-purple-100 text-purple-600'
+                          }`}>
+                            <IconComponent size={16} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <h4 className={`text-sm font-medium ${!notification.isRead ? 'text-gray-900' : 'text-gray-700'}`}>{notification.title}</h4>
+                              {!notification.isRead && <div className="w-2 h-2 bg-blue-600 rounded-full" />}
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="text-xs text-gray-400 flex items-center gap-1">
+                                <Clock size={12} />
+                                {formatTimeAgo(notification.timestamp)}
+                              </span>
+                              {!notification.isRead && (
+                                <button
+                                  onClick={() => markAsRead(notification.id)}
+                                  className="text-xs text-[var(--color-accent)]"
+                                >
+                                  Mark as read
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 sm:p-4 border-t border-gray-200 bg-gray-50">
+              <p className="text-xs sm:text-sm text-gray-600 text-center">
+                You have {notifications.length} total notification{notifications.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 export default OperationsLayout
-
-
