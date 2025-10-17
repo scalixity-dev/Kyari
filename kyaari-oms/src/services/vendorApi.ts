@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { TokenManager } from './api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Ensure API_URL always includes /api path
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
 
 export interface VendorProfile {
   id: string;

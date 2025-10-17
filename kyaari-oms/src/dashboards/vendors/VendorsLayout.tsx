@@ -1,25 +1,12 @@
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
+import { useNotifications } from '../../hooks/useNotifications'
+import type { Notification as AppNotification } from '../../services/notifications'
 import type { LucideIcon } from 'lucide-react'
 import { LayoutDashboard, Package, FileText, Bell, BarChart3, Users, Wallet, Menu, X, Clock, CheckSquare } from 'lucide-react'
 import kyariLogo from '../../assets/kyariLogo.webp'
 import { MegaSearch } from '../../components'
-
-type NotificationType = 'order' | 'invoice' | 'dispatch' | 'performance' | 'support'
-
-interface Notification {
-  id: string
-  type: NotificationType
-  title: string
-  message: string
-  timestamp: Date
-  isRead: boolean
-  action?: {
-    label: string
-    path: string
-  }
-}
 
 type NavItem = {
   to: string
@@ -37,69 +24,26 @@ const navItems: NavItem[] = [
   { to: '/vendors/profile-settings', icon: Users, label: 'Profile Settings' }
 ]
 
-// Vendor-specific sample notifications
-const sampleNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'order',
-    title: 'New Order Received',
-    message: 'Order #ORD-2025-016 for ₹15,000 requires processing',
-    timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-    isRead: false,
-    action: { label: 'View Order', path: '/vendors/orders' }
-  },
-  {
-    id: '2',
-    type: 'invoice',
-    title: 'Payment Processed',
-    message: 'Payment of ₹25,000 for Invoice #INV-2025-008 has been processed',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    isRead: false,
-    action: { label: 'View Invoice', path: '/vendors/invoices' }
-  },
-  {
-    id: '3',
-    type: 'dispatch',
-    title: 'Dispatch Reminder',
-    message: 'Order #ORD-2025-014 is due for dispatch today',
-    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-    isRead: false,
-    action: { label: 'View Dispatch', path: '/vendors/dispatch' }
-  },
-  {
-    id: '4',
-    type: 'performance',
-    title: 'Performance Update',
-    message: 'Your vendor rating has improved to 4.8/5.0',
-    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-    isRead: true,
-    action: { label: 'View Performance', path: '/vendors/performance' }
-  },
-  {
-    id: '5',
-    type: 'support',
-    title: 'Support Ticket Resolved',
-    message: 'Your support ticket #SUP-2025-003 has been resolved',
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    isRead: true,
-    action: { label: 'View Support', path: '/vendors/support' }
-  }
-]
-
 function VendorsLayout() {
   const { logout, user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  
+  // Use real notification hook with FCM + light polling
+  const { 
+    notifications, 
+    unreadCount, 
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications()
+  
   const [showProfile, setShowProfile] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
-  const [notifications, setNotifications] = useState<Notification[]>(sampleNotifications)
   const [showNotificationsModal, setShowNotificationsModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const notificationsRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
-  
-  const unreadCount = notifications.filter(n => !n.isRead).length
 
   // Check if screen is mobile/tablet
   useEffect(() => {
@@ -153,42 +97,28 @@ function VendorsLayout() {
     navigate('/')
   }
 
-  function markAsRead(notificationId: string) {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId ? { ...notif, isRead: true } : notif
-      )
-    )
-  }
-
-  function markAllAsRead() {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, isRead: true }))
-    )
-  }
-
-  function handleNotificationClick(notification: Notification) {
+  function handleNotificationClick(notification: AppNotification) {
     markAsRead(notification.id)
-    if (notification.action) {
-      navigate(notification.action.path)
+    // Navigate based on orderId if available
+    if (notification.metadata?.orderId) {
+      navigate(`/vendors/orders`)
     }
     setShowNotifications(false)
   }
 
-  function getNotificationIcon(type: NotificationType) {
+  function getNotificationIcon(type: string) {
     switch (type) {
-      case 'order': return Package
-      case 'invoice': return FileText
-      case 'dispatch': return Wallet
-      case 'performance': return BarChart3
-      case 'support': return Users
+      case 'critical': return Bell
+      case 'info': return Package
+      case 'reminder': return Clock
       default: return Bell
     }
   }
 
-  function formatTimeAgo(date: Date) {
+  function formatTimeAgo(date: Date | string) {
+    const dateObj = typeof date === 'string' ? new Date(date) : date
     const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    const diffInMinutes = Math.floor((now.getTime() - dateObj.getTime()) / (1000 * 60))
     
     if (diffInMinutes < 1) return 'Just now'
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`
@@ -364,30 +294,29 @@ function VendorsLayout() {
                     ) : (
                       notifications.map((notification) => {
                         const IconComponent = getNotificationIcon(notification.type)
+                        const isUnread = notification.status !== 'READ' && !notification.readAt
                         return (
                           <div
                             key={notification.id}
                             onClick={() => handleNotificationClick(notification)}
                             className={`px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                              !notification.isRead ? 'bg-blue-50' : ''
+                              isUnread ? 'bg-blue-50' : ''
                             }`}
                           >
                             <div className="flex items-start gap-3">
                               <div className={`p-2 rounded-full flex-shrink-0 ${
-                                notification.type === 'order' ? 'bg-green-100 text-green-600' :
-                                notification.type === 'invoice' ? 'bg-blue-100 text-blue-600' :
-                                notification.type === 'dispatch' ? 'bg-purple-100 text-purple-600' :
-                                notification.type === 'performance' ? 'bg-orange-100 text-orange-600' :
-                                'bg-red-100 text-red-600'
+                                notification.priority === 'HIGH' || notification.priority === 'URGENT' ? 'bg-red-100 text-red-600' :
+                                notification.priority === 'MEDIUM' ? 'bg-orange-100 text-orange-600' :
+                                'bg-blue-100 text-blue-600'
                               }`}>
                                 <IconComponent size={16} />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
-                                  <h4 className={`text-sm font-medium ${!notification.isRead ? 'text-gray-900' : 'text-gray-700'}`}>
+                                  <h4 className={`text-sm font-medium ${isUnread ? 'text-gray-900' : 'text-gray-700'}`}>
                                     {notification.title}
                                   </h4>
-                                  {!notification.isRead && (
+                                  {isUnread && (
                                     <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
                                   )}
                                 </div>
@@ -395,11 +324,11 @@ function VendorsLayout() {
                                 <div className="flex items-center justify-between mt-2">
                                   <span className="text-xs text-gray-400 flex items-center gap-1">
                                     <Clock size={12} />
-                                    {formatTimeAgo(notification.timestamp)}
+                                    {formatTimeAgo(notification.createdAt)}
                                   </span>
-                                  {notification.action && (
+                                  {notification.metadata?.orderId && (
                                     <span className="text-xs text-blue-600 font-medium">
-                                      {notification.action.label} →
+                                      Order: {notification.metadata.orderId}
                                     </span>
                                   )}
                                 </div>
@@ -469,14 +398,14 @@ function VendorsLayout() {
               <div className="flex items-center gap-2">
                 <Bell className="w-5 h-5" />
                 <h2 className="text-base sm:text-lg md:text-xl font-semibold" style={{ color: 'var(--color-heading)' }}>All Notifications</h2>
-                {notifications.some(n => !n.isRead) && (
+                {unreadCount > 0 && (
                   <span className="px-2 py-0.5 bg-red-500 text-white rounded-full text-xs font-medium">
-                    {notifications.filter(n => !n.isRead).length} new
+                    {unreadCount} new
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {notifications.some(n => !n.isRead) && (
+                {unreadCount > 0 && (
                   <button
                     onClick={markAllAsRead}
                     className="px-3 py-1.5 text-xs sm:text-sm rounded-lg hover:bg-blue-50"
@@ -506,29 +435,27 @@ function VendorsLayout() {
                   {notifications.map((notification) => {
                     const IconComponent = getNotificationIcon(notification.type)
                     return (
-                      <div key={notification.id} className={`p-3 sm:p-4 ${!notification.isRead ? 'bg-blue-50' : ''}`}>
+                      <div key={notification.id} className={`p-3 sm:p-4 ${notification.status !== 'READ' ? 'bg-blue-50' : ''}`}>
                         <div className="flex items-start gap-3">
                           <div className={`p-2 rounded-full flex-shrink-0 ${
-                            notification.type === 'order' ? 'bg-green-100 text-green-600' :
-                            notification.type === 'invoice' ? 'bg-blue-100 text-blue-600' :
-                            notification.type === 'dispatch' ? 'bg-purple-100 text-purple-600' :
-                            notification.type === 'performance' ? 'bg-orange-100 text-orange-600' :
-                            'bg-red-100 text-red-600'
+                            notification.priority === 'HIGH' || notification.priority === 'URGENT' ? 'bg-red-100 text-red-600' :
+                            notification.priority === 'MEDIUM' ? 'bg-orange-100 text-orange-600' :
+                            'bg-blue-100 text-blue-600'
                           }`}>
                             <IconComponent size={16} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
-                              <h4 className={`text-sm font-medium ${!notification.isRead ? 'text-gray-900' : 'text-gray-700'}`}>{notification.title}</h4>
-                              {!notification.isRead && <div className="w-2 h-2 bg-blue-600 rounded-full" />}
+                              <h4 className={`text-sm font-medium ${notification.status !== 'READ' ? 'text-gray-900' : 'text-gray-700'}`}>{notification.title}</h4>
+                              {notification.status !== 'READ' && <div className="w-2 h-2 bg-blue-600 rounded-full" />}
                             </div>
                             <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
                             <div className="flex items-center justify-between mt-2">
                               <span className="text-xs text-gray-400 flex items-center gap-1">
                                 <Clock size={12} />
-                                {formatTimeAgo(notification.timestamp)}
+                                {formatTimeAgo(notification.createdAt)}
                               </span>
-                              {!notification.isRead && (
+                              {notification.status !== 'READ' && (
                                 <button
                                   onClick={() => markAsRead(notification.id)}
                                   className="text-xs text-[var(--color-accent)]"
