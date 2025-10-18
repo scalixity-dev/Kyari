@@ -476,8 +476,13 @@ export default function Performance() {
   return (
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h2 className="text-lg sm:text-xl md:text-2xl text-[var(--color-heading)] mb-0 sm:mb-0 font-[var(--font-heading)]">Performance Analytics</h2>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2">
+          Performance Analytics
+        </h1>
+        <p className="text-sm sm:text-base text-[var(--color-primary)]">
+          Monitor your performance metrics and analytics
+        </p>
       </div>
 
       {/* Time Range Selector */}
@@ -536,7 +541,7 @@ export default function Performance() {
                 <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
               </button>
               {showFromCalendar && (
-                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg min-w-[280px]">
+                <div className="absolute z-50 mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg min-w-[280px]">
                   <Calendar
                     mode="single"
                     selected={dateFromDate}
@@ -566,7 +571,7 @@ export default function Performance() {
                 <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
               </button>
               {showToCalendar && (
-                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg min-w-[280px]">
+                <div className="absolute z-50 mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg min-w-[280px]">
                   <Calendar
                     mode="single"
                     selected={dateToDate}
@@ -591,7 +596,7 @@ export default function Performance() {
                 }
               }}
               disabled={!dateFromDate || !dateToDate}
-              className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-accent)]/90 transition-colors whitespace-nowrap h-[42px] disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-accent)]/90 transition-colors whitespace-nowrap h-[42px] disabled:bg-gray-300 disabled:cursor-not-allowed cursor-pointer"
             >
               Apply Filter
             </button>
@@ -604,7 +609,7 @@ export default function Performance() {
                 setShowFromCalendar(false)
                 setShowToCalendar(false)
               }}
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors whitespace-nowrap h-[42px]"
+              className="px-4 py-1 bg-white text-secondary border border-secondary rounded-2xl font-medium hover:bg-secondary hover:text-white transition-colors duration-200 text-sm whitespace-nowrap h-[42px] cursor-pointer"
             >
               Reset
             </button>

@@ -170,7 +170,7 @@ function AccountsLayout() {
                 className="h-8"
                 style={{ filter: 'brightness(0) invert(1)' }}
               />
-              {!isMobile && <div className="text-sm text-white/70 mt-1">Vendor Portal</div>}
+              {!isMobile && <div className="text-sm text-white/70 mt-1">Accounts Portal</div>}
             </div>
             {/* Mobile Close Button */}
             {isMobile && (
@@ -229,8 +229,8 @@ function AccountsLayout() {
 
           {/* Left welcome text (visible on md+) */}
           <div className="hidden md:block ml-9 mr-6 text-3xl font-medium" style={{ color: 'var(--color-secondary)' }}>
-            <div className="font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Vendor Dashboard</div>
-            <div className="text-xl mt-1">Welcome Vendor</div>
+            <div className="font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Accounts Dashboard</div>
+            <div className="text-xl mt-1">Welcome Accounts</div>
           </div>
           {/* Spacer on desktop to push right-group to the edge */}
           {!isMobile && <div className="flex-1" />}
@@ -238,7 +238,7 @@ function AccountsLayout() {
           <div className="flex items-center gap-4">
             <MegaSearch 
               isMobile={isMobile} 
-              userRole="VENDOR" 
+              userRole="ACCOUNTS" 
               placeholder="Mega Search"
             />
 

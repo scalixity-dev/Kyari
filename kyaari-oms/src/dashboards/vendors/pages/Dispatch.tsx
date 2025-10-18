@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { format, parseISO } from 'date-fns'
 import { CustomDropdown, KPICard } from '../../../components'
 import { Pagination } from '../../../components/ui/Pagination'
+import { CSVPDFExportButton } from '../../../components/ui/export-button'
 import { Calendar } from '../../../components/ui/calendar'
 
 interface DispatchOrder {
@@ -196,29 +197,29 @@ const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, order, onClose, o
 const getStatusBadge = (status: DispatchOrder['status']) => {
   switch (status) {
     case 'Ready for Dispatch':
-      return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Ready</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-blue-100 text-blue-800 border-blue-300">Ready</span>
     case 'Dispatch Marked':
-      return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Dispatched</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-yellow-100 text-yellow-800 border-yellow-300">Dispatched</span>
     case 'In Transit':
-      return <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">In Transit</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-orange-100 text-orange-800 border-orange-300">In Transit</span>
     case 'Delivered - Verified':
       return (
-        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium inline-flex items-center gap-1">
-          <CheckSquare className="w-3 h-3 text-green-800" />
+        <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold border bg-green-100 text-green-800 border-green-300 items-center gap-1">
+          <CheckSquare className="w-3 h-3" />
           <span>Verified</span>
         </span>
       )
     case 'Delivered - Mismatch':
       return (
-        <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium inline-flex items-center gap-1">
-          <AlertTriangle className="w-3 h-3 text-red-800" />
+        <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold border bg-red-100 text-red-800 border-red-300 items-center gap-1">
+          <AlertTriangle className="w-3 h-3" />
           <span>Mismatch</span>
         </span>
       )
     case 'Received by Store':
-      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Received</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-green-100 text-green-800 border-green-300">Received</span>
     default:
-      return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">{status}</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-gray-100 text-gray-800 border-gray-300">{status}</span>
   }
 }
 
@@ -226,22 +227,22 @@ const getVerificationBadge = (verification: DispatchOrder['storeVerification']) 
   switch (verification) {
     case 'OK':
       return (
-        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium inline-flex items-center gap-1">
-          <CheckSquare className="w-3 h-3 text-green-800" />
+        <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold border bg-green-100 text-green-800 border-green-300 items-center gap-1">
+          <CheckSquare className="w-3 h-3" />
           <span>Verified</span>
         </span>
       )
     case 'Mismatch':
       return (
-        <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium inline-flex items-center gap-1">
-          <AlertTriangle className="w-3 h-3 text-red-800" />
+        <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold border bg-red-100 text-red-800 border-red-300 items-center gap-1">
+          <AlertTriangle className="w-3 h-3" />
           <span>Mismatch</span>
         </span>
       )
     case 'Pending':
       return (
-        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium inline-flex items-center gap-1">
-          <Clock className="w-3 h-3 text-yellow-800" />
+        <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold border bg-yellow-100 text-yellow-800 border-yellow-300 items-center gap-1">
+          <Clock className="w-3 h-3" />
           <span>Pending</span>
         </span>
       )
@@ -560,23 +561,110 @@ export default function Dispatch() {
   const endIndex = Math.min(filteredOrders.length, startIndex + itemsPerPage)
   const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
 
+  // Export functions
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const toCSV = (rows: Array<Record<string, unknown>>, headerOrder?: string[]) => {
+    if (!rows || rows.length === 0) return ''
+    const headers = headerOrder && headerOrder.length > 0 ? headerOrder : Array.from(new Set(rows.flatMap((r) => Object.keys(r))))
+    const escapeCell = (val: unknown) => {
+      const s = val === undefined || val === null ? '' : String(val)
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s
+    }
+    const lines = [headers.join(',')]
+    for (const row of rows) {
+      lines.push(headers.map((h) => escapeCell((row as Record<string, unknown>)[h])).join(','))
+    }
+    return lines.join('\n')
+  }
+
+  const handleExportCSV = () => {
+    const rows = filteredOrders.map(order => ({
+      orderNumber: order.orderNumber,
+      poNumber: order.poNumber,
+      date: order.date,
+      items: order.items,
+      quantity: order.quantity,
+      status: order.status,
+      dispatchDate: order.dispatchDate || '',
+      estimatedDelivery: order.estimatedDelivery || '',
+      awbNumber: order.awbNumber || '',
+      logisticsPartner: order.logisticsPartner || '',
+      storeVerification: order.storeVerification || '',
+      verificationNotes: order.verificationNotes || ''
+    }))
+    
+    const csv = toCSV(rows, ['orderNumber', 'poNumber', 'date', 'items', 'quantity', 'status', 'dispatchDate', 'estimatedDelivery', 'awbNumber', 'logisticsPartner', 'storeVerification', 'verificationNotes'])
+    const filename = `vendor_dispatch_${new Date().toISOString().slice(0, 10)}.csv`
+    downloadFile(csv, filename, 'text/csv;charset=utf-8;')
+  }
+
+  const handleExportPDF = () => {
+    const content = [
+      'VENDOR DISPATCH REPORT',
+      `Generated: ${new Date().toLocaleString()}`,
+      `Total Dispatch Orders: ${filteredOrders.length}`,
+      '',
+      '=== DISPATCH ORDER SUMMARY ===',
+      ...filteredOrders.map(order => [
+        `Order: ${order.orderNumber}`,
+        `PO Number: ${order.poNumber}`,
+        `Date: ${order.date}`,
+        `Items: ${order.items}`,
+        `Quantity: ${order.quantity}`,
+        `Status: ${order.status}`,
+        ...(order.dispatchDate ? [`Dispatch Date: ${order.dispatchDate}`] : []),
+        ...(order.estimatedDelivery ? [`Estimated Delivery: ${order.estimatedDelivery}`] : []),
+        ...(order.awbNumber ? [`AWB Number: ${order.awbNumber}`] : []),
+        ...(order.logisticsPartner ? [`Logistics Partner: ${order.logisticsPartner}`] : []),
+        ...(order.storeVerification ? [`Store Verification: ${order.storeVerification}`] : []),
+        ...(order.verificationNotes ? [`Verification Notes: ${order.verificationNotes}`] : []),
+        '---'
+      ]).flat()
+    ].join('\n')
+    
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vendor_dispatch_${new Date().toISOString().slice(0, 10)}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden bg-[var(--color-sharktank-bg)]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 sm:mb-0">Dispatch Management</h1>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2">
+          Dispatch Management
+        </h1>
+        <p className="text-sm sm:text-base text-[var(--color-primary)]">
+          Track and manage your order dispatches
+        </p>
       </div>
 
       {/* Loading State */}
       {loading && (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-accent)]"></div>
+        <div className="bg-white rounded-xl p-12 text-center">
+          <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading dispatch orders...</p>
         </div>
       )}
 
       {/* Empty State */}
       {!loading && dispatchOrders.length === 0 && (
-        <div className="bg-white rounded-xl shadow-md border border-white/20 p-12 text-center">
+        <div className="bg-white rounded-xl p-12 text-center">
           <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-700 mb-2">No Dispatches Found</h3>
           <p className="text-gray-500">You haven't dispatched any orders yet.</p>
@@ -603,7 +691,7 @@ export default function Dispatch() {
         <KPICard
           title="In Transit"
           value={inTransit.length}
-          subtitle="En route"
+          subtitle="On the way"
           icon={<MapPin size={32} />}
         />
         <KPICard
@@ -613,13 +701,18 @@ export default function Dispatch() {
           icon={<CheckSquare size={32} />}
         />
       </div>
-
-      
-
       {/* Dispatch Orders Heading */}
       <div className="mb-3 sm:mb-4">
         <div className="flex flex-col gap-3">
-          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-[var(--color-heading)]">Dispatch Orders</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h2 className="text-base sm:text-lg md:text-xl font-semibold text-[var(--color-heading)]">Dispatch Orders</h2>
+            <CSVPDFExportButton
+              onExportCSV={handleExportCSV}
+              onExportPDF={handleExportPDF}
+              label="Export"
+              className="w-full sm:w-auto"
+            />
+          </div>
 
           {/* Filters */}
           <div className="bg-white rounded-xl shadow-md border border-white/20 p-3 sm:p-4">
@@ -637,7 +730,7 @@ export default function Dispatch() {
                 <div className="hidden sm:flex sm:flex-row sm:items-center gap-2 mt-2">
                   <button
                     onClick={() => setCurrentPage(1)}
-                    className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
+                    className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
                     style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
                   >
                     Apply
@@ -653,8 +746,7 @@ export default function Dispatch() {
                       setDateToDate(undefined)
                       setCurrentPage(1)
                     }}
-                    className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
-                    style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+                    className="w-full sm:w-[140px] px-4 py-2 sm:py-2 bg-white text-secondary border border-secondary rounded-2xl font-medium hover:bg-secondary hover:text-white transition-colors duration-200 text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
                   >
                     Reset
                   </button>
@@ -712,7 +804,7 @@ export default function Dispatch() {
                       <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
                     </button>
                     {showFromCalendar && (
-                      <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                      <div className="absolute z-50 mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
                         <Calendar
                           mode="single"
                           selected={dateFromDate}
@@ -740,7 +832,7 @@ export default function Dispatch() {
                       <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
                     </button>
                     {showToCalendar && (
-                      <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                      <div className="absolute z-50 mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
                         <Calendar
                           mode="single"
                           selected={dateToDate}
@@ -764,7 +856,7 @@ export default function Dispatch() {
             <div className="flex sm:hidden gap-2 pt-4 mt-2">
               <button
                 onClick={() => setCurrentPage(1)}
-                className="flex-1 px-4 py-2.5 rounded-md text-white font-medium text-sm min-h-[44px]"
+                className="flex-1 px-4 py-2.5 rounded-md text-white font-medium text-sm min-h-[44px] cursor-pointer"
                 style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
               >
                 Apply Filters
@@ -780,8 +872,7 @@ export default function Dispatch() {
                   setDateToDate(undefined)
                   setCurrentPage(1)
                 }}
-                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px]"
-                style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+                className="flex-1 px-4 py-2 bg-white text-secondary border border-secondary rounded-2xl font-medium hover:bg-secondary hover:text-white transition-colors duration-200 text-sm min-h-[44px] cursor-pointer"
               >
                 Reset
               </button>
@@ -791,41 +882,41 @@ export default function Dispatch() {
       </div>
 
       {/* Dispatch Orders Table */}
-      <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
-        
+      <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
         {/* Desktop Table */}
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full border-separate border-spacing-0">
-            <thead>
-              <tr className="bg-[var(--color-accent)]">
-                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Order</th>
-                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">PO Number</th>
-                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Items</th>
-                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Qty</th>
-                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Status</th>
-                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Store Verification</th>
-                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+        <div className="overflow-x-auto">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <table className="w-full border-separate border-spacing-0">
+              <thead>
+                <tr className="bg-[var(--color-accent)]">
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Order</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">PO Number</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Items</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Qty</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Status</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Store Verification</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
               {paginatedOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white">
+                  <td className="p-3">
                     <div>
-                      <div className="text-sm font-medium text-[var(--color-heading)]">{order.orderNumber}</div>
+                      <div className="font-semibold text-secondary">{order.orderNumber}</div>
                       <div className="text-xs text-gray-500">{order.date}</div>
                     </div>
                   </td>
-                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {order.poNumber}
+                  <td className="p-3">
+                    <div className="text-sm text-gray-900">{order.poNumber}</div>
                   </td>
-                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {order.items}
+                  <td className="p-3">
+                    <div className="text-sm text-gray-900">{order.items}</div>
                   </td>
-                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {order.quantity}
+                  <td className="p-3">
+                    <div className="text-sm text-gray-900">{order.quantity}</div>
                   </td>
-                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                  <td className="p-3">
                     {getStatusBadge(order.status)}
                     {order.dispatchDate && (
                       <div className="text-xs text-gray-500 mt-1">
@@ -833,24 +924,26 @@ export default function Dispatch() {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 lg:px-6 py-4 max-w-[14rem] break-words align-top">
+                  <td className="p-3">
                     {getVerificationBadge(order.storeVerification)}
                     {order.verificationNotes && (
-                      <div className="text-xs text-gray-500 mt-1 max-w-[14rem] break-words">
+                      <div className="text-xs text-gray-500 mt-1">
                         {order.verificationNotes}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm">
-                    {order.status === 'Ready for Dispatch' && (
-                      <button
-                        onClick={() => handleMarkDispatch(order.id)}
-                        className="px-3 py-1 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs font-medium flex items-center gap-1"
-                      >
-                        <Package size={12} />
-                        Mark Dispatched
-                      </button>
-                    )}
+                  <td className="p-3 text-sm">
+                    <div className="flex items-center gap-1.5">
+                      {order.status === 'Ready for Dispatch' && (
+                        <button
+                          onClick={() => handleMarkDispatch(order.id)}
+                          className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95 flex items-center gap-1"
+                        >
+                          <Package size={12} />
+                          Mark Dispatched
+                        </button>
+                      )}
+                    </div>
                     {order.dispatchProof && (
                       <div className="flex items-center gap-2 mt-1">
                         <FileText className="w-4 h-4 text-gray-500" />
@@ -868,15 +961,16 @@ export default function Dispatch() {
             </tbody>
           </table>
         </div>
+      </div>
 
-        {/* Mobile Cards */}
-        <div className="lg:hidden divide-y divide-gray-200">
+      {/* Mobile Cards */}
+      <div className="lg:hidden space-y-3">
           {paginatedOrders.map((order) => (
-            <div key={order.id} className="p-3 sm:p-4 md:p-5">
+            <div key={order.id} className="rounded-xl p-4 border border-gray-200 bg-white">
               <div className="flex justify-between items-start mb-3 gap-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-sm sm:text-base text-[var(--color-heading)] truncate">{order.orderNumber}</h3>
-                  <p className="text-xs sm:text-sm text-gray-600 mb-1">{order.date}</p>
+                  <h3 className="font-semibold text-secondary text-lg truncate">{order.orderNumber}</h3>
+                  <p className="text-xs text-gray-500 mb-1">{order.date}</p>
                   <p className="text-xs text-gray-500 truncate">PO: {order.poNumber}</p>
                 </div>
                 <div className="flex-shrink-0">
@@ -884,22 +978,26 @@ export default function Dispatch() {
                 </div>
               </div>
               
-              <div className="mb-3 space-y-1.5">
-                <p className="text-xs sm:text-sm text-gray-600">
-                  <span className="font-medium text-gray-800">Item:</span> {order.items}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  <span className="font-medium text-gray-800">Quantity:</span> {order.quantity}
-                </p>
+              <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                <div>
+                  <span className="text-gray-500 block">Item</span>
+                  <span className="font-medium">{order.items}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block">Quantity</span>
+                  <span className="font-medium">{order.quantity}</span>
+                </div>
                 {order.dispatchDate && (
-                  <p className="text-xs text-gray-500">
-                    <span className="font-medium">Dispatched:</span> {order.dispatchDate}
-                  </p>
+                  <div>
+                    <span className="text-gray-500 block">Dispatched</span>
+                    <span className="font-medium">{order.dispatchDate}</span>
+                  </div>
                 )}
                 {order.estimatedDelivery && order.status !== 'Received by Store' && (
-                  <p className="text-xs text-gray-500">
-                    <span className="font-medium">ETA:</span> {order.estimatedDelivery}
-                  </p>
+                  <div>
+                    <span className="text-gray-500 block">ETA</span>
+                    <span className="font-medium">{order.estimatedDelivery}</span>
+                  </div>
                 )}
               </div>
 
@@ -912,15 +1010,17 @@ export default function Dispatch() {
                 </div>
               )}
 
-              {order.status === 'Ready for Dispatch' && (
-                <button
-                  onClick={() => handleMarkDispatch(order.id)}
-                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[var(--color-accent)] text-white rounded-lg hover:bg-[var(--color-accent)]/90 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                >
-                  <Package size={16} />
-                  <span>Mark as Dispatched</span>
-                </button>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {order.status === 'Ready for Dispatch' && (
+                  <button
+                    onClick={() => handleMarkDispatch(order.id)}
+                    className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95 flex items-center gap-1"
+                  >
+                    <Package size={12} />
+                    Mark Dispatched
+                  </button>
+                )}
+              </div>
               
               {order.dispatchProof && (
                 <div className="flex items-center gap-2 mt-2 p-2 bg-blue-50 border border-blue-100 rounded text-left">
