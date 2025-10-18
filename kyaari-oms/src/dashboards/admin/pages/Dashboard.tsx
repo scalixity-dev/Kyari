@@ -226,6 +226,22 @@ export default function Dashboard() {
       {/* Header Section */}
      
 
+      {/* KPI Cards */}
+      <div className="mb-6 lg:mb-8 ">
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Today's Overview</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+          {kpiData.map((kpi, index) => (
+            <KPICard
+              key={index}
+              title={kpi.title}
+              value={kpi.value}
+              icon={kpi.icon}
+              subtitle={kpi.subtitle}
+            />
+          ))}
+        </div>
+      </div>
+
       {/* Task Center */}
       <div className="mb-6 lg:mb-8">
         <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Actions Required Today</h2>
@@ -303,22 +319,6 @@ export default function Dashboard() {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="mb-6 lg:mb-8 ">
-        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Today's Overview</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-          {kpiData.map((kpi, index) => (
-            <KPICard
-              key={index}
-              title={kpi.title}
-              value={kpi.value}
-              icon={kpi.icon}
-              subtitle={kpi.subtitle}
-            />
-          ))}
         </div>
       </div>
 

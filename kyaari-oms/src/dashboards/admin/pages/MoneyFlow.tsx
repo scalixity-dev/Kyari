@@ -391,10 +391,13 @@ export default function MoneyFlow() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
-     
+      {/* Page Header */}
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Money Flow</h1>
+        <p className="text-sm sm:text-base text-gray-600">Track payments, invoices, and financial transactions</p>
+      </div>
 
       <div className="mb-4 sm:mb-6 lg:mb-8">
-        <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Money Flow</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 py-8 sm:py-10 gap-6 sm:gap-8 xl:gap-6">
           {kpis.map((k, i) => (
             <KPICard 

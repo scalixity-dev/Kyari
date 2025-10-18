@@ -263,6 +263,42 @@ export default function AuditLogs() {
     window.URL.revokeObjectURL(url)
   }
 
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'Admin':
+        return { bg: '#DBEAFE', text: '#1E3A8A', border: '#BFDBFE' } // Blue
+      case 'Vendor':
+        return { bg: '#D1FAE5', text: '#065F46', border: '#A7F3D0' } // Green
+      case 'Accounts':
+        return { bg: '#FEF9C3', text: '#92400E', border: '#FEF08A' } // Yellow
+      case 'Ops':
+        return { bg: '#FFEDD5', text: '#9A3412', border: '#FED7AA' } // Orange
+      case 'Store Operator':
+        return { bg: '#E0E7FF', text: '#3730A3', border: '#C7D2FE' } // Indigo
+      default:
+        return { bg: '#F3F4F6', text: '#374151', border: '#E5E7EB' } // Gray
+    }
+  }
+
+  const getModuleColor = (module: string) => {
+    switch (module) {
+      case 'Orders':
+        return { bg: '#DBEAFE', text: '#1E3A8A', border: '#BFDBFE' } // Blue
+      case 'Vendors':
+        return { bg: '#D1FAE5', text: '#065F46', border: '#A7F3D0' } // Green
+      case 'Payments':
+        return { bg: '#FEF9C3', text: '#92400E', border: '#FEF08A' } // Yellow
+      case 'Tickets':
+        return { bg: '#FFEDD5', text: '#9A3412', border: '#FED7AA' } // Orange
+      case 'Users':
+        return { bg: '#E0E7FF', text: '#3730A3', border: '#C7D2FE' } // Indigo
+      case 'Analytics':
+        return { bg: '#FCE7F3', text: '#831843', border: '#FBCFE8' } // Pink
+      default:
+        return { bg: '#F3F4F6', text: '#374151', border: '#E5E7EB' } // Gray
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen overflow-x-auto bg-[var(--color-sharktank-bg)] font-sans w-full overflow-x-hidden">
       {/* Header */}
@@ -463,7 +499,14 @@ export default function AuditLogs() {
                     <div className="text-gray-500">{log.userEmail}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                    <span 
+                      className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full border"
+                      style={{
+                        backgroundColor: getRoleColor(log.role).bg,
+                        color: getRoleColor(log.role).text,
+                        borderColor: getRoleColor(log.role).border
+                      }}
+                    >
                       {log.role}
                     </span>
                   </td>
@@ -471,7 +514,14 @@ export default function AuditLogs() {
                     {log.action}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-700">
+                    <span 
+                      className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full border"
+                      style={{
+                        backgroundColor: getModuleColor(log.module).bg,
+                        color: getModuleColor(log.module).text,
+                        borderColor: getModuleColor(log.module).border
+                      }}
+                    >
                       {log.module}
                     </span>
                   </td>

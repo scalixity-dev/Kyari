@@ -161,6 +161,7 @@ export default function Notifications() {
   return (
   <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Page Header */}
+
       <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="font-heading text-secondary text-2xl sm:text-3xl lg:text-4xl font-semibold">Notifications</h2>
         <button
@@ -170,6 +171,7 @@ export default function Notifications() {
           <Send size={16} />
           {showBroadcast ? 'Hide Broadcast' : 'Send Broadcast'}
         </button>
+
       </div>
 
       {/* Broadcast Notification Panel */}

@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
-import { LayoutDashboard, Package, Bell, Users, CheckSquare, FileText, Wallet, MapPin, Eye } from 'lucide-react';
-import { KPICard, Pagination } from '../../../components';
+import { LayoutDashboard, Package, Bell, Users, CheckSquare, FileText, Wallet, MapPin, Eye, Filter } from 'lucide-react';
+import { KPICard, Pagination, CustomDropdown, CSVPDFExportButton } from '../../../components';
 
 // TypeScript types
 type Status = "Received" | "Assigned" | "Confirmed" | "Invoiced" | "Dispatched" | "Verified" | "Paid";
@@ -105,9 +105,27 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, index, isDragDisabled = fa
 interface ListViewProps {
   orders: Order[];
   onOrderClick?: (orderId: string) => void;
+  showFilters: boolean;
+  filters: FilterState;
+  onFilterChange: (key: keyof FilterState, value: string) => void;
+  onResetFilters: () => void;
 }
 
-const ListView: React.FC<ListViewProps> = ({ orders, onOrderClick }) => {
+interface FilterState {
+  vendor: string;
+  status: string;
+  qtyMin: string;
+  qtyMax: string;
+}
+
+const ListView: React.FC<ListViewProps> = ({ 
+  orders, 
+  onOrderClick, 
+  showFilters, 
+  filters, 
+  onFilterChange, 
+  onResetFilters
+}) => {
   const [page, setPage] = React.useState(1);
   const pageSize = 10;
   
@@ -121,16 +139,86 @@ const ListView: React.FC<ListViewProps> = ({ orders, onOrderClick }) => {
   const endIndex = Math.min(startIndex + pageSize, orders.length);
   const pageOrders = orders.slice(startIndex, endIndex);
 
+  // Get unique vendors for dropdown
+  const uniqueVendors = Array.from(new Set(orders.map(o => o.vendor))).sort();
+
   return (
-    <div className="bg-header-bg rounded-xl overflow-hidden">
-      {/* Desktop Table View */}
-      <div className="hidden md:block">
-        <table className="w-full border-separate border-spacing-0">
-          <thead>
-            <tr style={{ background: 'var(--color-accent)' }}>
-              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
-                Order ID
-              </th>
+    <div>
+      {/* Filter Section */}
+      {showFilters && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Vendor</label>
+              <CustomDropdown
+                value={filters.vendor}
+                onChange={(value) => onFilterChange('vendor', value)}
+                options={[
+                  { value: '', label: 'All Vendors' },
+                  ...uniqueVendors.map(v => ({ value: v, label: v }))
+                ]}
+                placeholder="All Vendors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <CustomDropdown
+                value={filters.status}
+                onChange={(value) => onFilterChange('status', value)}
+                options={[
+                  { value: '', label: 'All Status' },
+                  ...statusColumns.map(s => ({ value: s, label: s }))
+                ]}
+                placeholder="All Status"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Quantity Range</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={filters.qtyMin}
+                  onChange={(e) => onFilterChange('qtyMin', e.target.value)}
+                  placeholder="Min"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px]"
+                />
+                <input
+                  type="number"
+                  value={filters.qtyMax}
+                  onChange={(e) => onFilterChange('qtyMax', e.target.value)}
+                  placeholder="Max"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Actions</label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={onResetFilters}
+                  className="px-4 py-2 border border-secondary rounded-md text-secondary font-medium hover:bg-gray-50 text-sm min-h-[44px]"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-header-bg rounded-xl overflow-hidden">
+        {/* Desktop Table View */}
+        <div className="hidden md:block">
+          <div className="overflow-x-auto">
+            <table className="w-full border-separate border-spacing-0">
+              <thead>
+                <tr style={{ background: 'var(--color-accent)' }}>
+                  <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                    Order ID
+                  </th>
               <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
                 Vendor
               </th>
@@ -169,7 +257,8 @@ const ListView: React.FC<ListViewProps> = ({ orders, onOrderClick }) => {
               </tr>
             ))}
           </tbody>
-        </table>
+            </table>
+          </div>
         {/* Desktop Pagination */}
         <Pagination
           currentPage={page}
@@ -224,6 +313,7 @@ const ListView: React.FC<ListViewProps> = ({ orders, onOrderClick }) => {
           variant="mobile"
           itemLabel="orders"
         />
+      </div>
       </div>
     </div>
   );
@@ -305,6 +395,13 @@ const BoardView: React.FC<BoardViewProps> = ({ orders, onOrderMove, onOrderClick
 const OrderTracking: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    vendor: '',
+    status: '',
+    qtyMin: '',
+    qtyMax: ''
+  });
   const navigate = useNavigate();
 
   const handleOrderClick = (orderId: string) => {
@@ -340,11 +437,72 @@ const OrderTracking: React.FC = () => {
     setOrders(updatedOrders);
   };
 
+  const handleFilterChange = (key: keyof FilterState, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      vendor: '',
+      status: '',
+      qtyMin: '',
+      qtyMax: ''
+    });
+  };
+
+  // Apply filters
+  const filteredOrders = React.useMemo(() => {
+    return orders.filter(order => {
+      if (filters.vendor && order.vendor !== filters.vendor) return false;
+      if (filters.status && order.status !== filters.status) return false;
+      if (filters.qtyMin && order.qty < parseInt(filters.qtyMin)) return false;
+      if (filters.qtyMax && order.qty > parseInt(filters.qtyMax)) return false;
+      return true;
+    });
+  }, [orders, filters]);
+
+  const handleExportCSV = () => {
+    const headers = ['Order ID', 'Vendor', 'Quantity', 'Status'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredOrders.map(order => [
+        order.id,
+        `"${order.vendor}"`,
+        order.qty,
+        order.status
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `orders-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleExportPDF = () => {
+    const content = filteredOrders.map(order => 
+      `${order.id} | ${order.vendor} | Qty: ${order.qty} | ${order.status}`
+    ).join('\n');
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `orders-${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-6 font-[var(--font-heading)]">
-          Order Tracking
-        </h1>
+        {/* Page Header */}
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Order Tracking</h1>
+          <p className="text-sm sm:text-base text-gray-600">Track and monitor order status in real-time</p>
+        </div>
 
         {/* View Toggle */}
         <div className="mb-4 sm:mb-6">
@@ -401,12 +559,36 @@ const OrderTracking: React.FC = () => {
           })}
         </div>
 
+        {/* Filter and Export Buttons - Only for List View */}
+        {viewMode === 'list' && (
+          <div className="flex flex-col sm:flex-row justify-end gap-2 mb-4">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors min-h-[44px] sm:min-h-auto w-full sm:w-auto"
+            >
+              <Filter size={16} className="flex-shrink-0" />
+              <span className="text-sm">Filter</span>
+            </button>
+            <CSVPDFExportButton
+              onExportCSV={handleExportCSV}
+              onExportPDF={handleExportPDF}
+            />
+          </div>
+        )}
+
         {/* Main Content */}
         <div className={`${viewMode === 'board' ? 'bg-[var(--color-sharktank-bg)]' : ''} rounded-lg`}>
           {viewMode === 'list' ? (
-            <ListView orders={orders} onOrderClick={handleOrderClick} />
+            <ListView 
+              orders={filteredOrders} 
+              onOrderClick={handleOrderClick}
+              showFilters={showFilters}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onResetFilters={handleResetFilters}
+            />
           ) : (
-            <BoardView orders={orders} onOrderMove={handleOrderMove} onOrderClick={handleOrderClick} />
+            <BoardView orders={filteredOrders} onOrderMove={handleOrderMove} onOrderClick={handleOrderClick} />
           )}
         </div>
 
