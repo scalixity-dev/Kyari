@@ -1,25 +1,12 @@
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, FileText, Wallet, BarChart3, Bell, Users, Menu, X, Clock, CheckSquare } from 'lucide-react'
+import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
+import { useNotifications } from '../../hooks/useNotifications'
+import type { Notification as AppNotification } from '../../services/notifications'
+import type { LucideIcon } from 'lucide-react'
+import { LayoutDashboard, Package, FileText, Bell, BarChart3, Users, Wallet, Menu, X, Clock, CheckSquare } from 'lucide-react'
 import kyariLogo from '../../assets/kyariLogo.webp'
 import { MegaSearch } from '../../components'
-
-type NotificationType = 'payment' | 'invoice' | 'order' | 'vendor' | 'support'
-
-interface Notification {
-  id: string
-  type: NotificationType
-  title: string
-  message: string
-  timestamp: Date
-  isRead: boolean
-  action?: {
-    label: string
-    path: string
-  }
-}
 
 type NavItem = {
   to: string
@@ -37,70 +24,27 @@ const navItems: NavItem[] = [
   { to: '/accounts/profile-settings', icon: FileText, label: 'Profile & Settings' }
 ]
 
-// Accounts-specific sample notifications
-const sampleNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'payment',
-    title: 'Payment Approval Required',
-    message: 'Invoice #INV-2025-024 for ₹45,000 requires approval',
-    timestamp: new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago
-    isRead: false,
-    action: { label: 'Review Payment', path: '/accounts/payment-release' }
-  },
-  {
-    id: '2',
-    type: 'invoice',
-    title: 'New Invoice Received',
-    message: 'Invoice #INV-2025-025 from Vendor ABC for ₹28,500',
-    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-    isRead: false,
-    action: { label: 'View Invoice', path: '/accounts/po-invoices' }
-  },
-  {
-    id: '3',
-    type: 'order',
-    title: 'Order Status Update',
-    message: 'Order #ORD-2025-018 has been dispatched by vendor',
-    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
-    isRead: false,
-    action: { label: 'View Order', path: '/accounts/vendor-orders' }
-  },
-  {
-    id: '4',
-    type: 'vendor',
-    title: 'Vendor Payment Completed',
-    message: 'Payment of ₹52,000 to Vendor XYZ has been processed',
-    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-    isRead: true,
-    action: { label: 'View Details', path: '/accounts/payment-release' }
-  },
-  {
-    id: '5',
-    type: 'support',
-    title: 'Support Query Resolved',
-    message: 'Your query regarding invoice discrepancy has been resolved',
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    isRead: true,
-    action: { label: 'View Support', path: '/accounts/support' }
-  }
-]
-
 function AccountsLayout() {
-  const location = useLocation()
-  const navigate = useNavigate()
   const { logout, user } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  
+  // Use real notification hook with FCM + light polling
+  const { 
+    notifications, 
+    unreadCount, 
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications()
+  
   const [showProfile, setShowProfile] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
-  const [notifications, setNotifications] = useState<Notification[]>(sampleNotifications)
   const [showNotificationsModal, setShowNotificationsModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const sidebarRef = useRef<HTMLDivElement>(null)
   const notificationsRef = useRef<HTMLDivElement>(null)
-  
-  const unreadCount = notifications.filter(n => !n.isRead).length
-  
+  const sidebarRef = useRef<HTMLDivElement>(null)
+
   // Check if screen is mobile/tablet
   useEffect(() => {
     const checkScreenSize = () => {
@@ -153,48 +97,28 @@ function AccountsLayout() {
     navigate('/')
   }
 
-  function handleNavClick() {
-    if (isMobile) {
-      setSidebarOpen(false)
-    }
-  }
-
-  function markAsRead(notificationId: string) {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId ? { ...notif, isRead: true } : notif
-      )
-    )
-  }
-
-  function markAllAsRead() {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, isRead: true }))
-    )
-  }
-
-  function handleNotificationClick(notification: Notification) {
+  function handleNotificationClick(notification: AppNotification) {
     markAsRead(notification.id)
-    if (notification.action) {
-      navigate(notification.action.path)
+    // Navigate based on orderId if available
+    if (notification.metadata?.orderId) {
+      navigate(`/accounts/vendor-orders`)
     }
     setShowNotifications(false)
   }
 
-  function getNotificationIcon(type: NotificationType) {
+  function getNotificationIcon(type: string) {
     switch (type) {
-      case 'payment': return Wallet
-      case 'invoice': return FileText
-      case 'order': return Package
-      case 'vendor': return Users
-      case 'support': return Users
+      case 'critical': return Bell
+      case 'info': return Package
+      case 'reminder': return Clock
       default: return Bell
     }
   }
 
-  function formatTimeAgo(date: Date) {
+  function formatTimeAgo(date: Date | string) {
+    const dateObj = typeof date === 'string' ? new Date(date) : date
     const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    const diffInMinutes = Math.floor((now.getTime() - dateObj.getTime()) / (1000 * 60))
     
     if (diffInMinutes < 1) return 'Just now'
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`
@@ -204,6 +128,12 @@ function AccountsLayout() {
     
     const diffInDays = Math.floor(diffInHours / 24)
     return `${diffInDays}d ago`
+  }
+
+  function handleNavClick() {
+    if (isMobile) {
+      setSidebarOpen(false)
+    }
   }
 
   return (
@@ -217,8 +147,7 @@ function AccountsLayout() {
       )}
 
       {/* Sidebar */}
-      <aside 
-        ref={sidebarRef}
+      <aside  
         className={`p-6 flex flex-col justify-between scrollbar-hidden transition-transform duration-300 ease-in-out ${
           isMobile 
             ? `fixed left-0 top-0 h-full z-50 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
@@ -241,7 +170,7 @@ function AccountsLayout() {
                 className="h-8"
                 style={{ filter: 'brightness(0) invert(1)' }}
               />
-              {!isMobile && <div className="text-sm text-white/70 mt-1">Accounts</div>}
+              {!isMobile && <div className="text-sm text-white/70 mt-1">Vendor Portal</div>}
             </div>
             {/* Mobile Close Button */}
             {isMobile && (
@@ -277,14 +206,14 @@ function AccountsLayout() {
           </nav>
         </div>
 
-        {/* footer intentionally empty to match admin layout minimalism */}
+        {/* footer intentionally removed per user request */}
       </aside>
 
   {/* Main area */}
   <main className={`transition-all duration-300 ease-in-out ${isMobile ? 'ml-0' : 'ml-[230px]'}`} style={{ marginTop: 0, paddingTop: 0, overflowX: 'hidden', height: '100vh' }}>
   {/* Top bar (fixed) */}
-  <div className={`flex items-center justify-between bg-[var(--color-sharktank-bg)] py-2 pr-6 pl-0 fixed top-0 right-0 h-28 border-l border-white/20 transition-all duration-300 ease-in-out ${
-    isMobile ? 'left-0 z-30' : 'left-[230px] z-40'
+  <div className={`flex items-center justify-between bg-[var(--color-sharktank-bg)] py-2 pr-6 pl-0 fixed top-0 right-0 h-28 z-40 border-l border-white/20 transition-all duration-300 ease-in-out ${
+    isMobile ? 'left-0' : 'left-[230px]'
   }`}>
           {/* Mobile Menu Button */}
           {isMobile && (
@@ -300,8 +229,8 @@ function AccountsLayout() {
 
           {/* Left welcome text (visible on md+) */}
           <div className="hidden md:block ml-9 mr-6 text-3xl font-medium" style={{ color: 'var(--color-secondary)' }}>
-            <div className="font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Accounts Dashboard</div>
-            <div className="text-xl mt-1">Welcome to Accounts</div>
+            <div className="font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Vendor Dashboard</div>
+            <div className="text-xl mt-1">Welcome Vendor</div>
           </div>
           {/* Spacer on desktop to push right-group to the edge */}
           {!isMobile && <div className="flex-1" />}
@@ -309,7 +238,7 @@ function AccountsLayout() {
           <div className="flex items-center gap-4">
             <MegaSearch 
               isMobile={isMobile} 
-              userRole="ACCOUNTS" 
+              userRole="VENDOR" 
               placeholder="Mega Search"
             />
 
@@ -318,7 +247,7 @@ function AccountsLayout() {
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
                 aria-label="Notifications" 
-                className="relative rounded-md text-[var(--color-secondary)] hover:bg-white/10 p-2 transition-colors" 
+                className="relative rounded-md text-[var(--color-secondary)] hover:bg-white/10 p-2 transition-colors cursor-pointer" 
                 style={{ background: 'transparent' }}
               >
                 <Bell size={18} />
@@ -330,7 +259,7 @@ function AccountsLayout() {
               </button>
 
               {showNotifications && (
-                <div className={`absolute right-0 mt-2 rounded-lg shadow-lg overflow-hidden z-50 ${
+                <div className={`absolute right-0 mt-2 rounded-lg shadow-lg border border-gray-200 z-50 ${
                   isMobile ? 'w-[calc(100vw-2rem)] max-w-sm -mr-4' : 'w-96'
                 } max-h-[500px]`} style={{ background: 'white' }}>
                   {/* Notifications Header */}
@@ -340,7 +269,7 @@ function AccountsLayout() {
                       {unreadCount > 0 && (
                         <button
                           onClick={markAllAsRead}
-                          className="text-sm text-white hover:text-white/80 flex items-center gap-1"
+                          className="text-sm text-white hover:text-white/80 flex items-center gap-1 cursor-pointer"
                         >
                           <CheckSquare size={14} />
                           Mark all read
@@ -348,7 +277,7 @@ function AccountsLayout() {
                       )}
                       <button
                         onClick={() => setShowNotifications(false)}
-                        className="text-white hover:text-white/80"
+                        className="text-white hover:text-white/80 cursor-pointer"
                       >
                         <X size={18} />
                       </button>
@@ -365,30 +294,29 @@ function AccountsLayout() {
                     ) : (
                       notifications.map((notification) => {
                         const IconComponent = getNotificationIcon(notification.type)
+                        const isUnread = notification.status !== 'READ' && !notification.readAt
                         return (
                           <div
                             key={notification.id}
                             onClick={() => handleNotificationClick(notification)}
                             className={`px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                              !notification.isRead ? 'bg-blue-50' : ''
+                              isUnread ? 'bg-blue-50' : ''
                             }`}
                           >
                             <div className="flex items-start gap-3">
                               <div className={`p-2 rounded-full flex-shrink-0 ${
-                                notification.type === 'payment' ? 'bg-green-100 text-green-600' :
-                                notification.type === 'invoice' ? 'bg-blue-100 text-blue-600' :
-                                notification.type === 'order' ? 'bg-purple-100 text-purple-600' :
-                                notification.type === 'vendor' ? 'bg-orange-100 text-orange-600' :
-                                'bg-red-100 text-red-600'
+                                notification.priority === 'HIGH' || notification.priority === 'URGENT' ? 'bg-red-100 text-red-600' :
+                                notification.priority === 'MEDIUM' ? 'bg-orange-100 text-orange-600' :
+                                'bg-blue-100 text-blue-600'
                               }`}>
                                 <IconComponent size={16} />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
-                                  <h4 className={`text-sm font-medium ${!notification.isRead ? 'text-gray-900' : 'text-gray-700'}`}>
+                                  <h4 className={`text-sm font-medium ${isUnread ? 'text-gray-900' : 'text-gray-700'}`}>
                                     {notification.title}
                                   </h4>
-                                  {!notification.isRead && (
+                                  {isUnread && (
                                     <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
                                   )}
                                 </div>
@@ -396,11 +324,11 @@ function AccountsLayout() {
                                 <div className="flex items-center justify-between mt-2">
                                   <span className="text-xs text-gray-400 flex items-center gap-1">
                                     <Clock size={12} />
-                                    {formatTimeAgo(notification.timestamp)}
+                                    {formatTimeAgo(notification.createdAt)}
                                   </span>
-                                  {notification.action && (
+                                  {notification.metadata?.orderId && (
                                     <span className="text-xs text-blue-600 font-medium">
-                                      {notification.action.label} →
+                                      Order: {notification.metadata.orderId}
                                     </span>
                                   )}
                                 </div>
@@ -416,7 +344,7 @@ function AccountsLayout() {
                   {notifications.length > 0 && (
                     <div className="px-4 py-3" style={{ background: '#C3754C' }}>
                       <button
-                        className="text-sm text-white hover:text-white/80 flex items-center justify-center gap-1 font-medium w-full cursor-pointer"
+                        className="text-sm text-white hover:text-white/80 flex items-center justify-center gap-1 w-full cursor-pointer"
                         onClick={() => { setShowNotifications(false); setShowNotificationsModal(true) }}
                       >
                         View all notifications
@@ -466,18 +394,18 @@ function AccountsLayout() {
       {showNotificationsModal && (
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
           <div className="bg-white rounded-t-2xl sm:rounded-xl w-full max-w-2xl md:max-w-3xl max-h-[90vh] sm:max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl sm:rounded-t-xl" style={{ borderColor: '#E4E4E4' }}>
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl sm:rounded-t-xl" style={{ borderColor: '#E4E4E4' }}>
               <div className="flex items-center gap-2">
                 <Bell className="w-5 h-5" />
                 <h2 className="text-base sm:text-lg md:text-xl font-semibold" style={{ color: 'var(--color-heading)' }}>All Notifications</h2>
-                {notifications.some(n => !n.isRead) && (
+                {unreadCount > 0 && (
                   <span className="px-2 py-0.5 bg-red-500 text-white rounded-full text-xs font-medium">
-                    {notifications.filter(n => !n.isRead).length} new
+                    {unreadCount} new
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {notifications.some(n => !n.isRead) && (
+                {unreadCount > 0 && (
                   <button
                     onClick={markAllAsRead}
                     className="px-3 py-1.5 text-xs sm:text-sm rounded-lg hover:bg-blue-50"
@@ -507,33 +435,30 @@ function AccountsLayout() {
                   {notifications.map((notification) => {
                     const IconComponent = getNotificationIcon(notification.type)
                     return (
-                      <div key={notification.id} className={`p-3 sm:p-4 ${!notification.isRead ? 'bg-blue-50' : ''}`}>
+                      <div key={notification.id} className={`p-3 sm:p-4 ${notification.status !== 'READ' ? 'bg-blue-50' : ''}`}>
                         <div className="flex items-start gap-3">
                           <div className={`p-2 rounded-full flex-shrink-0 ${
-                            notification.type === 'payment' ? 'bg-green-100 text-green-600' :
-                            notification.type === 'invoice' ? 'bg-blue-100 text-blue-600' :
-                            notification.type === 'order' ? 'bg-purple-100 text-purple-600' :
-                            notification.type === 'vendor' ? 'bg-orange-100 text-orange-600' :
-                            'bg-red-100 text-red-600'
+                            notification.priority === 'HIGH' || notification.priority === 'URGENT' ? 'bg-red-100 text-red-600' :
+                            notification.priority === 'MEDIUM' ? 'bg-orange-100 text-orange-600' :
+                            'bg-blue-100 text-blue-600'
                           }`}>
                             <IconComponent size={16} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
-                              <h4 className={`text-sm font-medium ${!notification.isRead ? 'text-gray-900' : 'text-gray-700'}`}>{notification.title}</h4>
-                              {!notification.isRead && <div className="w-2 h-2 bg-blue-600 rounded-full" />}
+                              <h4 className={`text-sm font-medium ${notification.status !== 'READ' ? 'text-gray-900' : 'text-gray-700'}`}>{notification.title}</h4>
+                              {notification.status !== 'READ' && <div className="w-2 h-2 bg-blue-600 rounded-full" />}
                             </div>
                             <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
                             <div className="flex items-center justify-between mt-2">
                               <span className="text-xs text-gray-400 flex items-center gap-1">
                                 <Clock size={12} />
-                                {formatTimeAgo(notification.timestamp)}
+                                {formatTimeAgo(notification.createdAt)}
                               </span>
-                              {!notification.isRead && (
+                              {notification.status !== 'READ' && (
                                 <button
                                   onClick={() => markAsRead(notification.id)}
-                                  className="text-xs"
-                                  style={{ color: 'var(--color-accent)' }}
+                                  className="text-xs text-[var(--color-accent)]"
                                 >
                                   Mark as read
                                 </button>

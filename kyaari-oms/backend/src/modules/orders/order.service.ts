@@ -53,6 +53,9 @@ export class OrderService {
       // Send notification to primary vendor about new order assignment (URGENT priority)
       await this.sendOrderAssignmentNotification(order, data);
       
+      // Send confirmation notification to admin who created the order
+      await this.sendOrderCreationNotification(order, data, createdById);
+      
       return await this.getOrderById(order.id);
     } catch (error) {
       logger.error('Failed to create order', { 
@@ -701,6 +704,31 @@ export class OrderService {
         error 
       });
       // Don't throw - notification failure shouldn't block order creation
+    }
+  }
+
+  private async sendOrderCreationNotification(order: Order, data: CreateOrderDto, createdById: string): Promise<void> {
+    try {
+      await notificationService.sendNotificationToUser(
+        createdById,
+        {
+          title: 'Order Created Successfully',
+          body: `Order ${data.orderNumber} has been created and assigned to vendor. You will be notified when the vendor responds.`,
+          priority: NotificationPriority.NORMAL,
+          data: {
+            type: 'ORDER_CREATED',
+            orderId: order.id,
+            orderNumber: data.orderNumber
+          }
+        }
+      );
+    } catch (error) {
+      logger.error('Failed to send order creation notification', { 
+        orderId: order.id, 
+        createdById,
+        error 
+      });
+      // Don't throw error as notification failure shouldn't fail order creation
     }
   }
 

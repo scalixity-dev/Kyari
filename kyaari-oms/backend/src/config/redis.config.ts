@@ -36,7 +36,7 @@ class RedisConfig {
         url: this.getRedisUrl(),
         socket: {
           connectTimeout: 5000,
-          reconnectStrategy: (retries) => {
+          reconnectStrategy: (retries: number) => {
             if (retries > 10) {
               logger.error('Redis reconnection failed after 10 retries');
               return new Error('Redis reconnection limit exceeded');
@@ -48,7 +48,7 @@ class RedisConfig {
       });
 
       // Error handlers
-      this.client.on('error', (err) => {
+      this.client.on('error', (err: Error) => {
         logger.error('Redis Client Error', { error: err });
         this.isConnected = false;
       });

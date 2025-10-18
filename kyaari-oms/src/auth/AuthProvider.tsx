@@ -2,6 +2,13 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { ApiService } from '../services/api'
 import type { User, LoginRequest } from '../services/api'
 import toast from 'react-hot-toast'
+import { 
+  initializeFirebaseClient, 
+  getFCMToken, 
+  registerServiceWorker,
+  onForegroundMessage,
+  isNotificationSupported 
+} from '../services/firebase'
 
 type AuthContextType = {
   user: User | null
@@ -17,6 +24,64 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
+
+  // Initialize Firebase and notification handling
+  useEffect(() => {
+    const initializeFirebase = async () => {
+      if (isNotificationSupported()) {
+        const initialized = initializeFirebaseClient()
+        if (initialized) {
+          // Register service worker for background notifications
+          await registerServiceWorker()
+          
+          // Set up foreground message listener
+          onForegroundMessage((payload) => {
+            console.log('Foreground notification received:', payload)
+            
+            // Show toast notification for foreground messages
+            const body = payload.notification?.body || payload.data?.body || 'New notification received'
+            
+            toast(body, {
+              icon: '🔔',
+              duration: 5000,
+            })
+          })
+        }
+      }
+    }
+
+    initializeFirebase()
+  }, [])
+
+  // Register FCM token for authenticated users
+  const registerFCMToken = async () => {
+    try {
+      if (!isNotificationSupported()) {
+        console.log('📱 Notifications not supported on this device')
+        return
+      }
+
+      console.log('🔔 Attempting to register FCM token...')
+      const fcmToken = await getFCMToken()
+      if (!fcmToken) {
+        console.log('⚠️ Could not obtain FCM token - notifications may not work')
+        console.log('💡 To enable notifications: Allow notifications in your browser settings')
+        return
+      }
+
+      console.log('✅ FCM token obtained, registering with backend...')
+
+      // Register token with backend using API service
+      const result = await ApiService.registerDeviceToken(fcmToken, 'WEB')
+      if (result.success) {
+        console.log('FCM token registered successfully')
+      } else {
+        console.error('Failed to register FCM token:', result.message)
+      }
+    } catch (error) {
+      console.error('Error registering FCM token:', error)
+    }
+  }
 
   // Initialize auth state on mount
   useEffect(() => {
@@ -76,6 +141,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Get the user data that was stored by ApiService.login()
       const user = ApiService.getCurrentUserFromStorage()
       setUser(user)
+      
+      // Register FCM token for push notifications
+      if (user?.id) {
+        setTimeout(() => {
+          registerFCMToken()
+        }, 1000) // Small delay to ensure login is fully processed
+      }
+      
       return true
     } catch (error: any) {
       console.error('Login error:', error)

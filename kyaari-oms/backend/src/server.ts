@@ -4,6 +4,7 @@ import { logger } from './utils/logger';
 import { prisma } from './config/database';
 import { redisConfig } from './config/redis.config';
 import { SchedulerService } from './services/scheduler.service';
+import { initializeFirebase } from './config/firebase.config';
 
 const startServer = async () => {
   try {
@@ -17,6 +18,14 @@ const startServer = async () => {
       logger.info('Redis caching enabled');
     } else {
       logger.info('Redis caching disabled');
+    }
+
+    // Initialize Firebase for notifications
+    const firebaseInitialized = initializeFirebase();
+    if (firebaseInitialized) {
+      logger.info('🔥 Firebase initialized successfully for notifications');
+    } else {
+      logger.warn('Firebase initialization skipped - notifications will be simulated');
     }
 
     // Initialize and start token cleanup scheduler
