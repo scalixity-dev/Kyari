@@ -310,7 +310,14 @@ export default function VendorSupport() {
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 lg:mb-10 gap-3">
-        <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 font-[var(--font-heading)]">Vendor Support</h2>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2">
+            Vendor Support
+          </h1>
+          <p className="text-sm sm:text-base text-[var(--color-primary)]">
+            Get help and support for your operations
+          </p>
+        </div>
         <button
           onClick={() => setShowNewTicket(true)}
           className="bg-accent text-button-text rounded-xl px-4 py-2.5 border border-transparent flex items-center justify-center gap-2 w-full sm:w-auto min-h-[44px] sm:min-h-auto"
@@ -406,7 +413,7 @@ export default function VendorSupport() {
                 <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
               </button>
               {showFromCalendar && (
-                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                <div className="absolute z-50 mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
                   <Calendar
                     mode="single"
                     selected={dateFromDate}
@@ -437,7 +444,7 @@ export default function VendorSupport() {
                 <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
               </button>
               {showToCalendar && (
-                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                <div className="absolute z-50 mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
                   <Calendar
                     mode="single"
                     selected={dateToDate}
@@ -464,7 +471,7 @@ export default function VendorSupport() {
           />
           <button 
             onClick={resetFilters} 
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2.5 sm:py-2 text-xs sm:text-sm whitespace-nowrap hover:bg-secondary hover:text-white transition-colors duration-200 min-h-[44px] sm:min-h-auto"
+            className="bg-white text-secondary border border-secondary rounded-2xl px-4 py-2.5 sm:py-2 text-xs sm:text-sm whitespace-nowrap hover:bg-secondary hover:text-white transition-colors duration-200 min-h-[44px] sm:min-h-auto cursor-pointer"
           >
             Reset
           </button>
@@ -519,8 +526,8 @@ export default function VendorSupport() {
                   <td className="p-3 text-sm whitespace-nowrap">{t.createdAt} / {t.updatedAt}</td>
                   <td className="p-3 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
-                      <button onClick={() => setDrawerTicket(t)} className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95 whitespace-nowrap">View</button>
-                      <button onClick={() => resolveTicket(t)} className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 whitespace-nowrap">Resolve</button>
+                      <button onClick={() => setDrawerTicket(t)} className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95 whitespace-nowrap cursor-pointer">View</button>
+                      <button onClick={() => resolveTicket(t)} className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 whitespace-nowrap cursor-pointer">Resolve</button>
                     </div>
                   </td>
                 </tr>

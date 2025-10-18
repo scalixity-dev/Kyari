@@ -79,8 +79,13 @@ export default function ProfileSettings() {
   return (
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 sm:mb-0 font-[var(--font-heading)]">Profile & Settings</h2>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2">
+          Profile & Settings
+        </h1>
+        <p className="text-sm sm:text-base text-[var(--color-primary)]">
+          Manage your profile information and account settings
+        </p>
       </div>
 
       {/* Tabs */}

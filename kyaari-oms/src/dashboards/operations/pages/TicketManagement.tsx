@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, Eye, X, CheckSquare, Clock, Calendar as CalendarIcon, FileText, Paperclip, Edit } from 'lucide-react'
-import { CustomDropdown, KPICard } from '../../../components'
+import { CustomDropdown, KPICard, CSVPDFExportButton } from '../../../components'
+import { Pagination } from '../../../components/ui/Pagination'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
 import { TicketApi, type TicketListItem, type TicketComment } from '../../../services/ticketApi'
@@ -49,26 +50,26 @@ interface Attachment {
 const getStatusBadge = (status: string) => {
   switch (status) {
     case 'open':
-      return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">Open</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#FEE2E2', color: '#991B1B', borderColor: '#EF4444' }}>Open</span>
     case 'under-review':
-      return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Under Review</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#FEF3C7', color: '#92400E', borderColor: '#F59E0B' }}>Under Review</span>
     case 'resolved':
-      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Resolved</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#D1FAE5', color: '#065F46', borderColor: '#10B981' }}>Resolved</span>
     default:
-      return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">{status}</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#F3F4F6', color: '#374151', borderColor: '#9CA3AF' }}>{status}</span>
   }
 }
 
 const getPriorityBadge = (priority: string) => {
   switch (priority) {
     case 'high':
-      return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">High</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#FEE2E2', color: '#991B1B', borderColor: '#EF4444' }}>High</span>
     case 'medium':
-      return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Medium</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#FEF3C7', color: '#92400E', borderColor: '#F59E0B' }}>Medium</span>
     case 'low':
-      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Low</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#D1FAE5', color: '#065F46', borderColor: '#10B981' }}>Low</span>
     default:
-      return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">{priority}</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#F3F4F6', color: '#374151', borderColor: '#9CA3AF' }}>{priority}</span>
   }
 }
 
@@ -88,15 +89,20 @@ const getIssueTypeLabel = (issueType: string) => {
 export default function TicketManagement() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [filters, setFilters] = useState({
     status: 'all',
     vendor: '',
-    date: '',
+    fromDate: '',
+    toDate: '',
     ticket: ''
   })
-  const [dateCalendar, setDateCalendar] = useState<Date | undefined>()
-  const [showDateCalendar, setShowDateCalendar] = useState(false)
-  const dateCalendarRef = useRef<HTMLDivElement>(null)
+  const [fromDateCalendar, setFromDateCalendar] = useState<Date | undefined>()
+  const [toDateCalendar, setToDateCalendar] = useState<Date | undefined>()
+  const [showFromDateCalendar, setShowFromDateCalendar] = useState(false)
+  const [showToDateCalendar, setShowToDateCalendar] = useState(false)
+  const fromDateCalendarRef = useRef<HTMLDivElement>(null)
+  const toDateCalendarRef = useRef<HTMLDivElement>(null)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [updateStatusModalOpen, setUpdateStatusModalOpen] = useState(false)
@@ -106,6 +112,10 @@ export default function TicketManagement() {
   const [newAttachment, setNewAttachment] = useState<File | null>(null)
   const [pagination, setPagination] = useState<{ page: number; limit: number; total: number }>({ page: 1, limit: 20, total: 0 })
   const [viewingAttachment, setViewingAttachment] = useState<{ url: string; type: 'image' | 'pdf' | 'unknown'; name: string } | null>(null)
+
+  // pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   const mapApiTicketToUI = (t: TicketListItem): Ticket => {
     const orderIdentifiers: string[] = []
@@ -151,12 +161,14 @@ export default function TicketManagement() {
     }
   }
 
-  const fetchTickets = async () => {
+  const fetchTickets = React.useCallback(async () => {
     try {
+      setIsLoading(true)
       const res = await TicketApi.list({
-        status: filters.status as any,
+        status: filters.status === 'all' ? undefined : filters.status as 'open' | 'under-review' | 'resolved' | 'closed' | undefined,
         vendor: filters.vendor || undefined,
-        dateFrom: filters.date || undefined,
+        dateFrom: filters.fromDate || undefined,
+        dateTo: filters.toDate || undefined,
         page: pagination.page,
         limit: pagination.limit,
       })
@@ -167,19 +179,23 @@ export default function TicketManagement() {
       setPagination(res.data.pagination)
     } catch (e) {
       console.error('Failed to load tickets', e)
+    } finally {
+      setIsLoading(false)
     }
-  }
+  }, [filters.status, filters.vendor, filters.fromDate, filters.toDate, pagination.page, pagination.limit])
 
   useEffect(() => {
     fetchTickets()
- 
-  }, [])
+  }, [fetchTickets])
 
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dateCalendarRef.current && !dateCalendarRef.current.contains(event.target as Node)) {
-        setShowDateCalendar(false)
+      if (fromDateCalendarRef.current && !fromDateCalendarRef.current.contains(event.target as Node)) {
+        setShowFromDateCalendar(false)
+      }
+      if (toDateCalendarRef.current && !toDateCalendarRef.current.contains(event.target as Node)) {
+        setShowToDateCalendar(false)
       }
     }
 
@@ -201,8 +217,12 @@ export default function TicketManagement() {
       )
     }
 
-    if (filters.date) {
-      filtered = filtered.filter(ticket => ticket.raisedOn === filters.date)
+    if (filters.fromDate) {
+      filtered = filtered.filter(ticket => ticket.raisedOn >= filters.fromDate)
+    }
+
+    if (filters.toDate) {
+      filtered = filtered.filter(ticket => ticket.raisedOn <= filters.toDate)
     }
 
     if (filters.ticket) {
@@ -211,7 +231,14 @@ export default function TicketManagement() {
     }
 
     setFilteredTickets(filtered)
+    setCurrentPage(1) // Reset to first page when filters change
   }, [filters, tickets])
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredTickets.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredTickets.length)
+  const paginatedTickets = filteredTickets.slice(startIndex, endIndex)
 
   // Build vendor dropdown options from loaded tickets
   const vendorOptions = React.useMemo(() => {
@@ -317,6 +344,41 @@ export default function TicketManagement() {
   const underReviewTickets = tickets.filter(ticket => ticket.status === 'under-review').length
   const resolvedTickets = tickets.filter(ticket => ticket.status === 'resolved').length
 
+  const handleExportCSV = () => {
+    const csvContent = [
+      ['Ticket ID', 'Order ID', 'Vendor Name', 'Vendor Email', 'Issue Type', 'Issue Description', 'Status', 'Priority', 'Raised On', 'Last Updated', 'Raised By'],
+      ...filteredTickets.map(ticket => [
+        ticket.ticketNumber,
+        ticket.orderNumber,
+        ticket.vendor.name,
+        ticket.vendor.email,
+        getIssueTypeLabel(ticket.issueType),
+        ticket.issueDescription,
+        ticket.status,
+        ticket.priority,
+        ticket.raisedOn,
+        ticket.lastUpdated,
+        ticket.raisedBy
+      ])
+    ].map(row => row.map(field => `"${field}"`).join(',')).join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `tickets_export_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handleExportPDF = () => {
+    // For now, we'll export as CSV since PDF generation would require additional libraries
+    // In a real implementation, you might use libraries like jsPDF or html2canvas
+    handleExportCSV()
+  }
+
   return (
     <div className="p-4 sm:p-6 md:p-8 bg-[var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
@@ -330,7 +392,7 @@ export default function TicketManagement() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 mt-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 mt-8 sm:mt-12">
         <KPICard
           title="Open Tickets"
           value={openTickets}
@@ -349,13 +411,20 @@ export default function TicketManagement() {
       </div>
 
       {/* Tickets Heading */}
-      <div className="mb-3 sm:mb-4">
+      <div className="mb-3 sm:mb-4 flex items-center justify-between">
         <h2 className="text-base sm:text-lg md:text-xl font-semibold text-[var(--color-heading)]">All Tickets</h2>
+        <CSVPDFExportButton
+          onExportCSV={handleExportCSV}
+          onExportPDF={handleExportPDF}
+          label="Export"
+        />
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 pb-3 sm:pb-4 mb-4 sm:mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Filter Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-4">
+          {/* Search Ticket */}
           <div>
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Ticket#</label>
             <input
@@ -363,30 +432,86 @@ export default function TicketManagement() {
               value={filters.ticket}
               onChange={(e) => setFilters({ ...filters, ticket: e.target.value })}
               placeholder="Search ticket number"
-              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto mb-2"
+              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
             />
+          </div>
 
-            <div className="hidden sm:flex sm:flex-row sm:items-center gap-2">
+          {/* Search Vendor */}
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Vendor#</label>
+            <CustomDropdown
+              value={filters.vendor}
+              onChange={(value) => setFilters({ ...filters, vendor: value || '' })}
+              options={vendorOptions}
+              placeholder="All Vendors"
+            />
+          </div>
+
+          {/* From Date */}
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">From Date</label>
+            <div className="relative" ref={fromDateCalendarRef}>
               <button
-                onClick={() => {/* Apply filters */}}
-                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
-                style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
+                type="button"
+                onClick={() => setShowFromDateCalendar(!showFromDateCalendar)}
+                className="w-full px-3 py-2.5 sm:py-3 text-xs sm:text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
               >
-                Apply
+                <span className={fromDateCalendar ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                  {fromDateCalendar ? format(fromDateCalendar, 'dd/MM/yyyy') : 'Select date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
               </button>
-              <button
-                onClick={() => {
-                  setFilters({ status: 'all', vendor: '', date: '', ticket: '' })
-                  setDateCalendar(undefined)
-                }}
-                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
-                style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
-              >
-                Reset
-              </button>
+              {showFromDateCalendar && (
+                <div className="absolute z-50 mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={fromDateCalendar}
+                    onSelect={(date) => {
+                      setFromDateCalendar(date)
+                      setFilters({...filters, fromDate: date ? format(date, 'yyyy-MM-dd') : ''})
+                      setShowFromDateCalendar(false)
+                    }}
+                    initialFocus
+                    className="w-full"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
+          {/* To Date */}
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">To Date</label>
+            <div className="relative" ref={toDateCalendarRef}>
+              <button
+                type="button"
+                onClick={() => setShowToDateCalendar(!showToDateCalendar)}
+                className="w-full px-3 py-2.5 sm:py-3 text-xs sm:text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
+              >
+                <span className={toDateCalendar ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                  {toDateCalendar ? format(toDateCalendar, 'dd/MM/yyyy') : 'Select date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+              </button>
+              {showToDateCalendar && (
+                <div className="absolute z-50 mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={toDateCalendar}
+                    onSelect={(date) => {
+                      setToDateCalendar(date)
+                      setFilters({...filters, toDate: date ? format(date, 'yyyy-MM-dd') : ''})
+                      setShowToDateCalendar(false)
+                    }}
+                    initialFocus
+                    className="w-full"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Status */}
           <div>
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Status</label>
             <CustomDropdown
@@ -401,144 +526,111 @@ export default function TicketManagement() {
               placeholder="All Statuses"
             />
           </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Vendor</label>
-            <CustomDropdown
-              value={filters.vendor}
-              onChange={(value) => setFilters({ ...filters, vendor: value || '' })}
-              options={vendorOptions}
-              placeholder="All Vendors"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Date</label>
-            <div className="relative" ref={dateCalendarRef}>
-              <button
-                type="button"
-                onClick={() => setShowDateCalendar(!showDateCalendar)}
-                className="w-full px-3 py-2.5 sm:py-3 text-xs sm:text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
-              >
-                <span className={dateCalendar ? 'text-gray-900 truncate' : 'text-gray-500'}>
-                  {dateCalendar ? format(dateCalendar, 'PPP') : 'Select date'}
-                </span>
-                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
-              </button>
-              {showDateCalendar && (
-                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
-                  <Calendar
-                    mode="single"
-                    selected={dateCalendar}
-                    onSelect={(date) => {
-                      setDateCalendar(date)
-                      setFilters({...filters, date: date ? format(date, 'yyyy-MM-dd') : ''})
-                      setShowDateCalendar(false)
-                    }}
-                    initialFocus
-                    className="w-full"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
         </div>
 
-        {/* Mobile Apply/Reset Buttons */}
-        <div className="flex sm:hidden flex-row items-center gap-2 mt-4">
-          <button
-            onClick={() => {/* Apply filters */}}
-            className="flex-1 px-4 py-2.5 rounded-md text-white font-medium text-sm min-h-[44px]"
-            style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
-          >
-            Apply
-          </button>
-          <button
-            onClick={() => {
-              setFilters({ status: 'all', vendor: '', date: '', ticket: '' })
-              setDateCalendar(undefined)
-            }}
-            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px]"
-            style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
-          >
-            Reset
-          </button>
+        {/* Action Buttons Row */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+          <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => {/* Apply filters */}}
+              className="flex-1 sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
+              style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
+            >
+              Apply
+            </button>
+            <button
+              onClick={() => {
+                setFilters({ status: 'all', vendor: '', fromDate: '', toDate: '', ticket: '' })
+                setFromDateCalendar(undefined)
+                setToDateCalendar(undefined)
+              }}
+              className="flex-1 sm:w-[140px] px-4 py-2.5 sm:py-2 bg-white text-secondary border border-secondary rounded-2xl font-medium hover:bg-secondary hover:text-white transition-colors duration-200 text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
+            >
+              Reset
+            </button>
+          </div>
         </div>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="bg-white rounded-xl p-12 text-center">
+          <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading tickets...</p>
+        </div>
+      )}
+
       {/* Tickets Table */}
-      <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden mb-6">
-        {/* Desktop Table View - Hidden on Mobile */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[var(--color-accent)]">
-              <tr>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Ticket ID</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Order ID</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Vendor</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Issue</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Raised On</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Last Updated</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Actions</th>
+      {!isLoading && (
+      <div className="hidden lg:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px] border-collapse">
+            <thead>
+              <tr style={{ background: 'var(--color-accent)' }}>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Ticket ID</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Order ID</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Vendor</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Issue</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Status</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Raised On</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Last Updated</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredTickets.map((ticket) => (
-                <tr key={ticket.id} className="hover:bg-gray-50">
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+            <tbody className="bg-white">
+              {paginatedTickets.map((ticket) => (
+                <tr key={ticket.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="p-3">
                     <div className="flex items-center gap-2">
-                      <div className="text-sm font-medium text-[var(--color-heading)]">{ticket.ticketNumber}</div>
+                      <div className="font-semibold text-secondary">{ticket.ticketNumber}</div>
                       {getPriorityBadge(ticket.priority)}
                     </div>
                   </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{ticket.orderNumber}</div>
-                  </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+                  <td className="p-3 font-semibold text-secondary">{ticket.orderNumber}</td>
+                  <td className="p-3">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{ticket.vendor.name}</div>
                       <div className="text-xs text-gray-500">{ticket.vendor.email}</div>
                     </div>
                   </td>
-                  <td className="px-4 xl:px-6 py-4">
+                  <td className="p-3">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{getIssueTypeLabel(ticket.issueType)}</div>
                       <div className="text-xs text-gray-500 max-w-xs truncate">{ticket.issueDescription}</div>
                     </div>
                   </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+                  <td className="p-3">
                     {getStatusBadge(ticket.status)}
                   </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="p-3 text-sm text-gray-600">
                     {ticket.raisedOn}
                   </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="p-3 text-sm text-gray-600">
                     {ticket.lastUpdated}
                   </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex flex-col items-start gap-2">
+                  <td className="p-3">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => handleViewDetails(ticket)}
-                        className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-xs font-medium flex items-center gap-1"
+                        className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 flex items-center gap-1"
                       >
-                        <Eye size={14} />
+                        <Eye size={12} />
                         View
                       </button>
                       {ticket.status !== 'resolved' && (
                         <button
                           onClick={() => handleUpdateStatus(ticket)}
-                          className="px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors text-xs font-medium flex items-center gap-1"
+                          className="bg-yellow-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-yellow-600 flex items-center gap-1"
                         >
-                          <Edit size={14} />
+                          <Edit size={12} />
                           Update
                         </button>
                       )}
                       <button
                         onClick={() => handleAddComment(ticket)}
-                        className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-xs font-medium flex items-center gap-1"
+                        className="bg-green-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-600 flex items-center gap-1"
                       >
-                        <FileText size={14} />
+                        <FileText size={12} />
                         Comment
                       </button>
                     </div>
@@ -550,13 +642,13 @@ export default function TicketManagement() {
         </div>
 
         {/* Mobile Card View - Visible only on Mobile */}
-        <div className="md:hidden space-y-4 p-4">
-          {filteredTickets.map((ticket) => (
-            <div key={ticket.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <div className="lg:hidden space-y-3 p-4">
+          {paginatedTickets.map((ticket) => (
+            <div key={ticket.id} className="rounded-xl p-4 border border-gray-200 bg-white">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-semibold text-[var(--color-heading)]">{ticket.ticketNumber}</span>
+                    <h3 className="font-semibold text-secondary text-lg">{ticket.ticketNumber}</h3>
                     {getPriorityBadge(ticket.priority)}
                   </div>
                   <div className="text-xs text-gray-500">{ticket.orderNumber}</div>
@@ -564,61 +656,77 @@ export default function TicketManagement() {
                 {getStatusBadge(ticket.status)}
               </div>
 
-              <div className="space-y-2 mb-3">
+              <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
                 <div>
-                  <span className="text-xs text-gray-500">Vendor:</span>
-                  <div className="text-sm font-medium text-gray-900">{ticket.vendor.name}</div>
+                  <span className="text-gray-500 block">Vendor</span>
+                  <span className="font-medium">{ticket.vendor.name}</span>
                   <div className="text-xs text-gray-500">{ticket.vendor.email}</div>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-500">Issue:</span>
-                  <div className="text-sm font-medium text-gray-900">{getIssueTypeLabel(ticket.issueType)}</div>
+                  <span className="text-gray-500 block">Issue</span>
+                  <span className="font-medium">{getIssueTypeLabel(ticket.issueType)}</span>
                   <div className="text-xs text-gray-600 line-clamp-2">{ticket.issueDescription}</div>
                 </div>
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Raised: {ticket.raisedOn}</span>
-                  <span>Updated: {ticket.lastUpdated}</span>
+                <div>
+                  <span className="text-gray-500 block">Raised</span>
+                  <span className="font-medium">{ticket.raisedOn}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block">Updated</span>
+                  <span className="font-medium">{ticket.lastUpdated}</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => handleViewDetails(ticket)}
-                  className="w-full px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-medium flex items-center justify-center gap-2 min-h-[44px]"
+                  className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 flex items-center gap-1"
                 >
-                  <Eye size={16} />
-                  View Details
+                  <Eye size={12} />
+                  View
                 </button>
-                <div className="grid grid-cols-2 gap-2">
-                  {ticket.status !== 'resolved' && (
-                    <button
-                      onClick={() => handleUpdateStatus(ticket)}
-                      className="px-3 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors text-sm font-medium min-h-[44px] flex items-center justify-center gap-1"
-                    >
-                      <Edit size={16} />
-                      Update
-                    </button>
-                  )}
+                {ticket.status !== 'resolved' && (
                   <button
-                    onClick={() => handleAddComment(ticket)}
-                    className={`px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm font-medium flex items-center justify-center gap-1 min-h-[44px] ${
-                      ticket.status !== 'resolved' ? '' : 'col-span-2'
-                    }`}
+                    onClick={() => handleUpdateStatus(ticket)}
+                    className="bg-yellow-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-yellow-600 flex items-center gap-1"
                   >
-                    <FileText size={16} /> Comment
+                    <Edit size={12} />
+                    Update
                   </button>
-                </div>
+                )}
+                <button
+                  onClick={() => handleAddComment(ticket)}
+                  className="bg-green-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-600 flex items-center gap-1"
+                >
+                  <FileText size={12} />
+                  Comment
+                </button>
               </div>
             </div>
           ))}
         </div>
 
         {filteredTickets.length === 0 && (
-          <div className="p-8 text-center text-gray-500">
-            No tickets found matching the current filters.
+          <div className="bg-white rounded-xl p-12 text-center">
+            <p className="text-gray-500">No tickets found matching the current filters.</p>
           </div>
         )}
+        
+        {/* Pagination */}
+        {filteredTickets.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTickets.length}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setCurrentPage}
+            itemLabel="tickets"
+            variant="desktop"
+          />
+        )}
       </div>
+      )}
 
       {/* View Details Modal */}
       {detailsModalOpen && selectedTicket && (

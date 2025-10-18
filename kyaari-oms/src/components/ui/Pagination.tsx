@@ -59,7 +59,7 @@ export function Pagination({
 
   // Desktop variant
   return (
-    <div className="flex items-center justify-between px-3 md:px-4 lg:px-6 py-3 bg-white border-t border-gray-100">
+    <div className="flex items-center justify-between px-3 md:px-4 lg:px-6 py-3 bg-white border-t border-gray-100 rounded-b-xl">
       <div className="text-xs text-gray-500">
         Showing {totalItems === 0 ? 0 : startIndex + 1}-{endIndex} of {totalItems}
         {itemLabel && ` ${itemLabel}`}

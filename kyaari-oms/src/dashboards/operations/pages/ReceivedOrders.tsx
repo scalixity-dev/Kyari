@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { CheckSquare, AlertTriangle, X, Calendar as CalendarIcon, ChevronDown, ChevronRight } from 'lucide-react'
-import { CustomDropdown, KPICard } from '../../../components'
+import { CustomDropdown, KPICard, CSVPDFExportButton } from '../../../components'
+import { Pagination } from '../../../components/ui/Pagination'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
 import ReceivedOrdersApiService, { type ReceivedOrder } from '../../../services/receivedOrdersApi'
@@ -20,13 +21,13 @@ interface ItemQuantityInput {
 const getStatusBadge = (status: string) => {
   switch (status) {
     case 'pending':
-      return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Pending</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#FEF3C7', color: '#92400E', borderColor: '#F59E0B' }}>Pending</span>
     case 'verified':
-      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Verified</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#D1FAE5', color: '#065F46', borderColor: '#10B981' }}>Verified</span>
     case 'mismatch':
-      return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">Mismatch</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#FEE2E2', color: '#991B1B', borderColor: '#EF4444' }}>Mismatch</span>
     default:
-      return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">{status}</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#F3F4F6', color: '#374151', borderColor: '#9CA3AF' }}>{status}</span>
   }
 }
 
@@ -37,13 +38,18 @@ export default function ReceivedOrders() {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
+    order: '',
     vendor: '',
-    date: '',
+    fromDate: '',
+    toDate: '',
     status: 'all'
   })
-  const [dateCalendar, setDateCalendar] = useState<Date | undefined>()
-  const [showDateCalendar, setShowDateCalendar] = useState(false)
-  const dateCalendarRef = useRef<HTMLDivElement>(null)
+  const [fromDateCalendar, setFromDateCalendar] = useState<Date | undefined>()
+  const [toDateCalendar, setToDateCalendar] = useState<Date | undefined>()
+  const [showFromDateCalendar, setShowFromDateCalendar] = useState(false)
+  const [showToDateCalendar, setShowToDateCalendar] = useState(false)
+  const fromDateCalendarRef = useRef<HTMLDivElement>(null)
+  const toDateCalendarRef = useRef<HTMLDivElement>(null)
   const [ticketModalOpen, setTicketModalOpen] = useState(false)
   const [selectedOrderForTicket, setSelectedOrderForTicket] = useState<ReceivedOrder | null>(null)
   const [ticketData, setTicketData] = useState<TicketData>({
@@ -59,6 +65,10 @@ export default function ReceivedOrders() {
     mismatch: 0,
     total: 0
   })
+
+  // pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   // Fetch orders and metrics on mount
   useEffect(() => {
@@ -107,8 +117,11 @@ export default function ReceivedOrders() {
   // Close calendar when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dateCalendarRef.current && !dateCalendarRef.current.contains(event.target as Node)) {
-        setShowDateCalendar(false)
+      if (fromDateCalendarRef.current && !fromDateCalendarRef.current.contains(event.target as Node)) {
+        setShowFromDateCalendar(false)
+      }
+      if (toDateCalendarRef.current && !toDateCalendarRef.current.contains(event.target as Node)) {
+        setShowToDateCalendar(false)
       }
     }
 
@@ -120,14 +133,24 @@ export default function ReceivedOrders() {
   React.useEffect(() => {
     let filtered = orders
 
+    if (filters.order) {
+      filtered = filtered.filter(order => 
+        order.orderNumber.toLowerCase().includes(filters.order.toLowerCase())
+      )
+    }
+
     if (filters.vendor) {
       filtered = filtered.filter(order => 
         order.vendor.name.toLowerCase().includes(filters.vendor.toLowerCase())
       )
     }
 
-    if (filters.date) {
-      filtered = filtered.filter(order => order.submittedAt.startsWith(filters.date))
+    if (filters.fromDate) {
+      filtered = filtered.filter(order => order.submittedAt >= filters.fromDate)
+    }
+
+    if (filters.toDate) {
+      filtered = filtered.filter(order => order.submittedAt <= filters.toDate + 'T23:59:59.999Z')
     }
 
     if (filters.status !== 'all') {
@@ -135,7 +158,14 @@ export default function ReceivedOrders() {
     }
 
     setFilteredOrders(filtered)
+    setCurrentPage(1) // Reset to first page when filters change
   }, [filters, orders])
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredOrders.length)
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
 
   const handleVerifyOrder = async (orderId: string) => {
     try {
@@ -143,10 +173,12 @@ export default function ReceivedOrders() {
       // Refresh data
       await fetchReceivedOrders()
       await fetchMetrics()
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to verify order:', error)
       // Show user-friendly error message
-      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to verify order. Please try again.'
+      const errorMessage = (error as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || 
+                          (error as { response?: { data?: { error?: string } }; message?: string })?.message || 
+                          'Failed to verify order. Please try again.'
       alert(`Error: ${errorMessage}`)
     }
   }
@@ -229,10 +261,12 @@ export default function ReceivedOrders() {
         comments: '',
         proofFile: undefined
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to raise ticket:', error)
       // Show user-friendly error message
-      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to raise ticket. Please try again.'
+      const errorMessage = (error as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || 
+                          (error as { response?: { data?: { error?: string } }; message?: string })?.message || 
+                          'Failed to raise ticket. Please try again.'
       alert(`Error: ${errorMessage}`)
     }
   }
@@ -253,10 +287,12 @@ export default function ReceivedOrders() {
       await fetchReceivedOrders()
       await fetchMetrics()
       setSelectedOrders(new Set())
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to bulk verify orders:', error)
       // Show user-friendly error message
-      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to bulk verify orders. Please try again.'
+      const errorMessage = (error as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || 
+                          (error as { response?: { data?: { error?: string } }; message?: string })?.message || 
+                          'Failed to bulk verify orders. Please try again.'
       alert(`Error: ${errorMessage}`)
     }
   }
@@ -304,6 +340,41 @@ export default function ReceivedOrders() {
     return order && order.status === 'pending'
   })
 
+  const handleExportCSV = () => {
+    const csvContent = [
+      ['Order ID', 'Order Number', 'Vendor Name', 'Vendor Email', 'Status', 'Submitted Date', 'Total Items', 'Quantity Invoiced', 'Quantity Received', 'GRN Number', 'Ticket Number'],
+      ...filteredOrders.map(order => [
+        order.id,
+        order.orderNumber,
+        order.vendor?.name || 'N/A',
+        order.vendor?.email || 'N/A',
+        order.status,
+        order.submittedAt ? format(new Date(order.submittedAt), 'yyyy-MM-dd') : 'N/A',
+        order.items || 0,
+        order.quantityInvoiced || 0,
+        order.quantityReceived || 0,
+        order.grnNumber || 'N/A',
+        order.ticketNumber || 'N/A'
+      ])
+    ].map(row => row.map(field => `"${field}"`).join(',')).join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `received_orders_export_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handleExportPDF = () => {
+    // For now, we'll export as CSV since PDF generation would require additional libraries
+    // In a real implementation, you might use libraries like jsPDF or html2canvas
+    handleExportCSV()
+  }
+
   return (
     <div className="p-4 sm:p-6 md:p-8 bg-[var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
@@ -317,7 +388,7 @@ export default function ReceivedOrders() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 mt-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 mt-8 sm:mt-12">
         <KPICard
           title="Pending Verification"
           value={metrics.pending}
@@ -336,52 +407,117 @@ export default function ReceivedOrders() {
       </div>
 
       {/* Received Orders Heading */}
-      <div className="mb-3 sm:mb-4">
+      <div className="mb-3 sm:mb-4 flex items-center justify-between">
         <h2 className="text-base sm:text-lg md:text-xl font-semibold text-[var(--color-heading)]">Received Orders</h2>
+        <CSVPDFExportButton
+          onExportCSV={handleExportCSV}
+          onExportPDF={handleExportPDF}
+          label="Export"
+        />
       </div>
 
       {/* Loading State */}
       {loading && (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-accent)]"></div>
+        <div className="bg-white rounded-xl p-12 text-center">
+          <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading orders...</p>
         </div>
       )}
 
       {/* Filters */}
       {!loading && (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 pb-3 sm:pb-4 mb-4 sm:mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Filter Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-4">
+          {/* Search Order */}
           <div>
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Order#</label>
             <input
               type="text"
+              value={filters.order}
+              onChange={(e) => setFilters({...filters, order: e.target.value})}
+              placeholder="Search order number"
+              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
+            />
+          </div>
+
+          {/* Search Vendor */}
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Vendor#</label>
+            <input
+              type="text"
               value={filters.vendor}
               onChange={(e) => setFilters({...filters, vendor: e.target.value})}
-              placeholder="Search order number"
-              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto mb-2"
+              placeholder="Search vendor"
+              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
             />
+          </div>
 
-            <div className="hidden sm:flex sm:flex-row sm:items-center gap-2">
+          {/* From Date */}
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">From Date</label>
+            <div className="relative" ref={fromDateCalendarRef}>
               <button
-                onClick={() => {/* Apply filters */}}
-                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
-                style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
+                type="button"
+                onClick={() => setShowFromDateCalendar(!showFromDateCalendar)}
+                className="w-full px-3 py-2.5 sm:py-3 text-xs sm:text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
               >
-                Apply
+                <span className={fromDateCalendar ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                  {fromDateCalendar ? format(fromDateCalendar, 'dd/MM/yyyy') : 'Select date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
               </button>
-              <button
-                onClick={() => {
-                  setFilters({vendor: '', date: '', status: 'all'})
-                  setDateCalendar(undefined)
-                }}
-                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
-                style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
-              >
-                Reset
-              </button>
+              {showFromDateCalendar && (
+                <div className="absolute z-50 mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={fromDateCalendar}
+                    onSelect={(date) => {
+                      setFromDateCalendar(date)
+                      setFilters({...filters, fromDate: date ? format(date, 'yyyy-MM-dd') : ''})
+                      setShowFromDateCalendar(false)
+                    }}
+                    initialFocus
+                    className="w-full"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
+          {/* To Date */}
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">To Date</label>
+            <div className="relative" ref={toDateCalendarRef}>
+              <button
+                type="button"
+                onClick={() => setShowToDateCalendar(!showToDateCalendar)}
+                className="w-full px-3 py-2.5 sm:py-3 text-xs sm:text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
+              >
+                <span className={toDateCalendar ? 'text-gray-900 truncate' : 'text-gray-500'}>
+                  {toDateCalendar ? format(toDateCalendar, 'dd/MM/yyyy') : 'Select date'}
+                </span>
+                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+              </button>
+              {showToDateCalendar && (
+                <div className="absolute z-50 mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={toDateCalendar}
+                    onSelect={(date) => {
+                      setToDateCalendar(date)
+                      setFilters({...filters, toDate: date ? format(date, 'yyyy-MM-dd') : ''})
+                      setShowToDateCalendar(false)
+                    }}
+                    initialFocus
+                    className="w-full"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Status */}
           <div>
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Status</label>
             <CustomDropdown
@@ -396,74 +532,32 @@ export default function ReceivedOrders() {
               placeholder="All Statuses"
             />
           </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Vendor</label>
-            <input
-              type="text"
-              value={filters.vendor}
-              onChange={(e) => setFilters({...filters, vendor: e.target.value})}
-              placeholder="Search vendor"
-              className="w-full px-3 py-2.5 sm:py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Date</label>
-            <div className="relative" ref={dateCalendarRef}>
-              <button
-                type="button"
-                onClick={() => setShowDateCalendar(!showDateCalendar)}
-                className="w-full px-3 py-2.5 sm:py-3 text-xs sm:text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto flex items-center justify-between text-left"
-              >
-                <span className={dateCalendar ? 'text-gray-900 truncate' : 'text-gray-500'}>
-                  {dateCalendar ? format(dateCalendar, 'PPP') : 'Select date'}
-                </span>
-                <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
-              </button>
-              {showDateCalendar && (
-                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
-                  <Calendar
-                    mode="single"
-                    selected={dateCalendar}
-                    onSelect={(date) => {
-                      setDateCalendar(date)
-                      setFilters({...filters, date: date ? format(date, 'yyyy-MM-dd') : ''})
-                      setShowDateCalendar(false)
-                    }}
-                    initialFocus
-                    className="w-full"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
         </div>
 
-        {/* Mobile Apply/Reset Buttons */}
-        <div className="flex sm:hidden flex-row items-center gap-2 mt-4">
-          <button
-            onClick={() => {/* Apply filters */}}
-            className="flex-1 px-4 py-2.5 rounded-md text-white font-medium text-sm min-h-[44px]"
-            style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
-          >
-            Apply
-          </button>
-          <button
-            onClick={() => {
-              setFilters({vendor: '', date: '', status: 'all'})
-              setDateCalendar(undefined)
-            }}
-            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px]"
-            style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
-          >
-            Reset
-          </button>
-        </div>
+        {/* Action Buttons Row */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+          <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => {/* Apply filters */}}
+              className="flex-1 sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
+              style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
+            >
+              Apply
+            </button>
+            <button
+              onClick={() => {
+                setFilters({order: '', vendor: '', fromDate: '', toDate: '', status: 'all'})
+                setFromDateCalendar(undefined)
+                setToDateCalendar(undefined)
+              }}
+              className="flex-1 sm:w-[140px] px-4 py-2.5 sm:py-2 bg-white text-secondary border border-secondary rounded-2xl font-medium hover:bg-secondary hover:text-white transition-colors duration-200 text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
+            >
+              Reset
+            </button>
+          </div>
 
-        {/* Bulk Actions */}
-        {selectedOrders.size > 0 && canBulkVerify && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          {/* Bulk Actions */}
+          {selectedOrders.size > 0 && canBulkVerify && (
             <button
               onClick={handleBulkVerification}
               className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
@@ -471,21 +565,20 @@ export default function ReceivedOrders() {
               <CheckSquare size={16} />
               Bulk Verify ({selectedOrders.size})
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       )}
 
       {/* Orders Table */}
       {!loading && (
-      <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden mb-6">
-        {/* Desktop Table View - Hidden on Mobile */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[var(--color-accent)]">
-              <tr>
-                <th className="px-4 xl:px-6 py-3 text-left w-12"></th>
-                <th className="px-4 xl:px-6 py-3 text-left">
+      <div className="hidden lg:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px] border-collapse">
+            <thead>
+              <tr style={{ background: 'var(--color-accent)' }}>
+                <th className="text-left p-3 font-heading font-normal w-12" style={{ color: 'var(--color-button-text)' }}></th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
                   <input
                     type="checkbox"
                     checked={selectedOrders.size > 0 && selectedOrders.size === filteredOrders.filter(o => o.status === 'pending').length && filteredOrders.filter(o => o.status === 'pending').length > 0}
@@ -494,20 +587,21 @@ export default function ReceivedOrders() {
                     className="rounded border-white text-white focus:ring-white"
                   />
                 </th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Order ID</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Items</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Vendor</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Qty Invoiced</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Qty Received</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
-                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Actions</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Order ID</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Items</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Vendor</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Date</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Qty Invoiced</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Qty Received</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Status</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredOrders.map((order) => (
+            <tbody className="bg-white">
+              {paginatedOrders.map((order) => (
                 <React.Fragment key={order.id}>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+                  <tr className="hover:bg-gray-50 transition-colors">
+                    <td className="p-3">
                       <button
                         onClick={() => toggleRowExpansion(order.id)}
                         className="text-gray-600 hover:text-[var(--color-accent)] transition-colors"
@@ -515,7 +609,7 @@ export default function ReceivedOrders() {
                         {expandedRows.has(order.id) ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                       </button>
                     </td>
-                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+                    <td className="p-3">
                       <input
                         type="checkbox"
                         checked={selectedOrders.has(order.id)}
@@ -525,23 +619,24 @@ export default function ReceivedOrders() {
                         className="rounded border-gray-300 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </td>
-                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-[var(--color-heading)]">{order.orderNumber}</div>
-                      <div className="text-xs text-gray-500">{format(new Date(order.submittedAt), 'dd/MM/yyyy')}</div>
-                    </td>
-                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="p-3 font-semibold text-secondary">{order.orderNumber}</td>
+                    <td className="p-3 text-sm text-gray-600">
                       {order.items} {order.items === 1 ? 'item' : 'items'}
                     </td>
-                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+                    <td className="p-3">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{order.vendor.name}</div>
                         <div className="text-xs text-gray-500">{order.vendor.email}</div>
                       </div>
                     </td>
-                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="p-3">
+                      <div className="text-sm text-gray-600">{format(new Date(order.submittedAt), 'dd/MM/yyyy')}</div>
+                      <div className="text-xs text-gray-500">{format(new Date(order.submittedAt), 'HH:mm')}</div>
+                    </td>
+                    <td className="p-3 text-sm text-gray-600">
                       {order.quantityInvoiced}
                     </td>
-                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+                    <td className="p-3">
                       <div className="text-sm text-gray-600">
                         {order.status === 'pending' ? (
                           <span className="text-gray-400 italic">-</span>
@@ -557,37 +652,37 @@ export default function ReceivedOrders() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+                    <td className="p-3">
                       {getStatusBadge(order.status)}
                     </td>
-                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="p-3">
                       {order.status === 'pending' && (
-                        <div className="flex flex-col items-start gap-2">
+                        <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => handleVerifyOrder(order.id)}
-                            className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-xs font-medium flex items-center gap-1"
+                            className="bg-green-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-600 flex items-center gap-1"
                           >
-                            <CheckSquare size={14} />
+                            <CheckSquare size={12} />
                             Verify OK
                           </button>
                           <button
                             onClick={() => handleRaiseTicket(order)}
-                            className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors text-xs font-medium flex items-center gap-1"
+                            className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 flex items-center gap-1"
                           >
-                            <AlertTriangle size={14} />
+                            <AlertTriangle size={12} />
                             Raise Ticket
                           </button>
                         </div>
                       )}
                       {order.status === 'verified' && (
                         <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckSquare size={14} />
+                          <CheckSquare size={12} />
                           Verified
                         </span>
                       )}
                       {order.status === 'mismatch' && (
                         <span className="text-xs text-red-600 flex items-center gap-1">
-                          <AlertTriangle size={14} />
+                          <AlertTriangle size={12} />
                           Ticket Raised
                         </span>
                       )}
@@ -595,37 +690,39 @@ export default function ReceivedOrders() {
                   </tr>
                   {expandedRows.has(order.id) && (
                     <tr className="bg-gray-50">
-                      <td colSpan={9} className="px-4 xl:px-6 py-4">
-                        <div className="text-sm">
-                          <h4 className="font-semibold text-gray-900 mb-3">Item Details ({order.itemDetails?.length || 0} items):</h4>
-                          {order.itemDetails && order.itemDetails.length > 0 ? (
-                            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                              <table className="w-full">
-                                <thead className="bg-gray-100">
-                                  <tr>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Product Name</th>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">SKU</th>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Order #</th>
-                                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">Qty Invoiced</th>
-                                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">Qty Dispatched</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200">
-                                  {order.itemDetails.map((item, idx) => (
-                                    <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                      <td className="px-3 py-2 text-sm text-gray-900">{item.productName}</td>
-                                      <td className="px-3 py-2 text-sm text-gray-600">{item.sku || '-'}</td>
-                                      <td className="px-3 py-2 text-sm text-gray-600">{item.orderNumber}</td>
-                                      <td className="px-3 py-2 text-sm text-gray-900 text-right">{item.quantityInvoiced}</td>
-                                      <td className="px-3 py-2 text-sm text-gray-900 text-right">{item.quantityDispatched}</td>
+                      <td colSpan={10} className="p-0">
+                        <div className="px-6 py-4 border-t border-gray-200">
+                          <div className="bg-white rounded-lg overflow-hidden">
+                            <div className="text-sm">
+                              <h4 className="font-semibold text-secondary mb-3">Item Details ({order.itemDetails?.length || 0} items):</h4>
+                              {order.itemDetails && order.itemDetails.length > 0 ? (
+                                <table className="w-full">
+                                  <thead>
+                                    <tr className="bg-gray-100 border-b border-gray-200">
+                                      <th className="text-left p-3 text-sm font-semibold text-secondary">Product Name</th>
+                                      <th className="text-left p-3 text-sm font-semibold text-secondary">SKU</th>
+                                      <th className="text-left p-3 text-sm font-semibold text-secondary">Order #</th>
+                                      <th className="text-right p-3 text-sm font-semibold text-secondary">Qty Invoiced</th>
+                                      <th className="text-right p-3 text-sm font-semibold text-secondary">Qty Dispatched</th>
                                     </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                                  </thead>
+                                  <tbody>
+                                    {order.itemDetails.map((item, idx) => (
+                                      <tr key={item.id} className={idx % 2 === 0 ? 'bg-white border-b border-gray-100' : 'bg-gray-50 border-b border-gray-100'}>
+                                        <td className="p-3 text-sm font-medium text-secondary">{item.productName}</td>
+                                        <td className="p-3 text-sm text-gray-600">{item.sku || '-'}</td>
+                                        <td className="p-3 text-sm text-gray-600">{item.orderNumber}</td>
+                                        <td className="p-3 text-sm text-gray-900 text-right">{item.quantityInvoiced}</td>
+                                        <td className="p-3 text-sm text-gray-900 text-right">{item.quantityDispatched}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              ) : (
+                                <p className="text-gray-500 italic">No item details available</p>
+                              )}
                             </div>
-                          ) : (
-                            <p className="text-gray-500 italic">No item details available</p>
-                          )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -637,9 +734,9 @@ export default function ReceivedOrders() {
         </div>
 
         {/* Mobile Card View - Visible only on Mobile */}
-        <div className="md:hidden space-y-4 p-4">
-          {filteredOrders.map((order) => (
-            <div key={order.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <div className="lg:hidden space-y-3 p-4">
+          {paginatedOrders.map((order) => (
+            <div key={order.id} className="rounded-xl p-4 border border-gray-200 bg-white">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2 flex-1">
                   <button
@@ -657,29 +754,34 @@ export default function ReceivedOrders() {
                     className="rounded border-gray-300 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed mt-0.5"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-[var(--color-heading)]">{order.orderNumber}</div>
-                    <div className="text-xs text-gray-500">{format(new Date(order.submittedAt), 'dd/MM/yyyy')}</div>
+                    <h3 className="font-semibold text-secondary text-lg">{order.orderNumber}</h3>
                   </div>
                 </div>
                 {getStatusBadge(order.status)}
               </div>
 
-              <div className="space-y-2 mb-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Vendor:</span>
-                  <span className="font-medium text-gray-900 text-right truncate max-w-[60%]">{order.vendor.name}</span>
+              <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                <div>
+                  <span className="text-gray-500 block">Vendor</span>
+                  <span className="font-medium text-right truncate max-w-[60%]">{order.vendor.name}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Items:</span>
-                  <span className="font-medium text-gray-900">{order.items} {order.items === 1 ? 'item' : 'items'}</span>
+                <div>
+                  <span className="text-gray-500 block">Date</span>
+                  <span className="font-medium">
+                    {format(new Date(order.submittedAt), 'dd/MM/yyyy')} at {format(new Date(order.submittedAt), 'HH:mm')}
+                  </span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Qty Invoiced:</span>
-                  <span className="font-medium text-gray-900">{order.quantityInvoiced}</span>
+                <div>
+                  <span className="text-gray-500 block">Items</span>
+                  <span className="font-medium">{order.items} {order.items === 1 ? 'item' : 'items'}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Qty Received:</span>
-                  <span className="font-medium text-gray-900">
+                <div>
+                  <span className="text-gray-500 block">Qty Invoiced</span>
+                  <span className="font-medium">{order.quantityInvoiced}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block">Qty Received</span>
+                  <span className="font-medium">
                     {order.status === 'pending' ? (
                       <span className="text-gray-400 italic">-</span>
                     ) : (
@@ -728,32 +830,32 @@ export default function ReceivedOrders() {
               )}
 
               {order.status === 'pending' && (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => handleVerifyOrder(order.id)}
-                    className="w-full px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm font-medium flex items-center justify-center gap-2 min-h-[44px]"
+                    className="bg-green-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-600 flex items-center gap-1"
                   >
-                    <CheckSquare size={16} />
+                    <CheckSquare size={12} />
                     Verify OK
                   </button>
                   <button
                     onClick={() => handleRaiseTicket(order)}
-                    className="w-full px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors text-sm font-medium flex items-center justify-center gap-2 min-h-[44px]"
+                    className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 flex items-center gap-1"
                   >
-                    <AlertTriangle size={16} />
+                    <AlertTriangle size={12} />
                     Raise Ticket
                   </button>
                 </div>
               )}
               {order.status === 'verified' && (
-                <div className="text-sm text-green-600 flex items-center justify-center gap-1 py-2">
-                  <CheckSquare size={16} />
+                <div className="text-xs text-green-600 flex items-center gap-1">
+                  <CheckSquare size={12} />
                   Verified
                 </div>
               )}
               {order.status === 'mismatch' && (
-                <div className="text-sm text-red-600 flex items-center justify-center gap-1 py-2">
-                  <AlertTriangle size={16} />
+                <div className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertTriangle size={12} />
                   Ticket Raised
                 </div>
               )}
@@ -762,9 +864,23 @@ export default function ReceivedOrders() {
         </div>
 
         {filteredOrders.length === 0 && (
-          <div className="p-8 text-center text-gray-500">
-            No orders found matching the current filters.
+          <div className="bg-white rounded-xl p-12 text-center">
+            <p className="text-gray-500">No orders found matching the current filters.</p>
           </div>
+        )}
+        
+        {/* Pagination */}
+        {filteredOrders.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredOrders.length}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setCurrentPage}
+            itemLabel="orders"
+            variant="desktop"
+          />
         )}
       </div>
       )}

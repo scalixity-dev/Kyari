@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { CheckSquare, X, AlertTriangle, Clock, FileText, ChevronDown, ChevronUp, Package, Calendar as CalendarIcon } from 'lucide-react'
 import { AssignmentApiService } from '@/services/assignmentApi'
-import { KPICard, CustomDropdown } from '../../../components'
+import { KPICard, CustomDropdown, Loader } from '../../../components'
 import { Pagination } from '../../../components/ui/Pagination'
+import { CSVPDFExportButton } from '../../../components/ui/export-button'
 import type { AssignmentOrder, AssignmentProduct } from '@/services/assignmentApi'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
@@ -26,7 +27,7 @@ interface DeclineReasonModalProps {
   onDecline: (productId: string, reason: string) => void
 }
 
-const PartialConfirmModal: React.FC<PartialConfirmModalProps> = ({ isOpen, product, orderNumber, onClose, onConfirm }) => {
+const PartialConfirmModal: React.FC<PartialConfirmModalProps & { submitting?: boolean }> = ({ isOpen, product, orderNumber, onClose, onConfirm, submitting }) => {
   const [availableQty, setAvailableQty] = useState<number>(0)
 
   if (!isOpen || !product) return null
@@ -98,10 +99,13 @@ const PartialConfirmModal: React.FC<PartialConfirmModalProps> = ({ isOpen, produ
             </button>
             <button
               type="submit"
-              disabled={availableQty <= 0 || availableQty > product.requestedQty}
+              disabled={submitting || availableQty <= 0 || availableQty > product.requestedQty}
               className="flex-1 px-4 py-2 sm:py-2.5 bg-[var(--color-accent)] text-white text-sm font-medium rounded-lg hover:bg-[var(--color-accent)]/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors order-1 sm:order-2"
             >
-              Confirm Partial
+              <span className="inline-flex items-center gap-2 justify-center">
+                {submitting && <Loader size="xs" color="white" />}
+                <span>Confirm Partial</span>
+              </span>
             </button>
           </div>
         </form>
@@ -110,7 +114,7 @@ const PartialConfirmModal: React.FC<PartialConfirmModalProps> = ({ isOpen, produ
   )
 }
 
-const DeclineReasonModal: React.FC<DeclineReasonModalProps> = ({ isOpen, product, orderNumber, onClose, onDecline }) => {
+const DeclineReasonModal: React.FC<DeclineReasonModalProps & { submitting?: boolean }> = ({ isOpen, product, orderNumber, onClose, onDecline, submitting }) => {
   const [selectedReason, setSelectedReason] = useState<string>('')
 
   if (!isOpen || !product) return null
@@ -178,10 +182,13 @@ const DeclineReasonModal: React.FC<DeclineReasonModalProps> = ({ isOpen, product
             </button>
             <button
               type="submit"
-              disabled={!selectedReason}
+              disabled={submitting || !selectedReason}
               className="flex-1 px-4 py-2 sm:py-2.5 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors order-1 sm:order-2"
             >
-              Decline Product
+              <span className="inline-flex items-center gap-2 justify-center">
+                {submitting && <Loader size="xs" color="white" />}
+                <span>Decline Product</span>
+              </span>
             </button>
           </div>
         </form>
@@ -193,23 +200,23 @@ const DeclineReasonModal: React.FC<DeclineReasonModalProps> = ({ isOpen, product
 const getStatusBadge = (status: string) => {
   switch (status) {
     case 'Pending':
-      return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Pending</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-yellow-100 text-yellow-800 border-yellow-300">Pending</span>
     case 'Confirmed':
-      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Confirmed</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-green-100 text-green-800 border-green-300">Confirmed</span>
     case 'Partially Confirmed':
-      return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Partial</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-blue-100 text-blue-800 border-blue-300">Partial</span>
     case 'Declined':
-      return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">Declined</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-red-100 text-red-800 border-red-300">Declined</span>
     case 'Waiting for PO':
-      return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">Awaiting PO</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-purple-100 text-purple-800 border-purple-300">Awaiting PO</span>
     case 'PO Received':
-      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">PO Received</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-green-100 text-green-800 border-green-300">PO Received</span>
     case 'Mixed':
-      return <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">Mixed</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-orange-100 text-orange-800 border-orange-300">Mixed</span>
     case 'Not Available':
-      return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">Not Available</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-gray-100 text-gray-800 border-gray-300">Not Available</span>
     default:
-      return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">{status}</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-gray-100 text-gray-800 border-gray-300">{status}</span>
   }
 }
 
@@ -223,6 +230,9 @@ export default function Orders() {
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set())
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+  // Loading states
+  const [loadingFullByProduct, setLoadingFullByProduct] = useState<Record<string, boolean>>({})
+  const [modalSubmitting, setModalSubmitting] = useState<boolean>(false)
 
   // Filters (mirroring Invoices)
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Confirmed' | 'Partially Confirmed' | 'Declined' | 'Waiting for PO' | 'PO Received' | 'Mixed'>('All')
@@ -261,7 +271,9 @@ export default function Orders() {
   }
 
   const handleProductConfirmFull = async (orderId: string, productId: string) => {
+    const key = `${orderId}:${productId}`
     try {
+      setLoadingFullByProduct(prev => ({ ...prev, [key]: true }))
       const product = orders
         .find(o => o.id === orderId)
         ?.products.find(p => p.id === productId)
@@ -278,6 +290,8 @@ export default function Orders() {
       await loadAssignments()
     } catch (error) {
       console.error('Failed to confirm order:', error)
+    } finally {
+      setLoadingFullByProduct(prev => ({ ...prev, [key]: false }))
     }
   }
 
@@ -295,6 +309,7 @@ export default function Orders() {
   const handlePartialConfirm = async (_productId: string, availableQty: number) => {
     if (selectedProduct) {
       try {
+        setModalSubmitting(true)
         // Call API to confirm partial
         await AssignmentApiService.updateAssignmentStatus(
           selectedProduct.assignmentId,
@@ -310,6 +325,8 @@ export default function Orders() {
         setSelectedOrderNumber('')
       } catch (error) {
         console.error('Failed to partially confirm order:', error)
+      } finally {
+        setModalSubmitting(false)
       }
     }
   }
@@ -328,6 +345,7 @@ export default function Orders() {
   const handleDeclineWithReason = async (_productId: string, reason: string) => {
     if (selectedProduct) {
       try {
+        setModalSubmitting(true)
         // Call API to decline
         await AssignmentApiService.updateAssignmentStatus(
           selectedProduct.assignmentId,
@@ -344,6 +362,8 @@ export default function Orders() {
         setSelectedOrderNumber('')
       } catch (error) {
         console.error('Failed to decline order:', error)
+      } finally {
+        setModalSubmitting(false)
       }
     }
   }
@@ -418,23 +438,99 @@ export default function Orders() {
     setExpandedOrders(new Set())
   }
 
+  // Export functions
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const toCSV = (rows: Array<Record<string, unknown>>, headerOrder?: string[]) => {
+    if (!rows || rows.length === 0) return ''
+    const headers = headerOrder && headerOrder.length > 0 ? headerOrder : Array.from(new Set(rows.flatMap((r) => Object.keys(r))))
+    const escapeCell = (val: unknown) => {
+      const s = val === undefined || val === null ? '' : String(val)
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s
+    }
+    const lines = [headers.join(',')]
+    for (const row of rows) {
+      lines.push(headers.map((h) => escapeCell((row as Record<string, unknown>)[h])).join(','))
+    }
+    return lines.join('\n')
+  }
+
+  const handleExportCSV = () => {
+    const rows = filteredOrders.map(order => ({
+      orderNumber: order.orderNumber,
+      date: order.date,
+      customerName: order.customerName,
+      totalItems: order.totalItems,
+      totalConfirmed: order.totalConfirmed,
+      status: order.overallStatus,
+      products: order.products.map(p => `${p.name} (${p.sku}) - Qty: ${p.requestedQty}, Status: ${p.status}`).join('; ')
+    }))
+    
+    const csv = toCSV(rows, ['orderNumber', 'date', 'customerName', 'totalItems', 'totalConfirmed', 'status', 'products'])
+    const filename = `vendor_orders_${new Date().toISOString().slice(0, 10)}.csv`
+    downloadFile(csv, filename, 'text/csv;charset=utf-8;')
+  }
+
+  const handleExportPDF = () => {
+    const content = [
+      'VENDOR ORDERS REPORT',
+      `Generated: ${new Date().toLocaleString()}`,
+      `Total Orders: ${filteredOrders.length}`,
+      '',
+      '=== ORDER SUMMARY ===',
+      ...filteredOrders.map(order => [
+        `Order: ${order.orderNumber}`,
+        `Date: ${order.date}`,
+        `Customer: ${order.customerName}`,
+        `Items: ${order.totalItems} (Confirmed: ${order.totalConfirmed})`,
+        `Status: ${order.overallStatus}`,
+        `Products: ${order.products.map(p => `${p.name} (${p.sku}) - ${p.requestedQty} units - ${p.status}`).join(', ')}`,
+        '---'
+      ]).flat()
+    ].join('\n')
+    
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vendor_orders_${new Date().toISOString().slice(0, 10)}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 sm:mb-0 font-[var(--font-heading)]">Orders Management</h2>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2">
+          Orders Management
+        </h1>
+        <p className="text-sm sm:text-base text-[var(--color-primary)]">
+          Manage and track your assigned orders
+        </p>
       </div>
 
       {/* Loading State */}
       {loading && (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-accent)]"></div>
+        <div className="bg-white rounded-xl p-12 text-center">
+          <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading orders...</p>
         </div>
       )}
 
       {/* Empty State */}
       {!loading && orders.length === 0 && (
-        <div className="bg-white rounded-xl shadow-md border border-white/20 p-12 text-center">
+        <div className="bg-white rounded-xl p-12 text-center">
           <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-700 mb-2">No Orders Found</h3>
           <p className="text-gray-500">You don't have any assigned orders at the moment.</p>
@@ -475,8 +571,14 @@ export default function Orders() {
 
       {/* Orders Header */}
       <div className="mb-3 sm:mb-4">
-        <div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h2 className="text-base sm:text-lg md:text-xl font-semibold text-secondary">All Orders</h2>
+          <CSVPDFExportButton
+            onExportCSV={handleExportCSV}
+            onExportPDF={handleExportPDF}
+            label="Export"
+            className="w-full sm:w-auto"
+          />
         </div>
       </div>
 
@@ -496,7 +598,7 @@ export default function Orders() {
             <div className="hidden sm:flex sm:flex-row sm:items-center gap-2">
               <button
                 onClick={() => setCurrentPage(1)}
-                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
+                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
                 style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
               >
                 Apply
@@ -511,31 +613,11 @@ export default function Orders() {
                   setDateToDate(undefined)
                   setCurrentPage(1)
                 }}
-                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
-                style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+                className="w-full sm:w-[140px] px-4 py-2 sm:py-2 bg-white text-secondary border border-secondary rounded-2xl font-medium hover:bg-secondary hover:text-white transition-colors duration-200 text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
               >
                 Reset
               </button>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Status</label>
-            <CustomDropdown
-              value={statusFilter === 'All' ? '' : statusFilter}
-              onChange={(value) => { setStatusFilter((value || 'All') as typeof statusFilter); setCurrentPage(1) }}
-              options={[
-                { value: '', label: 'All Statuses' },
-                { value: 'Pending', label: 'Pending' },
-                { value: 'Confirmed', label: 'Confirmed' },
-                { value: 'Partially Confirmed', label: 'Partially Confirmed' },
-                { value: 'Declined', label: 'Declined' },
-                { value: 'Waiting for PO', label: 'Waiting for PO' },
-                { value: 'PO Received', label: 'PO Received' },
-                { value: 'Mixed', label: 'Mixed' }
-              ]}
-              placeholder="All Statuses"
-            />
           </div>
 
           <div className="lg:col-span-2">
@@ -605,13 +687,32 @@ export default function Orders() {
               </div>
             </div>
           </div>
+
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Status</label>
+            <CustomDropdown
+              value={statusFilter === 'All' ? '' : statusFilter}
+              onChange={(value) => { setStatusFilter((value || 'All') as typeof statusFilter); setCurrentPage(1) }}
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'Pending', label: 'Pending' },
+                { value: 'Confirmed', label: 'Confirmed' },
+                { value: 'Partially Confirmed', label: 'Partially Confirmed' },
+                { value: 'Declined', label: 'Declined' },
+                { value: 'Waiting for PO', label: 'Waiting for PO' },
+                { value: 'PO Received', label: 'PO Received' },
+                { value: 'Mixed', label: 'Mixed' }
+              ]}
+              placeholder="All Statuses"
+            />
+          </div>
         </div>
 
         {/* Mobile-only Filter Actions */}
         <div className="flex sm:hidden gap-2 pt-4 mt-2 border-t border-gray-200">
           <button
             onClick={() => setCurrentPage(1)}
-            className="flex-1 px-4 py-2.5 rounded-md text-white font-medium text-sm min-h-[44px]"
+            className="flex-1 px-4 py-2.5 rounded-md text-white font-medium text-sm min-h-[44px] cursor-pointer"
             style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
           >
             Apply Filters
@@ -626,8 +727,7 @@ export default function Orders() {
               setDateToDate(undefined)
               setCurrentPage(1)
             }}
-            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px]"
-            style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+            className="flex-1 px-4 py-2 bg-white text-secondary border border-secondary rounded-2xl font-medium hover:bg-secondary hover:text-white transition-colors duration-200 text-sm min-h-[44px] cursor-pointer"
           >
             Reset
           </button>
@@ -635,36 +735,37 @@ export default function Orders() {
       </div>
 
       {/* Orders Table Container */}
-      <div className="bg-header-bg rounded-xl overflow-hidden">
+      <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
         {/* Desktop Table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full border-separate border-spacing-0">
-            <thead>
-              <tr className="bg-[var(--color-accent)]">
-                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Order Details</th>
-                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Customer</th>
-                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Products</th>
-                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Status</th>
-                <th className="text-left px-4 lg:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+        <div className="overflow-x-auto">
+          <div className="bg-white rounded-t-lg shadow-sm border border-gray-200 overflow-hidden">
+            <table className="w-full border-separate border-spacing-0">
+              <thead>
+                <tr className="bg-[var(--color-accent)]">
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Order Details</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Customer</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Products</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Status</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
               {paginatedOrders.map((order) => (
                 <React.Fragment key={order.id}>
-                  <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleOrderExpansion(order.id)}>
-                    <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                  <tr className="border-b border-gray-100 hover:bg-gray-50 bg-white cursor-pointer" onClick={() => toggleOrderExpansion(order.id)}>
+                    <td className="p-3">
                       <div className="flex items-center gap-2">
                         {expandedOrders.has(order.id) ? <ChevronUp size={16} className="text-secondary" /> : <ChevronDown size={16} className="text-secondary" />}
                         <div>
-                          <div className="text-sm font-semibold text-secondary">{order.orderNumber}</div>
+                          <div className="font-semibold text-secondary">{order.orderNumber}</div>
                           <div className="text-xs text-gray-500">{order.date}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="p-3 text-sm text-gray-900">
                       {order.customerName}
                     </td>
-                    <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="p-3 text-sm text-gray-900">
                       <div className="flex items-center gap-2">
                         <Package size={16} className="text-gray-400" />
                         <span>{order.totalItems} items</span>
@@ -673,10 +774,10 @@ export default function Orders() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                    <td className="p-3">
                       {getStatusBadge(order.overallStatus)}
                     </td>
-                    <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="p-3 text-sm">
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
@@ -691,12 +792,12 @@ export default function Orders() {
                   
                   {expandedOrders.has(order.id) && order.products.map((product) => (
                     <tr key={product.id} className="bg-gray-50">
-                      <td className="pl-10 lg:pl-12 pr-4 lg:pr-6 py-3 text-sm">
+                      <td className="p-3 text-sm">
                         <div className="text-gray-600">
                           <span className="font-medium">SKU:</span> {product.sku}
                         </div>
                       </td>
-                      <td className="px-4 lg:px-6 py-3 text-sm">
+                      <td className="p-3 text-sm">
                         <div>
                           <div className="font-medium text-secondary">{product.name}</div>
                           {product.backorderQty > 0 && (
@@ -706,38 +807,43 @@ export default function Orders() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 lg:px-6 py-3 text-sm text-gray-600">
+                      <td className="p-3 text-sm text-gray-900">
                         {product.confirmedQty > 0 ? `${product.confirmedQty}/${product.requestedQty}` : product.requestedQty}
                       </td>
-                      <td className="px-4 lg:px-6 py-3">
+                      <td className="p-3">
                         {getStatusBadge(product.status)}
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="p-3">
                         {product.status === 'Pending' && (
-                          <div className="flex gap-1.5">
+                          <div className="flex items-center gap-1.5">
                             <button
                               onClick={() => handleProductConfirmFull(order.id, product.id)}
-                              className="px-2.5 py-1.5 bg-green-500 text-white rounded-md text-xs font-medium flex items-center gap-1 hover:bg-green-600 transition-colors"
+                              disabled={!!loadingFullByProduct[`${order.id}:${product.id}`]}
+                              className="bg-green-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed flex items-center gap-1"
                               title="Confirm Full"
                             >
-                              <CheckSquare size={12} />
-                              <span>Full</span>
+                              {loadingFullByProduct[`${order.id}:${product.id}`] ? (
+                                <Loader size="xs" color="white" />
+                              ) : (
+                                <CheckSquare size={12} />
+                              )}
+                              <span>{loadingFullByProduct[`${order.id}:${product.id}`] ? 'Processing' : 'Full'}</span>
                             </button>
                             <button
                               onClick={() => handleProductConfirmPartial(order.id, product.id)}
-                              className="px-2.5 py-1.5 bg-blue-500 text-white rounded-md text-xs font-medium flex items-center gap-1 hover:bg-blue-600 transition-colors"
+                              className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 flex items-center gap-1"
                               title="Confirm Partial"
                             >
                               <FileText size={12} />
-                              <span>Partial</span>
+                              Partial
                             </button>
                             <button
                               onClick={() => handleProductDecline(order.id, product.id)}
-                              className="px-2.5 py-1.5 bg-red-500 text-white rounded-md text-xs font-medium flex items-center gap-1 hover:bg-red-600 transition-colors"
+                              className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 flex items-center gap-1"
                               title="Decline"
                             >
                               <X size={12} />
-                              <span>Decline</span>
+                              Decline
                             </button>
                           </div>
                         )}
@@ -770,7 +876,8 @@ export default function Orders() {
                 </React.Fragment>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
           {orders.length > 0 && (
             <Pagination
               currentPage={currentPage}
@@ -784,12 +891,13 @@ export default function Orders() {
             />
           )}
         </div>
+      </div>
 
         {/* Mobile Cards */}
-        <div className="md:hidden divide-y divide-gray-200">
+        <div className="lg:hidden space-y-3">
           {paginatedOrders.map((order) => (
-            <div key={order.id} className="p-3 sm:p-4 md:p-5 bg-white">
-              <div className="flex justify-between items-start mb-3 gap-2">
+            <div key={order.id} className="rounded-xl p-4 border border-gray-200 bg-white">
+              <div className="flex items-start justify-between mb-3">
                 <div className="flex items-start gap-2 flex-1 min-w-0">
                   <button
                     aria-label={expandedOrders.has(order.id) ? 'Collapse items' : 'Expand items'}
@@ -799,9 +907,9 @@ export default function Orders() {
                     {expandedOrders.has(order.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-secondary text-sm sm:text-base truncate">{order.orderNumber}</h3>
-                    <p className="text-xs sm:text-sm text-gray-600">{order.date}</p>
-                    <p className="text-xs sm:text-sm text-gray-600 truncate">{order.customerName}</p>
+                    <h3 className="font-semibold text-secondary text-lg truncate">{order.orderNumber}</h3>
+                    <p className="text-sm text-gray-500">{order.date}</p>
+                    <p className="text-sm text-gray-500 truncate">{order.customerName}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -809,71 +917,74 @@ export default function Orders() {
                 </div>
               </div>
               
-              <div className="mb-3">
-                <p className="text-xs sm:text-sm text-gray-600 mb-2">
-                  <span className="font-medium text-gray-800">Products:</span> {order.totalItems} items
-                  {order.totalConfirmed > 0 && (
-                    <span className="text-green-600 ml-2">({order.totalConfirmed} confirmed)</span>
-                  )}
-                </p>
-                
-                {expandedOrders.has(order.id) && (
-                  <div className="space-y-2.5 sm:space-y-3 mt-3">
-                    {order.products.map((product) => (
-                      <div key={product.id} className="bg-gray-50 p-2.5 sm:p-3 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-start mb-2 gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-secondary text-xs sm:text-sm truncate">{product.name}</p>
-                            <p className="text-xs text-gray-500 truncate">SKU: {product.sku}</p>
-                            <p className="text-xs text-gray-600">
-                              <span className="font-medium">Qty:</span> {product.confirmedQty > 0 ? `${product.confirmedQty}/${product.requestedQty}` : product.requestedQty}
-                            </p>
-                            {product.backorderQty > 0 && (
-                              <p className="text-xs text-yellow-600 mt-0.5">
-                                <span className="font-medium">Backorder:</span> {product.backorderQty} units
-                              </p>
-                            )}
-                            {product.status === 'Declined' && product.declineReason && (
-                              <p className="text-xs text-red-600 mt-1 p-1.5 bg-red-50 rounded border border-red-100">
-                                <span className="font-medium">Reason:</span> {product.declineReason}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex-shrink-0">
-                            {getStatusBadge(product.status)}
-                          </div>
-                        </div>
-
-                        {product.status === 'Pending' && (
-                          <div className="flex gap-1.5 sm:gap-2 flex-wrap">
-                            <button
-                              onClick={() => handleProductConfirmFull(order.id, product.id)}
-                              className="flex-1 min-w-[70px] px-2 sm:px-2.5 py-1.5 bg-green-500 text-white rounded-md text-xs font-medium flex items-center justify-center gap-1 hover:bg-green-600 transition-colors"
-                            >
-                              <CheckSquare size={12} />
-                              <span>Full</span>
-                            </button>
-                            <button
-                              onClick={() => handleProductConfirmPartial(order.id, product.id)}
-                              className="flex-1 min-w-[70px] px-2 sm:px-2.5 py-1.5 bg-blue-500 text-white rounded-md text-xs font-medium flex items-center justify-center gap-1 hover:bg-blue-600 transition-colors"
-                            >
-                              <FileText size={12} />
-                              <span>Partial</span>
-                            </button>
-                            <button
-                              onClick={() => handleProductDecline(order.id, product.id)}
-                              className="flex-1 min-w-[70px] px-2 sm:px-2.5 py-1.5 bg-red-500 text-white rounded-md text-xs font-medium flex items-center justify-center gap-1 hover:bg-red-600 transition-colors"
-                            >
-                              <X size={12} />
-                              <span>Decline</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+              {/* Info Grid */}
+              <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                <div>
+                  <span className="text-gray-500 block">Products</span>
+                  <span className="font-medium">{order.totalItems} items
+                    {order.totalConfirmed > 0 && (
+                      <span className="text-green-600 ml-1">({order.totalConfirmed} confirmed)</span>
+                    )}
+                  </span>
+                </div>
               </div>
+              
+              {expandedOrders.has(order.id) && (
+                <div className="space-y-3 mb-4">
+                  {order.products.map((product) => (
+                    <div key={product.id} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <div className="flex justify-between items-start mb-2 gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-secondary text-sm truncate">{product.name}</p>
+                          <p className="text-sm text-gray-500 truncate">SKU: {product.sku}</p>
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Qty:</span> {product.confirmedQty > 0 ? `${product.confirmedQty}/${product.requestedQty}` : product.requestedQty}
+                          </p>
+                          {product.backorderQty > 0 && (
+                            <p className="text-sm text-yellow-600 mt-0.5">
+                              <span className="font-medium">Backorder:</span> {product.backorderQty} units
+                            </p>
+                          )}
+                          {product.status === 'Declined' && product.declineReason && (
+                            <p className="text-sm text-red-600 mt-1 p-1.5 bg-red-50 rounded border border-red-100">
+                              <span className="font-medium">Reason:</span> {product.declineReason}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex-shrink-0">
+                          {getStatusBadge(product.status)}
+                        </div>
+                      </div>
+
+                      {product.status === 'Pending' && (
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => handleProductConfirmFull(order.id, product.id)}
+                            className="bg-green-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-600 flex items-center gap-1"
+                          >
+                            <CheckSquare size={12} />
+                            Full
+                          </button>
+                          <button
+                            onClick={() => handleProductConfirmPartial(order.id, product.id)}
+                            className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 flex items-center gap-1"
+                          >
+                            <FileText size={12} />
+                            Partial
+                          </button>
+                          <button
+                            onClick={() => handleProductDecline(order.id, product.id)}
+                            className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 flex items-center gap-1"
+                          >
+                            <X size={12} />
+                            Decline
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           {orders.length > 0 && (
@@ -891,34 +1002,35 @@ export default function Orders() {
             </div>
           )}
         </div>
-      </div>
 
-      {/* Partial Confirmation Modal */}
-      <PartialConfirmModal
-        isOpen={modalOpen}
-        product={selectedProduct}
-        orderNumber={selectedOrderNumber}
-        onClose={() => {
-          setModalOpen(false)
-          setSelectedProduct(null)
-          setSelectedOrderNumber('')
-        }}
-        onConfirm={handlePartialConfirm}
-      />
+          {/* Partial Confirmation Modal */}
+          <PartialConfirmModal
+            isOpen={modalOpen}
+            product={selectedProduct}
+            orderNumber={selectedOrderNumber}
+            submitting={modalSubmitting}
+            onClose={() => {
+              setModalOpen(false)
+              setSelectedProduct(null)
+              setSelectedOrderNumber('')
+            }}
+            onConfirm={handlePartialConfirm}
+          />
 
-      {/* Decline Reason Modal */}
-      <DeclineReasonModal
-        isOpen={declineModalOpen}
-        product={selectedProduct}
-        orderNumber={selectedOrderNumber}
-        onClose={() => {
-          setDeclineModalOpen(false)
-          setSelectedProduct(null)
-          setSelectedOrderNumber('')
-        }}
-        onDecline={handleDeclineWithReason}
-      />
-      </>
+          {/* Decline Reason Modal */}
+          <DeclineReasonModal
+            isOpen={declineModalOpen}
+            product={selectedProduct}
+            orderNumber={selectedOrderNumber}
+            submitting={modalSubmitting}
+            onClose={() => {
+              setDeclineModalOpen(false)
+              setSelectedProduct(null)
+              setSelectedOrderNumber('')
+            }}
+            onDecline={handleDeclineWithReason}
+          />
+        </>
       )}
     </div>
   )
