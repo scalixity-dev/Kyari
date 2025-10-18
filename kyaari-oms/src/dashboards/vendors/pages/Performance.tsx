@@ -1,13 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
 import { ChevronUp as TrendingUpIcon, AlertTriangle, Wallet, Clock, CheckSquare, X, Package, BarChart3, Calendar as CalendarIcon } from 'lucide-react'
 import { 
-  LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
+  LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, Sector,
+  XAxis, YAxis, CartesianGrid 
 } from 'recharts'
 import { KPICard } from '../../../components'
 import { CSVPDFExportButton } from '../../../components/ui/export-button'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
+import { 
+  ChartContainer, 
+  ChartTooltip, 
+  ChartTooltipContent, 
+  ChartLegend, 
+  ChartLegendContent,
+  type ChartConfig 
+} from '../../../components/ui/chart'
 
 interface PerformanceData {
   fillRate: number
@@ -68,7 +76,7 @@ const slaBreachData = [
 const rejectionReasons = [
   { name: 'Quality Issues', value: 35, color: '#ef4444' },
   { name: 'Stock Unavailable', value: 28, color: '#f97316' },
-  { name: 'Price Mismatch', value: 20, color: '#eab308' },
+  { name: 'Price Mismatch', value: 20, color: 'var(--color-accent)' },
   { name: 'Late Delivery', value: 17, color: '#6b7280' }
 ]
 
@@ -106,6 +114,74 @@ const orderFulfillmentData = [
   { week: 'Week 3', delivered: 38, rejected: 3, pending: 6 },
   { week: 'Week 4', delivered: 29, rejected: 6, pending: 4 }
 ]
+
+// Chart configurations for shadcn charts
+const fillRateChartConfig = {
+  fillRate: {
+    label: "Fill Rate",
+    color: "var(--color-secondary)",
+  },
+  rejectionRate: {
+    label: "Rejection Rate",
+    color: "hsl(0, 84%, 60%)",
+  },
+} satisfies ChartConfig
+
+const paymentChartConfig = {
+  pending: {
+    label: "Pending Payments",
+    color: "var(--color-accent)",
+  },
+  released: {
+    label: "Released Payments",
+    color: "var(--color-secondary)",
+  },
+} satisfies ChartConfig
+
+const slaChartConfig = {
+  count: {
+    label: "Actual Breaches",
+    color: "hsl(0, 84%, 60%)",
+  },
+  target: {
+    label: "Target (Max)",
+    color: "var(--color-secondary)",
+  },
+} satisfies ChartConfig
+
+const rejectionChartConfig = {
+  "Quality Issues": {
+    label: "Quality Issues",
+    color: "hsl(0, 84%, 60%)",
+  },
+  "Stock Unavailable": {
+    label: "Stock Unavailable",
+    color: "hsl(25, 95%, 53%)",
+  },
+  "Price Mismatch": {
+    label: "Price Mismatch",
+    color: "var(--color-accent)",
+  },
+  "Late Delivery": {
+    label: "Late Delivery",
+    color: "hsl(218, 11%, 48%)",
+  },
+} satisfies ChartConfig
+
+const orderFulfillmentChartConfig = {
+  delivered: {
+    label: "Delivered",
+    color: "var(--color-secondary)",
+  },
+  rejected: {
+    label: "Rejected",
+    color: "hsl(0, 84%, 60%)",
+  },
+  pending: {
+    label: "Pending",
+    color: "var(--color-accent)",
+  },
+} satisfies ChartConfig
 
 export default function Performance() {
   const downloadFile = (content: string, filename: string, mimeType: string) => {
@@ -284,6 +360,7 @@ export default function Performance() {
   const [showToCalendar, setShowToCalendar] = useState(false)
   const fromCalendarRef = useRef<HTMLDivElement>(null)
   const toCalendarRef = useRef<HTMLDivElement>(null)
+  const [activePieIndex, setActivePieIndex] = useState(0)
 
   // Hook to detect screen size
   useEffect(() => {
@@ -317,16 +394,6 @@ export default function Performance() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Get responsive chart height based on screen size
-  const getChartHeight = () => {
-    switch (screenSize) {
-      case 'mobile': return 200
-      case 'tablet': return 225
-      case 'desktop': return 250
-      default: return 250
-    }
-  }
-
   // Get responsive font sizes for chart elements
   const getChartFontSizes = () => {
     switch (screenSize) {
@@ -334,16 +401,6 @@ export default function Performance() {
       case 'tablet': return { axis: 11, tooltip: 12, legend: 11 }
       case 'desktop': return { axis: 12, tooltip: 13, legend: 12 }
       default: return { axis: 12, tooltip: 13, legend: 12 }
-    }
-  }
-
-  // Get responsive pie chart outer radius
-  const getPieChartRadius = () => {
-    switch (screenSize) {
-      case 'mobile': return 60
-      case 'tablet': return 70
-      case 'desktop': return 80
-      default: return 80
     }
   }
 
@@ -414,35 +471,6 @@ export default function Performance() {
       case '1Y': return `${baseTitle} (Monthly)`
       default: return baseTitle
     }
-  }
-
-  interface TooltipProps {
-    active?: boolean
-    payload?: Array<{
-      color: string
-      name: string
-      value: number
-    }>
-    label?: string
-  }
-
-  const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
-    const fontSizes = getChartFontSizes()
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-md max-w-xs">
-          <p className="font-medium text-gray-800" style={{ fontSize: fontSizes.tooltip }}>
-            {label}
-          </p>
-          {payload.map((entry, index: number) => (
-            <p key={index} style={{ color: entry.color, fontSize: fontSizes.tooltip }} className="font-medium">
-              {entry.name}: {entry.value}{entry.name.includes('Rate') ? '%' : ''}
-            </p>
-          ))}
-        </div>
-      )
-    }
-    return null
   }
 
   return (
@@ -635,14 +663,14 @@ export default function Performance() {
           <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-4">Performance Insights</h3>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+              <div className="w-2 h-2 rounded-full mt-2" style={{ backgroundColor: 'var(--color-secondary)' }}></div>
               <div>
                 <p className="text-sm font-medium text-gray-800">Excellent Fill Rate</p>
                 <p className="text-xs text-gray-600">Your 92.5% fill rate is above industry average of 88%</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
+              <div className="w-2 h-2 rounded-full mt-2" style={{ backgroundColor: 'var(--color-accent)' }}></div>
               <div>
                 <p className="text-sm font-medium text-gray-800">SLA Improvement Needed</p>
                 <p className="text-xs text-gray-600">Focus on order confirmation times to reduce SLA breaches</p>
@@ -668,7 +696,7 @@ export default function Performance() {
                 <span className="text-sm text-gray-600">92.5% / 95%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-500 h-2 rounded-full" style={{ width: '97.4%' }}></div>
+                <div className="h-2 rounded-full" style={{ width: '97.4%', backgroundColor: 'var(--color-secondary)' }}></div>
               </div>
             </div>
             
@@ -688,7 +716,7 @@ export default function Performance() {
                 <span className="text-sm text-gray-600">97% / 100%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '97%' }}></div>
+                <div className="h-2 rounded-full" style={{ width: '97%', backgroundColor: 'var(--color-accent)' }}></div>
               </div>
             </div>
           </div>
@@ -703,37 +731,47 @@ export default function Performance() {
             <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">
               {getChartTitle('Fill Rate & Rejection Trend')}
             </h3>
-            <TrendingUpIcon className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+            <TrendingUpIcon className="w-4 h-4 sm:w-5 sm:h-5" color="var(--color-secondary)" />
           </div>
-          <div className="flex">
-            <div className="flex-1 -ml-4 sm:ml-0">
-              <ResponsiveContainer width="100%" height={getChartHeight()}>
-                <LineChart data={fillRateData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="period" tick={{ fontSize: getChartFontSizes().axis }} />
-                  <YAxis tick={{ fontSize: getChartFontSizes().axis }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: getChartFontSizes().legend }} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="fillRate" 
-                    stroke="#10b981" 
-                    strokeWidth={3}
-                    name="Fill Rate"
-                    dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="rejectionRate" 
-                    stroke="#ef4444" 
-                    strokeWidth={3}
-                    name="Rejection Rate"
-                    dot={{ fill: '#ef4444', strokeWidth: 2, r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <ChartContainer config={fillRateChartConfig} className="h-[250px] w-full">
+            <LineChart data={fillRateData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis 
+                dataKey="period" 
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tick={{ fontSize: getChartFontSizes().axis }}
+              />
+              <YAxis 
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tick={{ fontSize: getChartFontSizes().axis }}
+              />
+              <ChartTooltip 
+                content={<ChartTooltipContent className="bg-white" />} 
+                cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
+              />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Line 
+                type="monotone" 
+                dataKey="fillRate" 
+                stroke="var(--color-fillRate)" 
+                strokeWidth={2}
+                dot={{ fill: 'var(--color-fillRate)', r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="rejectionRate" 
+                stroke="var(--color-rejectionRate)" 
+                strokeWidth={2}
+                dot={{ fill: 'var(--color-rejectionRate)', r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ChartContainer>
         </div>
 
         {/* Payment Summary */}
@@ -744,41 +782,57 @@ export default function Performance() {
             </h3>
             <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
           </div>
-          <div className="flex">
-            <div className="flex-1 -ml-4 sm:ml-0">
-              <ResponsiveContainer width="100%" height={getChartHeight()}>
-                <AreaChart data={paymentData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="period" tick={{ fontSize: getChartFontSizes().axis }} />
-                  <YAxis tick={{ fontSize: getChartFontSizes().axis }} />
-                  <Tooltip 
-                    formatter={(value: number) => [`₹${(value / 1000).toFixed(0)}K`, '']}
-                    labelFormatter={(label) => `Period: ${label}`}
-                    contentStyle={{ fontSize: getChartFontSizes().tooltip }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: getChartFontSizes().legend }} />
-                  <Area
-                    type="monotone"
-                    dataKey="released"
-                    stackId="1"
-                    stroke="#10b981"
-                    fill="#10b981"
-                    name="Released Payments"
-                    fillOpacity={0.8}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="pending"
-                    stackId="2"
-                    stroke="#f59e0b"
-                    fill="#f59e0b"
-                    name="Pending Payments"
-                    fillOpacity={0.8}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <ChartContainer config={paymentChartConfig} className="h-[250px] w-full">
+            <AreaChart data={paymentData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="fillReleased" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-released)" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="var(--color-released)" stopOpacity={0.1}/>
+                </linearGradient>
+                <linearGradient id="fillPending" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-pending)" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="var(--color-pending)" stopOpacity={0.1}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis 
+                dataKey="period" 
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tick={{ fontSize: getChartFontSizes().axis }}
+              />
+              <YAxis 
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tick={{ fontSize: getChartFontSizes().axis }}
+                tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
+              />
+              <ChartTooltip 
+                content={<ChartTooltipContent 
+                  formatter={(value) => [`₹${((value as number) / 1000).toFixed(0)}K`, '']}
+                  className="bg-white"
+                />}
+                cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
+              />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Area
+                type="monotone"
+                dataKey="released"
+                stroke="var(--color-released)"
+                fill="url(#fillReleased)"
+                strokeWidth={2}
+              />
+              <Area
+                type="monotone"
+                dataKey="pending"
+                stroke="var(--color-pending)"
+                fill="url(#fillPending)"
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ChartContainer>
         </div>
       </div>
 
@@ -788,108 +842,179 @@ export default function Performance() {
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">SLA Breach Analysis</h3>
-            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5" color="var(--color-accent)" />
           </div>
-          <div className="flex">
-            <div className="flex-1 -ml-4 sm:ml-0">
-              <ResponsiveContainer width="100%" height={getChartHeight()}>
-                <BarChart data={slaBreachData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="type" tick={{ fontSize: getChartFontSizes().axis }} />
-                  <YAxis tick={{ fontSize: getChartFontSizes().axis }} />
-                  <Tooltip contentStyle={{ fontSize: getChartFontSizes().tooltip }} />
-                  <Legend wrapperStyle={{ fontSize: getChartFontSizes().legend }} />
-                  <Bar dataKey="count" fill="#ef4444" name="Actual Breaches" />
-                  <Bar dataKey="target" fill="#10b981" name="Target (Max)" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <ChartContainer config={slaChartConfig} className="h-[450px] w-full">
+            <BarChart data={slaBreachData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis 
+                dataKey="type" 
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tick={{ fontSize: getChartFontSizes().axis }}
+                angle={-15}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis 
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tick={{ fontSize: getChartFontSizes().axis }}
+              />
+              <ChartTooltip 
+                content={<ChartTooltipContent className="bg-white" />}
+                cursor={{ fill: 'hsl(var(--muted))', opacity: 0.15 }}
+              />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Bar 
+                dataKey="count" 
+                fill="var(--color-count)" 
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar 
+                dataKey="target" 
+                fill="var(--color-target)" 
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ChartContainer>
         </div>
 
         {/* Rejection Reasons */}
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Rejection Reasons</h3>
-            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <BarChart3 className="w-4 h-4 text-red-500" />
+              <span className="text-xs sm:text-sm">
+                Total: {rejectionReasons.reduce((sum, item) => sum + item.value, 0)}%
+              </span>
+            </div>
           </div>
-          <ResponsiveContainer width="100%" height={getChartHeight()}>
-                <PieChart margin={{ top: 20, right: 30, bottom: 20, left: 30 }}>
-                  <Pie
-                    data={rejectionReasons}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={getPieChartRadius()}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={(entry: { name?: string; percent?: number }) => {
-                      if (screenSize === 'mobile') return ''
-                      const name = entry.name || 'Unknown'
-                      // Shorten long names for better visibility
-                      const shortName = name.length > 12 ? name.substring(0, 12) + '...' : name
-                      return `${shortName}: ${entry.percent?.toFixed(0) || 0}%`
-                    }}
-                    labelLine={screenSize !== 'mobile'}
-                  >
+          <ChartContainer config={rejectionChartConfig} className="mx-auto aspect-square max-h-[300px]">
+            <PieChart>
+              <ChartTooltip 
+                cursor={false}
+                content={<ChartTooltipContent 
+                  hideLabel
+                  className="bg-white"
+                />}
+              />
+              <Pie
+                data={rejectionReasons}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={screenSize === 'mobile' ? 50 : 60}
+                strokeWidth={5}
+                activeIndex={activePieIndex}
+                activeShape={({
+                  outerRadius = 0,
+                  ...props
+                }: any) => (
+                  <g>
+                    <Sector {...props} outerRadius={outerRadius + 10} />
+                    <Sector
+                      {...props}
+                      outerRadius={outerRadius + 25}
+                      innerRadius={outerRadius + 12}
+                    />
+                  </g>
+                )}
+                onMouseEnter={(_, index) => setActivePieIndex(index)}
+              >
                 {rejectionReasons.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.color}
+                  />
                 ))}
               </Pie>
-              <Tooltip 
-                formatter={(value, _name, props) => [
-                  `${value}%`, 
-                  props.payload?.name || 'Unknown'
-                ]} 
-                contentStyle={{ fontSize: getChartFontSizes().tooltip }}
-                labelFormatter={() => ''}
-              />
             </PieChart>
-          </ResponsiveContainer>
+          </ChartContainer>
           
-          {/* Chart Details Below - Mobile Only */}
-          <div className="mt-4 space-y-3 sm:hidden">
+          {/* Interactive Legend */}
+          <div className="mt-6 space-y-2">
             {rejectionReasons.map((reason, index) => (
-              <div key={index} className="flex items-center justify-between">
+              <button
+                key={index}
+                type="button"
+                onClick={() => setActivePieIndex(index)}
+                onMouseEnter={() => setActivePieIndex(index)}
+                className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 ${
+                  activePieIndex === index
+                    ? 'bg-gray-100 shadow-sm'
+                    : 'hover:bg-gray-50'
+                }`}
+              >
                 <div className="flex items-center gap-3">
                   <div 
-                    className="w-4 h-4 rounded-full" 
+                    className="w-3 h-3 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: reason.color }}
-                  ></div>
+                  />
                   <span className="text-sm font-medium text-gray-700">
                     {reason.name}
                   </span>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">
-                  {reason.value}%
-                </span>
-              </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-gray-900">
+                    {reason.value}%
+                  </span>
+                  {activePieIndex === index && (
+                    <div className="w-2 h-2 rounded-full bg-gray-400" />
+                  )}
+                </div>
+              </button>
             ))}
           </div>
         </div>
       </div>
 
       {/* Order Fulfillment Weekly Analysis */}
-      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20 mb-6 lg:mb-8 -ml-2 sm:ml-0">
+      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20 mb-6 lg:mb-8">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Weekly Order Fulfillment</h3>
           <Package className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
         </div>
-        <div className="flex">
-          <div className="flex-1 -ml-4 sm:ml-0">
-            <ResponsiveContainer width="100%" height={getChartHeight() + 50}>
-              <BarChart data={orderFulfillmentData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="week" tick={{ fontSize: getChartFontSizes().axis }} />
-                <YAxis tick={{ fontSize: getChartFontSizes().axis }} />
-                <Tooltip contentStyle={{ fontSize: getChartFontSizes().tooltip }} />
-                <Legend wrapperStyle={{ fontSize: getChartFontSizes().legend }} />
-                <Bar dataKey="delivered" fill="#10b981" name="Delivered" />
-                <Bar dataKey="rejected" fill="#ef4444" name="Rejected" />
-                <Bar dataKey="pending" fill="#f59e0b" name="Pending" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        <ChartContainer config={orderFulfillmentChartConfig} className="h-[300px] w-full">
+          <BarChart data={orderFulfillmentData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis 
+              dataKey="week" 
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tick={{ fontSize: getChartFontSizes().axis }}
+            />
+            <YAxis 
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tick={{ fontSize: getChartFontSizes().axis }}
+            />
+            <ChartTooltip 
+              content={<ChartTooltipContent className="bg-white" />}
+              cursor={{ fill: 'hsl(var(--muted))', opacity: 0.15 }}
+            />
+            <ChartLegend content={<ChartLegendContent />} />
+            <Bar 
+              dataKey="delivered" 
+              fill="var(--color-delivered)" 
+              radius={[4, 4, 0, 0]}
+            />
+            <Bar 
+              dataKey="rejected" 
+              fill="var(--color-rejected)" 
+              radius={[4, 4, 0, 0]}
+            />
+            <Bar 
+              dataKey="pending" 
+              fill="var(--color-pending)" 
+              radius={[4, 4, 0, 0]}
+            />
+          </BarChart>
+        </ChartContainer>
       </div>
 
     </div>

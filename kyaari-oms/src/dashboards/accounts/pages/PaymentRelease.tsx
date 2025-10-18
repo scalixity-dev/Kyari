@@ -238,7 +238,7 @@ function AccountsPaymentRelease() {
           <div className="flex justify-end sm:justify-start">
             <button 
               onClick={resetFilters} 
-              className="bg-white text-secondary border border-secondary rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-50 transition-colors duration-200"
+              className="bg-white text-secondary border border-secondary rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-50 transition-colors duration-200"
             >
               Reset
             </button>

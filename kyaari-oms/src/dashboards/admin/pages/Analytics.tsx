@@ -10,6 +10,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  Sector,
   LabelList
 } from 'recharts'
 import Button from '../../../components/Button/Button'
@@ -253,6 +254,9 @@ export default function Analytics() {
   const [vendorSearchTerm, setVendorSearchTerm] = useState<string>('')
   const [showVendorDropdown, setShowVendorDropdown] = useState<boolean>(false)
   const vendorDropdownRef = useRef<HTMLDivElement>(null)
+  const [activePieIndexSla, setActivePieIndexSla] = useState<number | undefined>(undefined)
+  const [activePieIndexTicket, setActivePieIndexTicket] = useState<number | undefined>(undefined)
+  const [activePieIndexVendor, setActivePieIndexVendor] = useState<number | undefined>(undefined)
   
   // Pagination state
   const [reportPage, setReportPage] = useState(1)
@@ -263,6 +267,37 @@ export default function Analytics() {
     from: undefined,
     to: undefined
   })
+
+  // Custom render function for active pie sector (makes it bigger on hover with animation)
+  const renderActiveShape = (props: any) => {
+    const {
+      cx,
+      cy,
+      innerRadius,
+      outerRadius,
+      startAngle,
+      endAngle,
+      fill,
+    } = props
+
+    return (
+      <g>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 10} // Expand by 10px on hover
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+          style={{
+            filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.2))',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        />
+      </g>
+    )
+  }
 
   // Calculate metrics for the current view
   const getCurrentMetrics = () => {
@@ -867,6 +902,8 @@ export default function Analytics() {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
+                            activeIndex={activePieIndexVendor}
+                            activeShape={renderActiveShape}
                             data={[
                               { name: 'On Time', value: vendor.totalOrders - vendor.breaches, color: 'var(--color-secondary)' },
                               { name: 'Breaches', value: vendor.breaches, color: '#EF4444' }
@@ -876,9 +913,26 @@ export default function Analytics() {
                             innerRadius={20}
                             outerRadius={35}
                             dataKey="value"
+                            onMouseEnter={(_, index) => setActivePieIndexVendor(index)}
+                            onMouseLeave={() => setActivePieIndexVendor(undefined)}
+                            animationBegin={0}
+                            animationDuration={400}
+                            animationEasing="ease-in-out"
                           >
-                            <Cell fill={getComputedStyle(document.documentElement).getPropertyValue('--color-secondary') || 'var(--color-secondary)'} />
-                            <Cell fill="#EF4444" />
+                            <Cell 
+                              fill={getComputedStyle(document.documentElement).getPropertyValue('--color-secondary') || 'var(--color-secondary)'}
+                              style={{
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                cursor: 'pointer'
+                              }}
+                            />
+                            <Cell 
+                              fill="#EF4444"
+                              style={{
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                cursor: 'pointer'
+                              }}
+                            />
                           </Pie>
                           <Tooltip />
                         </PieChart>
@@ -978,6 +1032,8 @@ export default function Analytics() {
                           }}
                         />
                         <Pie
+                          activeIndex={activePieIndexSla}
+                          activeShape={renderActiveShape}
                           data={slaBreachesData}
                           cx="50%"
                           cy="50%"
@@ -985,11 +1041,21 @@ export default function Analytics() {
                           outerRadius={100}
                           dataKey="value"
                           nameKey="name"
-                          label={({ name, value }) => `${name}: ${value}%`}
-                          labelLine={true}
+                          onMouseEnter={(_, index) => setActivePieIndexSla(index)}
+                          onMouseLeave={() => setActivePieIndexSla(undefined)}
+                          animationBegin={0}
+                          animationDuration={400}
+                          animationEasing="ease-in-out"
                         >
                           {slaBreachesData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={entry.color}
+                              style={{
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                cursor: 'pointer'
+                              }}
+                            />
                           ))}
                         </Pie>
                       </PieChart>
@@ -1099,6 +1165,8 @@ export default function Analytics() {
                       }}
                     />
                     <Pie
+                      activeIndex={activePieIndexTicket}
+                      activeShape={renderActiveShape}
                       data={ticketResolutionData}
                       cx="50%"
                       cy="50%"
@@ -1106,11 +1174,21 @@ export default function Analytics() {
                       outerRadius={100}
                       dataKey="value"
                       nameKey="name"
-                      label={({ name, value }) => `${name}: ${value}%`}
-                      labelLine={true}
+                      onMouseEnter={(_, index) => setActivePieIndexTicket(index)}
+                      onMouseLeave={() => setActivePieIndexTicket(undefined)}
+                      animationBegin={0}
+                      animationDuration={400}
+                      animationEasing="ease-in-out"
                     >
                       {ticketResolutionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.color}
+                          style={{
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            cursor: 'pointer'
+                          }}
+                        />
                       ))}
                     </Pie>
                   </PieChart>

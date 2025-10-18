@@ -480,7 +480,8 @@ export default function UsersRoles() {
     <div className="p-4 sm:p-6 font-sans text-primary min-h-[calc(100vh-4rem)] w-full" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h2 className="font-heading text-secondary text-2xl sm:text-3xl lg:text-4xl font-semibold">Users & Roles</h2>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Users & Roles</h1>
+        <p className="text-sm sm:text-base text-gray-600">Manage system users, vendors, and permissions</p>
       </div>
 
       {/* Tabs */}
