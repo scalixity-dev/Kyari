@@ -7,7 +7,9 @@ export interface Notification {
   id: string;
   title: string;
   message: string;
-  type: 'DISPATCH' | 'ASSIGNMENT' | 'PAYMENT' | 'INVOICE' | 'BROADCAST' | 'SYSTEM';
+  type: 'DISPATCH' | 'ASSIGNMENT' | 'PAYMENT' | 'INVOICE' | 'BROADCAST' | 'SYSTEM' | 
+         'VENDOR_INVOICE_UPLOADED' | 'VENDOR_INVOICE_SUBMITTED' | 'ACCOUNTS_INVOICE_UPLOADED' |
+         'GRN_TICKET_CREATED' | 'VENDOR_CONFIRMED_ASSIGNMENT' | string; // Allow string for extensibility
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   status: 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
   createdAt: string;
@@ -17,6 +19,14 @@ export interface Notification {
     vendorId?: string;
     amount?: number;
     url?: string;
+    type?: string; // Specific notification type
+    invoiceId?: string;
+    invoiceNumber?: string;
+    vendorName?: string;
+    purchaseOrderId?: string;
+    ticketId?: string;
+    ticketNumber?: string;
+    grnId?: string;
     [key: string]: any;
   };
 }
