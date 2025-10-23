@@ -3,6 +3,7 @@ import { FileText, CheckSquare, X, Clock, Calendar as CalendarIcon, ChevronDown,
 import { CustomDropdown, KPICard } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { Pagination } from '../../../components/ui/Pagination'
+import { CSVPDFExportButton } from '../../../components/ui/export-button'
 import { format, parseISO } from 'date-fns'
 import { InvoiceApiService, type VendorInvoiceDetailed } from '../../../services/invoiceApi'
 import toast from 'react-hot-toast'
@@ -219,21 +220,21 @@ const InvoiceUploadModal: React.FC<InvoiceUploadModalProps> = ({ isOpen, po, onC
 const getStatusBadge = (status: PurchaseOrder['status']) => {
   switch (status) {
     case 'Received':
-      return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Received</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-blue-100 text-blue-800 border-blue-300">Received</span>
     case 'Dispatched':
-      return <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-medium">Dispatched</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-indigo-100 text-indigo-800 border-indigo-300">Dispatched</span>
     case 'Validating':
-      return <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">Validating</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-orange-100 text-orange-800 border-orange-300">Validating</span>
     case 'Validated':
-      return <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium">Verified</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-emerald-100 text-emerald-800 border-emerald-300">Verified</span>
     case 'Approved':
-      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Approved</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-green-100 text-green-800 border-green-300">Approved</span>
     case 'Rejected':
-      return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">Ticket Raised</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-red-100 text-red-800 border-red-300">Ticket Raised</span>
     case 'Payment Received':
-      return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">Payment Received</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-purple-100 text-purple-800 border-purple-300">Payment Received</span>
     default:
-      return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">{status}</span>
+      return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border bg-gray-100 text-gray-800 border-gray-300">{status}</span>
   }
 }
 
@@ -571,23 +572,108 @@ export default function Invoices() {
   const endIndex = Math.min(startIndex + pageSize, filteredPurchaseOrders.length)
   const paginatedPurchaseOrders = filteredPurchaseOrders.slice(startIndex, endIndex)
 
+  // Export functions
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const toCSV = (rows: Array<Record<string, unknown>>, headerOrder?: string[]) => {
+    if (!rows || rows.length === 0) return ''
+    const headers = headerOrder && headerOrder.length > 0 ? headerOrder : Array.from(new Set(rows.flatMap((r) => Object.keys(r))))
+    const escapeCell = (val: unknown) => {
+      const s = val === undefined || val === null ? '' : String(val)
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s
+    }
+    const lines = [headers.join(',')]
+    for (const row of rows) {
+      lines.push(headers.map((h) => escapeCell((row as Record<string, unknown>)[h])).join(','))
+    }
+    return lines.join('\n')
+  }
+
+  const handleExportCSV = () => {
+    const rows = filteredPurchaseOrders.map(po => ({
+      poNumber: po.poNumber,
+      date: po.date,
+      linkedOrders: po.linkedOrders.join(', '),
+      items: po.items,
+      quantity: po.quantity,
+      amount: po.amount,
+      status: po.status,
+      dispatchStatus: po.dispatchStatus,
+      hasVendorInvoice: !!po.vendorInvoiceFile,
+      hasAccountsInvoice: !!po.accountsInvoiceFile,
+      rejectionReason: po.rejectionReason || ''
+    }))
+    
+    const csv = toCSV(rows, ['poNumber', 'date', 'linkedOrders', 'items', 'quantity', 'amount', 'status', 'dispatchStatus', 'hasVendorInvoice', 'hasAccountsInvoice', 'rejectionReason'])
+    const filename = `vendor_invoices_${new Date().toISOString().slice(0, 10)}.csv`
+    downloadFile(csv, filename, 'text/csv;charset=utf-8;')
+  }
+
+  const handleExportPDF = () => {
+    const content = [
+      'VENDOR INVOICES REPORT',
+      `Generated: ${new Date().toLocaleString()}`,
+      `Total Purchase Orders: ${filteredPurchaseOrders.length}`,
+      '',
+      '=== PURCHASE ORDER SUMMARY ===',
+      ...filteredPurchaseOrders.map(po => [
+        `PO Number: ${po.poNumber}`,
+        `Date: ${po.date}`,
+        `Linked Orders: ${po.linkedOrders.join(', ')}`,
+        `Items: ${po.items}`,
+        `Quantity: ${po.quantity}`,
+        `Amount: ₹${po.amount.toLocaleString()}`,
+        `Status: ${po.status}`,
+        `Dispatch Status: ${po.dispatchStatus}`,
+        `Vendor Invoice: ${po.vendorInvoiceFile ? 'Uploaded' : 'Not uploaded'}`,
+        `Accounts Invoice: ${po.accountsInvoiceFile ? 'Available' : 'Not available'}`,
+        ...(po.rejectionReason ? [`Rejection Reason: ${po.rejectionReason}`] : []),
+        '---'
+      ]).flat()
+    ].join('\n')
+    
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vendor_invoices_${new Date().toISOString().slice(0, 10)}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden bg-[var(--color-sharktank-bg)]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-0 sm:mb-0">Invoice Management</h1>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2">
+          Invoice Management
+        </h1>
+        <p className="text-sm sm:text-base text-[var(--color-primary)]">
+          Upload and manage your purchase order invoices
+        </p>
       </div>
 
       {/* Loading State */}
       {loading && (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-accent)]"></div>
+        <div className="bg-white rounded-xl p-12 text-center">
+          <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading invoices...</p>
         </div>
       )}
 
       {/* Empty State */}
       {!loading && purchaseOrders.length === 0 && (
-        <div className="bg-white rounded-xl shadow-md border border-white/20 p-12 text-center">
+        <div className="bg-white rounded-xl p-12 text-center">
           <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-700 mb-2">No Invoices Found</h3>
           <p className="text-gray-500">You don't have any purchase orders with invoices yet.</p>
@@ -627,7 +713,15 @@ export default function Invoices() {
 
       {/* Purchase Orders Heading */}
       <div className="mb-3 sm:mb-4">
-        <h2 className="text-base sm:text-lg md:text-xl font-semibold text-[var(--color-heading)]">Purchase Orders</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-[var(--color-heading)]">Purchase Orders</h2>
+          <CSVPDFExportButton
+            onExportCSV={handleExportCSV}
+            onExportPDF={handleExportPDF}
+            label="Export"
+            className="w-full sm:w-auto"
+          />
+        </div>
       </div>
 
       {/* Filters */}
@@ -646,7 +740,7 @@ export default function Invoices() {
             <div className="hidden sm:flex sm:flex-row sm:items-center gap-2">
               <button
                 onClick={() => setCurrentPage(1)}
-                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
+                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
                 style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
               >
                 Apply
@@ -662,8 +756,7 @@ export default function Invoices() {
                   setDateToDate(undefined)
                   setCurrentPage(1)
                 }}
-                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
-                style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+                className="w-full sm:w-[140px] px-4 py-2 sm:py-2 bg-white text-secondary border border-secondary rounded-2xl font-medium hover:bg-secondary hover:text-white transition-colors duration-200 text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
               >
                 Reset
               </button>
@@ -718,7 +811,7 @@ export default function Invoices() {
                   <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
                 </button>
                 {showFromCalendar && (
-                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                  <div className="absolute z-50 mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
                     <Calendar
                       mode="single"
                       selected={dateFromDate}
@@ -749,7 +842,7 @@ export default function Invoices() {
                   <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
                 </button>
                 {showToCalendar && (
-                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
+                  <div className="absolute z-50 mt-2 right-0 bg-white border border-gray-200 rounded-md shadow-lg w-full min-w-[280px]">
                     <Calendar
                       mode="single"
                       selected={dateToDate}
@@ -773,7 +866,7 @@ export default function Invoices() {
         <div className="flex sm:hidden gap-2 pt-4 mt-2 border-t border-gray-200">
           <button
             onClick={() => setCurrentPage(1)}
-            className="flex-1 px-4 py-2.5 rounded-md text-white font-medium text-sm min-h-[44px]"
+            className="flex-1 px-4 py-2.5 rounded-md text-white font-medium text-sm min-h-[44px] cursor-pointer"
             style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
           >
             Apply Filters
@@ -789,8 +882,7 @@ export default function Invoices() {
               setDateToDate(undefined)
               setCurrentPage(1)
             }}
-            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px]"
-            style={{ borderColor: '#1D4D43', color: '#1D4D43' }}
+            className="flex-1 px-4 py-2 bg-white text-secondary border border-secondary rounded-2xl font-medium hover:bg-secondary hover:text-white transition-colors duration-200 text-sm min-h-[44px] cursor-pointer"
           >
             Reset
           </button>
@@ -798,53 +890,54 @@ export default function Invoices() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
+      <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
         {/* Desktop Table */}
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full border-separate border-spacing-0">
-            <thead>
-              <tr className="bg-[var(--color-accent)]">
-                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">PO Number</th>
-                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Date</th>
-                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Linked Orders</th>
-                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Items</th>
-                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Qty</th>
-                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Dispatch Status</th>
-                <th className="text-left px-4 xl:px-6 py-4 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+        <div className="overflow-x-auto">
+          <div className="bg-white rounded-t-lg shadow-sm border border-gray-200 overflow-hidden">
+            <table className="w-full border-separate border-spacing-0">
+              <thead>
+                <tr className="bg-[var(--color-accent)]">
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">PO Number</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Date</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Linked Orders</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Items</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Qty</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Dispatch Status</th>
+                  <th className="text-left p-3 font-heading font-normal text-[var(--color-button-text)]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
               {paginatedPurchaseOrders.map((po) => (
-                <tr key={po.id} className="hover:bg-gray-50">
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--color-heading)]">
-                    {po.poNumber}
+                <tr key={po.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white">
+                  <td className="p-3">
+                    <div className="font-semibold text-secondary">{po.poNumber}</div>
                   </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="p-3 text-sm text-gray-900">
                     {po.date}
                   </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="p-3 text-sm text-gray-900">
                     {po.linkedOrders.join(', ')}
                   </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="p-3 text-sm text-gray-900">
                     {po.items}
                     {getValidationDisplay(po)}
                   </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="p-3 text-sm text-gray-900">
                     {po.quantity}
                   </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
+                  <td className="p-3">
                     {getStatusBadge(po.dispatchStatus as PurchaseOrder['status'] || po.status)}
                   </td>
-                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex flex-col items-start gap-2">
+                  <td className="p-3 text-sm">
+                    <div className="flex items-center gap-1.5">
                       {/* ALWAYS show upload button when ticket is raised (allows re-upload if wrong file) */}
                       {(po.status === 'Rejected' || po.dispatchStatus === 'Rejected') && (
                         <button
                           onClick={() => handleUploadInvoice(po.id)}
-                          className="px-3 py-1.5 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs font-medium flex items-center gap-1.5 shadow-sm"
+                          className="bg-orange-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-orange-600 flex items-center gap-1"
                         >
-                          <FileText size={13} />
-                          {po.vendorInvoiceFile ? 'Re-upload Your Invoice' : 'Upload Your Invoice'}
+                          <FileText size={12} />
+                          {po.vendorInvoiceFile ? 'Re-upload' : 'Upload'}
                         </button>
                       )}
 
@@ -855,10 +948,10 @@ export default function Invoices() {
                             console.log('Viewing vendor invoice:', po.vendorInvoiceUrl)
                             handleViewInvoice(po.vendorInvoiceUrl!, 'Your')
                           }}
-                          className="px-3 py-1 bg-blue-50 border border-blue-300 text-blue-700 rounded-md hover:bg-blue-100 transition-colors text-xs font-medium flex items-center gap-1.5"
+                          className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 flex items-center gap-1"
                         >
                           <FileText size={12} />
-                          <span className="font-semibold">Your Invoice</span>
+                          View Yours
                         </button>
                       )}
                       
@@ -866,10 +959,10 @@ export default function Invoices() {
                       {po.accountsInvoiceFile && po.accountsInvoiceUrl && (
                         <button
                           onClick={() => handleViewInvoice(po.accountsInvoiceUrl!, 'Accounts')}
-                          className="px-3 py-1 bg-gray-50 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors text-xs font-medium flex items-center gap-1.5"
+                          className="bg-purple-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-purple-600 flex items-center gap-1"
                         >
                           <FileText size={12} />
-                          <span className="font-semibold">Accounts Invoice</span>
+                          View Accounts
                         </button>
                       )}
 
@@ -882,48 +975,53 @@ export default function Invoices() {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
 
         {/* Mobile Cards */}
-        <div className="lg:hidden divide-y divide-gray-200">
+        <div className="lg:hidden space-y-3">
           {paginatedPurchaseOrders.map((po) => (
-            <div key={po.id} className="p-3 sm:p-4 md:p-5">
-              <div className="flex justify-between items-start mb-3 gap-2">
+            <div key={po.id} className="rounded-xl p-4 border border-gray-200 bg-white">
+              <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-[var(--color-heading)] text-sm sm:text-base truncate">{po.poNumber}</h3>
-                  <p className="text-xs sm:text-sm text-gray-600 mb-1">{po.date}</p>
-                  <p className="text-xs text-gray-500 truncate">Orders: {po.linkedOrders.join(', ')}</p>
+                  <h3 className="font-semibold text-secondary text-lg truncate">{po.poNumber}</h3>
+                  <p className="text-sm text-gray-500">{po.date}</p>
+                  <p className="text-sm text-gray-500 truncate">Orders: {po.linkedOrders.join(', ')}</p>
                 </div>
                 <div className="ml-2 flex-shrink-0">
                   {getStatusBadge(po.status)}
                 </div>
               </div>
               
-              <div className="mb-3 space-y-1.5">
-                <p className="text-xs sm:text-sm text-gray-600">
-                  <span className="font-medium text-gray-800">Item:</span> {po.items}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  <span className="font-medium text-gray-800">Quantity:</span> {po.quantity}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2">
-                  <span className="font-medium text-gray-800">Dispatch Status:</span>
-                  {getStatusBadge(po.dispatchStatus as PurchaseOrder['status'] || po.status)}
-                </p>
-                
+              {/* Info Grid */}
+              <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                <div>
+                  <span className="text-gray-500 block">Item</span>
+                  <span className="font-medium">{po.items}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block">Quantity</span>
+                  <span className="font-medium">{po.quantity}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-500 block">Dispatch Status</span>
+                  <div className="mt-1">
+                    {getStatusBadge(po.dispatchStatus as PurchaseOrder['status'] || po.status)}
+                  </div>
+                </div>
                 {getValidationDisplay(po)}
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-2">
                 {/* ALWAYS show upload button when ticket is raised (allows re-upload if wrong file) */}
                 {(po.status === 'Rejected' || po.dispatchStatus === 'Rejected') && (
                   <button
                     onClick={() => handleUploadInvoice(po.id)}
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-[var(--color-accent)] text-white rounded-md hover:bg-[var(--color-accent)]/90 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2 shadow-sm"
+                    className="bg-orange-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-orange-600 flex items-center gap-1"
                   >
-                    <FileText size={16} />
-                    <span>{po.vendorInvoiceFile ? 'Re-upload Your Invoice' : 'Upload Your Invoice'}</span>
+                    <FileText size={12} />
+                    {po.vendorInvoiceFile ? 'Re-upload' : 'Upload'}
                   </button>
                 )}
 
@@ -934,10 +1032,10 @@ export default function Invoices() {
                       console.log('Viewing vendor invoice:', po.vendorInvoiceUrl)
                       handleViewInvoice(po.vendorInvoiceUrl!, 'Your')
                     }}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-50 border border-blue-300 text-blue-700 rounded-md hover:bg-blue-100 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2"
+                    className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 flex items-center gap-1"
                   >
-                    <FileText size={14} />
-                    <span className="font-semibold">View Your Invoice</span>
+                    <FileText size={12} />
+                    View Yours
                   </button>
                 )}
                 
@@ -945,10 +1043,10 @@ export default function Invoices() {
                 {po.accountsInvoiceFile && po.accountsInvoiceUrl && (
                   <button
                     onClick={() => handleViewInvoice(po.accountsInvoiceUrl!, 'Accounts')}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-50 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2"
+                    className="bg-purple-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-purple-600 flex items-center gap-1"
                   >
-                    <FileText size={14} />
-                    <span className="font-semibold">View Accounts Invoice</span>
+                    <FileText size={12} />
+                    View Accounts
                   </button>
                 )}
 
@@ -993,10 +1091,10 @@ export default function Invoices() {
           aria-modal="true"
           aria-labelledby="invoice-modal-title"
         >
-          <div className="bg-white rounded-2xl w-full max-w-[95vw] sm:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl max-h-[95vh] flex flex-col shadow-2xl">
+          <div className="bg-white rounded-2xl w-full max-w-[90vw] sm:max-w-3xl xl:max-w-4xl 2xl:max-w-5xl max-h-[95vh] flex flex-col shadow-2xl transform translate-x-6 sm:translate-x-8 xl:translate-x-16">
             {/* Header - Fixed */}
             <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 xl:px-7 xl:py-5 2xl:px-8 2xl:py-6 border-b border-gray-200 flex-shrink-0">
-              <h3 id="invoice-modal-title" className="text-lg sm:text-xl xl:text-2xl 2xl:text-3xl font-semibold text-[var(--color-heading)]">
+              <h3 id="invoice-modal-title" className="font-heading text-secondary font-normal text-lg sm:text-xl xl:text-2xl 2xl:text-3xl">
                 {viewingInvoice.type} Invoice
               </h3>
               <button
@@ -1059,7 +1157,7 @@ export default function Invoices() {
                         href={viewingInvoice.url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--color-accent)] text-white rounded-full hover:opacity-90 transition-opacity"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-button-text rounded-full hover:opacity-90 transition-opacity"
                       >
                         <FileText size={20} />
                         <span>Download Invoice</span>

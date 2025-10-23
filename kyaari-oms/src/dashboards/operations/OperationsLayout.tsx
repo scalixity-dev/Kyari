@@ -169,7 +169,7 @@ function OperationsLayout() {
                 className="h-8"
                 style={{ filter: 'brightness(0) invert(1)' }}
               />
-              {!isMobile && <div className="text-sm text-white/70 mt-1">Vendor Portal</div>}
+              {!isMobile && <div className="text-sm text-white/70 mt-1">Operations Portal</div>}
             </div>
             {/* Mobile Close Button */}
             {isMobile && (
@@ -228,8 +228,8 @@ function OperationsLayout() {
 
           {/* Left welcome text (visible on md+) */}
           <div className="hidden md:block ml-9 mr-6 text-3xl font-medium" style={{ color: 'var(--color-secondary)' }}>
-            <div className="font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Vendor Dashboard</div>
-            <div className="text-xl mt-1">Welcome Vendor</div>
+            <div className="font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Operations Dashboard</div>
+            <div className="text-xl mt-1">Welcome Operations</div>
           </div>
           {/* Spacer on desktop to push right-group to the edge */}
           {!isMobile && <div className="flex-1" />}
@@ -237,7 +237,7 @@ function OperationsLayout() {
           <div className="flex items-center gap-4">
             <MegaSearch 
               isMobile={isMobile} 
-              userRole="VENDOR" 
+              userRole="OPS" 
               placeholder="Mega Search"
             />
 
