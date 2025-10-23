@@ -114,7 +114,6 @@ export default function Reports() {
   ]
 
   const totalPendingVerification = 23 // This would come from actual data
-  const resolutionRate = ((currentTicketMetrics.resolved / currentTicketMetrics.raised) * 100).toFixed(1)
 
   // Get chart data based on selected time range
   const chartData = timeRange === 'weekly' 
