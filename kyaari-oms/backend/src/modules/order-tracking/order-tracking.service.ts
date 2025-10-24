@@ -68,6 +68,11 @@ export class OrderTrackingService {
                     }
                   }
                 }
+              },
+              goodsReceiptItems: {
+                select: {
+                  status: true
+                }
               }
             },
             orderBy: {
@@ -502,16 +507,27 @@ export class OrderTrackingService {
     const paymentStatus = latestAssignment.purchaseOrderItem?.purchaseOrder?.payment?.status;
     const hasCompletedPayment = hasPurchaseOrder && paymentStatus === 'COMPLETED';
     
+    // Check if there are GoodsReceiptItems (verification records)
+    const hasGoodsReceiptItems = latestAssignment.goodsReceiptItems && latestAssignment.goodsReceiptItems.length > 0;
+    const hasVerifiedGoodsReceipt = hasGoodsReceiptItems && 
+      latestAssignment.goodsReceiptItems.some((item: any) => 
+        item.status === 'VERIFIED_OK' || item.status === 'QUANTITY_MISMATCH'
+      );
 
     // Map assignment status to tracking status following correct business flow:
     // Received → Assigned → Confirmed → Invoiced → Dispatched → Verified → Paid
     let trackingStatus: OrderTrackingStatus;
     
-    // If payment is completed, order is "Paid" (final status)
-    if (hasCompletedPayment) {
+    // If there are verified goods receipt items AND completed payment, order is "Paid"
+    if (hasVerifiedGoodsReceipt && hasCompletedPayment) {
       trackingStatus = 'Paid';
-    } else {
-      // Map assignment status to tracking status based on business flow
+    }
+    // If there are verified goods receipt items but no completed payment, order is "Verified"
+    else if (hasVerifiedGoodsReceipt && !hasCompletedPayment) {
+      trackingStatus = 'Verified';
+    }
+    // Otherwise, map assignment status to tracking status based on business flow
+    else {
       switch (assignmentStatus) {
         case AssignmentStatus.PENDING_CONFIRMATION:
           trackingStatus = 'Assigned';
@@ -525,12 +541,6 @@ export class OrderTrackingService {
           break;
         case AssignmentStatus.DISPATCHED:
           trackingStatus = 'Dispatched';
-          break;
-        case AssignmentStatus.VERIFIED_OK:
-          trackingStatus = 'Verified';
-          break;
-        case AssignmentStatus.COMPLETED:
-          trackingStatus = 'Paid';
           break;
         default:
           trackingStatus = 'Received';
@@ -592,25 +602,38 @@ export class OrderTrackingService {
         }
       });
 
-      // 6. Verified: Count from AssignedOrderItem table with VERIFIED_OK or VERIFIED_MISMATCH status
-      statusCounts['Verified'] = await prisma.assignedOrderItem.count({
+      // 6. Verified: Count orders that have GoodsReceiptItem entries (verified but not paid)
+      statusCounts['Verified'] = await prisma.goodsReceiptItem.count({
         where: {
           status: {
-            in: [AssignmentStatus.VERIFIED_OK, AssignmentStatus.VERIFIED_MISMATCH]
+            in: ['VERIFIED_OK', 'QUANTITY_MISMATCH']
+          },
+          assignedOrderItem: {
+            purchaseOrderItem: {
+              purchaseOrder: {
+                payment: {
+                  status: {
+                    not: 'COMPLETED'
+                  }
+                }
+              }
+            }
           }
         }
       });
 
-      // 7. Paid: Among verified orders, count those with completed payments
-      statusCounts['Paid'] = await prisma.assignedOrderItem.count({
+      // 7. Paid: Count orders that have GoodsReceiptItem entries AND completed payments
+      statusCounts['Paid'] = await prisma.goodsReceiptItem.count({
         where: {
           status: {
-            in: [AssignmentStatus.VERIFIED_OK, AssignmentStatus.VERIFIED_MISMATCH]
+            in: ['VERIFIED_OK', 'QUANTITY_MISMATCH']
           },
-          purchaseOrderItem: {
-            purchaseOrder: {
-              payment: {
-                status: 'COMPLETED'
+          assignedOrderItem: {
+            purchaseOrderItem: {
+              purchaseOrder: {
+                payment: {
+                  status: 'COMPLETED'
+                }
               }
             }
           }

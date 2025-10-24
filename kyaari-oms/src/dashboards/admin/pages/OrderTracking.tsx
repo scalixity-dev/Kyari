@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
@@ -364,46 +364,29 @@ const OrderTracking: React.FC = () => {
   });
   const navigate = useNavigate();
 
-  // Load initial data
+  // Load all data once on component mount
   useEffect(() => {
-
     loadOrderTrackingData();
   }, []);
-
-  // Load data when filters change
-  useEffect(() => {
-    loadOrderTrackingData();
-  }, [filters]);
 
   const loadOrderTrackingData = async () => {
     try {
       setLoading(true);
-      const apiFilters: OrderTrackingFilters = {};
       
-      // Don't send status filter to backend - we'll filter on frontend
-      if (filters.vendor) apiFilters.vendor = filters.vendor;
-      if (filters.qtyMin) apiFilters.qtyMin = parseInt(filters.qtyMin);
-      if (filters.qtyMax) apiFilters.qtyMax = parseInt(filters.qtyMax);
-      if (filters.search) apiFilters.search = filters.search;
-
+      // Fetch all orders without filters (like PaymentRelease does)
       const response = await OrderTrackingApi.getOrderTracking({
         page: 1,
         limit: 100,
-        filters: Object.keys(apiFilters).length > 0 ? apiFilters : undefined
+        filters: undefined // No filters - get all data
       });
 
       if (response.success) {
-        // Use orders from main data, fallback to summary recentOrders if main orders is empty/undefined
-        let ordersToUse = response.data.orders && response.data.orders.length > 0 
+        // Store all orders (like PaymentRelease does)
+        const allOrders = response.data.orders && response.data.orders.length > 0 
           ? response.data.orders 
           : response.data.summary?.recentOrders || [];
         
-        // Apply status filter on frontend (only for current page)
-        if (filters.status) {
-          ordersToUse = ordersToUse.filter(order => order.status === filters.status);
-        }
-      
-        setOrders(ordersToUse);
+        setOrders(allOrders);
         
         // Set summary data from the main response
         if (response.data.summary) {
@@ -416,6 +399,26 @@ const OrderTracking: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Client-side filtering with useMemo (like PaymentRelease)
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      // Status filter
+      if (filters.status && order.status !== filters.status) return false;
+      
+      // Vendor filter
+      if (filters.vendor && !order.vendor.companyName.toLowerCase().includes(filters.vendor.toLowerCase())) return false;
+      
+      // Search filter
+      if (filters.search && !order.orderNumber.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      
+      // Quantity range filters
+      if (filters.qtyMin && order.quantity < parseInt(filters.qtyMin)) return false;
+      if (filters.qtyMax && order.quantity > parseInt(filters.qtyMax)) return false;
+      
+      return true;
+    });
+  }, [orders, filters]);
 
 
   const handleOrderClick = (orderId: string) => {
@@ -484,13 +487,14 @@ const OrderTracking: React.FC = () => {
 
   const handleExportCSV = async () => {
     try {
+      // Export with current filters
       const apiFilters: OrderTrackingFilters = {};
       
-      // Don't send status filter to backend - we'll filter on frontend
       if (filters.vendor) apiFilters.vendor = filters.vendor;
       if (filters.qtyMin) apiFilters.qtyMin = parseInt(filters.qtyMin);
       if (filters.qtyMax) apiFilters.qtyMax = parseInt(filters.qtyMax);
       if (filters.search) apiFilters.search = filters.search;
+      // Note: status filter is applied client-side, so we don't send it to API
 
       const blob = await OrderTrackingApi.exportToCSV(
         Object.keys(apiFilters).length > 0 ? apiFilters : undefined
@@ -509,13 +513,14 @@ const OrderTracking: React.FC = () => {
 
   const handleExportPDF = async () => {
     try {
+      // Export with current filters
       const apiFilters: OrderTrackingFilters = {};
       
-      // Don't send status filter to backend - we'll filter on frontend
       if (filters.vendor) apiFilters.vendor = filters.vendor;
       if (filters.qtyMin) apiFilters.qtyMin = parseInt(filters.qtyMin);
       if (filters.qtyMax) apiFilters.qtyMax = parseInt(filters.qtyMax);
       if (filters.search) apiFilters.search = filters.search;
+      // Note: status filter is applied client-side, so we don't send it to API
 
       const blob = await OrderTrackingApi.exportToPDF(
         Object.keys(apiFilters).length > 0 ? apiFilters : undefined
@@ -626,7 +631,7 @@ const OrderTracking: React.FC = () => {
             </div>
           ) : viewMode === 'list' ? (
             <ListView 
-              orders={orders} 
+              orders={filteredOrders} 
               onOrderClick={handleOrderClick}
               showFilters={showFilters}
               filters={filters}
@@ -634,12 +639,12 @@ const OrderTracking: React.FC = () => {
               onResetFilters={handleResetFilters}
             />
           ) : (
-            <BoardView orders={orders} onOrderMove={handleOrderMove} onOrderClick={handleOrderClick} />
+            <BoardView orders={filteredOrders} onOrderMove={handleOrderMove} onOrderClick={handleOrderClick} />
           )}
         </div>
 
         {/* Empty State (if no orders) */}
-        {!loading && (!orders || orders.length === 0) && (
+        {!loading && (!filteredOrders || filteredOrders.length === 0) && (
           <div className="text-center py-8 sm:py-12">
             <div className="text-gray-400 text-lg sm:text-xl mb-2">No orders found</div>
             <div className="text-gray-500 text-sm sm:text-base">
