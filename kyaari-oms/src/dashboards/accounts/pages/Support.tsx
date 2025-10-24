@@ -402,7 +402,10 @@ export default function AccountsSupport() {
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 lg:mb-10 gap-3">
-      <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)]">Account Support</h2>
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Account Support</h1>
+          <p className="text-sm sm:text-base text-gray-600">Get help with payment issues, vendor queries, and system support</p>
+        </div>
         <button
           onClick={() => setShowNewTicket(true)}
           className="bg-accent text-button-text rounded-xl px-4 py-2.5 border border-transparent flex items-center justify-center gap-2 w-full sm:w-auto min-h-[44px] sm:min-h-auto"
