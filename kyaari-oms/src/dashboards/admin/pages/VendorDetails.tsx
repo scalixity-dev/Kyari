@@ -1,9 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { BarChart, Bar,  XAxis, YAxis, AreaChart, Area, CartesianGrid } from 'recharts'
 import { BarChart3, Clock, FileText, Package, CheckSquare, AlertTriangle, Filter } from 'lucide-react'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../../../components/ui/chart"
 import { Pagination, CustomDropdown, CSVPDFExportButton } from '../../../components'
+import { vendorTrackingApi, type VendorPerformanceMetricsDto, type VendorSlaDto } from '../../../services/vendorTrackingApi'
 
 interface FilterState {
   orderNumber: string;
@@ -13,123 +14,109 @@ interface FilterState {
 }
 
 // TypeScript types
-interface VendorMetrics {
-  fillRate: number
-  slaCompliance: number
-  avgInvoiceDays: number
-  avgTicketDays: number
-  ordersCount: number
-  pendingOrders: number
-  completedOrders: number
-}
-
 interface VendorDetails {
   id: string
-  name: string
-  metrics: VendorMetrics
+  companyName: string
+  contactPersonName: string
+  contactPhone: string
+  fillRate?: number
+  slaComplianceRate?: number
+  user: {
+    id: string
+    email?: string
+    name: string
+    status: string
+  }
 }
 
 interface Order {
   id: string
   orderNumber: string
   date: string
-  status: 'Pending' | 'Processing' | 'Completed' | 'Cancelled'
-  amount: number
-  items: number
+  status: string
+  assignedQuantity: number
+  confirmedQuantity?: number
+  assignedAt: Date
+  vendorActionAt?: Date
+  orderItem: {
+    productName: string
+    quantity: number
+    order: {
+      orderNumber: string
+      createdAt: Date
+    }
+  }
 }
 
 interface TrendData {
-  month: string
+  period: string
   fillRate: number
   slaCompliance: number
 }
 
 interface ProcessingData {
-  month: string
-  invoiceDays: number
-  ticketDays: number
+  period: string
+  fulfillmentTime: number
+  slaCompliance: number
 }
 
-// Mock data for the vendor details
-const mockVendorDetails: Record<string, VendorDetails> = {
-  'greenleaf-farms': {
-    id: 'greenleaf-farms',
-    name: 'GreenLeaf Farms',
-    metrics: {
-      fillRate: 94,
-      slaCompliance: 90,
-      avgInvoiceDays: 3.5,
-      avgTicketDays: 1.2,
-      ordersCount: 156,
-      pendingOrders: 12,
-      completedOrders: 144
-    }
-  },
-  'happyplant-co': {
-    id: 'happyplant-co',
-    name: 'HappyPlant Co',
-    metrics: {
-      fillRate: 91,
-      slaCompliance: 86,
-      avgInvoiceDays: 4.2,
-      avgTicketDays: 1.6,
-      ordersCount: 142,
-      pendingOrders: 8,
-      completedOrders: 134
-    }
-  },
-  'bloomworks': {
-    id: 'bloomworks',
-    name: 'BloomWorks',
-    metrics: {
-      fillRate: 89,
-      slaCompliance: 84,
-      avgInvoiceDays: 3.9,
-      avgTicketDays: 2.0,
-      ordersCount: 128,
-      pendingOrders: 15,
-      completedOrders: 113
-    }
+interface TimeFilter {
+  type: 'days' | 'weeks' | 'months'
+  label: string
+}
+
+// Time filter options
+const timeFilters: TimeFilter[] = [
+  { type: 'days', label: 'Last 30 Days' },
+  { type: 'weeks', label: 'Last 4 Weeks' },
+  { type: 'months', label: 'Last 12 Months' }
+]
+
+// Generate mock data based on time filter
+const generateTrendData = (filterType: 'days' | 'weeks' | 'months'): TrendData[] => {
+  if (filterType === 'days') {
+    return Array.from({ length: 30 }, (_, i) => ({
+      period: `${i + 1}`,
+      fillRate: 85 + Math.random() * 10,
+      slaCompliance: 80 + Math.random() * 15
+    }))
+  } else if (filterType === 'weeks') {
+    return Array.from({ length: 4 }, (_, i) => ({
+      period: `Week ${i + 1}`,
+      fillRate: 85 + Math.random() * 10,
+      slaCompliance: 80 + Math.random() * 15
+    }))
+  } else {
+    return Array.from({ length: 12 }, (_, i) => ({
+      period: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
+      fillRate: 85 + Math.random() * 10,
+      slaCompliance: 80 + Math.random() * 15
+    }))
   }
 }
 
-// Mock trend data
-const trendData: TrendData[] = [
-  { month: 'Jan', fillRate: 88, slaCompliance: 85 },
-  { month: 'Feb', fillRate: 90, slaCompliance: 87 },
-  { month: 'Mar', fillRate: 92, slaCompliance: 89 },
-  { month: 'Apr', fillRate: 91, slaCompliance: 88 },
-  { month: 'May', fillRate: 93, slaCompliance: 90 },
-  { month: 'Jun', fillRate: 94, slaCompliance: 90 }
-]
-
-const processingData: ProcessingData[] = [
-  { month: 'Jan', invoiceDays: 4.2, ticketDays: 1.8 },
-  { month: 'Feb', invoiceDays: 3.9, ticketDays: 1.5 },
-  { month: 'Mar', invoiceDays: 3.7, ticketDays: 1.3 },
-  { month: 'Apr', invoiceDays: 3.8, ticketDays: 1.4 },
-  { month: 'May', invoiceDays: 3.6, ticketDays: 1.2 },
-  { month: 'Jun', invoiceDays: 3.5, ticketDays: 1.2 }
-]
-
-// Mock orders data
-const mockOrders: Order[] = [
-  { id: '1', orderNumber: 'ORD-001', date: '15/09/2025', status: 'Completed', amount: 2450, items: 25 },
-  { id: '2', orderNumber: 'ORD-002', date: '18/09/2025', status: 'Processing', amount: 1890, items: 18 },
-  { id: '3', orderNumber: 'ORD-003', date: '20/09/2025', status: 'Pending', amount: 3200, items: 32 },
-  { id: '4', orderNumber: 'ORD-004', date: '22/09/2025', status: 'Completed', amount: 1750, items: 15 },
-  { id: '5', orderNumber: 'ORD-005', date: '25/09/2025', status: 'Processing', amount: 4100, items: 41 }
-]
-
-// Helper function to format currency
-const formatINR = (amount: number): string => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount)
+const generateProcessingData = (filterType: 'days' | 'weeks' | 'months'): ProcessingData[] => {
+  if (filterType === 'days') {
+    return Array.from({ length: 30 }, (_, i) => ({
+      period: `${i + 1}`,
+      fulfillmentTime: 2 + Math.random() * 3,
+      slaCompliance: 80 + Math.random() * 15
+    }))
+  } else if (filterType === 'weeks') {
+    return Array.from({ length: 4 }, (_, i) => ({
+      period: `Week ${i + 1}`,
+      fulfillmentTime: 2 + Math.random() * 3,
+      slaCompliance: 80 + Math.random() * 15
+    }))
+  } else {
+    return Array.from({ length: 12 }, (_, i) => ({
+      period: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
+      fulfillmentTime: 2 + Math.random() * 3,
+      slaCompliance: 80 + Math.random() * 15
+    }))
+  }
 }
+
 
 // Helper function to get status color
 const getStatusColor = (status: string): string => {
@@ -148,6 +135,19 @@ export default function VendorDetails() {
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
   
+  // State management
+  const [vendor, setVendor] = useState<VendorDetails | null>(null)
+  const [performanceMetrics, setPerformanceMetrics] = useState<VendorPerformanceMetricsDto | null>(null)
+  const [slaMetrics, setSlaMetrics] = useState<VendorSlaDto | null>(null)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  // Chart data state
+  const [timeFilter, setTimeFilter] = useState<'days' | 'weeks' | 'months'>('days')
+  const [trendData, setTrendData] = useState<TrendData[]>([])
+  const [processingData, setProcessingData] = useState<ProcessingData[]>([])
+  
   // Filter state
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState<FilterState>({
@@ -157,19 +157,78 @@ export default function VendorDetails() {
     amountMax: ''
   })
 
-  // Get vendor details or fallback
-  const vendor = id ? mockVendorDetails[id] : null
+  // Fetch vendor data
+  useEffect(() => {
+    const fetchVendorData = async () => {
+      if (!id) return
+
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Fetch performance metrics and SLA data in parallel
+        const [metricsResponse, slaResponse] = await Promise.all([
+          vendorTrackingApi.getVendorPerformanceMetrics(id),
+          vendorTrackingApi.getVendorSlaMetrics(id)
+        ])
+
+        setPerformanceMetrics(metricsResponse)
+        setSlaMetrics(slaResponse)
+        setVendor(metricsResponse.vendor)
+        setOrders(metricsResponse.recentAssignments.map(assignment => ({
+          id: assignment.id,
+          orderNumber: assignment.orderItem.order.orderNumber,
+          date: new Date(assignment.assignedAt).toLocaleDateString('en-GB'),
+          status: assignment.status,
+          assignedQuantity: assignment.assignedQuantity,
+          confirmedQuantity: assignment.confirmedQuantity,
+          assignedAt: assignment.assignedAt,
+          vendorActionAt: assignment.vendorActionAt,
+          orderItem: assignment.orderItem
+        })))
+
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch vendor data'
+        setError(`API Error: ${errorMessage}. Please check if the backend server is running.`)
+        console.error('Error fetching vendor data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchVendorData()
+  }, [id])
+
+  // Fetch chart data when time filter changes
+  useEffect(() => {
+    const fetchChartData = async () => {
+      if (!id) return
+
+      try {
+        const data = await vendorTrackingApi.getVendorPerformanceTrends(id, timeFilter)
+        setTrendData(data.trends)
+        setProcessingData(data.fulfillment)
+      } catch (err) {
+        console.error('Error fetching chart data:', err)
+        // Fallback to mock data if API fails
+        setTrendData(generateTrendData(timeFilter))
+        setProcessingData(generateProcessingData(timeFilter))
+      }
+    }
+
+    fetchChartData()
+  }, [id, timeFilter])
   
   // Filter logic
   const filteredOrders = useMemo(() => {
-    return mockOrders.filter(order => {
+    return orders.filter(order => {
       if (filters.orderNumber && !order.orderNumber.toLowerCase().includes(filters.orderNumber.toLowerCase())) return false
       if (filters.status && order.status !== filters.status) return false
-      if (filters.amountMin && order.amount < parseInt(filters.amountMin)) return false
-      if (filters.amountMax && order.amount > parseInt(filters.amountMax)) return false
+      if (filters.amountMin && order.assignedQuantity < parseInt(filters.amountMin)) return false
+      if (filters.amountMax && order.assignedQuantity > parseInt(filters.amountMax)) return false
       return true
     })
-  }, [filters])
+  }, [orders, filters])
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredOrders.length / pageSize)
@@ -179,6 +238,33 @@ export default function VendorDetails() {
     filteredOrders.slice(startIndex, endIndex),
     [filteredOrders, startIndex, endIndex]
   )
+
+  if (loading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading vendor data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-accent text-white rounded-md hover:bg-accent/90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (!vendor) {
     return (
@@ -217,15 +303,15 @@ export default function VendorDetails() {
   }
   
   const handleExportCSV = () => {
-    const headers = ['Order Number', 'Date', 'Status', 'Items', 'Amount (INR)']
+    const headers = ['Order Number', 'Date', 'Status', 'Assigned Qty', 'Confirmed Qty']
     const csvContent = [
       headers.join(','),
       ...filteredOrders.map(order => [
         order.orderNumber,
         order.date,
         order.status,
-        order.items,
-        order.amount
+        order.assignedQuantity,
+        order.confirmedQuantity || 'N/A'
       ].join(','))
     ].join('\n')
 
@@ -240,7 +326,7 @@ export default function VendorDetails() {
 
   const handleExportPDF = () => {
     const content = filteredOrders.map(order => 
-      `${order.orderNumber} | ${order.date} | ${order.status} | Items: ${order.items} | ${formatINR(order.amount)}`
+      `${order.orderNumber} | ${order.date} | ${order.status} | Assigned: ${order.assignedQuantity} | Confirmed: ${order.confirmedQuantity || 'N/A'}`
     ).join('\n')
     
     const blob = new Blob([content], { type: 'text/plain' })
@@ -264,7 +350,7 @@ export default function VendorDetails() {
 
       {/* Header */}
       <div className="mb-9">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">{vendor.name}</h1>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">{vendor.companyName}</h1>
         <p className="text-sm sm:text-base text-gray-600">Detailed performance metrics and order history</p>
       </div>
 
@@ -275,7 +361,7 @@ export default function VendorDetails() {
             <BarChart3 className="w-5 h-5" />
           </div>
           <h4 className="text-sm font-semibold text-gray-800 mb-1">Fill Rate</h4>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{vendor.metrics.fillRate}%</div>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{performanceMetrics?.metrics.calculatedFillRate.toFixed(1) || 0}%</div>
         </div>
 
         <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
@@ -283,23 +369,23 @@ export default function VendorDetails() {
             <CheckSquare className="w-5 h-5" />
           </div>
           <h4 className="text-sm font-semibold text-gray-800 mb-1">SLA Compliance</h4>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{vendor.metrics.slaCompliance}%</div>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{slaMetrics?.metrics.slaComplianceRate.toFixed(1) || 0}%</div>
         </div>
 
         <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
           <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
             <FileText className="w-5 h-5" />
           </div>
-          <h4 className="text-sm font-semibold text-gray-800 mb-1">Avg Invoice</h4>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{vendor.metrics.avgInvoiceDays}d</div>
+          <h4 className="text-sm font-semibold text-gray-800 mb-1">Avg Fulfillment</h4>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{slaMetrics?.metrics.avgFulfillmentTime.toFixed(1) || 0}d</div>
         </div>
 
         <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
           <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
             <Clock className="w-5 h-5" />
           </div>
-          <h4 className="text-sm font-semibold text-gray-800 mb-1">Avg Ticket</h4>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{vendor.metrics.avgTicketDays}d</div>
+          <h4 className="text-sm font-semibold text-gray-800 mb-1">Total Orders</h4>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{performanceMetrics?.metrics.totalOrders || 0}</div>
         </div>
       </div>
 
@@ -309,29 +395,55 @@ export default function VendorDetails() {
           <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
             <Package className="w-5 h-5" />
           </div>
-          <h4 className="text-sm font-semibold text-gray-800 mb-1">Total Orders</h4>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{vendor.metrics.ordersCount}</div>
+          <h4 className="text-sm font-semibold text-gray-800 mb-1">Assigned Qty</h4>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{performanceMetrics?.metrics.totalAssignedQuantity || 0}</div>
         </div>
 
         <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
           <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
             <AlertTriangle className="w-5 h-5" />
           </div>
-          <h4 className="text-sm font-semibold text-gray-800 mb-1">Pending</h4>
-          <div className="text-2xl font-bold text-orange-600 mt-1">{vendor.metrics.pendingOrders}</div>
+          <h4 className="text-sm font-semibold text-gray-800 mb-1">Confirmed Qty</h4>
+          <div className="text-2xl font-bold text-orange-600 mt-1">{performanceMetrics?.metrics.totalConfirmedQuantity || 0}</div>
         </div>
 
         <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
           <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
             <CheckSquare className="w-5 h-5" />
           </div>
-          <h4 className="text-sm font-semibold text-gray-800 mb-1">Completed</h4>
-          <div className="text-2xl font-bold text-green-600 mt-1">{vendor.metrics.completedOrders}</div>
+          <h4 className="text-sm font-semibold text-gray-800 mb-1">Current Fill Rate</h4>
+          <div className="text-2xl font-bold text-green-600 mt-1">{performanceMetrics?.metrics.currentFillRate.toFixed(1) || 0}%</div>
         </div>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
+      {/* Time Filter for Charts */}
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-1 sm:mb-2">Performance Analytics</h3>
+            <p className="text-sm text-gray-500">Track vendor performance over time</p>
+          </div>
+          
+          <div className="flex gap-2">
+            {timeFilters.map((filter) => (
+              <button
+                key={filter.type}
+                onClick={() => setTimeFilter(filter.type)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
+                  timeFilter === filter.type
+                    ? 'bg-[var(--color-accent)] text-white'
+                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Row - Stacked Vertically */}
+      <div className="space-y-4 sm:space-y-6 mb-4 sm:mb-6">
         {/* Performance Trends Chart */}
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
           <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-3 sm:mb-4">Performance Trends</h3>
@@ -346,7 +458,7 @@ export default function VendorDetails() {
                 color: "var(--color-accent)",
               },
             }}
-            className="h-48 sm:h-64 w-full"
+            className="h-64 sm:h-80 w-full"
           >
             <AreaChart
               data={trendData}
@@ -364,7 +476,7 @@ export default function VendorDetails() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
               <XAxis 
-                dataKey="month" 
+                dataKey="period" 
                 tick={{ fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
@@ -407,19 +519,19 @@ export default function VendorDetails() {
 
         {/* Processing Times Chart */}
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
-          <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-3 sm:mb-4">Processing Times</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-3 sm:mb-4">Fulfillment Times</h3>
           <ChartContainer 
             config={{
-              invoiceDays: {
-                label: "Invoice Processing",
+              fulfillmentTime: {
+                label: "Fulfillment Time",
                 color: "var(--color-secondary)",
               },
-              ticketDays: {
-                label: "Ticket Resolution",
+              slaCompliance: {
+                label: "SLA Compliance",
                 color: "var(--color-accent)",
               },
             }}
-            className="h-48 sm:h-64 w-full"
+            className="h-64 sm:h-80 w-full"
           >
             <BarChart
               data={processingData}
@@ -427,7 +539,7 @@ export default function VendorDetails() {
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
               <XAxis 
-                dataKey="month" 
+                dataKey="period" 
                 tick={{ fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
@@ -441,14 +553,14 @@ export default function VendorDetails() {
                 cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
                 content={<ChartTooltipContent 
                   formatter={(value, name) => [
-                    `${value}d`, 
-                    name === 'invoiceDays' ? 'Invoice Processing' : 'Ticket Resolution'
+                    name === 'fulfillmentTime' ? `${value}d` : `${value}%`, 
+                    name === 'fulfillmentTime' ? 'Fulfillment Time' : 'SLA Compliance'
                   ]}
                   className="bg-white"
                 />}
               />
-              <Bar dataKey="invoiceDays" fill="var(--color-secondary)" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="ticketDays" fill="var(--color-accent)" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="fulfillmentTime" fill="var(--color-secondary)" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="slaCompliance" fill="var(--color-accent)" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ChartContainer>
         </div>
@@ -559,10 +671,10 @@ export default function VendorDetails() {
                   Status
                 </th>
                 <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
-                  Items
+                  Assigned Qty
                 </th>
                 <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
-                  Amount
+                  Confirmed Qty
                 </th>
               </tr>
             </thead>
@@ -576,8 +688,8 @@ export default function VendorDetails() {
                       {order.status}
                     </span>
                   </td>
-                  <td className="p-3 text-sm text-gray-600">{order.items}</td>
-                  <td className="p-3 text-sm font-medium text-gray-900">{formatINR(order.amount)}</td>
+                  <td className="p-3 text-sm text-gray-600">{order.assignedQuantity}</td>
+                  <td className="p-3 text-sm font-medium text-gray-900">{order.confirmedQuantity || 'N/A'}</td>
                 </tr>
               ))}
             </tbody>
@@ -614,13 +726,13 @@ export default function VendorDetails() {
                   <span className="font-medium">{order.date}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Items</span>
-                  <span className="font-medium">{order.items}</span>
+                  <span className="text-gray-500 block">Assigned Qty</span>
+                  <span className="font-medium">{order.assignedQuantity}</span>
                 </div>
               </div>
               <div className="pt-2 border-t border-gray-100">
-                <span className="text-gray-500 text-sm block mb-1">Amount</span>
-                <span className="text-base font-bold text-[var(--color-heading)]">{formatINR(order.amount)}</span>
+                <span className="text-gray-500 text-sm block mb-1">Confirmed Qty</span>
+                <span className="text-base font-bold text-[var(--color-heading)]">{order.confirmedQuantity || 'N/A'}</span>
               </div>
             </div>
           ))}
