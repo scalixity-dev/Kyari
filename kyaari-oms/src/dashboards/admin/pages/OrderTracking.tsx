@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
 import { LayoutDashboard, Package, Bell, Users, CheckSquare, FileText, Wallet, MapPin, Eye, Filter } from 'lucide-react';
-import { KPICard, Pagination, CustomDropdown, CSVPDFExportButton } from '../../../components';
+import { KPICard, CustomDropdown, CSVPDFExportButton } from '../../../components';
 import { OrderTrackingApi } from '../../../services/orderTrackingApi';
 import type { OrderTrackingItem, OrderTrackingSummary, OrderTrackingFilters } from '../../../services/orderTrackingApi';
 
@@ -101,6 +101,7 @@ interface FilterState {
   status: string;
   qtyMin: string;
   qtyMax: string;
+  search: string;
 }
 
 interface ListViewProps {
@@ -110,13 +111,6 @@ interface ListViewProps {
   filters: FilterState;
   onFilterChange: (key: keyof FilterState, value: string) => void;
   onResetFilters: () => void;
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-  onPageChange?: (page: number) => void;
 }
 
 const ListView: React.FC<ListViewProps> = ({ 
@@ -125,14 +119,8 @@ const ListView: React.FC<ListViewProps> = ({
   showFilters, 
   filters, 
   onFilterChange, 
-  onResetFilters,
-  pagination,
-  onPageChange
+  onResetFilters
 }) => {
-  const pageSize = pagination?.limit || 10;
-  const total = pagination?.total || (orders?.length || 0);
-  const startIndex = ((pagination?.page || 1) - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, total);
 
   // Get unique vendors for dropdown
   const uniqueVendors = Array.from(new Set((orders || []).map(o => o.vendor.companyName))).sort();
@@ -141,34 +129,34 @@ const ListView: React.FC<ListViewProps> = ({
     <div>
       {/* Filter Section */}
       {showFilters && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Vendor</label>
-              <CustomDropdown
-                value={filters.vendor}
-                onChange={(value) => onFilterChange('vendor', value)}
-                options={[
-                  { value: '', label: 'All Vendors' },
-                  ...uniqueVendors.map(v => ({ value: v, label: v }))
-                ]}
-                placeholder="All Vendors"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-              <CustomDropdown
-                value={filters.status}
-                onChange={(value) => onFilterChange('status', value)}
-                options={[
-                  { value: '', label: 'All Status' },
-                  ...statusColumns.map(s => ({ value: s, label: s }))
-                ]}
-                placeholder="All Status"
-              />
-            </div>
-
+        <div className="bg-white border border-secondary/20 rounded-xl p-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => onFilterChange('search', e.target.value)}
+              placeholder="Search by order number..."
+              className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200"
+            />
+            <CustomDropdown
+              value={filters.status}
+              onChange={(value) => onFilterChange('status', value)}
+              options={[
+                { value: '', label: 'All Status' },
+                ...statusColumns.map(s => ({ value: s, label: s }))
+              ]}
+              placeholder="All Status"
+            />
+            <CustomDropdown
+              value={filters.vendor}
+              onChange={(value) => onFilterChange('vendor', value)}
+              options={[
+                { value: '', label: 'All Vendors' },
+                ...uniqueVendors.map(v => ({ value: v, label: v }))
+              ]}
+              placeholder="All Vendors"
+            />
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Quantity Range</label>
               <div className="flex gap-2">
@@ -188,18 +176,14 @@ const ListView: React.FC<ListViewProps> = ({
                 />
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Actions</label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <button
-                  onClick={onResetFilters}
-                  className="px-4 py-2 border border-secondary rounded-md text-secondary font-medium hover:bg-gray-50 text-sm min-h-[44px]"
-                >
-                  Reset
-                </button>
-              </div>
-            </div>
+          </div>
+          <div className="flex justify-center sm:justify-end">
+            <button 
+              onClick={onResetFilters} 
+              className="bg-white text-secondary border border-secondary rounded-lg px-6 py-2.5 text-sm hover:bg-gray-50 transition-colors"
+            >
+              Reset Filters
+            </button>
           </div>
         </div>
       )}
@@ -254,19 +238,6 @@ const ListView: React.FC<ListViewProps> = ({
           </tbody>
             </table>
           </div>
-        {/* Desktop Pagination */}
-        {pagination && onPageChange && (
-          <Pagination
-            currentPage={pagination.page}
-            totalPages={pagination.totalPages}
-            totalItems={pagination.total}
-            startIndex={startIndex + 1}
-            endIndex={endIndex}
-            onPageChange={onPageChange}
-            variant="desktop"
-            itemLabel="orders"
-          />
-        )}
       </div>
 
       {/* Mobile Card View */}
@@ -299,19 +270,6 @@ const ListView: React.FC<ListViewProps> = ({
             </div>
           </div>
         ))}
-        {/* Mobile Pagination */}
-        {pagination && onPageChange && (
-          <Pagination
-            currentPage={pagination.page}
-            totalPages={pagination.totalPages}
-            totalItems={pagination.total}
-            startIndex={startIndex + 1}
-            endIndex={endIndex}
-            onPageChange={onPageChange}
-            variant="mobile"
-            itemLabel="orders"
-          />
-        )}
       </div>
       </div>
     </div>
@@ -401,13 +359,8 @@ const OrderTracking: React.FC = () => {
     vendor: '',
     status: '',
     qtyMin: '',
-    qtyMax: ''
-  });
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 0
+    qtyMax: '',
+    search: ''
   });
   const navigate = useNavigate();
 
@@ -420,57 +373,45 @@ const OrderTracking: React.FC = () => {
   // Load data when filters change
   useEffect(() => {
     loadOrderTrackingData();
-  }, [filters, pagination.page, pagination.limit]);
+  }, [filters]);
 
   const loadOrderTrackingData = async () => {
     try {
       setLoading(true);
       const apiFilters: OrderTrackingFilters = {};
       
+      // Don't send status filter to backend - we'll filter on frontend
       if (filters.vendor) apiFilters.vendor = filters.vendor;
-      if (filters.status) apiFilters.status = filters.status as any;
       if (filters.qtyMin) apiFilters.qtyMin = parseInt(filters.qtyMin);
       if (filters.qtyMax) apiFilters.qtyMax = parseInt(filters.qtyMax);
-
-      
+      if (filters.search) apiFilters.search = filters.search;
 
       const response = await OrderTrackingApi.getOrderTracking({
-        page: pagination.page,
-        limit: pagination.limit,
+        page: 1,
+        limit: 100,
         filters: Object.keys(apiFilters).length > 0 ? apiFilters : undefined
       });
 
-
-
       if (response.success) {
         // Use orders from main data, fallback to summary recentOrders if main orders is empty/undefined
-        const ordersToUse = response.data.orders && response.data.orders.length > 0 
+        let ordersToUse = response.data.orders && response.data.orders.length > 0 
           ? response.data.orders 
           : response.data.summary?.recentOrders || [];
+        
+        // Apply status filter on frontend (only for current page)
+        if (filters.status) {
+          ordersToUse = ordersToUse.filter(order => order.status === filters.status);
+        }
       
         setOrders(ordersToUse);
         
-        // Set pagination with fallback values
-        setPagination({
-          page: response.data.page || 1,
-          limit: response.data.limit || 10,
-          total: response.data.total || ordersToUse.length,
-          totalPages: response.data.totalPages || 1
-        });
-        
         // Set summary data from the main response
         if (response.data.summary) {
-       
           setSummary(response.data.summary);
         }
-        
-       
-      } else {
-        console.error('❌ OrderTracking: API response not successful:', response);
       }
     } catch (error) {
-      console.error('❌ OrderTracking: Failed to load order tracking data:', error);
-      console.error('❌ OrderTracking: Error details:', error);
+      // Handle error silently
     } finally {
       setLoading(false);
     }
@@ -522,15 +463,12 @@ const OrderTracking: React.FC = () => {
         loadOrderTrackingData();
       }
     } catch (error) {
-      console.error('Failed to update order status:', error);
-      // Optionally show error message to user
+      // Handle error silently
     }
   };
 
   const handleFilterChange = (key: keyof FilterState, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    // Reset to first page when filters change
-    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const handleResetFilters = () => {
@@ -538,23 +476,21 @@ const OrderTracking: React.FC = () => {
       vendor: '',
       status: '',
       qtyMin: '',
-      qtyMax: ''
+      qtyMax: '',
+      search: ''
     });
-    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const handlePageChange = (newPage: number) => {
-    setPagination(prev => ({ ...prev, page: newPage }));
-  };
 
   const handleExportCSV = async () => {
     try {
       const apiFilters: OrderTrackingFilters = {};
       
+      // Don't send status filter to backend - we'll filter on frontend
       if (filters.vendor) apiFilters.vendor = filters.vendor;
-      if (filters.status) apiFilters.status = filters.status as any;
       if (filters.qtyMin) apiFilters.qtyMin = parseInt(filters.qtyMin);
       if (filters.qtyMax) apiFilters.qtyMax = parseInt(filters.qtyMax);
+      if (filters.search) apiFilters.search = filters.search;
 
       const blob = await OrderTrackingApi.exportToCSV(
         Object.keys(apiFilters).length > 0 ? apiFilters : undefined
@@ -567,7 +503,7 @@ const OrderTracking: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Failed to export CSV:', error);
+      // Handle error silently
     }
   };
 
@@ -575,10 +511,11 @@ const OrderTracking: React.FC = () => {
     try {
       const apiFilters: OrderTrackingFilters = {};
       
+      // Don't send status filter to backend - we'll filter on frontend
       if (filters.vendor) apiFilters.vendor = filters.vendor;
-      if (filters.status) apiFilters.status = filters.status as any;
       if (filters.qtyMin) apiFilters.qtyMin = parseInt(filters.qtyMin);
       if (filters.qtyMax) apiFilters.qtyMax = parseInt(filters.qtyMax);
+      if (filters.search) apiFilters.search = filters.search;
 
       const blob = await OrderTrackingApi.exportToPDF(
         Object.keys(apiFilters).length > 0 ? apiFilters : undefined
@@ -591,7 +528,7 @@ const OrderTracking: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Failed to export PDF:', error);
+      // Handle error silently
     }
   };
 
@@ -695,8 +632,6 @@ const OrderTracking: React.FC = () => {
               filters={filters}
               onFilterChange={handleFilterChange}
               onResetFilters={handleResetFilters}
-              pagination={pagination}
-              onPageChange={handlePageChange}
             />
           ) : (
             <BoardView orders={orders} onOrderMove={handleOrderMove} onOrderClick={handleOrderClick} />

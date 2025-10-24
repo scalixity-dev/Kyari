@@ -1,5 +1,4 @@
 import { prisma } from '../../config/database';
-import { logger } from '../../utils/logger';
 import { 
   OrderTrackingItemDto, 
   OrderTrackingQueryDto, 
@@ -25,20 +24,11 @@ export class OrderTrackingService {
       // Build where clause based on filters
       const whereClause = this.buildWhereClause(filters);
       
-      logger.info('Order tracking query debug', {
-        query,
-        filters,
-        whereClause,
-        skip,
-        limit
-      });
 
       // Get total count for pagination
       const total = await prisma.orderItem.count({
         where: whereClause
       });
-      
-      logger.info('Order tracking total count', { total });
 
       // Get order items with related data - including purchase order and payment info
       const orderItems = await prisma.orderItem.findMany({
@@ -90,10 +80,6 @@ export class OrderTrackingService {
         take: limit
       });
 
-      logger.info('Order tracking query result', { 
-        orderItemsCount: orderItems.length,
-        orderItemsIds: orderItems.map(item => item.id)
-      });
 
       // Transform to DTOs
       const orders = [];
@@ -102,21 +88,10 @@ export class OrderTrackingService {
           const transformedItem = this.transformToOrderTrackingDto(item);
           orders.push(transformedItem);
         } catch (error) {
-          logger.error('Failed to transform order item to DTO', { 
-            error: error instanceof Error ? error.message : error, 
-            orderItemId: item.id,
-            hasOrder: !!item.order 
-          });
           // Continue with other items instead of throwing
           continue;
         }
       }
-      
-      logger.info('Order tracking transformation result', { 
-        originalCount: orderItems.length,
-        transformedCount: orders.length,
-        transformedIds: orders.map(o => o.id)
-      });
 
       // Get summary data
       const summary = await this.getOrderTrackingSummary();
@@ -136,32 +111,10 @@ export class OrderTrackingService {
         message: `Found ${total} orders`
       };
       
-      // Debug: Check payment status in database
-      const completedPaymentsCount = await prisma.payment.count({
-        where: { status: 'COMPLETED' }
-      });
-      
-      const allPaymentsCount = await prisma.payment.count();
-      const paymentsByStatus = await prisma.payment.groupBy({
-        by: ['status'],
-        _count: true
-      });
-      
-      logger.info('Order tracking final response', { 
-        ordersCount: orders.length,
-        total,
-        page,
-        limit,
-        totalPages,
-        completedPaymentsInDB: completedPaymentsCount,
-        allPaymentsInDB: allPaymentsCount,
-        paymentsByStatus
-      });
       
       return response;
 
     } catch (error) {
-      logger.error('Failed to get order tracking data', { error, query });
       throw error;
     }
   }
@@ -250,7 +203,6 @@ export class OrderTrackingService {
       };
 
     } catch (error) {
-      logger.error('Failed to get order tracking summary', { error });
       throw error;
     }
   }
@@ -344,7 +296,6 @@ export class OrderTrackingService {
       return this.transformToOrderTrackingDto(updatedOrderItem);
 
     } catch (error) {
-      logger.error('Failed to update order status', { error, updateData, userId });
       throw error;
     }
   }
@@ -394,7 +345,6 @@ export class OrderTrackingService {
       return this.transformToOrderTrackingDto(orderItem);
 
     } catch (error) {
-      logger.error('Failed to get order by ID', { error, orderId });
       throw error;
     }
   }
@@ -469,22 +419,7 @@ export class OrderTrackingService {
       ];
     }
 
-    // Status filter - this is complex as we need to check assignment status
-    if (filters.status) {
-      const assignmentStatus = this.mapTrackingStatusToAssignmentStatus(filters.status);
-      if (assignmentStatus) {
-        where.assignedItems = {
-          some: {
-            status: assignmentStatus
-          }
-        };
-      } else if (filters.status === 'Received') {
-        // For 'Received' status, check if no assignments exist
-        where.assignedItems = {
-          none: {}
-        };
-      }
-    }
+    // Status filter is handled after transformation since tracking status is computed
 
     return where;
   }
@@ -515,10 +450,6 @@ export class OrderTrackingService {
 
     // Check if order exists
     if (!orderItem.order) {
-      logger.error('Order relation missing for order item', { 
-        orderItemId: orderItem.id, 
-        orderId: orderItem.orderId 
-      });
       throw new Error(`Order not found for order item ${orderItem.id}`);
     }
 
@@ -571,18 +502,6 @@ export class OrderTrackingService {
     const paymentStatus = latestAssignment.purchaseOrderItem?.purchaseOrder?.payment?.status;
     const hasCompletedPayment = hasPurchaseOrder && paymentStatus === 'COMPLETED';
     
-    // Debug logging for payment status
-    if (hasPurchaseOrder) {
-      logger.info('Order item payment debug', {
-        orderItemId: orderItem.id,
-        hasPurchaseOrder,
-        paymentStatus,
-        hasCompletedPayment,
-        assignmentStatus,
-        purchaseOrderId: latestAssignment.purchaseOrderItem?.purchaseOrder?.id,
-        paymentId: latestAssignment.purchaseOrderItem?.purchaseOrder?.payment?.id
-      });
-    }
 
     // Map assignment status to tracking status following correct business flow:
     // Received → Assigned → Confirmed → Invoiced → Dispatched → Verified → Paid
@@ -616,16 +535,6 @@ export class OrderTrackingService {
         default:
           trackingStatus = 'Received';
       }
-    }
-    
-    // Debug logging for final status mapping
-    if (hasPurchaseOrder) {
-      logger.info('Order status mapping result', {
-        orderItemId: orderItem.id,
-        assignmentStatus,
-        hasCompletedPayment,
-        finalTrackingStatus: trackingStatus
-      });
     }
     
     return trackingStatus;
@@ -708,10 +617,8 @@ export class OrderTrackingService {
         }
       });
 
-      logger.info('Simple status counts calculated from Order and AssignedOrderItem tables', statusCounts);
 
     } catch (error) {
-      logger.error('Failed to calculate simple status counts', { error });
       // Return zero counts on error
       return {
         'Received': 0,
