@@ -121,11 +121,39 @@ const generateProcessingData = (filterType: 'days' | 'weeks' | 'months'): Proces
 // Helper function to get status color
 const getStatusColor = (status: string): string => {
   switch (status) {
-    case 'Completed': return 'text-green-600 bg-green-100'
-    case 'Processing': return 'text-yellow-600 bg-yellow-100'
-    case 'Pending': return 'text-orange-600 bg-orange-100'
-    case 'Cancelled': return 'text-red-600 bg-red-100'
+    case 'COMPLETED':
+    case 'VERIFIED_OK':
+    case 'DISPATCHED':
+      return 'text-green-600 bg-green-100'
+    case 'VENDOR_CONFIRMED_FULL':
+    case 'VENDOR_CONFIRMED_PARTIAL':
+    case 'INVOICED':
+      return 'text-blue-600 bg-blue-100'
+    case 'PENDING_CONFIRMATION':
+      return 'text-orange-600 bg-orange-100'
+    case 'VENDOR_DECLINED':
+    case 'VERIFIED_MISMATCH':
+      return 'text-red-600 bg-red-100'
+    case 'STORE_RECEIVED':
+      return 'text-purple-600 bg-purple-100'
     default: return 'text-gray-600 bg-gray-100'
+  }
+}
+
+// Helper function to format status for display
+const formatStatus = (status: string): string => {
+  switch (status) {
+    case 'PENDING_CONFIRMATION': return 'Pending'
+    case 'VENDOR_CONFIRMED_FULL': return 'Confirmed Full'
+    case 'VENDOR_CONFIRMED_PARTIAL': return 'Confirmed Partial'
+    case 'VENDOR_DECLINED': return 'Declined'
+    case 'INVOICED': return 'Invoiced'
+    case 'DISPATCHED': return 'Dispatched'
+    case 'STORE_RECEIVED': return 'Store Received'
+    case 'VERIFIED_OK': return 'Verified OK'
+    case 'VERIFIED_MISMATCH': return 'Verified Mismatch'
+    case 'COMPLETED': return 'Completed'
+    default: return status
   }
 }
 
@@ -612,10 +640,16 @@ export default function VendorDetails() {
                   onChange={(value) => handleFilterChange('status', value)}
                   options={[
                     { value: '', label: 'All Status' },
-                    { value: 'Pending', label: 'Pending' },
-                    { value: 'Processing', label: 'Processing' },
-                    { value: 'Completed', label: 'Completed' },
-                    { value: 'Cancelled', label: 'Cancelled' }
+                    { value: 'PENDING_CONFIRMATION', label: 'Pending Confirmation' },
+                    { value: 'VENDOR_CONFIRMED_FULL', label: 'Confirmed Full' },
+                    { value: 'VENDOR_CONFIRMED_PARTIAL', label: 'Confirmed Partial' },
+                    { value: 'VENDOR_DECLINED', label: 'Declined' },
+                    { value: 'INVOICED', label: 'Invoiced' },
+                    { value: 'DISPATCHED', label: 'Dispatched' },
+                    { value: 'STORE_RECEIVED', label: 'Store Received' },
+                    { value: 'VERIFIED_OK', label: 'Verified OK' },
+                    { value: 'VERIFIED_MISMATCH', label: 'Verified Mismatch' },
+                    { value: 'COMPLETED', label: 'Completed' }
                   ]}
                   placeholder="All Status"
                 />
@@ -685,7 +719,7 @@ export default function VendorDetails() {
                   <td className="p-3 text-sm text-gray-600">{order.date}</td>
                   <td className="p-3">
                     <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
-                      {order.status}
+                      {formatStatus(order.status)}
                     </span>
                   </td>
                   <td className="p-3 text-sm text-gray-600">{order.assignedQuantity}</td>
@@ -717,7 +751,7 @@ export default function VendorDetails() {
               <div className="flex items-start justify-between mb-3">
                 <h4 className="font-semibold text-[var(--color-secondary)] text-lg">{order.orderNumber}</h4>
                 <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
-                  {order.status}
+                  {formatStatus(order.status)}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3 mb-2 text-sm">
