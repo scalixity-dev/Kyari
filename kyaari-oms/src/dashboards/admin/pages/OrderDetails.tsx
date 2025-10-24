@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronUp, Package, Clock, Wallet, Users } from 'lucide-react';
+import { ChevronUp, Package, Clock, Wallet, Users, FileText } from 'lucide-react';
 import { OrderTrackingApi, type OrderTrackingItem } from '../../../services/orderTrackingApi';
 import toast from 'react-hot-toast';
 
@@ -33,6 +33,7 @@ const OrderDetails = () => {
   const navigate = useNavigate();
   const [orderDetails, setOrderDetails] = useState<OrderTrackingItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -113,6 +114,215 @@ const OrderDetails = () => {
 
   const totalPrice = orderDetails.totalPrice || 0;
   const totalQuantity = orderDetails.quantity;
+
+  // Custom Print Component
+  const PrintComponent = () => (
+    <div ref={printRef} className="print-container p-8 bg-white text-black">
+      <style>
+        {`
+          @media print {
+            body { margin: 0; }
+            .print-container { 
+              width: 100%; 
+              font-family: Arial, sans-serif; 
+              color: black;
+              background: white;
+            }
+            .print-header { 
+              border-bottom: 2px solid #000; 
+              padding-bottom: 20px; 
+              margin-bottom: 30px; 
+            }
+            .print-section { 
+              margin-bottom: 25px; 
+              page-break-inside: avoid;
+            }
+            .print-grid { 
+              display: grid; 
+              grid-template-columns: 1fr 1fr; 
+              gap: 20px; 
+            }
+            .print-field { 
+              margin-bottom: 10px; 
+            }
+            .print-label { 
+              font-weight: bold; 
+              color: #333; 
+              font-size: 12px; 
+            }
+            .print-value { 
+              font-size: 14px; 
+              margin-top: 2px; 
+            }
+            .print-status { 
+              display: inline-block; 
+              padding: 4px 8px; 
+              border-radius: 4px; 
+              font-size: 12px; 
+              font-weight: bold; 
+              border: 1px solid #000; 
+            }
+            .print-footer { 
+              margin-top: 40px; 
+              padding-top: 20px; 
+              border-top: 1px solid #ccc; 
+              text-align: center; 
+              font-size: 10px; 
+              color: #666; 
+            }
+          }
+        `}
+      </style>
+      
+      {/* Header */}
+      <div className="print-header">
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 10px 0' }}>
+          Order Details Report
+        </h1>
+        <div style={{ fontSize: '12px', color: '#666' }}>
+          Generated on: {new Date().toLocaleDateString('en-GB')} at {new Date().toLocaleTimeString('en-GB')}
+        </div>
+      </div>
+
+      {/* Order Information */}
+      <div className="print-section">
+        <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '15px', borderBottom: '1px solid #ccc', paddingBottom: '5px' }}>
+          Order Information
+        </h2>
+        <div className="print-grid">
+          <div className="print-field">
+            <div className="print-label">Order Number:</div>
+            <div className="print-value">{orderDetails.orderNumber || 'N/A'}</div>
+          </div>
+          <div className="print-field">
+            <div className="print-label">Client Order ID:</div>
+            <div className="print-value">{orderDetails.clientOrderId || 'N/A'}</div>
+          </div>
+          <div className="print-field">
+            <div className="print-label">Status:</div>
+            <div className="print-value">
+              <span className="print-status" style={{ backgroundColor: '#f3f4f6', color: '#000' }}>
+                {orderDetails.status}
+              </span>
+            </div>
+          </div>
+          <div className="print-field">
+            <div className="print-label">Product Name:</div>
+            <div className="print-value">{orderDetails.productName || 'N/A'}</div>
+          </div>
+          <div className="print-field">
+            <div className="print-label">SKU:</div>
+            <div className="print-value">{orderDetails.sku || 'N/A'}</div>
+          </div>
+          <div className="print-field">
+            <div className="print-label">Quantity:</div>
+            <div className="print-value">{totalQuantity || 0} items</div>
+          </div>
+          <div className="print-field">
+            <div className="print-label">Price Per Unit:</div>
+            <div className="print-value">{orderDetails.pricePerUnit ? formatINR(orderDetails.pricePerUnit) : 'N/A'}</div>
+          </div>
+          <div className="print-field">
+            <div className="print-label">Total Price:</div>
+            <div className="print-value" style={{ fontWeight: 'bold', fontSize: '16px' }}>
+              {totalPrice ? formatINR(totalPrice) : 'N/A'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Vendor Information */}
+      <div className="print-section">
+        <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '15px', borderBottom: '1px solid #ccc', paddingBottom: '5px' }}>
+          Vendor Information
+        </h2>
+        <div className="print-grid">
+          <div className="print-field">
+            <div className="print-label">Company Name:</div>
+            <div className="print-value">{orderDetails.vendor?.companyName || 'N/A'}</div>
+          </div>
+          <div className="print-field">
+            <div className="print-label">Contact Person:</div>
+            <div className="print-value">{orderDetails.vendor?.contactPersonName || 'N/A'}</div>
+          </div>
+          <div className="print-field">
+            <div className="print-label">Contact Phone:</div>
+            <div className="print-value">{orderDetails.vendor?.contactPhone || 'N/A'}</div>
+          </div>
+          <div className="print-field">
+            <div className="print-label">Vendor ID:</div>
+            <div className="print-value">{orderDetails.vendor?.id || 'N/A'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tracking Information */}
+      <div className="print-section">
+        <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '15px', borderBottom: '1px solid #ccc', paddingBottom: '5px' }}>
+          Tracking Information
+        </h2>
+        <div className="print-grid">
+          <div className="print-field">
+            <div className="print-label">Created Date:</div>
+            <div className="print-value">{orderDetails.createdAt ? new Date(orderDetails.createdAt).toLocaleDateString('en-GB') : 'N/A'}</div>
+          </div>
+          <div className="print-field">
+            <div className="print-label">Updated Date:</div>
+            <div className="print-value">{orderDetails.updatedAt ? new Date(orderDetails.updatedAt).toLocaleDateString('en-GB') : 'N/A'}</div>
+          </div>
+          {orderDetails.assignedAt && (
+            <div className="print-field">
+              <div className="print-label">Assigned Date:</div>
+              <div className="print-value">{new Date(orderDetails.assignedAt).toLocaleDateString('en-GB')}</div>
+            </div>
+          )}
+          {orderDetails.vendorActionAt && (
+            <div className="print-field">
+              <div className="print-label">Vendor Action Date:</div>
+              <div className="print-value">{new Date(orderDetails.vendorActionAt).toLocaleDateString('en-GB')}</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Assignment Details */}
+      {(orderDetails.assignedQuantity || orderDetails.confirmedQuantity || orderDetails.vendorRemarks) && (
+        <div className="print-section">
+          <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '15px', borderBottom: '1px solid #ccc', paddingBottom: '5px' }}>
+            Assignment Details
+          </h2>
+          <div className="print-grid">
+            {orderDetails.assignedQuantity && (
+              <div className="print-field">
+                <div className="print-label">Assigned Quantity:</div>
+                <div className="print-value">{orderDetails.assignedQuantity}</div>
+              </div>
+            )}
+            {orderDetails.confirmedQuantity && (
+              <div className="print-field">
+                <div className="print-label">Confirmed Quantity:</div>
+                <div className="print-value">{orderDetails.confirmedQuantity}</div>
+              </div>
+            )}
+            {orderDetails.vendorRemarks && (
+              <div className="print-field" style={{ gridColumn: '1 / -1' }}>
+                <div className="print-label">Vendor Remarks:</div>
+                <div className="print-value" style={{ backgroundColor: '#f9f9f9', padding: '8px', borderRadius: '4px', marginTop: '4px' }}>
+                  {orderDetails.vendorRemarks}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="print-footer">
+        <div>This document was generated automatically from the Order Management System</div>
+        <div>For any queries, please contact the system administrator</div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
@@ -313,13 +523,55 @@ const OrderDetails = () => {
           <button className="bg-[var(--color-accent)] text-[var(--color-button-text)] px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity">
             Update Tracking Status
           </button>
-          <button className="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+          <button 
+            onClick={() => {
+              if (printRef.current) {
+                const printWindow = window.open('', '_blank');
+                if (printWindow) {
+                  printWindow.document.write(`
+                    <html>
+                      <head>
+                        <title>Order Details - ${orderDetails.orderNumber}</title>
+                        <style>
+                          body { font-family: Arial, sans-serif; margin: 20px; color: black; }
+                          .print-header { border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
+                          .print-section { margin-bottom: 25px; }
+                          .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+                          .print-field { margin-bottom: 10px; }
+                          .print-label { font-weight: bold; color: #333; font-size: 12px; }
+                          .print-value { font-size: 14px; margin-top: 2px; }
+                          .print-status { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid #000; background: #f3f4f6; }
+                          .print-footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc; text-align: center; font-size: 10px; color: #666; }
+                        </style>
+                      </head>
+                      <body>
+                        ${printRef.current.innerHTML}
+                      </body>
+                    </html>
+                  `);
+                  printWindow.document.close();
+                  printWindow.print();
+                  printWindow.close();
+                }
+              }
+            }}
+            className="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
+            <FileText size={16} />
             Print Details
           </button>
-          <button className="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+          <button 
+            onClick={() => navigate('/admin/support/vendors')}
+            className="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+          >
             Contact Vendor
           </button>
         </div>
+      </div>
+
+      {/* Hidden Print Component */}
+      <div style={{ display: 'none' }}>
+        <PrintComponent />
       </div>
     </div>
   );
