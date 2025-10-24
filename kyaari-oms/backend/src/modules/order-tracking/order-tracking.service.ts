@@ -40,7 +40,7 @@ export class OrderTrackingService {
       
       logger.info('Order tracking total count', { total });
 
-      // Get order items with related data - simplified query similar to summary
+      // Get order items with related data - including purchase order and payment info
       const orderItems = await prisma.orderItem.findMany({
         where: whereClause,
         include: {
@@ -64,6 +64,19 @@ export class OrderTrackingService {
                   companyName: true,
                   contactPersonName: true,
                   contactPhone: true
+                }
+              },
+              purchaseOrderItem: {
+                include: {
+                  purchaseOrder: {
+                    include: {
+                      payment: {
+                        select: {
+                          status: true
+                        }
+                      }
+                    }
+                  }
                 }
               }
             },
@@ -123,12 +136,26 @@ export class OrderTrackingService {
         message: `Found ${total} orders`
       };
       
+      // Debug: Check payment status in database
+      const completedPaymentsCount = await prisma.payment.count({
+        where: { status: 'COMPLETED' }
+      });
+      
+      const allPaymentsCount = await prisma.payment.count();
+      const paymentsByStatus = await prisma.payment.groupBy({
+        by: ['status'],
+        _count: true
+      });
+      
       logger.info('Order tracking final response', { 
         ordersCount: orders.length,
         total,
         page,
         limit,
-        totalPages
+        totalPages,
+        completedPaymentsInDB: completedPaymentsCount,
+        allPaymentsInDB: allPaymentsCount,
+        paymentsByStatus
       });
       
       return response;
@@ -144,68 +171,82 @@ export class OrderTrackingService {
    */
   async getOrderTrackingSummary(): Promise<OrderTrackingSummaryDto> {
     try {
-      // Get all order items with their latest assignment status
-      const orderItems = await prisma.orderItem.findMany({
+      // Get total orders count
+      const totalOrders = await prisma.order.count();
+
+      // Calculate status counts using simple queries on Order table
+      const statusCounts = await this.calculateSimpleStatusCounts();
+
+      // Get recent orders (latest 10 orders)
+      const recentOrders = await prisma.order.findMany({
+        take: 10,
+        orderBy: {
+          createdAt: 'desc'
+        },
         include: {
-          order: {
+          primaryVendor: {
+            select: {
+              id: true,
+              companyName: true,
+              contactPersonName: true,
+              contactPhone: true
+            }
+          },
+          items: {
+            take: 1,
             include: {
-              primaryVendor: {
-                select: {
-                  id: true,
-                  companyName: true,
-                  contactPersonName: true,
-                  contactPhone: true
+              assignedItems: {
+                take: 1,
+                orderBy: {
+                  assignedAt: 'desc'
                 }
               }
             }
-          },
-          assignedItems: {
-            orderBy: {
-              assignedAt: 'desc'
-            },
-            take: 1
           }
         }
       });
 
-      // Transform to tracking status and count
-      const statusCounts: Record<OrderTrackingStatus, number> = {
-        'Received': 0,
-        'Assigned': 0,
-        'Confirmed': 0,
-        'Invoiced': 0,
-        'Dispatched': 0,
-        'Verified': 0,
-        'Paid': 0
-      };
-
-      const recentOrders: OrderTrackingItemDto[] = [];
-
-      for (const item of orderItems) {
-        try {
-          const trackingStatus = this.determineTrackingStatus(item);
-          statusCounts[trackingStatus]++;
-
-          // Add to recent orders (limit to 10)
-          if (recentOrders.length < 10) {
-            const dto = this.transformToOrderTrackingDto(item);
-            recentOrders.push(dto);
-          }
-        } catch (error) {
-          logger.error('Failed to process order item in summary', { 
-            error: error instanceof Error ? error.message : error, 
-            orderItemId: item.id,
-            hasOrder: !!item.order 
-          });
-          // Skip this item and continue with others
-          continue;
-        }
-      }
+      // Transform recent orders to DTO format
+      const recentOrdersDto: OrderTrackingItemDto[] = recentOrders.map(order => {
+        const firstItem = order.items[0];
+        const latestAssignment = firstItem?.assignedItems[0];
+        
+        return {
+          id: firstItem?.id || '',
+          orderId: order.id,
+          orderNumber: order.orderNumber || 'N/A',
+          clientOrderId: order.clientOrderId || 'N/A',
+          productName: firstItem?.productName || 'N/A',
+          sku: firstItem?.sku || '',
+          quantity: firstItem?.quantity || 0,
+          pricePerUnit: firstItem?.pricePerUnit ? Number(firstItem.pricePerUnit) : undefined,
+          totalPrice: firstItem?.totalPrice ? Number(firstItem.totalPrice) : undefined,
+          vendor: order.primaryVendor ? {
+            id: order.primaryVendor.id,
+            companyName: order.primaryVendor.companyName,
+            contactPersonName: order.primaryVendor.contactPersonName,
+            contactPhone: order.primaryVendor.contactPhone
+          } : {
+            id: '',
+            companyName: 'No Vendor',
+            contactPersonName: '',
+            contactPhone: ''
+          },
+          status: this.mapOrderStatusToTrackingStatus(order.status),
+          assignedQuantity: latestAssignment?.assignedQuantity,
+          confirmedQuantity: latestAssignment?.confirmedQuantity || undefined,
+          vendorRemarks: latestAssignment?.vendorRemarks || undefined,
+          assignedAt: latestAssignment?.assignedAt?.toISOString(),
+          vendorActionAt: latestAssignment?.vendorActionAt?.toISOString(),
+          createdAt: order.createdAt?.toISOString() || new Date().toISOString(),
+          updatedAt: order.updatedAt?.toISOString() || new Date().toISOString()
+        };
+      });
 
       return {
-        totalOrders: orderItems.length,
+        totalOrders,
         statusCounts,
-        recentOrders
+        recentOrders: recentOrdersDto
       };
 
     } catch (error) {
@@ -525,25 +566,191 @@ export class OrderTrackingService {
     const latestAssignment = orderItem.assignedItems[0];
     const assignmentStatus = latestAssignment.status;
 
-    // Map assignment status to tracking status
-    switch (assignmentStatus) {
-      case AssignmentStatus.PENDING_CONFIRMATION:
+    // Check if there's a purchase order and payment status
+    const hasPurchaseOrder = latestAssignment.purchaseOrderItem !== null;
+    const paymentStatus = latestAssignment.purchaseOrderItem?.purchaseOrder?.payment?.status;
+    const hasCompletedPayment = hasPurchaseOrder && paymentStatus === 'COMPLETED';
+    
+    // Debug logging for payment status
+    if (hasPurchaseOrder) {
+      logger.info('Order item payment debug', {
+        orderItemId: orderItem.id,
+        hasPurchaseOrder,
+        paymentStatus,
+        hasCompletedPayment,
+        assignmentStatus,
+        purchaseOrderId: latestAssignment.purchaseOrderItem?.purchaseOrder?.id,
+        paymentId: latestAssignment.purchaseOrderItem?.purchaseOrder?.payment?.id
+      });
+    }
+
+    // Map assignment status to tracking status following correct business flow:
+    // Received → Assigned → Confirmed → Invoiced → Dispatched → Verified → Paid
+    let trackingStatus: OrderTrackingStatus;
+    
+    // If payment is completed, order is "Paid" (final status)
+    if (hasCompletedPayment) {
+      trackingStatus = 'Paid';
+    } else {
+      // Map assignment status to tracking status based on business flow
+      switch (assignmentStatus) {
+        case AssignmentStatus.PENDING_CONFIRMATION:
+          trackingStatus = 'Assigned';
+          break;
+        case AssignmentStatus.VENDOR_CONFIRMED_FULL:
+        case AssignmentStatus.VENDOR_CONFIRMED_PARTIAL:
+          trackingStatus = 'Confirmed';
+          break;
+        case AssignmentStatus.INVOICED:
+          trackingStatus = 'Invoiced';
+          break;
+        case AssignmentStatus.DISPATCHED:
+          trackingStatus = 'Dispatched';
+          break;
+        case AssignmentStatus.VERIFIED_OK:
+          trackingStatus = 'Verified';
+          break;
+        case AssignmentStatus.COMPLETED:
+          trackingStatus = 'Paid';
+          break;
+        default:
+          trackingStatus = 'Received';
+      }
+    }
+    
+    // Debug logging for final status mapping
+    if (hasPurchaseOrder) {
+      logger.info('Order status mapping result', {
+        orderItemId: orderItem.id,
+        assignmentStatus,
+        hasCompletedPayment,
+        finalTrackingStatus: trackingStatus
+      });
+    }
+    
+    return trackingStatus;
+  }
+
+  /**
+   * Calculate status counts using simple queries on Order and AssignedOrderItem tables
+   */
+  private async calculateSimpleStatusCounts(): Promise<Record<OrderTrackingStatus, number>> {
+    const statusCounts: Record<OrderTrackingStatus, number> = {
+      'Received': 0,
+      'Assigned': 0,
+      'Confirmed': 0,
+      'Invoiced': 0,
+      'Dispatched': 0,
+      'Verified': 0,
+      'Paid': 0
+    };
+
+    try {
+      // 1. Received: Count orders from Order table with RECEIVED status
+      statusCounts['Received'] = await prisma.order.count({
+        where: {
+          status: OrderStatus.RECEIVED
+        }
+      });
+
+      // 2. Assigned: Count orders from Order table with ASSIGNED status
+      statusCounts['Assigned'] = await prisma.order.count({
+        where: {
+          status: OrderStatus.ASSIGNED
+        }
+      });
+
+      // 3. Confirmed: Count from AssignedOrderItem table with VENDOR_CONFIRMED_FULL or VENDOR_CONFIRMED_PARTIAL
+      statusCounts['Confirmed'] = await prisma.assignedOrderItem.count({
+        where: {
+          status: {
+            in: [AssignmentStatus.VENDOR_CONFIRMED_FULL, AssignmentStatus.VENDOR_CONFIRMED_PARTIAL]
+          }
+        }
+      });
+
+      // 4. Invoiced: Count from AssignedOrderItem table with INVOICED status
+      statusCounts['Invoiced'] = await prisma.assignedOrderItem.count({
+        where: {
+          status: AssignmentStatus.INVOICED
+        }
+      });
+
+      // 5. Dispatched: Count from AssignedOrderItem table with DISPATCHED status
+      statusCounts['Dispatched'] = await prisma.assignedOrderItem.count({
+        where: {
+          status: AssignmentStatus.DISPATCHED
+        }
+      });
+
+      // 6. Verified: Count from AssignedOrderItem table with VERIFIED_OK or VERIFIED_MISMATCH status
+      statusCounts['Verified'] = await prisma.assignedOrderItem.count({
+        where: {
+          status: {
+            in: [AssignmentStatus.VERIFIED_OK, AssignmentStatus.VERIFIED_MISMATCH]
+          }
+        }
+      });
+
+      // 7. Paid: Among verified orders, count those with completed payments
+      statusCounts['Paid'] = await prisma.assignedOrderItem.count({
+        where: {
+          status: {
+            in: [AssignmentStatus.VERIFIED_OK, AssignmentStatus.VERIFIED_MISMATCH]
+          },
+          purchaseOrderItem: {
+            purchaseOrder: {
+              payment: {
+                status: 'COMPLETED'
+              }
+            }
+          }
+        }
+      });
+
+      logger.info('Simple status counts calculated from Order and AssignedOrderItem tables', statusCounts);
+
+    } catch (error) {
+      logger.error('Failed to calculate simple status counts', { error });
+      // Return zero counts on error
+      return {
+        'Received': 0,
+        'Assigned': 0,
+        'Confirmed': 0,
+        'Invoiced': 0,
+        'Dispatched': 0,
+        'Verified': 0,
+        'Paid': 0
+      };
+    }
+
+    return statusCounts;
+  }
+
+  /**
+   * Map Order status to tracking status
+   */
+  private mapOrderStatusToTrackingStatus(orderStatus: OrderStatus): OrderTrackingStatus {
+    switch (orderStatus) {
+      case OrderStatus.RECEIVED:
+        return 'Received';
+      case OrderStatus.ASSIGNED:
         return 'Assigned';
-      case AssignmentStatus.VENDOR_CONFIRMED_FULL:
-      case AssignmentStatus.VENDOR_CONFIRMED_PARTIAL:
+      case OrderStatus.PROCESSING:
         return 'Confirmed';
-      case AssignmentStatus.INVOICED:
-        return 'Invoiced';
-      case AssignmentStatus.DISPATCHED:
+      case OrderStatus.FULFILLED:
         return 'Dispatched';
-      case AssignmentStatus.VERIFIED_OK:
+      case OrderStatus.PARTIALLY_FULFILLED:
         return 'Verified';
-      case AssignmentStatus.COMPLETED:
+      case OrderStatus.CLOSED:
         return 'Paid';
+      case OrderStatus.CANCELLED:
+        return 'Received'; // Cancelled orders go back to received
       default:
         return 'Received';
     }
   }
+
 
   /**
    * Map tracking status to assignment status

@@ -413,7 +413,7 @@ const OrderTracking: React.FC = () => {
 
   // Load initial data
   useEffect(() => {
-    console.log('🔍 OrderTracking: Component mounted, loading initial data...');
+
     loadOrderTrackingData();
   }, []);
 
@@ -432,8 +432,7 @@ const OrderTracking: React.FC = () => {
       if (filters.qtyMin) apiFilters.qtyMin = parseInt(filters.qtyMin);
       if (filters.qtyMax) apiFilters.qtyMax = parseInt(filters.qtyMax);
 
-      console.log('🔍 OrderTracking: Loading data with filters:', apiFilters);
-      console.log('🔍 OrderTracking: Pagination:', pagination);
+      
 
       const response = await OrderTrackingApi.getOrderTracking({
         page: pagination.page,
@@ -441,21 +440,14 @@ const OrderTracking: React.FC = () => {
         filters: Object.keys(apiFilters).length > 0 ? apiFilters : undefined
       });
 
-      console.log('🔍 OrderTracking: API Response:', response);
-      console.log('🔍 OrderTracking: Response success:', response.success);
-      console.log('🔍 OrderTracking: Response data:', response.data);
-      console.log('🔍 OrderTracking: Orders array:', response.data?.orders);
-      console.log('🔍 OrderTracking: Orders length:', response.data?.orders?.length);
-      console.log('🔍 OrderTracking: Summary recentOrders:', response.data?.summary?.recentOrders);
-      console.log('🔍 OrderTracking: Summary recentOrders length:', response.data?.summary?.recentOrders?.length);
+
 
       if (response.success) {
         // Use orders from main data, fallback to summary recentOrders if main orders is empty/undefined
         const ordersToUse = response.data.orders && response.data.orders.length > 0 
           ? response.data.orders 
           : response.data.summary?.recentOrders || [];
-        
-        console.log('✅ OrderTracking: Setting orders:', ordersToUse);
+      
         setOrders(ordersToUse);
         
         // Set pagination with fallback values
@@ -468,11 +460,11 @@ const OrderTracking: React.FC = () => {
         
         // Set summary data from the main response
         if (response.data.summary) {
-          console.log('✅ OrderTracking: Setting summary from main response:', response.data.summary);
+       
           setSummary(response.data.summary);
         }
         
-        console.log('✅ OrderTracking: Orders set successfully');
+       
       } else {
         console.error('❌ OrderTracking: API response not successful:', response);
       }
@@ -603,14 +595,7 @@ const OrderTracking: React.FC = () => {
     }
   };
 
-  // Debug current state
-  console.log('🔍 OrderTracking: Current state:', {
-    orders: orders,
-    ordersLength: orders?.length,
-    summary: summary,
-    loading: loading,
-    pagination: pagination
-  });
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">

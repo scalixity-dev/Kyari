@@ -75,7 +75,6 @@ export class OrderTrackingApi {
    * Get order tracking data with filters and pagination
    */
   static async getOrderTracking(query: OrderTrackingQuery = {}): Promise<OrderTrackingResponse> {
-    console.log('🔍 OrderTrackingApi: getOrderTracking called with query:', query);
     
     const params = new URLSearchParams();
     
@@ -95,19 +94,14 @@ export class OrderTrackingApi {
     }
 
     const url = `/api/order-tracking?${params.toString()}`;
-    console.log('🔍 OrderTrackingApi: Making request to:', url);
-    console.log('🔍 OrderTrackingApi: Request params:', params.toString());
+
 
     try {
       const response = await api.get(url);
-      console.log('🔍 OrderTrackingApi: Raw response:', response);
-      console.log('🔍 OrderTrackingApi: Response data:', response.data);
-      console.log('🔍 OrderTrackingApi: Response status:', response.status);
+
       return response.data;
     } catch (error: unknown) {
-      console.error('❌ OrderTrackingApi: Request failed:', error);
-      console.error('❌ OrderTrackingApi: Error response:', (error as any)?.response?.data);
-      console.error('❌ OrderTrackingApi: Error status:', (error as any)?.response?.status);
+
       throw error;
     }
   }
@@ -116,18 +110,11 @@ export class OrderTrackingApi {
    * Get order tracking summary
    */
   static async getOrderTrackingSummary(): Promise<{ success: boolean; data: OrderTrackingSummary; message: string }> {
-    console.log('🔍 OrderTrackingApi: getOrderTrackingSummary called');
     
     try {
       const response = await api.get('/api/order-tracking/summary');
-      console.log('🔍 OrderTrackingApi: Summary raw response:', response);
-      console.log('🔍 OrderTrackingApi: Summary response data:', response.data);
-      console.log('🔍 OrderTrackingApi: Summary response status:', response.status);
       return response.data;
     } catch (error: unknown) {
-      console.error('❌ OrderTrackingApi: Summary request failed:', error);
-      console.error('❌ OrderTrackingApi: Summary error response:', (error as any)?.response?.data);
-      console.error('❌ OrderTrackingApi: Summary error status:', (error as any)?.response?.status);
       throw error;
     }
   }
