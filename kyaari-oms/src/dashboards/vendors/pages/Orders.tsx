@@ -597,13 +597,6 @@ export default function Orders() {
 
             <div className="hidden sm:flex sm:flex-row sm:items-center gap-2">
               <button
-                onClick={() => setCurrentPage(1)}
-                className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
-                style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
-              >
-                Apply
-              </button>
-              <button
                 onClick={() => {
                   setStatusFilter('All')
                   setOrderSearch('')
@@ -711,13 +704,6 @@ export default function Orders() {
         {/* Mobile-only Filter Actions */}
         <div className="flex sm:hidden gap-2 pt-4 mt-2 border-t border-gray-200">
           <button
-            onClick={() => setCurrentPage(1)}
-            className="flex-1 px-4 py-2.5 rounded-md text-white font-medium text-sm min-h-[44px] cursor-pointer"
-            style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
-          >
-            Apply Filters
-          </button>
-          <button
             onClick={() => {
               setStatusFilter('All')
               setOrderSearch('')
@@ -727,7 +713,7 @@ export default function Orders() {
               setDateToDate(undefined)
               setCurrentPage(1)
             }}
-            className="flex-1 px-4 py-2 bg-white text-secondary border border-secondary rounded-2xl font-medium hover:bg-secondary hover:text-white transition-colors duration-200 text-sm min-h-[44px] cursor-pointer"
+            className="w-full px-4 py-2 bg-white text-secondary border border-secondary rounded-2xl font-medium hover:bg-secondary hover:text-white transition-colors duration-200 text-sm min-h-[44px] cursor-pointer"
           >
             Reset
           </button>

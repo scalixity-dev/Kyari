@@ -58,7 +58,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ type, message, time
   const iconColorClass = getNotificationColor(type)
 
   return (
-    <div className={`flex items-start gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-gray-50 rounded-lg transition-colors ${
+    <div className={`flex items-start gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer ${
       !read ? 'bg-blue-50' : ''
     }`}>
       <div className="flex-shrink-0 mt-1">
@@ -132,7 +132,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/40 bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
@@ -147,11 +147,11 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={onMarkAllAsRead}
-              className="text-sm text-[var(--color-accent)] hover:underline"
+              className="text-sm text-[var(--color-accent)] hover:underline cursor-pointer"
             >
               Mark all as read
             </button>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 cursor-pointer">
               <X size={24} />
             </button>
           </div>
@@ -168,7 +168,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({
               return (
                 <div 
                   key={notification.id}
-                  className={`border rounded-lg p-4 ${
+                  className={`border rounded-lg p-4 cursor-pointer ${
                     notification.read ? 'bg-white border-gray-200' : 'bg-blue-50 border-blue-200'
                   }`}
                 >
@@ -189,7 +189,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({
                         {!notification.read && (
                           <button
                             onClick={() => onMarkAsRead(notification.id)}
-                            className="text-xs text-[var(--color-accent)] hover:underline"
+                            className="text-xs text-[var(--color-accent)] hover:underline cursor-pointer"
                           >
                             Mark as read
                           </button>
@@ -351,8 +351,11 @@ export default function Dashboard() {
       
       {/* KPI Cards */}
       <div className="mb-6 lg:mb-8">
-        <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Today's Overview</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mt-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2">Today's Overview</h2>
+        <p className="text-sm sm:text-base text-[var(--color-primary)]">
+          Monitor daily operations and key performance metrics
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mt-8 sm:mt-12">
           {kpiData.map((kpi, index) => (
             <KPICard
               key={index}
@@ -375,13 +378,13 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 gap-6">
           
           {/* Notifications & Quick Actions Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
             {/* Notifications Heading (outside the card) */}
-            <div className="lg:col-span-2 mb-0 flex flex-col">
+            <div className="lg:col-span-4 mb-0 flex flex-col">
               <h3 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)] font-[var(--font-heading)] mb-3">Recent Notification</h3>
 
               <div className="bg-white rounded-xl shadow-md border border-white/20 p-3 sm:p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
-                <div className="space-y-0 overflow-y-auto max-h-[400px] sm:max-h-none">
+                <div className="space-y-1 sm:space-y-2 overflow-y-auto max-h-[400px] sm:max-h-none">
                   {recentNotifications.map((notification) => (
                     <NotificationItem
                       key={notification.id}
@@ -398,7 +401,7 @@ export default function Dashboard() {
                 <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
                   <button 
                     onClick={() => setNotificationsModalOpen(true)}
-                    className="text-sm sm:text-base text-[var(--color-accent)] hover:text-[var(--color-accent)]/80 font-medium"
+                    className="text-sm sm:text-base text-[var(--color-accent)] hover:text-[var(--color-accent)]/80 font-medium cursor-pointer"
                   >
                     View all notifications →
                   </button>
@@ -422,10 +425,10 @@ export default function Dashboard() {
                       <button
                         key={index}
                         onClick={action.onClick}
-                        className={`${bgColorClass} text-white p-3 sm:p-4 rounded-xl shadow-md flex flex-col sm:flex-row lg:flex-col items-center justify-center gap-2 sm:gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all w-full flex-1 lg:flex-none min-h-[80px] sm:min-h-[100px]`}
+                        className={`${bgColorClass} text-white p-3 sm:p-4 rounded-xl shadow-md flex flex-col sm:flex-row lg:flex-col items-center justify-center gap-2 sm:gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all w-full flex-1 lg:flex-none min-h-[80px] sm:min-h-[100px] cursor-pointer`}
                       >
                         <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-lg bg-white/20 flex-shrink-0">
-                          {React.isValidElement(action.icon) ? React.cloneElement(action.icon as React.ReactElement<any>, { size: 20 }) : action.icon}
+                          {React.isValidElement(action.icon) ? React.cloneElement(action.icon as React.ReactElement<{ size?: number }>, { size: 20 }) : action.icon}
                         </div>
                         <span className="font-semibold text-xs sm:text-sm text-center leading-tight">{action.title}</span>
                       </button>
