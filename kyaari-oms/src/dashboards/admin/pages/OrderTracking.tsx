@@ -1,31 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
 import { LayoutDashboard, Package, Bell, Users, CheckSquare, FileText, Wallet, MapPin, Eye, Filter } from 'lucide-react';
 import { KPICard, Pagination, CustomDropdown, CSVPDFExportButton } from '../../../components';
+import { OrderTrackingApi } from '../../../services/orderTrackingApi';
+import type { OrderTrackingItem, OrderTrackingSummary, OrderTrackingFilters } from '../../../services/orderTrackingApi';
 
 // TypeScript types
 type Status = "Received" | "Assigned" | "Confirmed" | "Invoiced" | "Dispatched" | "Verified" | "Paid";
-type Order = { id: string; vendor: string; qty: number; status: Status };
-
 type ViewMode = 'list' | 'board';
-
-// Sample order data with mixed statuses
-const initialOrders: Order[] = [
-  { id: "ORD-001", vendor: "Green Valley Farms", qty: 250, status: "Received" },
-  { id: "ORD-002", vendor: "Organic Harvest Co", qty: 180, status: "Assigned" },
-  { id: "ORD-003", vendor: "Fresh Fields Ltd", qty: 320, status: "Confirmed" },
-  { id: "ORD-004", vendor: "Nature's Best", qty: 95, status: "Invoiced" },
-  { id: "ORD-005", vendor: "Farm Fresh Direct", qty: 210, status: "Dispatched" },
-  { id: "ORD-006", vendor: "Golden Harvest", qty: 165, status: "Verified" },
-  { id: "ORD-007", vendor: "Eco Greens", qty: 275, status: "Paid" },
-  { id: "ORD-008", vendor: "Valley Organics", qty: 140, status: "Received" },
-  { id: "ORD-009", vendor: "Sunrise Farms", qty: 190, status: "Assigned" },
-  { id: "ORD-010", vendor: "Pure Harvest", qty: 300, status: "Confirmed" },
-  { id: "ORD-011", vendor: "Green Earth Co", qty: 85, status: "Invoiced" },
-  { id: "ORD-012", vendor: "Natural Foods Inc", qty: 225, status: "Dispatched" },
-];
 
 const statusColumns: Status[] = ["Received", "Assigned", "Confirmed", "Invoiced", "Dispatched", "Verified", "Paid"];
 
@@ -66,7 +50,7 @@ const getStatusColor = (status: Status): string => {
 };
 
 interface OrderCardProps {
-  order: Order;
+  order: OrderTrackingItem;
   index: number;
   isDragDisabled?: boolean;
   onOrderClick?: (orderId: string) => void;
@@ -89,13 +73,13 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, index, isDragDisabled = fa
         `}
       >
         <div className="font-semibold text-[var(--color-heading)] text-sm sm:text-base mb-1">
-          {order.id}
+          {order.orderNumber}
         </div>
         <div className="text-gray-600 text-sm mb-2 leading-relaxed">
-          {order.vendor}
+          {order.vendor.companyName}
         </div>
         <div className="text-gray-500 text-xs sm:text-sm">
-          Qty: {order.qty}
+          Qty: {order.quantity}
         </div>
       </div>
     )}
@@ -103,12 +87,13 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, index, isDragDisabled = fa
 );
 
 interface ListViewProps {
-  orders: Order[];
+  orders: OrderTrackingItem[];
   onOrderClick?: (orderId: string) => void;
   showFilters: boolean;
   filters: FilterState;
   onFilterChange: (key: keyof FilterState, value: string) => void;
   onResetFilters: () => void;
+  loading?: boolean;
 }
 
 interface FilterState {
@@ -118,29 +103,39 @@ interface FilterState {
   qtyMax: string;
 }
 
+interface ListViewProps {
+  orders: OrderTrackingItem[];
+  onOrderClick?: (orderId: string) => void;
+  showFilters: boolean;
+  filters: FilterState;
+  onFilterChange: (key: keyof FilterState, value: string) => void;
+  onResetFilters: () => void;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  onPageChange?: (page: number) => void;
+}
+
 const ListView: React.FC<ListViewProps> = ({ 
   orders, 
   onOrderClick, 
   showFilters, 
   filters, 
   onFilterChange, 
-  onResetFilters
+  onResetFilters,
+  pagination,
+  onPageChange
 }) => {
-  const [page, setPage] = React.useState(1);
-  const pageSize = 10;
-  
-  // Reset to first page when orders change
-  React.useEffect(() => {
-    setPage(1);
-  }, [orders]);
-
-  const totalPages = Math.max(1, Math.ceil(orders.length / pageSize));
-  const startIndex = (page - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, orders.length);
-  const pageOrders = orders.slice(startIndex, endIndex);
+  const pageSize = pagination?.limit || 10;
+  const total = pagination?.total || (orders?.length || 0);
+  const startIndex = ((pagination?.page || 1) - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, total);
 
   // Get unique vendors for dropdown
-  const uniqueVendors = Array.from(new Set(orders.map(o => o.vendor))).sort();
+  const uniqueVendors = Array.from(new Set((orders || []).map(o => o.vendor.companyName))).sort();
 
   return (
     <div>
@@ -231,20 +226,20 @@ const ListView: React.FC<ListViewProps> = ({
             </tr>
           </thead>
           <tbody>
-            {pageOrders.map((order) => (
+            {(orders || []).map((order) => (
               <tr
                 key={order.id}
                 onClick={() => onOrderClick?.(order.id)}
                 className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors cursor-pointer"
               >
                 <td className="p-3 font-semibold text-secondary">
-                  {order.id}
+                  {order.orderNumber}
                 </td>
                 <td className="p-3 text-sm text-gray-700">
-                  {order.vendor}
+                  {order.vendor.companyName}
                 </td>
                 <td className="p-3 text-sm text-gray-600">
-                  {order.qty}
+                  {order.quantity}
                 </td>
                 <td className="p-3">
                   <span className={`
@@ -260,21 +255,23 @@ const ListView: React.FC<ListViewProps> = ({
             </table>
           </div>
         {/* Desktop Pagination */}
-        <Pagination
-          currentPage={page}
-          totalPages={totalPages}
-          totalItems={orders.length}
-          startIndex={startIndex}
-          endIndex={endIndex}
-          onPageChange={setPage}
-          variant="desktop"
-          itemLabel="orders"
-        />
+        {pagination && onPageChange && (
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            startIndex={startIndex + 1}
+            endIndex={endIndex}
+            onPageChange={onPageChange}
+            variant="desktop"
+            itemLabel="orders"
+          />
+        )}
       </div>
 
       {/* Mobile Card View */}
       <div className="md:hidden space-y-3">
-        {pageOrders.map((order) => (
+        {(orders || []).map((order) => (
           <div
             key={order.id}
             onClick={() => onOrderClick?.(order.id)}
@@ -282,7 +279,7 @@ const ListView: React.FC<ListViewProps> = ({
           >
             <div className="flex items-start justify-between mb-3">
               <div className="font-semibold text-secondary text-lg">
-                {order.id}
+                {order.orderNumber}
               </div>
               <span className={`
                 inline-block px-2.5 py-1 rounded-full text-xs font-semibold border flex-shrink-0
@@ -292,27 +289,29 @@ const ListView: React.FC<ListViewProps> = ({
               </span>
             </div>
             <div className="text-sm text-gray-600 mb-3">
-              {order.vendor}
+              {order.vendor.companyName}
             </div>
             <div className="grid grid-cols-1 gap-2 text-sm">
               <div>
                 <span className="text-gray-500">Quantity: </span>
-                <span className="font-medium">{order.qty}</span>
+                <span className="font-medium">{order.quantity}</span>
               </div>
             </div>
           </div>
         ))}
         {/* Mobile Pagination */}
-        <Pagination
-          currentPage={page}
-          totalPages={totalPages}
-          totalItems={orders.length}
-          startIndex={startIndex}
-          endIndex={endIndex}
-          onPageChange={setPage}
-          variant="mobile"
-          itemLabel="orders"
-        />
+        {pagination && onPageChange && (
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            startIndex={startIndex + 1}
+            endIndex={endIndex}
+            onPageChange={onPageChange}
+            variant="mobile"
+            itemLabel="orders"
+          />
+        )}
       </div>
       </div>
     </div>
@@ -321,7 +320,7 @@ const ListView: React.FC<ListViewProps> = ({
 
 interface BoardColumnProps {
   status: Status;
-  orders: Order[];
+  orders: OrderTrackingItem[];
   onOrderClick?: (orderId: string) => void;
 }
 
@@ -332,7 +331,7 @@ const BoardColumn: React.FC<BoardColumnProps> = ({ status, orders, onOrderClick 
         {status}
       </h3>
       <span className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full">
-        {orders.length}
+        {orders?.length || 0}
       </span>
     </div>
     
@@ -347,7 +346,7 @@ const BoardColumn: React.FC<BoardColumnProps> = ({ status, orders, onOrderClick 
             transition-colors duration-200
           `}
         >
-          {orders.map((order, orderIndex) => (
+          {(orders || []).map((order, orderIndex) => (
             <OrderCard
               key={order.id}
               order={order}
@@ -363,16 +362,16 @@ const BoardColumn: React.FC<BoardColumnProps> = ({ status, orders, onOrderClick 
 );
 
 interface BoardViewProps {
-  orders: Order[];
+  orders: OrderTrackingItem[];
   onOrderMove: (result: DropResult) => void;
   onOrderClick?: (orderId: string) => void;
 }
 
 const BoardView: React.FC<BoardViewProps> = ({ orders, onOrderMove, onOrderClick }) => {
   const ordersByStatus = statusColumns.reduce((acc, status) => {
-    acc[status] = orders.filter(order => order.status === status);
+    acc[status] = (orders || []).filter(order => order.status === status);
     return acc;
-  }, {} as Record<Status, Order[]>);
+  }, {} as Record<Status, OrderTrackingItem[]>);
 
   return (
     <DragDropContext onDragEnd={onOrderMove}>
@@ -393,7 +392,9 @@ const BoardView: React.FC<BoardViewProps> = ({ orders, onOrderMove, onOrderClick
 };
 
 const OrderTracking: React.FC = () => {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [orders, setOrders] = useState<OrderTrackingItem[]>([]);
+  const [summary, setSummary] = useState<OrderTrackingSummary | null>(null);
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
@@ -402,13 +403,93 @@ const OrderTracking: React.FC = () => {
     qtyMin: '',
     qtyMax: ''
   });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0
+  });
   const navigate = useNavigate();
+
+  // Load initial data
+  useEffect(() => {
+    console.log('🔍 OrderTracking: Component mounted, loading initial data...');
+    loadOrderTrackingData();
+  }, []);
+
+  // Load data when filters change
+  useEffect(() => {
+    loadOrderTrackingData();
+  }, [filters, pagination.page, pagination.limit]);
+
+  const loadOrderTrackingData = async () => {
+    try {
+      setLoading(true);
+      const apiFilters: OrderTrackingFilters = {};
+      
+      if (filters.vendor) apiFilters.vendor = filters.vendor;
+      if (filters.status) apiFilters.status = filters.status as any;
+      if (filters.qtyMin) apiFilters.qtyMin = parseInt(filters.qtyMin);
+      if (filters.qtyMax) apiFilters.qtyMax = parseInt(filters.qtyMax);
+
+      console.log('🔍 OrderTracking: Loading data with filters:', apiFilters);
+      console.log('🔍 OrderTracking: Pagination:', pagination);
+
+      const response = await OrderTrackingApi.getOrderTracking({
+        page: pagination.page,
+        limit: pagination.limit,
+        filters: Object.keys(apiFilters).length > 0 ? apiFilters : undefined
+      });
+
+      console.log('🔍 OrderTracking: API Response:', response);
+      console.log('🔍 OrderTracking: Response success:', response.success);
+      console.log('🔍 OrderTracking: Response data:', response.data);
+      console.log('🔍 OrderTracking: Orders array:', response.data?.orders);
+      console.log('🔍 OrderTracking: Orders length:', response.data?.orders?.length);
+      console.log('🔍 OrderTracking: Summary recentOrders:', response.data?.summary?.recentOrders);
+      console.log('🔍 OrderTracking: Summary recentOrders length:', response.data?.summary?.recentOrders?.length);
+
+      if (response.success) {
+        // Use orders from main data, fallback to summary recentOrders if main orders is empty/undefined
+        const ordersToUse = response.data.orders && response.data.orders.length > 0 
+          ? response.data.orders 
+          : response.data.summary?.recentOrders || [];
+        
+        console.log('✅ OrderTracking: Setting orders:', ordersToUse);
+        setOrders(ordersToUse);
+        
+        // Set pagination with fallback values
+        setPagination({
+          page: response.data.page || 1,
+          limit: response.data.limit || 10,
+          total: response.data.total || ordersToUse.length,
+          totalPages: response.data.totalPages || 1
+        });
+        
+        // Set summary data from the main response
+        if (response.data.summary) {
+          console.log('✅ OrderTracking: Setting summary from main response:', response.data.summary);
+          setSummary(response.data.summary);
+        }
+        
+        console.log('✅ OrderTracking: Orders set successfully');
+      } else {
+        console.error('❌ OrderTracking: API response not successful:', response);
+      }
+    } catch (error) {
+      console.error('❌ OrderTracking: Failed to load order tracking data:', error);
+      console.error('❌ OrderTracking: Error details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleOrderClick = (orderId: string) => {
     navigate(`/admin/orders/${orderId}`);
   };
 
-  const handleOrderMove = (result: DropResult) => {
+  const handleOrderMove = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
     // If no destination, return early
@@ -423,22 +504,41 @@ const OrderTracking: React.FC = () => {
     }
 
     // Find the order being moved
-    const orderToMove = orders.find(order => order.id === draggableId);
+    const orderToMove = (orders || []).find(order => order.id === draggableId);
     if (!orderToMove) return;
 
-    // Update the order's status
     const newStatus = destination.droppableId as Status;
-    const updatedOrders = orders.map(order =>
-      order.id === draggableId
-        ? { ...order, status: newStatus }
-        : order
-    );
 
-    setOrders(updatedOrders);
+    try {
+      // Update the order's status via API
+      const response = await OrderTrackingApi.updateOrderStatus(draggableId, {
+        orderItemId: draggableId,
+        newStatus,
+        remarks: `Status changed from ${orderToMove.status} to ${newStatus}`
+      });
+
+      if (response.success) {
+        // Update local state
+        const updatedOrders = (orders || []).map(order =>
+          order.id === draggableId
+            ? { ...order, status: newStatus }
+            : order
+        );
+        setOrders(updatedOrders);
+        
+        // Reload order tracking data to update summary counts
+        loadOrderTrackingData();
+      }
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+      // Optionally show error message to user
+    }
   };
 
   const handleFilterChange = (key: keyof FilterState, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+    // Reset to first page when filters change
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const handleResetFilters = () => {
@@ -448,53 +548,69 @@ const OrderTracking: React.FC = () => {
       qtyMin: '',
       qtyMax: ''
     });
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  // Apply filters
-  const filteredOrders = React.useMemo(() => {
-    return orders.filter(order => {
-      if (filters.vendor && order.vendor !== filters.vendor) return false;
-      if (filters.status && order.status !== filters.status) return false;
-      if (filters.qtyMin && order.qty < parseInt(filters.qtyMin)) return false;
-      if (filters.qtyMax && order.qty > parseInt(filters.qtyMax)) return false;
-      return true;
-    });
-  }, [orders, filters]);
-
-  const handleExportCSV = () => {
-    const headers = ['Order ID', 'Vendor', 'Quantity', 'Status'];
-    const csvContent = [
-      headers.join(','),
-      ...filteredOrders.map(order => [
-        order.id,
-        `"${order.vendor}"`,
-        order.qty,
-        order.status
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `orders-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
   };
 
-  const handleExportPDF = () => {
-    const content = filteredOrders.map(order => 
-      `${order.id} | ${order.vendor} | Qty: ${order.qty} | ${order.status}`
-    ).join('\n');
-    
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `orders-${new Date().toISOString().split('T')[0]}.txt`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+  const handleExportCSV = async () => {
+    try {
+      const apiFilters: OrderTrackingFilters = {};
+      
+      if (filters.vendor) apiFilters.vendor = filters.vendor;
+      if (filters.status) apiFilters.status = filters.status as any;
+      if (filters.qtyMin) apiFilters.qtyMin = parseInt(filters.qtyMin);
+      if (filters.qtyMax) apiFilters.qtyMax = parseInt(filters.qtyMax);
+
+      const blob = await OrderTrackingApi.exportToCSV(
+        Object.keys(apiFilters).length > 0 ? apiFilters : undefined
+      );
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `order-tracking-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export CSV:', error);
+    }
   };
+
+  const handleExportPDF = async () => {
+    try {
+      const apiFilters: OrderTrackingFilters = {};
+      
+      if (filters.vendor) apiFilters.vendor = filters.vendor;
+      if (filters.status) apiFilters.status = filters.status as any;
+      if (filters.qtyMin) apiFilters.qtyMin = parseInt(filters.qtyMin);
+      if (filters.qtyMax) apiFilters.qtyMax = parseInt(filters.qtyMax);
+
+      const blob = await OrderTrackingApi.exportToPDF(
+        Object.keys(apiFilters).length > 0 ? apiFilters : undefined
+      );
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `order-tracking-${new Date().toISOString().split('T')[0]}.txt`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export PDF:', error);
+    }
+  };
+
+  // Debug current state
+  console.log('🔍 OrderTracking: Current state:', {
+    orders: orders,
+    ordersLength: orders?.length,
+    summary: summary,
+    loading: loading,
+    pagination: pagination
+  });
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
@@ -546,7 +662,8 @@ const OrderTracking: React.FC = () => {
         {/* Orders Summary */}
         <div className="mt-10 sm:mt-12 mb-4 sm:mb-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4">
           {statusColumns.map(status => {
-            const count = orders.filter(order => order.status === status).length;
+            const statusCounts = summary?.statusCounts || {};
+            const count = statusCounts[status] || 0;
             const icon = getStatusIcon(status);
             return (
               <KPICard
@@ -578,22 +695,31 @@ const OrderTracking: React.FC = () => {
 
         {/* Main Content */}
         <div className={`${viewMode === 'board' ? 'bg-[var(--color-sharktank-bg)]' : ''} rounded-lg`}>
-          {viewMode === 'list' ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading orders...</p>
+              </div>
+            </div>
+          ) : viewMode === 'list' ? (
             <ListView 
-              orders={filteredOrders} 
+              orders={orders} 
               onOrderClick={handleOrderClick}
               showFilters={showFilters}
               filters={filters}
               onFilterChange={handleFilterChange}
               onResetFilters={handleResetFilters}
+              pagination={pagination}
+              onPageChange={handlePageChange}
             />
           ) : (
-            <BoardView orders={filteredOrders} onOrderMove={handleOrderMove} onOrderClick={handleOrderClick} />
+            <BoardView orders={orders} onOrderMove={handleOrderMove} onOrderClick={handleOrderClick} />
           )}
         </div>
 
         {/* Empty State (if no orders) */}
-        {orders.length === 0 && (
+        {!loading && (!orders || orders.length === 0) && (
           <div className="text-center py-8 sm:py-12">
             <div className="text-gray-400 text-lg sm:text-xl mb-2">No orders found</div>
             <div className="text-gray-500 text-sm sm:text-base">

@@ -29,6 +29,12 @@ export class UserController {
    */
   async getUsers(req: Request, res: Response): Promise<void> {
     try {
+      logger.info('Get users request received', {
+        query: req.query,
+        user: req.user,
+        headers: req.headers
+      });
+
       const { role, status, page = '1', limit = '50' } = req.query;
       
       const pageNum = parseInt(page as string, 10);
@@ -42,6 +48,7 @@ export class UserController {
         offset
       };
 
+      logger.info('Fetching users with filters', { filters });
       const result = await userService.listUsers(filters);
 
       ResponseHelper.success(res, {

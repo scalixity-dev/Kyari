@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { TokenManager } from './api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export interface User {
   id: string;
@@ -52,23 +52,36 @@ class UserApiService {
     page?: number;
     limit?: number;
   }): Promise<UsersResponse> {
-    const response = await axios.get(`${API_URL}/users`, {
-      headers: this.getAuthHeader(),
-      params: {
-        role: params?.role,
-        status: params?.status,
-        page: params?.page || 1,
-        limit: params?.limit || 50,
-      },
-    });
-    return response.data.data;
+    try {
+       
+      const response = await axios.get(`${API_URL}/api/users`, {
+        headers: this.getAuthHeader(),
+        params: {
+          role: params?.role,
+          status: params?.status,
+          page: params?.page || 1,
+          limit: params?.limit || 50,
+        },
+      });
+      
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Response status:', error.response?.status);
+        console.error('Response data:', error.response?.data);
+        console.error('Request URL:', error.config?.url);
+        console.error('Request headers:', error.config?.headers);
+      }
+      throw error;
+    }
   }
 
   /**
    * Get single user by ID
    */
   async getUserById(id: string): Promise<User> {
-    const response = await axios.get(`${API_URL}/users/${id}`, {
+    const response = await axios.get(`${API_URL}/api/users/${id}`, {
       headers: this.getAuthHeader(),
     });
     return response.data.data;
@@ -78,7 +91,7 @@ class UserApiService {
    * Create new user
    */
   async createUser(payload: CreateUserPayload): Promise<User> {
-    const response = await axios.post(`${API_URL}/users`, payload, {
+    const response = await axios.post(`${API_URL}/api/users`, payload, {
       headers: this.getAuthHeader(),
     });
     return response.data.data.user;
@@ -88,7 +101,7 @@ class UserApiService {
    * Update user
    */
   async updateUser(id: string, payload: UpdateUserPayload): Promise<User> {
-    const response = await axios.patch(`${API_URL}/users/${id}`, payload, {
+    const response = await axios.patch(`${API_URL}/api/users/${id}`, payload, {
       headers: this.getAuthHeader(),
     });
     return response.data.data;
@@ -99,7 +112,7 @@ class UserApiService {
    */
   async toggleUserStatus(id: string, status: 'ACTIVE' | 'INACTIVE'): Promise<User> {
     const response = await axios.patch(
-      `${API_URL}/users/${id}/status`,
+      `${API_URL}/api/users/${id}/status`,
       { status },
       {
         headers: this.getAuthHeader(),
@@ -112,7 +125,7 @@ class UserApiService {
    * Delete user (soft delete)
    */
   async deleteUser(id: string): Promise<void> {
-    await axios.delete(`${API_URL}/users/${id}`, {
+    await axios.delete(`${API_URL}/api/users/${id}`, {
       headers: this.getAuthHeader(),
     });
   }
