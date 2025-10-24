@@ -653,10 +653,10 @@ export class OrderTrackingService {
         }
       });
 
-      // 2. Assigned: Count orders from Order table with ASSIGNED status
-      statusCounts['Assigned'] = await prisma.order.count({
+      // 2. Assigned: Count from AssignedOrderItem table with PENDING_CONFIRMATION status (assigned but not confirmed)
+      statusCounts['Assigned'] = await prisma.assignedOrderItem.count({
         where: {
-          status: OrderStatus.ASSIGNED
+          status: AssignmentStatus.PENDING_CONFIRMATION
         }
       });
 
