@@ -201,8 +201,9 @@ export class InvoiceUploadController {
           userId: req.user?.userId
         });
 
-        // Send notification for vendor invoice uploads
+        // Send notifications based on upload type
         if (invoiceType === 'VENDOR_UPLOAD') {
+          // Vendor uploaded invoice → notify ADMIN and ACCOUNTS teams
           try {
             await notificationService.sendNotificationToRole(
               ['ADMIN', 'ACCOUNTS'],
@@ -216,14 +217,37 @@ export class InvoiceUploadController {
                   invoiceNumber: existingInvoice.invoiceNumber,
                   vendorName: existingInvoice.purchaseOrder?.vendor?.companyName || 'Unknown',
                   purchaseOrderId: existingInvoice.purchaseOrderId || '',
-                  uploadedBy: req.user?.userId || 'unknown',
-                  deepLink: `/admin/invoices/${existingInvoice.id}/review`
+                  uploadedBy: req.user?.userId || 'unknown'
                 }
               }
             );
           } catch (notificationError) {
-            // Don't fail the upload if notification fails
             logger.warn('Failed to send vendor invoice upload notification', { 
+              notificationError, 
+              invoiceId, 
+              uploadType: invoiceType 
+            });
+          }
+        } else if (invoiceType === 'ACCOUNTS_UPLOAD' && existingInvoice.purchaseOrder?.vendorId) {
+          // Accounts team uploaded invoice → notify VENDOR
+          try {
+            await notificationService.sendNotificationToUser(
+              existingInvoice.purchaseOrder.vendorId,
+              {
+                title: 'Invoice Uploaded by Accounts Team',
+                body: `Accounts team has uploaded invoice ${existingInvoice.invoiceNumber} for your review`,
+                priority: 'NORMAL' as const,
+                data: {
+                  type: 'ACCOUNTS_INVOICE_UPLOADED',
+                  invoiceId: existingInvoice.id,
+                  invoiceNumber: existingInvoice.invoiceNumber,
+                  purchaseOrderId: existingInvoice.purchaseOrderId || '',
+                  uploadedBy: req.user?.userId || 'unknown'
+                }
+              }
+            );
+          } catch (notificationError) {
+            logger.warn('Failed to send accounts invoice upload notification to vendor', { 
               notificationError, 
               invoiceId, 
               uploadType: invoiceType 
@@ -438,10 +462,10 @@ export class InvoiceUploadController {
           userId: req.user?.userId
         });
 
-        // Send notification for vendor invoice uploads
+        // Send notifications based on upload type
         if (invoiceType === 'VENDOR_UPLOAD') {
+          // Vendor uploaded invoice → notify ADMIN and ACCOUNTS teams
           try {
-            // Get vendor information for notification
             const purchaseOrder = await prisma.purchaseOrder.findUnique({
               where: { id: finalPurchaseOrderId },
               include: { vendor: true }
@@ -459,14 +483,44 @@ export class InvoiceUploadController {
                   invoiceNumber: newInvoice.invoiceNumber,
                   vendorName: purchaseOrder?.vendor?.companyName || 'Unknown',
                   purchaseOrderId: finalPurchaseOrderId,
-                  uploadedBy: req.user?.userId || 'unknown',
-                  deepLink: `/admin/invoices/${newInvoice.id}/review`
+                  uploadedBy: req.user?.userId || 'unknown'
                 }
               }
             );
           } catch (notificationError) {
-            // Don't fail the upload if notification fails
             logger.warn('Failed to send vendor invoice submission notification', { 
+              notificationError, 
+              invoiceId: newInvoice.id, 
+              uploadType: invoiceType 
+            });
+          }
+        } else if (invoiceType === 'ACCOUNTS_UPLOAD') {
+          // Accounts team uploaded invoice → notify VENDOR
+          try {
+            const purchaseOrder = await prisma.purchaseOrder.findUnique({
+              where: { id: finalPurchaseOrderId },
+              include: { vendor: true }
+            });
+
+            if (purchaseOrder?.vendorId) {
+              await notificationService.sendNotificationToUser(
+                purchaseOrder.vendorId,
+                {
+                  title: 'Invoice Uploaded by Accounts Team',
+                  body: `Accounts team has uploaded invoice ${invoiceNumber} for your review`,
+                  priority: 'NORMAL' as const,
+                  data: {
+                    type: 'ACCOUNTS_INVOICE_UPLOADED',
+                    invoiceId: newInvoice.id,
+                    invoiceNumber: newInvoice.invoiceNumber,
+                    purchaseOrderId: finalPurchaseOrderId,
+                    uploadedBy: req.user?.userId || 'unknown'
+                  }
+                }
+              );
+            }
+          } catch (notificationError) {
+            logger.warn('Failed to send accounts invoice upload notification to vendor', { 
               notificationError, 
               invoiceId: newInvoice.id, 
               uploadType: invoiceType 

@@ -4,7 +4,7 @@ import { useAuth } from '../../auth/AuthProvider'
 import { useNotifications } from '../../hooks/useNotifications'
 import type { Notification as AppNotification } from '../../services/notifications'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, Users, Bell, Wallet, MapPin, BarChart3, FileText, ChevronRight, X, Clock, CheckSquare, Menu } from 'lucide-react'
+import { LayoutDashboard, Package, Users, Bell, Wallet, MapPin, BarChart3, FileText, ChevronRight, X, Clock, CheckSquare, Menu, AlertCircle } from 'lucide-react'
 import kyariLogo from '../../assets/kyariLogo.webp'
 import { MegaSearch } from '../../components'
 
@@ -111,6 +111,11 @@ function AdminLayout() {
   }
 
   function getNotificationIcon(type: string) {
+    // Check for specific notification types first
+    if (type.includes('INVOICE')) return FileText
+    if (type.includes('TICKET') || type.includes('ISSUE')) return AlertCircle
+    
+    // Fallback to generic types
     switch (type) {
       case 'critical': return Bell
       case 'info': return Package

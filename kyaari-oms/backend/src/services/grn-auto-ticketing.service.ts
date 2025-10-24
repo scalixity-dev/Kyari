@@ -186,9 +186,9 @@ export class GRNAutoTicketingService {
                                    result.ticket.priority === 'HIGH' ? '🚨 HIGH PRIORITY' : 
                                    result.ticket.priority === 'MEDIUM' ? '⚠️ MEDIUM' : 'LOW';
 
-          // Notify Operations, Admin, and QC teams
+          // Notify Operations, Admin, QC, and Accounts teams
           await notificationService.sendNotificationToRole(
-            ['OPERATIONS', 'ADMIN', 'QC'],
+            ['OPERATIONS', 'ADMIN', 'QC', 'ACCOUNTS'],
             {
               title: `${ticketPriorityText} GRN Ticket Created`,
               body: `Ticket ${result.ticket.ticketNumber} created for GRN ${grnData.grnNumber}. Immediate review required.`,
