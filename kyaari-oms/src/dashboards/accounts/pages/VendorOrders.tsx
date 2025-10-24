@@ -34,6 +34,7 @@ export default function VendorOrders() {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
   // Filter states
+  const [filterOrderId, setFilterOrderId] = useState('')
   const [filterVendor, setFilterVendor] = useState('')
   const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('')
   const [filterDateFrom, setFilterDateFrom] = useState('')
@@ -57,14 +58,19 @@ export default function VendorOrders() {
   const fetchVendorOrders = async () => {
     try {
       setLoading(true)
-      const response = await AccountsAssignmentApiService.getConfirmedVendorOrders({
+      const params: Record<string, any> = {
         page: currentPage,
         limit: itemsPerPage,
         vendorName: filterVendor || undefined,
         orderStatus: filterStatus || undefined,
         startDate: filterDateFrom || undefined,
         endDate: filterDateTo || undefined
-      })
+      }
+      if (filterOrderId) {
+        // add orderId only when present to avoid excess property errors on the literal
+        params.orderId = filterOrderId
+      }
+      const response = await AccountsAssignmentApiService.getConfirmedVendorOrders(params as any)
 
       setOrders(response.orders)
       setTotalPages(response.pagination.pages)
@@ -79,14 +85,14 @@ export default function VendorOrders() {
   // Fetch on mount and when filters/pagination change
   useEffect(() => {
     fetchVendorOrders()
-  }, [currentPage, filterVendor, filterStatus, filterDateFrom, filterDateTo])
+  }, [currentPage, filterOrderId, filterVendor, filterStatus, filterDateFrom, filterDateTo])
 
   // Reset to first page when filters change
   useEffect(() => {
     if (currentPage !== 1) {
       setCurrentPage(1)
     }
-  }, [filterVendor, filterStatus, filterDateFrom, filterDateTo])
+  }, [filterOrderId, filterVendor, filterStatus, filterDateFrom, filterDateTo])
 
   const paginatedOrders = orders
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -128,6 +134,7 @@ export default function VendorOrders() {
   }
 
   const resetFilters = () => {
+    setFilterOrderId('')
     setFilterVendor('')
     setFilterStatus('')
     setFilterDateFrom('')
@@ -156,13 +163,24 @@ export default function VendorOrders() {
     <div className="p-4 sm:p-6 lg:pl-9 xl:p-9 2xl:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6 xl:mb-7 2xl:mb-8">
-        <h2 className="text-2xl   font-semibold text-[var(--color-heading)] mb-2">Vendor Orders</h2>
-        <p className="text-sm xl:text-base 2xl:text-base text-[var(--color-heading)]">Manage vendor orders, generate POs, and track order status</p>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Vendor Orders</h1>
+        <p className="text-sm sm:text-base text-gray-600">Manage vendor orders, generate POs, and track order status</p>
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-md p-3 sm:p-4 xl:p-5 2xl:p-6 mb-4 sm:mb-6 xl:mb-7 2xl:mb-8 border border-gray-200">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 xl:gap-5 2xl:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 xl:gap-5 2xl:gap-6">
+          <div>
+            <label className="block text-xs xl:text-sm 2xl:text-base font-medium text-secondary mb-1 xl:mb-1.5 2xl:mb-2">Order ID</label>
+            <input
+              type="text"
+              value={filterOrderId}
+              onChange={(e) => setFilterOrderId(e.target.value)}
+              placeholder="Search by Order ID"
+              className="w-full px-3 xl:px-3.5 2xl:px-4 py-2 xl:py-2.5 2xl:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-xs xl:text-sm 2xl:text-base hover:border-accent transition-all duration-200"
+            />
+          </div>
+          
           <div>
             <label className="block text-xs xl:text-sm 2xl:text-base font-medium text-secondary mb-1 xl:mb-1.5 2xl:mb-2">Vendor</label>
             <CustomDropdown
@@ -173,6 +191,7 @@ export default function VendorOrders() {
                 ...vendors.map(vendor => ({ value: vendor, label: vendor }))
               ]}
               placeholder="All Vendors"
+              className="[&>button]:py-2 [&>button]:xl:py-2.5 [&>button]:2xl:py-3 [&>button]:px-3 [&>button]:xl:px-3.5 [&>button]:2xl:px-4 [&>button]:text-xs [&>button]:xl:text-sm [&>button]:2xl:text-base"
             />
           </div>
           
@@ -190,6 +209,7 @@ export default function VendorOrders() {
                 { value: 'Closed', label: 'Closed' }
               ]}
               placeholder="All Statuses"
+              className="[&>button]:py-2 [&>button]:xl:py-2.5 [&>button]:2xl:py-3 [&>button]:px-3 [&>button]:xl:px-3.5 [&>button]:2xl:px-4 [&>button]:text-xs [&>button]:xl:text-sm [&>button]:2xl:text-base"
             />
           </div>
           
@@ -292,131 +312,138 @@ export default function VendorOrders() {
 
       {/* Orders Table - Desktop View */}
       {!loading && orders.length > 0 && (
-      <div className="hidden lg:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
-        {/* Table head bar */}
-        <div className="bg-[#C3754C] text-white">
-          <div className="grid grid-cols-[90px_1fr_0.8fr_1fr_0.9fr_1fr_100px] xl:grid-cols-[100px_1.2fr_0.9fr_1.1fr_1fr_1.1fr_120px] 2xl:grid-cols-[120px_1.3fr_1fr_1.2fr_1fr_1.2fr_140px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-3 xl:py-4 2xl:py-5 font-['Quicksand'] font-bold text-sm xl:text-base 2xl:text-lg leading-[100%] tracking-[0] text-center">
-            <div className="text-xs xl:text-sm 2xl:text-base">Order ID</div>
-            <div className="text-xs xl:text-sm 2xl:text-base">Vendor Name</div>
-            <div className="text-xs xl:text-sm 2xl:text-base">Confirmed Qty</div>
-            <div className="text-xs xl:text-sm 2xl:text-base">Order Status</div>
-            <div className="text-xs xl:text-sm 2xl:text-base">PO Status</div>
-            <div className="text-xs xl:text-sm 2xl:text-base">Invoice Status</div>
-            <div className="text-xs xl:text-sm 2xl:text-base">Actions</div>
-          </div>
-        </div>
-
-        {/* Body */}
-        <div className="bg-white">
-          <div className="py-2">
-            {paginatedOrders.length === 0 ? (
-              <div className="px-3 xl:px-4 2xl:px-6 py-6 xl:py-8 text-center text-gray-500 text-xs xl:text-sm 2xl:text-base">No orders match current filters.</div>
-            ) : (
-              paginatedOrders.map((order) => {
+      <div className="hidden lg:block overflow-x-auto">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-w-[800px]">
+          <table className="w-full border-separate border-spacing-0">
+            <thead>
+              <tr style={{ background: 'var(--color-accent)' }}>
+                <th className="text-left p-3 font-heading font-normal text-xs" style={{ color: 'var(--color-button-text)' }}>Order ID</th>
+                <th className="text-left p-3 font-heading font-normal text-xs" style={{ color: 'var(--color-button-text)' }}>Vendor Name</th>
+                <th className="text-center p-3 font-heading font-normal text-xs" style={{ color: 'var(--color-button-text)' }}>Confirmed Qty</th>
+                <th className="text-center p-3 font-heading font-normal text-xs" style={{ color: 'var(--color-button-text)' }}>Order Status</th>
+                <th className="text-center p-3 font-heading font-normal text-xs" style={{ color: 'var(--color-button-text)' }}>PO Status</th>
+                <th className="text-center p-3 font-heading font-normal text-xs" style={{ color: 'var(--color-button-text)' }}>Invoice Status</th>
+                <th className="text-center p-3 font-heading font-normal text-xs" style={{ color: 'var(--color-button-text)' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedOrders.map((order) => {
                 const orderStatusStyle = STATUS_STYLES[order.orderStatus] || STATUS_STYLES.Confirmed
                 const poStatusStyle = PO_STATUS_STYLES[order.poStatus] || PO_STATUS_STYLES.Pending
                 const invoiceStatusStyle = INVOICE_STATUS_STYLES[order.invoiceStatus] || INVOICE_STATUS_STYLES['Not Created']
                 
                 return (
-                  <div key={order.id}>
-                    <div className="grid grid-cols-[90px_1fr_0.8fr_1fr_0.9fr_1fr_100px] xl:grid-cols-[100px_1.2fr_0.9fr_1.1fr_1fr_1.1fr_120px] 2xl:grid-cols-[120px_1.3fr_1fr_1.2fr_1fr_1.2fr_140px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-2 xl:py-3 2xl:py-4 items-center text-center hover:bg-gray-50 font-bold">
-                      <div className="text-[10px] xl:text-xs 2xl:text-sm font-medium text-gray-800 truncate">{order.id}</div>
-                      <div className="flex items-center justify-center min-w-0">
+                  <>
+                    <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
+                      <td className="p-3 font-semibold text-secondary text-sm">{order.id}</td>
+                      <td className="p-3">
                         <button
                           onClick={() => toggleRowExpansion(order.id)}
-                          className="flex items-center gap-0.5 xl:gap-1 hover:text-accent transition-colors text-[10px] xl:text-xs 2xl:text-sm text-gray-700 min-w-0 max-w-full"
+                          className="flex items-center gap-1 hover:text-accent transition-colors text-sm text-gray-700"
                         >
-                          {expandedRows.has(order.id) ? <ChevronDown size={12} className="flex-shrink-0" /> : <ChevronRight size={12} className="flex-shrink-0" />}
-                          <span className="truncate">{order.vendorName}</span>
+                          {expandedRows.has(order.id) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                          <span>{order.vendorName}</span>
                         </button>
-                      </div>
-                      <div className="text-[10px] xl:text-xs 2xl:text-sm font-semibold text-gray-900">{order.items.reduce((sum, item) => sum + item.confirmedQty, 0)}</div>
-                      <div className="flex items-center justify-center">
+                      </td>
+                      <td className="p-3 text-center text-sm font-medium text-gray-900">
+                        {order.items.reduce((sum, item) => sum + item.confirmedQty, 0)}
+                      </td>
+                      <td className="p-3 text-center">
                         <span 
-                          className="inline-block px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 rounded-md text-[9px] xl:text-[10px] 2xl:text-xs font-semibold whitespace-nowrap"
+                          className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
                           style={{
                             backgroundColor: orderStatusStyle.bg,
                             color: orderStatusStyle.color,
+                            borderColor: orderStatusStyle.border,
                           }}
                         >
                           {orderStatusStyle.label}
                         </span>
-                      </div>
-                      <div className="flex items-center justify-center">
+                      </td>
+                      <td className="p-3 text-center">
                         <span 
-                          className="inline-block px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 rounded-md text-[9px] xl:text-[10px] 2xl:text-xs font-semibold whitespace-nowrap"
+                          className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
                           style={{
                             backgroundColor: poStatusStyle.bg,
                             color: poStatusStyle.color,
+                            borderColor: poStatusStyle.border,
                           }}
                         >
                           {poStatusStyle.label}
                         </span>
-                      </div>
-                      <div className="flex items-center justify-center">
+                      </td>
+                      <td className="p-3 text-center">
                         <span 
-                          className="inline-block px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 rounded-md text-[9px] xl:text-[10px] 2xl:text-xs font-semibold whitespace-nowrap"
+                          className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
                           style={{
                             backgroundColor: invoiceStatusStyle.bg,
                             color: invoiceStatusStyle.color,
+                            borderColor: invoiceStatusStyle.border,
                           }}
                         >
                           {invoiceStatusStyle.label}
                         </span>
-                      </div>
-                      <div className="flex gap-0.5 xl:gap-1 justify-center items-center">
+                      </td>
+                      <td className="p-3 text-center">
                         <button
                           onClick={() => handleViewDetails(order)}
-                          className="bg-white text-secondary border border-secondary rounded-md px-2 xl:px-3 2xl:px-4 py-1 xl:py-1.5 2xl:py-2 text-[10px] xl:text-xs 2xl:text-sm hover:bg-gray-50 flex items-center gap-1 whitespace-nowrap"
-                          title="View Details"
+                          className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95 transition-all"
                         >
-                          <Eye size={12} className="flex-shrink-0" />
-                          <span>View</span>
+                          View
                         </button>
-                      </div>
-                    </div>
+                      </td>
+                    </tr>
                     
                     {/* Expanded Item Details */}
                     {expandedRows.has(order.id) && (
-                      <div className="px-3 xl:px-4 2xl:px-6 py-2 xl:py-3 bg-gray-50 border-t border-gray-100">
-                        <div className="bg-white rounded-lg p-2 xl:p-3 2xl:p-4 max-w-3xl">
-                          <div className="text-xs xl:text-sm 2xl:text-base font-medium text-secondary mb-2">Items:</div>
-                          <div className="space-y-2">
-                            {order.items.map((item, itemIndex) => (
-                              <div key={itemIndex} className="text-xs xl:text-sm 2xl:text-base text-gray-700 flex items-center justify-between">
-                                <div className="flex items-center gap-2 xl:gap-3">
-                                  <span className="font-medium">{item.sku}</span>
-                                  <span>{item.product}</span>
-                                </div>
-                                <div className="flex items-center gap-2 xl:gap-3">
-                                  <span className="text-gray-600">Ordered: {item.qty}</span>
-                                  <span className="text-green-600 font-medium">Confirmed: {item.confirmedQty}</span>
-                                </div>
-                              </div>
-                            ))}
+                      <tr className="bg-gray-50">
+                        <td colSpan={7} className="p-0">
+                          <div className="px-6 py-4 border-t border-gray-200">
+                            <div className="bg-white rounded-lg overflow-hidden">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-gray-100 border-b border-gray-200">
+                                    <th className="text-left p-3 text-sm font-semibold text-secondary">SKU</th>
+                                    <th className="text-left p-3 text-sm font-semibold text-secondary">Product</th>
+                                    <th className="text-center p-3 text-sm font-semibold text-secondary">Ordered Qty</th>
+                                    <th className="text-center p-3 text-sm font-semibold text-secondary">Confirmed Qty</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {order.items.map((item, itemIndex) => (
+                                    <tr key={itemIndex} className="bg-white border-b border-gray-100">
+                                      <td className="p-3 text-sm font-medium text-secondary">{item.sku}</td>
+                                      <td className="p-3 text-sm text-gray-700">{item.product}</td>
+                                      <td className="p-3 text-sm text-center text-gray-700">{item.qty}</td>
+                                      <td className="p-3 text-sm text-center font-medium text-green-600">{item.confirmedQty}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        </td>
+                      </tr>
                     )}
-                  </div>
+                  </>
                 )
-              })
-            )}
-          </div>
-        </div>
+              })}
+            </tbody>
+          </table>
 
-        {totalCount > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalCount}
-            startIndex={startIndex}
-            endIndex={endIndex}
-            onPageChange={setCurrentPage}
-            itemLabel="orders"
-            variant="desktop"
-          />
-        )}
+          {totalCount > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalCount}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+              itemLabel="orders"
+              variant="desktop"
+            />
+          )}
+        </div>
       </div>
       )}
 

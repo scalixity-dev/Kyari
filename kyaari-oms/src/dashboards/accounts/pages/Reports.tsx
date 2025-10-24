@@ -9,7 +9,7 @@ import {
   LineChart,
   Line
 } from 'recharts'
-import { KPICard } from '../../../components'
+import { KPICard, CustomDropdown } from '../../../components'
 import { CSVPDFExportButton } from '../../../components/ui/export-button'
 import { Pagination } from '../../../components/ui/Pagination'
 
@@ -348,7 +348,8 @@ function AccountsReports() {
     <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6 lg:mb-8">
-        <h2 className="text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6">Accounts Reports & KPIs</h2>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Accounts Reports & KPIs</h1>
+        <p className="text-sm sm:text-base text-gray-600">Track payment aging, compliance rates, SLA breaches, and payment trends</p>
       </div>
 
       {/* Top KPI Cards */}
@@ -402,8 +403,8 @@ function AccountsReports() {
               buttonClassName="min-h-[42px]"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div className="lg:col-span-1">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-end">
+            <div className="flex-1">
               <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Vendor</label>
               <input
                 type="text"
@@ -414,19 +415,32 @@ function AccountsReports() {
               />
             </div>
 
-            <div className="lg:col-span-1">
+            <div className="flex-1">
               <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Payment Status</label>
-              <select
+              <CustomDropdown
                 value={agingStatusFilter}
-                onChange={e => setAgingStatusFilter(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
-              >
-                <option value="all">All Status</option>
-                <option value="overdue">Overdue (&gt;30 days)</option>
-                <option value="warning">Warning (15-30 days)</option>
-                <option value="good">Good (&lt;15 days)</option>
-              </select>
+                onChange={(value) => setAgingStatusFilter(value)}
+                options={[
+                  { value: 'all', label: 'All Status' },
+                  { value: 'overdue', label: 'Overdue (>30 days)' },
+                  { value: 'warning', label: 'Warning (15-30 days)' },
+                  { value: 'good', label: 'Good (<15 days)' }
+                ]}
+                placeholder="All Status"
+                className="[&>button]:py-2 [&>button]:xl:py-2.5 [&>button]:2xl:py-3"
+              />
             </div>
+
+            <button
+              onClick={() => {
+                setAgingVendorFilter('')
+                setAgingStatusFilter('all')
+                setAgingCurrentPage(1)
+              }}
+              className="bg-white text-secondary border border-secondary hover:bg-secondary hover:text-white transition-all duration-200 px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-medium shadow-sm min-h-[44px] whitespace-nowrap"
+            >
+              Reset
+            </button>
           </div>
 
           {(agingVendorFilter || agingStatusFilter !== 'all') && (
@@ -648,8 +662,8 @@ function AccountsReports() {
               buttonClassName="min-h-[42px]"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            <div className="lg:col-span-1">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-end">
+            <div className="flex-1">
               <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Vendor</label>
               <input
                 type="text"
@@ -660,19 +674,32 @@ function AccountsReports() {
               />
             </div>
 
-            <div className="lg:col-span-1">
+            <div className="flex-1">
               <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Compliance Level</label>
-              <select
+              <CustomDropdown
                 value={complianceFilter}
-                onChange={e => setComplianceFilter(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
-              >
-                <option value="all">All Levels</option>
-                <option value="high">High (≥95%)</option>
-                <option value="medium">Medium (85-94%)</option>
-                <option value="low">Low (&lt;85%)</option>
-              </select>
+                onChange={(value) => setComplianceFilter(value)}
+                options={[
+                  { value: 'all', label: 'All Levels' },
+                  { value: 'high', label: 'High (≥95%)' },
+                  { value: 'medium', label: 'Medium (85-94%)' },
+                  { value: 'low', label: 'Low (<85%)' }
+                ]}
+                placeholder="All Levels"
+                className="[&>button]:py-2 [&>button]:xl:py-2.5 [&>button]:2xl:py-3"
+              />
             </div>
+
+            <button
+              onClick={() => {
+                setComplianceVendorFilter('')
+                setComplianceFilter('all')
+                setComplianceCurrentPage(1)
+              }}
+              className="bg-white text-secondary border border-secondary hover:bg-secondary hover:text-white transition-all duration-200 px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-medium shadow-sm min-h-[44px] whitespace-nowrap"
+            >
+              Reset
+            </button>
           </div>
 
           {(complianceVendorFilter || complianceFilter !== 'all') && (
@@ -928,49 +955,67 @@ function AccountsReports() {
               buttonClassName="min-h-[42px]"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            <div className="lg:col-span-1">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-end flex-wrap">
+            <div className="flex-1 min-w-[200px]">
               <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">SLA Type</label>
-              <select
+              <CustomDropdown
                 value={slaTypeFilter}
-                onChange={e => setSlaTypeFilter(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
-              >
-                <option value="all">All SLA Types</option>
-                <option value="Invoice Validation">Invoice Validation</option>
-                <option value="Payment Release">Payment Release</option>
-                <option value="Delivery Confirmation">Delivery Confirmation</option>
-                <option value="Vendor Response Time">Vendor Response Time</option>
-              </select>
+                onChange={(value) => setSlaTypeFilter(value)}
+                options={[
+                  { value: 'all', label: 'All SLA Types' },
+                  { value: 'Invoice Validation', label: 'Invoice Validation' },
+                  { value: 'Payment Release', label: 'Payment Release' },
+                  { value: 'Delivery Confirmation', label: 'Delivery Confirmation' },
+                  { value: 'Vendor Response Time', label: 'Vendor Response Time' }
+                ]}
+                placeholder="All SLA Types"
+                className="[&>button]:py-2 [&>button]:xl:py-2.5 [&>button]:2xl:py-3"
+              />
             </div>
 
-            <div className="lg:col-span-1">
+            <div className="flex-1 min-w-[200px]">
               <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Breach Severity</label>
-              <select
+              <CustomDropdown
                 value={slaBreachSeverity}
-                onChange={e => setSlaBreachSeverity(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
-              >
-                <option value="all">All Severities</option>
-                <option value="high">High (≥12 breaches)</option>
-                <option value="medium">Medium (8-11 breaches)</option>
-                <option value="low">Low (&lt;8 breaches)</option>
-              </select>
+                onChange={(value) => setSlaBreachSeverity(value)}
+                options={[
+                  { value: 'all', label: 'All Severities' },
+                  { value: 'high', label: 'High (≥12 breaches)' },
+                  { value: 'medium', label: 'Medium (8-11 breaches)' },
+                  { value: 'low', label: 'Low (<8 breaches)' }
+                ]}
+                placeholder="All Severities"
+                className="[&>button]:py-2 [&>button]:xl:py-2.5 [&>button]:2xl:py-3"
+              />
             </div>
 
-            <div className="lg:col-span-1">
+            <div className="flex-1 min-w-[200px]">
               <label className="block text-xs sm:text-sm font-medium mb-1 text-gray-700">Delay Severity</label>
-              <select
+              <CustomDropdown
                 value={slaDelaySeverity}
-                onChange={e => setSlaDelaySeverity(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent min-h-[44px] bg-white"
-              >
-                <option value="all">All Delays</option>
-                <option value="critical">Critical (&gt;5 days)</option>
-                <option value="moderate">Moderate (3-5 days)</option>
-                <option value="minor">Minor (≤3 days)</option>
-              </select>
+                onChange={(value) => setSlaDelaySeverity(value)}
+                options={[
+                  { value: 'all', label: 'All Delays' },
+                  { value: 'critical', label: 'Critical (>5 days)' },
+                  { value: 'moderate', label: 'Moderate (3-5 days)' },
+                  { value: 'minor', label: 'Minor (≤3 days)' }
+                ]}
+                placeholder="All Delays"
+                className="[&>button]:py-2 [&>button]:xl:py-2.5 [&>button]:2xl:py-3"
+              />
             </div>
+
+            <button
+              onClick={() => {
+                setSlaTypeFilter('all')
+                setSlaBreachSeverity('all')
+                setSlaDelaySeverity('all')
+                setSlaCurrentPage(1)
+              }}
+              className="bg-white text-secondary border border-secondary hover:bg-secondary hover:text-white transition-all duration-200 px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-medium shadow-sm min-h-[44px] whitespace-nowrap"
+            >
+              Reset
+            </button>
           </div>
 
           {(slaTypeFilter !== 'all' || slaBreachSeverity !== 'all' || slaDelaySeverity !== 'all') && (
@@ -1268,7 +1313,7 @@ function AccountsReports() {
               <Line
                 type="monotone"
                 dataKey="released"
-                stroke="#16a34a"
+                stroke="var(--color-secondary)"
                 strokeWidth={2}
                 name="Released"
                 dot={{ r: 4 }}
@@ -1277,7 +1322,7 @@ function AccountsReports() {
               <Line
                 type="monotone"
                 dataKey="pending"
-                stroke="#ea580c"
+                stroke="var(--color-accent)"
                 strokeWidth={2}
                 name="Pending"
                 dot={{ r: 4 }}

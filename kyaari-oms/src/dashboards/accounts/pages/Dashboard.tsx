@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileText, AlertTriangle, Wallet, MapPin, Bell, X, Plus } from 'lucide-react'
+import { FileText, AlertTriangle, Wallet, MapPin, Bell, X, Plus, Package } from 'lucide-react'
 import Button from '../../../components/Button/Button'
 import { KPICard } from '../../../components'
 
@@ -12,8 +12,10 @@ type KPI = {
 
 type NotificationItem = {
   id: string
+  type: 'invoice' | 'payment' | 'delivery' | 'order' | 'system'
   title: string
   description: string
+  read: boolean
 }
 
 function GenerateInvoiceModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -101,10 +103,21 @@ function AccountsDashboard() {
   ]
 
   const notifications: NotificationItem[] = [
-    { id: 'n1', title: 'Vendor uploaded invoice', description: 'Invoice INV-9012 uploaded for PO PO-2231.' },
-    { id: 'n2', title: 'Payment approval pending', description: 'Payment for INV-8893 awaiting approval.' },
-    { id: 'n3', title: 'Discrepancy reported', description: 'Qty mismatch on PO PO-2207. Review needed.' }
+    { id: 'n1', type: 'invoice', title: 'Vendor uploaded invoice', description: 'Invoice INV-9012 uploaded for PO PO-2231.', read: false },
+    { id: 'n2', type: 'payment', title: 'Payment approval pending', description: 'Payment for INV-8893 awaiting approval.', read: false },
+    { id: 'n3', type: 'delivery', title: 'Discrepancy reported', description: 'Qty mismatch on PO PO-2207. Review needed.', read: true }
   ]
+
+  const getNotificationIcon = (type: NotificationItem['type']) => {
+    switch (type) {
+      case 'invoice': return <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
+      case 'payment': return <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+      case 'delivery': return <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" />
+      case 'order': return <Package className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
+      case 'system': return <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-red-500" />
+      default: return <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" />
+    }
+  }
 
   const [showInvoiceModal, setShowInvoiceModal] = useState<boolean>(false)
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false)
@@ -123,40 +136,77 @@ function AccountsDashboard() {
         </div>
       </div>
 
-      {/* Notifications Panel */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
-          <h3 className="text-lg sm:text-xl text-[var(--color-heading)] font-[var(--font-heading)]">Recent Notifications</h3>
-          <span className="text-sm text-gray-500">{notifications.length} new</span>
-        </div>
-        <div className="divide-y divide-gray-100">
-          {notifications.map((n) => (
-            <div key={n.id} className="py-3 flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[var(--color-sharktank-bg)] flex items-center justify-center text-[var(--color-accent)] flex-shrink-0">
-                <Bell size={18} className="text-[var(--color-accent)]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-[var(--color-secondary)]" style={{ fontFamily: 'var(--font-heading)' }}>{n.title}</div>
-                <div className="text-sm text-[var(--color-primary)] break-words">{n.description}</div>
-              </div>
-              <button className="text-xs px-2 py-1 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 flex-shrink-0">Mark read</button>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Notifications & Quick Actions Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
+        {/* Notifications Heading (outside the card) */}
+        <div className="lg:col-span-4 mb-0 flex flex-col">
+          <h3 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)] font-[var(--font-heading)] mb-3">Recent Notification</h3>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-        <h3 className="text-lg sm:text-xl text-[var(--color-heading)] mb-4 font-[var(--font-heading)]">Quick Actions</h3>
-        <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-          <Button onClick={() => setShowInvoiceModal(true)} className="inline-flex items-center justify-center gap-2 rounded-xl w-full sm:w-auto">
-            <Plus size={16} />
-            <span>Generate Invoice</span>
-          </Button>
-          <Button onClick={() => setShowPaymentModal(true)} className="inline-flex items-center justify-center gap-2 rounded-xl w-full sm:w-auto">
-            <Wallet size={16} />
-            <span>Mark Payment Released</span>
-          </Button>
+          <div className="bg-white rounded-xl shadow-md border border-white/20 p-3 sm:p-4 md:p-5 flex-1 flex flex-col overflow-hidden">
+            <div className="space-y-1 sm:space-y-2 overflow-y-auto max-h-[400px] sm:max-h-none">
+              {notifications.map((n) => (
+                <div
+                  key={n.id}
+                  className={`flex items-start gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-gray-50 rounded-lg transition-colors ${
+                    !n.read ? 'bg-blue-50' : ''
+                  }`}
+                >
+                  <div className="flex-shrink-0 mt-1">
+                    {getNotificationIcon(n.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className={`text-sm sm:text-base font-medium leading-tight ${
+                        !n.read ? 'text-[var(--color-heading)]' : 'text-gray-700'
+                      }`}>
+                        {n.title}
+                      </p>
+                      {!n.read && (
+                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">{n.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
+              <button 
+                className="text-sm sm:text-base text-[var(--color-accent)] hover:text-[var(--color-accent)]/80 font-medium cursor-pointer"
+              >
+                View all notifications →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions Heading (outside the card) */}
+        <div className="flex flex-col justify-between">
+          <h3 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)] font-[var(--font-heading)] mb-3">Quick Action</h3>
+
+          <div className="h-full flex flex-col justify-start gap-3 flex-1">
+            <div className="flex flex-row lg:flex-col items-stretch gap-3 flex-1">
+              <button
+                onClick={() => setShowInvoiceModal(true)}
+                className="bg-green-500 hover:bg-green-600 text-white p-3 sm:p-4 rounded-xl shadow-md flex flex-col sm:flex-row lg:flex-col items-center justify-center gap-2 sm:gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all w-full flex-1 cursor-pointer"
+              >
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-lg bg-white/20 flex-shrink-0">
+                  <Plus size={20} />
+                </div>
+                <span className="font-semibold text-xs sm:text-sm text-center leading-tight">Generate Invoice</span>
+              </button>
+
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                className="bg-blue-500 hover:bg-blue-600 text-white p-3 sm:p-4 rounded-xl shadow-md flex flex-col sm:flex-row lg:flex-col items-center justify-center gap-2 sm:gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all w-full flex-1 cursor-pointer"
+              >
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-lg bg-white/20 flex-shrink-0">
+                  <Wallet size={20} />
+                </div>
+                <span className="font-semibold text-xs sm:text-sm text-center leading-tight">Mark Payment Released</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
