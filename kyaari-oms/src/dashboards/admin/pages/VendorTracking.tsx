@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BarChart3, FileText, Clock, Filter } from 'lucide-react'
+import { BarChart3, Users, Package, Filter } from 'lucide-react'
 import { Pagination, KPICard, CSVPDFExportButton } from '../../../components'
+import { vendorTrackingApi, type VendorTrackingDashboardResponse } from '../../../services/vendorTrackingApi'
 
 interface FilterState {
   vendor: string;
@@ -11,27 +12,16 @@ interface FilterState {
   slaMax: string;
 }
 
-// Mock vendor data
-const vendorsData = [
-  { id: 'greenleaf-farms', name: 'GreenLeaf Farms', fillRate: 94, sla: 90, avgInvoice: 3.5, avgTicket: 1.2 },
-  { id: 'happyplant-co', name: 'HappyPlant Co', fillRate: 91, sla: 86, avgInvoice: 4.2, avgTicket: 1.6 },
-  { id: 'bloomworks', name: 'BloomWorks', fillRate: 89, sla: 84, avgInvoice: 3.9, avgTicket: 2.0 },
-  { id: 'eco-greens', name: 'Eco Greens', fillRate: 92, sla: 88, avgInvoice: 3.7, avgTicket: 1.4 },
-  { id: 'valley-organics', name: 'Valley Organics', fillRate: 87, sla: 82, avgInvoice: 4.5, avgTicket: 2.2 },
-  { id: 'sunrise-farms', name: 'Sunrise Farms', fillRate: 93, sla: 91, avgInvoice: 3.3, avgTicket: 1.1 },
-  { id: 'pure-harvest', name: 'Pure Harvest', fillRate: 88, sla: 85, avgInvoice: 4.0, avgTicket: 1.8 },
-  { id: 'green-earth', name: 'Green Earth Co', fillRate: 90, sla: 87, avgInvoice: 3.8, avgTicket: 1.5 },
-  { id: 'natural-foods', name: 'Natural Foods Inc', fillRate: 86, sla: 83, avgInvoice: 4.3, avgTicket: 2.1 },
-  { id: 'golden-harvest', name: 'Golden Harvest', fillRate: 91, sla: 89, avgInvoice: 3.6, avgTicket: 1.3 },
-]
+// Use the imported types from the API service
+type DashboardData = VendorTrackingDashboardResponse;
 
 export default function VendorTracking() {
   const navigate = useNavigate()
   
-  // mock KPIs
-  const vendorPerformance = { fillRate: 92, slaCompliance: 88 }
-  const accounts = { avgInvoiceDays: 3.8 }
-  const ops = { avgTicketDays: 1.6 }
+  // State management
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   
   // Pagination state
   const [page, setPage] = useState(1)
@@ -47,17 +37,38 @@ export default function VendorTracking() {
     slaMax: ''
   })
   
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        const data = await vendorTrackingApi.getVendorTrackingDashboard()
+        setDashboardData(data)
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch vendor data'
+        setError(`API Error: ${errorMessage}. Please check if the backend server is running.`)
+        console.error('Error fetching vendor data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [])
+  
   // Filter logic
   const filteredVendors = useMemo(() => {
-    return vendorsData.filter(vendor => {
-      if (filters.vendor && !vendor.name.toLowerCase().includes(filters.vendor.toLowerCase())) return false
-      if (filters.fillRateMin && vendor.fillRate < parseInt(filters.fillRateMin)) return false
-      if (filters.fillRateMax && vendor.fillRate > parseInt(filters.fillRateMax)) return false
-      if (filters.slaMin && vendor.sla < parseInt(filters.slaMin)) return false
-      if (filters.slaMax && vendor.sla > parseInt(filters.slaMax)) return false
+    if (!dashboardData?.vendors) return []
+    
+    return dashboardData.vendors.filter(vendor => {
+      if (filters.vendor && !vendor.vendor.companyName.toLowerCase().includes(filters.vendor.toLowerCase())) return false
+      if (filters.fillRateMin && vendor.metrics.fillRate < parseInt(filters.fillRateMin)) return false
+      if (filters.fillRateMax && vendor.metrics.fillRate > parseInt(filters.fillRateMax)) return false
+      if (filters.slaMin && vendor.metrics.slaCompliance < parseInt(filters.slaMin)) return false
+      if (filters.slaMax && vendor.metrics.slaCompliance > parseInt(filters.slaMax)) return false
       return true
     })
-  }, [filters])
+  }, [dashboardData, filters])
   
   const totalPages = Math.max(1, Math.ceil(filteredVendors.length / pageSize))
   const startIndex = (page - 1) * pageSize
@@ -72,6 +83,15 @@ export default function VendorTracking() {
     if (value >= threshold.good) return 'text-green-600'
     if (value >= threshold.fair) return 'text-yellow-600'
     return 'text-red-600'
+  }
+  
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'ACTIVE': return 'text-green-600 bg-green-50'
+      case 'INACTIVE': return 'text-yellow-600 bg-yellow-50'
+      case 'NO_ORDERS': return 'text-gray-600 bg-gray-50'
+      default: return 'text-gray-600 bg-gray-50'
+    }
   }
   
   const handleFilterChange = (key: keyof FilterState, value: string) => {
@@ -91,15 +111,17 @@ export default function VendorTracking() {
   }
   
   const handleExportCSV = () => {
-    const headers = ['Vendor', 'Fill Rate (%)', 'SLA (%)', 'Avg Invoice (days)', 'Avg Ticket (days)']
+    const headers = ['Vendor', 'Fill Rate (%)', 'SLA (%)', 'Total Orders', 'Active Orders', 'Avg Fulfillment (days)', 'Status']
     const csvContent = [
       headers.join(','),
       ...filteredVendors.map(vendor => [
-        `"${vendor.name}"`,
-        vendor.fillRate,
-        vendor.sla,
-        vendor.avgInvoice,
-        vendor.avgTicket
+        `"${vendor.vendor.companyName}"`,
+        vendor.metrics.fillRate,
+        vendor.metrics.slaCompliance,
+        vendor.metrics.totalOrders,
+        vendor.metrics.activeOrders,
+        vendor.metrics.avgFulfillmentTime,
+        vendor.status
       ].join(','))
     ].join('\n')
 
@@ -114,7 +136,7 @@ export default function VendorTracking() {
 
   const handleExportPDF = () => {
     const content = filteredVendors.map(vendor => 
-      `${vendor.name} | Fill Rate: ${vendor.fillRate}% | SLA: ${vendor.sla}% | Avg Invoice: ${vendor.avgInvoice}d | Avg Ticket: ${vendor.avgTicket}d`
+      `${vendor.vendor.companyName} | Fill Rate: ${vendor.metrics.fillRate}% | SLA: ${vendor.metrics.slaCompliance}% | Orders: ${vendor.metrics.totalOrders} | Active: ${vendor.metrics.activeOrders} | Avg Fulfillment: ${vendor.metrics.avgFulfillmentTime}d`
     ).join('\n')
     
     const blob = new Blob([content], { type: 'text/plain' })
@@ -126,6 +148,33 @@ export default function VendorTracking() {
     window.URL.revokeObjectURL(url)
   }
 
+  if (loading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading vendor data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-accent text-white rounded-md hover:bg-accent/90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
       {/* Page Header */}
@@ -134,24 +183,30 @@ export default function VendorTracking() {
         <p className="text-sm sm:text-base text-gray-600">Monitor vendor performance and health metrics</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-4 sm:mb-6">
         <KPICard
-          title="Vendor Performance"
-          value={`${vendorPerformance.fillRate}%`}
-          subtitle={`Fill rate • SLA: ${vendorPerformance.slaCompliance}%`}
+          title="Total Vendors"
+          value={dashboardData?.summary.totalVendors || 0}
+          subtitle="Active vendors in system"
+          icon={<Users size={32} />}
+        />
+        <KPICard
+          title="Avg Fill Rate"
+          value={`${dashboardData?.summary.averageFillRate || 0}%`}
+          subtitle="Overall vendor performance"
           icon={<BarChart3 size={32} />}
         />
         <KPICard
-          title="Accounts"
-          value={`${accounts.avgInvoiceDays}d`}
-          subtitle="Avg invoice processing time"
-          icon={<FileText size={32} />}
+          title="Avg SLA Compliance"
+          value={`${dashboardData?.summary.averageSlaCompliance || 0}%`}
+          subtitle="Service level agreement"
+          icon={<BarChart3 size={32} />}
         />
         <KPICard
-          title="Operations"
-          value={`${ops.avgTicketDays}d`}
-          subtitle="Avg ticket resolution time"
-          icon={<Clock size={32} />}
+          title="Active Orders"
+          value={dashboardData?.summary.totalActiveOrders || 0}
+          subtitle={`${dashboardData?.summary.totalCompletedOrders || 0} completed`}
+          icon={<Package size={32} />}
         />
       </div>
 
@@ -262,28 +317,39 @@ export default function VendorTracking() {
             <thead>
               <tr style={{ background: 'var(--color-accent)' }}>
                 <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Vendor</th>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Fill rate</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Fill Rate</th>
                 <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>SLA</th>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Avg invoice (days)</th>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Avg ticket (days)</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Orders</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Avg Fulfillment</th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Status</th>
               </tr>
             </thead>
             <tbody>
               {pageVendors.map((vendor) => (
                 <tr 
-                  key={vendor.id}
+                  key={vendor.vendorId}
                   className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors cursor-pointer"
-                  onClick={() => handleVendorClick(vendor.id)}
+                  onClick={() => handleVendorClick(vendor.vendorId)}
                 >
-                  <td className="p-3 font-semibold text-secondary">{vendor.name}</td>
-                  <td className={`p-3 text-sm font-semibold ${getPerformanceColor(vendor.fillRate, { good: 90, fair: 85 })}`}>
-                    {vendor.fillRate}%
+                  <td className="p-3 font-semibold text-secondary">{vendor.vendor.companyName}</td>
+                  <td className={`p-3 text-sm font-semibold ${getPerformanceColor(vendor.metrics.fillRate, { good: 90, fair: 85 })}`}>
+                    {vendor.metrics.fillRate}%
                   </td>
-                  <td className={`p-3 text-sm font-semibold ${getPerformanceColor(vendor.sla, { good: 88, fair: 83 })}`}>
-                    {vendor.sla}%
+                  <td className={`p-3 text-sm font-semibold ${getPerformanceColor(vendor.metrics.slaCompliance, { good: 88, fair: 83 })}`}>
+                    {vendor.metrics.slaCompliance}%
                   </td>
-                  <td className="p-3 text-sm text-gray-700">{vendor.avgInvoice}</td>
-                  <td className="p-3 text-sm text-gray-700">{vendor.avgTicket}</td>
+                  <td className="p-3 text-sm text-gray-700">
+                    <div className="flex flex-col">
+                      <span className="font-medium">{vendor.metrics.totalOrders}</span>
+                      <span className="text-xs text-gray-500">{vendor.metrics.activeOrders} active</span>
+                    </div>
+                  </td>
+                  <td className="p-3 text-sm text-gray-700">{vendor.metrics.avgFulfillmentTime}d</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(vendor.status)}`}>
+                      {vendor.status}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -305,31 +371,36 @@ export default function VendorTracking() {
         <div className="md:hidden space-y-3">
           {pageVendors.map((vendor) => (
             <div 
-              key={vendor.id}
+              key={vendor.vendorId}
               className="rounded-xl p-4 border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 transition-colors"
-              onClick={() => handleVendorClick(vendor.id)}
+              onClick={() => handleVendorClick(vendor.vendorId)}
             >
-              <div className="font-semibold text-secondary text-lg mb-3">{vendor.name}</div>
+              <div className="flex justify-between items-start mb-3">
+                <div className="font-semibold text-secondary text-lg">{vendor.vendor.companyName}</div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(vendor.status)}`}>
+                  {vendor.status}
+                </span>
+              </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <div className="text-gray-500 block mb-1">Fill Rate</div>
-                  <div className={`font-semibold ${getPerformanceColor(vendor.fillRate, { good: 90, fair: 85 })}`}>
-                    {vendor.fillRate}%
+                  <div className={`font-semibold ${getPerformanceColor(vendor.metrics.fillRate, { good: 90, fair: 85 })}`}>
+                    {vendor.metrics.fillRate}%
                   </div>
                 </div>
                 <div>
                   <div className="text-gray-500 block mb-1">SLA</div>
-                  <div className={`font-semibold ${getPerformanceColor(vendor.sla, { good: 88, fair: 83 })}`}>
-                    {vendor.sla}%
+                  <div className={`font-semibold ${getPerformanceColor(vendor.metrics.slaCompliance, { good: 88, fair: 83 })}`}>
+                    {vendor.metrics.slaCompliance}%
                   </div>
                 </div>
                 <div>
-                  <div className="text-gray-500 block mb-1">Avg Invoice</div>
-                  <div className="font-medium">{vendor.avgInvoice} days</div>
+                  <div className="text-gray-500 block mb-1">Total Orders</div>
+                  <div className="font-medium">{vendor.metrics.totalOrders}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500 block mb-1">Avg Ticket</div>
-                  <div className="font-medium">{vendor.avgTicket} days</div>
+                  <div className="text-gray-500 block mb-1">Avg Fulfillment</div>
+                  <div className="font-medium">{vendor.metrics.avgFulfillmentTime}d</div>
                 </div>
               </div>
             </div>
