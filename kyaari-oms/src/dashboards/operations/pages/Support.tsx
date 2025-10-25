@@ -324,8 +324,7 @@ export default function Support() {
   }
 
   const handleExportPDF = () => {
-    // For now, we'll export as CSV since PDF generation would require additional libraries
-    // In a real implementation, you might use libraries like jsPDF or html2canvas
+    alert('PDF export is not yet implemented. Exporting as CSV instead.')
     handleExportCSV()
   }
 
