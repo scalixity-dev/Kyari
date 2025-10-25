@@ -389,7 +389,7 @@ export default function VendorDetails() {
             <BarChart3 className="w-5 h-5" />
           </div>
           <h4 className="text-sm font-semibold text-gray-800 mb-1">Fill Rate</h4>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{performanceMetrics?.metrics.calculatedFillRate.toFixed(1) || 0}%</div>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{(performanceMetrics?.metrics?.calculatedFillRate ?? 0).toFixed(1)}%</div>
         </div>
 
         <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
@@ -397,7 +397,7 @@ export default function VendorDetails() {
             <CheckSquare className="w-5 h-5" />
           </div>
           <h4 className="text-sm font-semibold text-gray-800 mb-1">SLA Compliance</h4>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{slaMetrics?.metrics.slaComplianceRate.toFixed(1) || 0}%</div>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{(slaMetrics?.metrics?.slaComplianceRate ?? 0).toFixed(1)}%</div>
         </div>
 
         <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
@@ -405,7 +405,7 @@ export default function VendorDetails() {
             <FileText className="w-5 h-5" />
           </div>
           <h4 className="text-sm font-semibold text-gray-800 mb-1">Avg Fulfillment</h4>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{slaMetrics?.metrics.avgFulfillmentTime.toFixed(1) || 0}d</div>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{(slaMetrics?.metrics?.avgFulfillmentTime ?? 0).toFixed(1)}d</div>
         </div>
 
         <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
@@ -413,7 +413,7 @@ export default function VendorDetails() {
             <Clock className="w-5 h-5" />
           </div>
           <h4 className="text-sm font-semibold text-gray-800 mb-1">Total Orders</h4>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{performanceMetrics?.metrics.totalOrders || 0}</div>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{performanceMetrics?.metrics?.totalOrders ?? 0}</div>
         </div>
       </div>
 
@@ -424,7 +424,7 @@ export default function VendorDetails() {
             <Package className="w-5 h-5" />
           </div>
           <h4 className="text-sm font-semibold text-gray-800 mb-1">Assigned Qty</h4>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{performanceMetrics?.metrics.totalAssignedQuantity || 0}</div>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{performanceMetrics?.metrics?.totalAssignedQuantity ?? 0}</div>
         </div>
 
         <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
@@ -432,7 +432,7 @@ export default function VendorDetails() {
             <AlertTriangle className="w-5 h-5" />
           </div>
           <h4 className="text-sm font-semibold text-gray-800 mb-1">Confirmed Qty</h4>
-          <div className="text-2xl font-bold text-orange-600 mt-1">{performanceMetrics?.metrics.totalConfirmedQuantity || 0}</div>
+          <div className="text-2xl font-bold text-orange-600 mt-1">{performanceMetrics?.metrics?.totalConfirmedQuantity ?? 0}</div>
         </div>
 
         <div className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative">
@@ -440,7 +440,7 @@ export default function VendorDetails() {
             <CheckSquare className="w-5 h-5" />
           </div>
           <h4 className="text-sm font-semibold text-gray-800 mb-1">Current Fill Rate</h4>
-          <div className="text-2xl font-bold text-green-600 mt-1">{performanceMetrics?.metrics.currentFillRate.toFixed(1) || 0}%</div>
+          <div className="text-2xl font-bold text-green-600 mt-1">{(performanceMetrics?.metrics?.currentFillRate ?? 0).toFixed(1)}%</div>
         </div>
       </div>
 

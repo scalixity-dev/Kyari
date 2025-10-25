@@ -282,17 +282,17 @@ export default function MoneyFlow() {
       ])
 
       // Safely set KPIs
-      if (kpisRes && kpisRes.data && kpisRes.data.data && kpisRes.data.data.kpis) {
-        setKpis(kpisRes.data.data.kpis)
+      if (kpisRes && kpisRes.data && kpisRes.data.kpis) {
+        setKpis(kpisRes.data.kpis)
       } else {
         setKpis([])
       }
 
       // Safely set transactions
-      if (transactionsRes && transactionsRes.data && transactionsRes.data.data && transactionsRes.data.data.transactions) {
-        setTransactions(transactionsRes.data.data.transactions)
-        setTotalPages(transactionsRes.data.data.pagination?.totalPages || 1)
-        setTotalItems(transactionsRes.data.data.pagination?.total || 0)
+      if (transactionsRes && transactionsRes.data && transactionsRes.data.transactions) {
+        setTransactions(transactionsRes.data.transactions)
+        setTotalPages(transactionsRes.data.pagination?.totalPages || 1)
+        setTotalItems(transactionsRes.data.pagination?.total || 0)
       } else {
         setTransactions([])
         setTotalPages(1)
@@ -300,15 +300,15 @@ export default function MoneyFlow() {
       }
 
       // Safely set trend data
-      if (trendRes && trendRes.data && trendRes.data.data && trendRes.data.data.trendData) {
-        setTrendData(trendRes.data.data.trendData)
+      if (trendRes && trendRes.data && trendRes.data.trendData) {
+        setTrendData(trendRes.data.trendData)
       } else {
         setTrendData({ labels: [], pending: [], cleared: [] })
       }
 
       // Safely set pie chart data
-      if (pieChartRes && pieChartRes.data && pieChartRes.data.data && pieChartRes.data.data.pieChartData) {
-        setPieChartData(pieChartRes.data.data.pieChartData)
+      if (pieChartRes && pieChartRes.data && pieChartRes.data.pieChartData) {
+        setPieChartData(pieChartRes.data.pieChartData)
       } else {
         setPieChartData({ pending: 0, cleared: 0, total: 0, pendingPercent: 0, clearedPercent: 0 })
       }
@@ -350,10 +350,10 @@ export default function MoneyFlow() {
       })
       
       // Check if response has the expected structure
-      if (res && res.data && res.data.data && res.data.data.transactions && res.data.data.pagination) {
-        setTransactions(res.data.data.transactions)
-        setTotalPages(res.data.data.pagination.totalPages || 1)
-        setTotalItems(res.data.data.pagination.total || 0)
+      if (res && res.data && res.data.transactions && res.data.pagination) {
+        setTransactions(res.data.transactions)
+        setTotalPages(res.data.pagination.totalPages || 1)
+        setTotalItems(res.data.pagination.total || 0)
       } else {
         console.error('Unexpected API response structure:', res)
         toast.error('Invalid response from server')

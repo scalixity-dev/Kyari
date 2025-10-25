@@ -61,23 +61,19 @@ export interface MoneyFlowListResponse {
 
 export interface MoneyFlowKPIsResponse {
   success: boolean
-  data: { 
-    data: { kpis: MoneyFlowKPIDto[] }
-  }
+  data: { kpis: MoneyFlowKPIDto[] }
   message: string
 }
 
 export interface MoneyFlowTransactionsResponse {
   success: boolean
   data: {
-    data: {
-      transactions: MoneyFlowTransactionDto[]
-      pagination: {
-        page: number
-        limit: number
-        total: number
-        totalPages: number
-      }
+    transactions: MoneyFlowTransactionDto[]
+    pagination: {
+      page: number
+      limit: number
+      total: number
+      totalPages: number
     }
   }
   message: string
@@ -85,25 +81,19 @@ export interface MoneyFlowTransactionsResponse {
 
 export interface MoneyFlowTrendResponse {
   success: boolean
-  data: { 
-    data: { trendData: MoneyFlowTrendDataDto }
-  }
+  data: { trendData: MoneyFlowTrendDataDto }
   message: string
 }
 
 export interface MoneyFlowPieChartResponse {
   success: boolean
-  data: { 
-    data: { pieChartData: MoneyFlowPieChartDto }
-  }
+  data: { pieChartData: MoneyFlowPieChartDto }
   message: string
 }
 
 export interface MoneyFlowCompleteResponse {
   success: boolean
-  data: { 
-    data: MoneyFlowListResponse
-  }
+  data: MoneyFlowListResponse
   message: string
 }
 

@@ -5,30 +5,19 @@ import { AssignmentStatus } from '@prisma/client';
 export const vendorTrackingQuerySchema = z.object({
   vendorId: z.string().cuid().optional(),
   status: z.nativeEnum(AssignmentStatus).optional(),
-  startDate: z.string().datetime().optional().transform((val) => {
-    if (!val) return undefined;
-    const date = new Date(val);
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid start date');
-    }
-    return date;
-  }),
-  endDate: z.string().datetime().optional().transform((val) => {
-    if (!val) return undefined;
-    const date = new Date(val);
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid end date');
-    }
-    return date;
-  }),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
   limit: z.number().int().min(1).max(100).optional(),
   offset: z.number().int().min(0).optional()
-}).refine((data) => {
+}).superRefine((data, ctx) => {
   // Validate date range
   if (data.startDate && data.endDate && data.startDate > data.endDate) {
-    throw new Error('Start date cannot be after end date');
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Start date cannot be after end date',
+      path: ['startDate']
+    });
   }
-  return true;
 });
 
 // Vendor ID validation schema
@@ -51,28 +40,17 @@ export const bulkUpdateFillRatesSchema = z.object({
 
 // Date range validation schema
 export const dateRangeSchema = z.object({
-  startDate: z.string().datetime().optional().transform((val) => {
-    if (!val) return undefined;
-    const date = new Date(val);
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid start date');
-    }
-    return date;
-  }),
-  endDate: z.string().datetime().optional().transform((val) => {
-    if (!val) return undefined;
-    const date = new Date(val);
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid end date');
-    }
-    return date;
-  })
-}).refine((data) => {
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional()
+}).superRefine((data, ctx) => {
   // Validate date range
   if (data.startDate && data.endDate && data.startDate > data.endDate) {
-    throw new Error('Start date cannot be after end date');
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Start date cannot be after end date',
+      path: ['startDate']
+    });
   }
-  return true;
 });
 
 // SLA query validation schema

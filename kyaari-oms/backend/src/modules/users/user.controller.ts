@@ -29,10 +29,18 @@ export class UserController {
    */
   async getUsers(req: Request, res: Response): Promise<void> {
     try {
+      // Filter out sensitive headers for logging
+      const safeHeaders = {
+        'content-type': req.headers['content-type'],
+        'user-agent': req.headers['user-agent'],
+        'accept': req.headers['accept'],
+        'accept-language': req.headers['accept-language']
+      };
+
       logger.info('Get users request received', {
         query: req.query,
         user: req.user,
-        headers: req.headers
+        headers: safeHeaders
       });
 
       const { role, status, page = '1', limit = '50' } = req.query;
