@@ -58,7 +58,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ type, message, time
   const iconColorClass = getNotificationColor(type)
 
   return (
-    <div className={`flex items-start gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer ${
+    <div className={`flex items-start gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-gray-50 rounded-lg transition-colors ${
       !read ? 'bg-blue-50' : ''
     }`}>
       <div className="flex-shrink-0 mt-1">
