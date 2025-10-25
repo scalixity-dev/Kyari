@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Plus, Send, Paperclip, Clock, AlertTriangle, CheckSquare, Calendar as CalendarIcon } from 'lucide-react'
-import { CustomDropdown, KPICard } from '../../../components'
+import { CustomDropdown, KPICard, CSVPDFExportButton } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { Pagination } from '../../../components/ui/Pagination'
 import { format } from 'date-fns'
@@ -287,6 +287,47 @@ export default function Support() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const handleExportCSV = () => {
+    const escapeCSVField = (field: string) => {
+      // Escape quotes by doubling them and wrap in quotes if contains special chars
+      const stringField = String(field ?? '')
+      if (stringField.includes('"') || stringField.includes(',') || stringField.includes('\n')) {
+        return `"${stringField.replace(/"/g, '""')}"`
+      }
+      return `"${stringField}"`
+    }
+
+    const csvContent = [
+      ['Ticket ID', 'Issue Title', 'Issue Type', 'Priority', 'Status', 'Assigned To', 'Created Date', 'Updated Date'],
+      ...filteredTickets.map(ticket => [
+        ticket.id,
+        ticket.issueTitle,
+        ticket.issueType,
+        ticket.priority,
+        ticket.status,
+        ticket.assignedTo,
+        ticket.createdAt,
+        ticket.updatedAt
+      ])
+    ].map(row => row.map(escapeCSVField).join(',')).join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `support_tickets_export_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleExportPDF = () => {
+    alert('PDF export is not yet implemented. Exporting as CSV instead.')
+    handleExportCSV()
+  }
+
   return (
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header */}
@@ -460,8 +501,13 @@ export default function Support() {
       </div>
 
       {/* Operations Support Tickets heading */}
-      <div className="mb-3 sm:mb-4">
+      <div className="mb-3 sm:mb-4 flex items-center justify-between">
         <h2 className="text-base sm:text-lg md:text-xl font-semibold text-secondary">All Support Tickets</h2>
+        <CSVPDFExportButton
+          onExportCSV={handleExportCSV}
+          onExportPDF={handleExportPDF}
+          label="Export"
+        />
       </div>
 
       {/* Desktop/Tablet Table - Horizontal Scroll */}
