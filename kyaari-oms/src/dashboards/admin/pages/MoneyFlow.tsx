@@ -1,5 +1,5 @@
 // React import removed - using automatic JSX runtime
-import React from 'react'
+import * as React from 'react'
 import { Wallet, FileText, Users, Search, ChevronDown } from 'lucide-react'
 import { CSVPDFExportButton, Pagination } from '../../../components'
 import {
@@ -316,6 +316,8 @@ export default function MoneyFlow() {
   const [statusFilter, setStatusFilter] = React.useState<'All' | 'Pending' | 'Released' | 'Approved'>('All')
   const [sortOrder, setSortOrder] = React.useState<'Latest' | 'Oldest'>('Latest')
   const [searchQuery, setSearchQuery] = React.useState('')
+  // Loading state for transactions table (used to show Orders-like loading UI)
+  const [isLoadingTransactions, setIsLoadingTransactions] = React.useState(false)
   const [statusOpen, setStatusOpen] = React.useState(false)
   const [sortOpen, setSortOpen] = React.useState(false)
   const [page, setPage] = React.useState(1)
@@ -421,6 +423,12 @@ export default function MoneyFlow() {
             <PieChart pending={pending} cleared={cleared} />
           </div>
 
+          {isLoadingTransactions ? (
+            <div className="bg-white rounded-xl p-12 text-center">
+              <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-500">Loading transactions...</p>
+            </div>
+          ) : (
           <div className="py-4 sm:py-6">
             {/* Header controls row */}
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
@@ -588,6 +596,7 @@ export default function MoneyFlow() {
               />
             </div>
           </div>
+          )}
     </div>
   )
 }

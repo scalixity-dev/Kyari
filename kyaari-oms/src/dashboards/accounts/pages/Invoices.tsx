@@ -336,14 +336,45 @@ function AccountsInvoices() {
         <p className="text-sm sm:text-base text-gray-600">Manage Purchase Orders and Vendor Invoices</p>
       </div>
 
-      {/* Loading State */}
-      {loading && (
-        <div className="flex justify-center items-center py-12">
-          <Loader size="xl" color="primary" />
-        </div>
-      )}
+      {/* Filters (visible while table loads) */}
+      <div className="mb-4 xl:mb-5 2xl:mb-6 bg-white rounded-xl shadow-md p-3 sm:p-4 xl:p-5 2xl:p-6 border border-gray-200">
+        <div className="flex flex-col sm:flex-row gap-3 xl:gap-4 2xl:gap-5 items-stretch sm:items-end">
+          {/* Search Bar */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none z-10" size={18} />
+            <input
+              type="text"
+              placeholder="Search by Order ID, Vendor, or Items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent shadow-sm text-sm min-h-[44px]"
+            />
+          </div>
 
-      {/* Empty State */}
+          {/* Status Filter */}
+          <div className="w-full sm:w-auto sm:min-w-[180px] xl:min-w-[200px] 2xl:min-w-[220px]">
+            <CustomDropdown
+              value={statusFilter}
+              options={statusOptions}
+              onChange={(value) => setStatusFilter(value as 'All' | POStatus)}
+              placeholder="Select Status"
+              className="[&>button]:py-2 [&>button]:xl:py-2.5 [&>button]:2xl:py-3"
+            />
+          </div>
+
+          {/* Reset Button */}
+          <div className="flex justify-end sm:justify-start">
+            <button 
+              onClick={resetFilters} 
+              className="bg-white text-secondary border border-secondary rounded-xl px-3 sm:px-4 py-2.5 text-xs sm:text-sm hover:bg-gray-50 transition-colors duration-200 min-h-[44px]"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Empty State (when not loading and no orders) */}
       {!loading && poOrders.length === 0 && (
         <div className="bg-white rounded-xl shadow-md border border-white/20 p-12 text-center">
           <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -352,9 +383,7 @@ function AccountsInvoices() {
         </div>
       )}
 
-      {/* Section 1: PO Generation */}
-      {!loading && poOrders.length > 0 && (
-      <div className="mb-6 sm:mb-8">
+        <div className="mb-6 sm:mb-8">
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h3 className="text-lg sm:text-xl font-semibold text-[var(--color-heading)]">Purchase Order Generation</h3>
           {selectedPOCount > 0 && (
@@ -369,379 +398,357 @@ function AccountsInvoices() {
           )}
         </div>
 
-        {/* Filters */}
-        <div className="mb-4 xl:mb-5 2xl:mb-6 bg-white rounded-xl shadow-md p-3 sm:p-4 xl:p-5 2xl:p-6 border border-gray-200">
-          <div className="flex flex-col sm:flex-row gap-3 xl:gap-4 2xl:gap-5 items-stretch sm:items-end">
-            {/* Search Bar */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none z-10" size={18} />
-              <input
-                type="text"
-                placeholder="Search by Order ID, Vendor, or Items..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent shadow-sm text-sm min-h-[44px]"
-              />
+        {/* Desktop Table Container */}
+        <div className="hidden lg:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
+          {loading ? (
+            <div className="bg-white rounded-xl p-12 text-center">
+              <div className="w-12 h-12 border-4 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-500">Loading invoices...</p>
             </div>
+          ) : (
+            <>
+              {/* Table head bar */}
+              <div className="bg-[#C3754C] text-white">
+                <div className="grid grid-cols-[50px_90px_90px_1fr_0.8fr_0.9fr_0.8fr_0.8fr_0.8fr_150px] xl:grid-cols-[60px_100px_100px_1.2fr_0.9fr_1fr_0.9fr_0.9fr_0.9fr_170px] 2xl:grid-cols-[70px_120px_120px_1.3fr_1fr_1.1fr_1fr_1fr_1fr_190px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-3 xl:py-4 2xl:py-5 font-['Fraunces'] text-sm xl:text-base 2xl:text-lg leading-[100%] tracking-[0] text-center">
+                  <div className="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedPOCount > 0 && selectedPOCount === poOrders.filter(o => o.poStatus === 'Pending').length}
+                      onChange={toggleSelectAllPOs}
+                      className="rounded border-white w-4 h-4"
+                    />
+                  </div>
+                  <div className="text-xs xl:text-sm 2xl:text-base">Order ID</div>
+                  <div className="text-xs xl:text-sm 2xl:text-base">PO ID</div>
+                  <div className="text-xs xl:text-sm 2xl:text-base">Vendor</div>
+                  <div className="text-xs xl:text-sm 2xl:text-base">Confirmed Qty</div>
+                  <div className="text-xs xl:text-sm 2xl:text-base">Amount</div>
+                  <div className="text-xs xl:text-sm 2xl:text-base">PO Status</div>
+                  <div className="text-xs xl:text-sm 2xl:text-base">Account Invoice</div>
+                  <div className="text-xs xl:text-sm 2xl:text-base">Vendor Invoice</div>
+                  <div className="text-xs xl:text-sm 2xl:text-base">Actions</div>
+                </div>
+              </div>
 
-            {/* Status Filter */}
-            <div className="w-full sm:w-auto sm:min-w-[180px] xl:min-w-[200px] 2xl:min-w-[220px]">
-              <CustomDropdown
-                value={statusFilter}
-                options={statusOptions}
-                onChange={(value) => setStatusFilter(value as 'All' | POStatus)}
-                placeholder="Select Status"
-                className="[&>button]:py-2 [&>button]:xl:py-2.5 [&>button]:2xl:py-3"
-              />
-            </div>
+              {/* Body */}
+              <div className="bg-white">
+                <div className="py-2">
+                  {paginatedOrders.length === 0 ? (
+                    <div className="px-3 xl:px-4 2xl:px-6 py-6 xl:py-8 text-center text-gray-500 text-xs xl:text-sm 2xl:text-base">No orders found matching your filters</div>
+                  ) : (
+                    paginatedOrders.map((order) => {
+                      const poStyle = PO_STATUS_STYLES[order.poStatus]
+                      const isSelected = selectedPOs.has(order.id)
+                      const canGeneratePO = order.poStatus === 'Pending'
+                      const isExpanded = expandedRows.has(order.id)
 
-            {/* Reset Button */}
-            <div className="flex justify-end sm:justify-start">
-              <button 
-                onClick={resetFilters} 
-                className="bg-white text-secondary border border-secondary rounded-xl px-3 sm:px-4 py-2.5 text-xs sm:text-sm hover:bg-gray-50 transition-colors duration-200 min-h-[44px]"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
+                      return (
+                        <div key={order.id}>
+                          <div className="grid grid-cols-[50px_90px_90px_1fr_0.8fr_0.9fr_0.8fr_0.8fr_0.8fr_150px] xl:grid-cols-[60px_100px_100px_1.2fr_0.9fr_1fr_0.9fr_0.9fr_0.9fr_170px] 2xl:grid-cols-[70px_120px_120px_1.3fr_1fr_1.1fr_1fr_1fr_1fr_190px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-2 xl:py-3 2xl:py-4 items-center text-center hover:bg-gray-50 font-bold">
+                            <div className="flex items-center justify-center">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => togglePOSelection(order.id)}
+                                disabled={!canGeneratePO}
+                                className="rounded border-gray-300 w-4 h-4"
+                              />
+                            </div>
+                            <div className="text-[10px] xl:text-xs 2xl:text-sm font-medium text-gray-800 truncate">{order.orderId}</div>
+                            <div className="text-[10px] xl:text-xs 2xl:text-sm font-medium text-gray-800 truncate">
+                              {order.poStatus === 'Generated' && order.poNumber ? order.poNumber : '—'}
+                            </div>
+                            <div className="flex items-center justify-center min-w-0">
+                              <button
+                                onClick={() => toggleRowExpansion(order.id)}
+                                className="flex items-center gap-0.5 xl:gap-1 hover:text-accent transition-colors text-[10px] xl:text-xs 2xl:text-sm text-gray-700 min-w-0 max-w-full"
+                              >
+                                {isExpanded ? <ChevronDown size={12} className="flex-shrink-0" /> : <ChevronRight size={12} className="flex-shrink-0" />}
+                                <span className="truncate">{order.vendor}</span>
+                              </button>
+                            </div>
+                            <div className="text-[10px] xl:text-xs 2xl:text-sm font-semibold text-gray-900">{order.confirmedQty}</div>
+                            <div className="text-[10px] xl:text-xs 2xl:text-sm font-semibold text-gray-900 truncate">₹{order.amount.toLocaleString('en-IN')}</div>
+                            <div className="flex items-center justify-center">
+                              <span 
+                                className="inline-block px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 rounded-md text-[9px] xl:text-[10px] 2xl:text-xs font-semibold whitespace-nowrap"
+                                style={{
+                                  backgroundColor: poStyle.bg,
+                                  color: poStyle.color,
+                                }}
+                              >
+                                {order.poStatus}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-center">
+                              {order.poStatus === 'Generated' && order.accountInvoice ? (
+                                <button
+                                  onClick={() => handleViewInvoice(order.accountInvoice!, 'Account')}
+                                  className="flex items-center gap-0.5 text-accent hover:text-secondary transition-colors text-[9px] xl:text-[10px] 2xl:text-xs whitespace-nowrap"
+                                >
+                                  <Eye size={10} className="flex-shrink-0" />
+                                  <span>View</span>
+                                </button>
+                              ) : (
+                                <span className="text-gray-400 text-[9px] xl:text-[10px] 2xl:text-xs">—</span>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-center">
+                              {order.vendorInvoice ? (
+                                <button
+                                  onClick={() => handleViewInvoice(order.vendorInvoice!, 'Vendor')}
+                                  className="flex items-center gap-0.5 text-accent hover:text-secondary transition-colors text-[9px] xl:text-[10px] 2xl:text-xs whitespace-nowrap"
+                                >
+                                  <Eye size={10} className="flex-shrink-0" />
+                                  <span>View</span>
+                                </button>
+                              ) : (
+                                <span className="text-gray-400 text-[9px] xl:text-[10px] 2xl:text-xs">—</span>
+                              )}
+                            </div>
+                            <div className="flex gap-0.5 xl:gap-1 justify-center items-center">
+                              <input
+                                type="file"
+                                ref={(el) => { fileInputRefs.current[order.id] = el }}
+                                onChange={(e) => handleFileChange(order.id, e)}
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                className="hidden"
+                              />
+                              <button 
+                                onClick={() => handleUploadInvoice(order.id)}
+                                className="rounded-md px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 text-[9px] xl:text-[10px] 2xl:text-xs flex items-center gap-0.5 bg-accent text-button-text hover:opacity-90 whitespace-nowrap flex-shrink-0"
+                                title="Upload Invoice"
+                              >
+                                <Upload size={10} className="flex-shrink-0" />
+                                <span>Upload</span>
+                              </button>
+                              {canGeneratePO ? (
+                                <button 
+                                  onClick={() => handleGeneratePO(order, 'json')}
+                                  disabled={isJsonLoading(order.id)}
+                                  className="rounded-md px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 text-[9px] xl:text-[10px] 2xl:text-xs flex items-center gap-0.5 bg-secondary text-white hover:opacity-90 whitespace-nowrap flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Generate PO (JSON)"
+                                >
+                                  {isJsonLoading(order.id) ? (
+                                    <Loader size="xs" color="white" className="flex-shrink-0" />
+                                  ) : (
+                                    <FileText size={10} className="flex-shrink-0" />
+                                  )}
+                                  <span>JSON</span>
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => handleViewPO(order.id)}
+                                  disabled={isJsonLoading(order.id)}
+                                  className="rounded-md px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 text-[9px] xl:text-[10px] 2xl:text-xs flex items-center gap-0.5 bg-secondary text-white hover:opacity-90 whitespace-nowrap flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="View Purchase Order"
+                                >
+                                  {isJsonLoading(order.id) ? (
+                                    <Loader size="xs" color="white" className="flex-shrink-0" />
+                                  ) : (
+                                    <Eye size={10} className="flex-shrink-0" />
+                                  )}
+                                  <span>JSON</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {isExpanded && (
+                            <div className="px-3 xl:px-4 2xl:px-6 py-2 xl:py-3 bg-gray-50 border-t border-gray-100">
+                              <div className="bg-white rounded-lg p-2 xl:p-3 2xl:p-4 max-w-3xl">
+                                <div className="text-xs xl:text-sm 2xl:text-base font-medium text-secondary mb-1">Items:</div>
+                                <div className="text-xs xl:text-sm 2xl:text-base text-gray-700">{order.items}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+
+              {filteredOrders.length > 0 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredOrders.length}
+                  startIndex={startIndex}
+                  endIndex={Math.min(endIndex, filteredOrders.length)}
+                  onPageChange={setCurrentPage}
+                  itemLabel="invoices"
+                  variant="desktop"
+                />
+              )}
+            </>
+          )}
         </div>
 
-        <div className="hidden lg:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
-          {/* Table head bar */}
-          <div className="bg-[#C3754C] text-white">
-            <div className="grid grid-cols-[50px_90px_90px_1fr_0.8fr_0.9fr_0.8fr_0.8fr_0.8fr_150px] xl:grid-cols-[60px_100px_100px_1.2fr_0.9fr_1fr_0.9fr_0.9fr_0.9fr_170px] 2xl:grid-cols-[70px_120px_120px_1.3fr_1fr_1.1fr_1fr_1fr_1fr_190px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-3 xl:py-4 2xl:py-5 font-['Fraunces'] text-sm xl:text-base 2xl:text-lg leading-[100%] tracking-[0] text-center">
-              <div className="flex items-center justify-center">
-                <input
-                  type="checkbox"
-                  checked={selectedPOCount > 0 && selectedPOCount === poOrders.filter(o => o.poStatus === 'Pending').length}
-                  onChange={toggleSelectAllPOs}
-                  className="rounded border-white w-4 h-4"
-                />
-              </div>
-              <div className="text-xs xl:text-sm 2xl:text-base">Order ID</div>
-              <div className="text-xs xl:text-sm 2xl:text-base">PO ID</div>
-              <div className="text-xs xl:text-sm 2xl:text-base">Vendor</div>
-              <div className="text-xs xl:text-sm 2xl:text-base">Confirmed Qty</div>
-              <div className="text-xs xl:text-sm 2xl:text-base">Amount</div>
-              <div className="text-xs xl:text-sm 2xl:text-base">PO Status</div>
-              <div className="text-xs xl:text-sm 2xl:text-base">Account Invoice</div>
-              <div className="text-xs xl:text-sm 2xl:text-base">Vendor Invoice</div>
-              <div className="text-xs xl:text-sm 2xl:text-base">Actions</div>
+        {/* Mobile Card View */}
+        <div className="lg:hidden bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+          {loading ? (
+            <div className="bg-white rounded-xl p-12 text-center">
+              <div className="w-12 h-12 border-4 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-500">Loading invoices...</p>
             </div>
-          </div>
-
-          {/* Body */}
-          <div className="bg-white">
-            <div className="py-2">
+          ) : (
+            <>
               {paginatedOrders.length === 0 ? (
-                <div className="px-3 xl:px-4 2xl:px-6 py-6 xl:py-8 text-center text-gray-500 text-xs xl:text-sm 2xl:text-base">No orders found matching your filters</div>
+                <div className="p-8 text-center text-gray-500">No orders found matching your filters</div>
               ) : (
-                paginatedOrders.map((order) => {
+                paginatedOrders.map((order, idx) => {
                   const poStyle = PO_STATUS_STYLES[order.poStatus]
                   const isSelected = selectedPOs.has(order.id)
                   const canGeneratePO = order.poStatus === 'Pending'
                   const isExpanded = expandedRows.has(order.id)
 
                   return (
-                    <div key={order.id}>
-                      <div className="grid grid-cols-[50px_90px_90px_1fr_0.8fr_0.9fr_0.8fr_0.8fr_0.8fr_150px] xl:grid-cols-[60px_100px_100px_1.2fr_0.9fr_1fr_0.9fr_0.9fr_0.9fr_170px] 2xl:grid-cols-[70px_120px_120px_1.3fr_1fr_1.1fr_1fr_1fr_1fr_190px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-2 xl:py-3 2xl:py-4 items-center text-center hover:bg-gray-50 font-bold">
-                        <div className="flex items-center justify-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => togglePOSelection(order.id)}
-                            disabled={!canGeneratePO}
-                            className="rounded border-gray-300 w-4 h-4"
-                          />
-                        </div>
-                        <div className="text-[10px] xl:text-xs 2xl:text-sm font-medium text-gray-800 truncate">{order.orderId}</div>
-                        <div className="text-[10px] xl:text-xs 2xl:text-sm font-medium text-gray-800 truncate">
-                          {order.poStatus === 'Generated' && order.poNumber ? order.poNumber : '—'}
-                        </div>
-                        <div className="flex items-center justify-center min-w-0">
+                    <div key={order.id} className={`p-4 border-b border-gray-200 last:border-b-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => togglePOSelection(order.id)}
+                          disabled={!canGeneratePO}
+                          className="rounded mt-1"
+                        />
+                        <div>
+                          <div className="font-medium text-secondary">{order.orderId}</div>
+                          {order.poStatus === 'Generated' && order.poNumber && (
+                            <div className="text-xs text-gray-500 mt-0.5">PO: {order.poNumber}</div>
+                          )}
                           <button
                             onClick={() => toggleRowExpansion(order.id)}
-                            className="flex items-center gap-0.5 xl:gap-1 hover:text-accent transition-colors text-[10px] xl:text-xs 2xl:text-sm text-gray-700 min-w-0 max-w-full"
+                            className="flex items-center gap-1 text-sm text-gray-600 hover:text-accent transition-colors mt-1"
                           >
-                            {isExpanded ? <ChevronDown size={12} className="flex-shrink-0" /> : <ChevronRight size={12} className="flex-shrink-0" />}
-                            <span className="truncate">{order.vendor}</span>
+                            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            <span>{order.vendor}</span>
                           </button>
-                        </div>
-                        <div className="text-[10px] xl:text-xs 2xl:text-sm font-semibold text-gray-900">{order.confirmedQty}</div>
-                        <div className="text-[10px] xl:text-xs 2xl:text-sm font-semibold text-gray-900 truncate">₹{order.amount.toLocaleString('en-IN')}</div>
-                        <div className="flex items-center justify-center">
-                          <span 
-                            className="inline-block px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 rounded-md text-[9px] xl:text-[10px] 2xl:text-xs font-semibold whitespace-nowrap"
-                            style={{
-                              backgroundColor: poStyle.bg,
-                              color: poStyle.color,
-                            }}
-                          >
-                            {order.poStatus}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-center">
-                          {order.poStatus === 'Generated' && order.accountInvoice ? (
-                            <button
-                              onClick={() => handleViewInvoice(order.accountInvoice!, 'Account')}
-                              className="flex items-center gap-0.5 text-accent hover:text-secondary transition-colors text-[9px] xl:text-[10px] 2xl:text-xs whitespace-nowrap"
-                            >
-                              <Eye size={10} className="flex-shrink-0" />
-                              <span>View</span>
-                            </button>
-                          ) : (
-                            <span className="text-gray-400 text-[9px] xl:text-[10px] 2xl:text-xs">—</span>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-center">
-                          {order.vendorInvoice ? (
-                            <button
-                              onClick={() => handleViewInvoice(order.vendorInvoice!, 'Vendor')}
-                              className="flex items-center gap-0.5 text-accent hover:text-secondary transition-colors text-[9px] xl:text-[10px] 2xl:text-xs whitespace-nowrap"
-                            >
-                              <Eye size={10} className="flex-shrink-0" />
-                              <span>View</span>
-                            </button>
-                          ) : (
-                            <span className="text-gray-400 text-[9px] xl:text-[10px] 2xl:text-xs">—</span>
-                          )}
-                        </div>
-                        <div className="flex gap-0.5 xl:gap-1 justify-center items-center">
-                          <input
-                            type="file"
-                            ref={(el) => { fileInputRefs.current[order.id] = el }}
-                            onChange={(e) => handleFileChange(order.id, e)}
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            className="hidden"
-                          />
-                          <button 
-                            onClick={() => handleUploadInvoice(order.id)}
-                            className="rounded-md px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 text-[9px] xl:text-[10px] 2xl:text-xs flex items-center gap-0.5 bg-accent text-button-text hover:opacity-90 whitespace-nowrap flex-shrink-0"
-                            title="Upload Invoice"
-                          >
-                            <Upload size={10} className="flex-shrink-0" />
-                            <span>Upload</span>
-                          </button>
-                          {canGeneratePO ? (
-                            <button 
-                              onClick={() => handleGeneratePO(order, 'json')}
-                              disabled={isJsonLoading(order.id)}
-                              className="rounded-md px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 text-[9px] xl:text-[10px] 2xl:text-xs flex items-center gap-0.5 bg-secondary text-white hover:opacity-90 whitespace-nowrap flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="Generate PO (JSON)"
-                            >
-                              {isJsonLoading(order.id) ? (
-                                <Loader size="xs" color="white" className="flex-shrink-0" />
-                              ) : (
-                                <FileText size={10} className="flex-shrink-0" />
-                              )}
-                              <span>JSON</span>
-                            </button>
-                          ) : (
-                            <button 
-                              onClick={() => handleViewPO(order.id)}
-                              disabled={isJsonLoading(order.id)}
-                              className="rounded-md px-1 xl:px-1.5 2xl:px-2 py-0.5 xl:py-1 text-[9px] xl:text-[10px] 2xl:text-xs flex items-center gap-0.5 bg-secondary text-white hover:opacity-90 whitespace-nowrap flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="View Purchase Order"
-                            >
-                              {isJsonLoading(order.id) ? (
-                                <Loader size="xs" color="white" className="flex-shrink-0" />
-                              ) : (
-                                <Eye size={10} className="flex-shrink-0" />
-                              )}
-                              <span>JSON</span>
-                            </button>
-                          )}
                         </div>
                       </div>
-                      {isExpanded && (
-                        <div className="px-3 xl:px-4 2xl:px-6 py-2 xl:py-3 bg-gray-50 border-t border-gray-100">
-                          <div className="bg-white rounded-lg p-2 xl:p-3 2xl:p-4 max-w-3xl">
-                            <div className="text-xs xl:text-sm 2xl:text-base font-medium text-secondary mb-1">Items:</div>
-                            <div className="text-xs xl:text-sm 2xl:text-base text-gray-700">{order.items}</div>
-                          </div>
-                        </div>
+                      <span 
+                        className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap"
+                        style={{
+                          backgroundColor: poStyle.bg,
+                          color: poStyle.color,
+                          borderColor: poStyle.border,
+                        }}
+                      >
+                        {order.poStatus}
+                      </span>
+                    </div>
+                    
+                    {isExpanded && (
+                      <div className="mb-3 ml-8 bg-gray-100 rounded-lg p-3">
+                        <div className="text-xs font-medium text-secondary mb-1">Items:</div>
+                        <div className="text-sm text-gray-700">{order.items}</div>
+                      </div>
+                    )}
+                    
+                    <div className="space-y-2 mb-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Qty:</span>
+                        <span className="font-medium">{order.confirmedQty}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Amount:</span>
+                        <span className="font-medium">₹{order.amount.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Account Invoice:</span>
+                        {order.poStatus === 'Generated' && order.accountInvoice ? (
+                          <button
+                            onClick={() => handleViewInvoice(order.accountInvoice!, 'Account')}
+                            className="flex items-center gap-1 text-accent hover:text-secondary transition-colors"
+                          >
+                            <Eye size={14} />
+                            <span className="font-medium">View</span>
+                          </button>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Vendor Invoice:</span>
+                        {order.vendorInvoice ? (
+                          <button
+                            onClick={() => handleViewInvoice(order.vendorInvoice!, 'Vendor')}
+                            className="flex items-center gap-1 text-accent hover:text-secondary transition-colors"
+                          >
+                            <Eye size={14} />
+                            <span className="font-medium">View</span>
+                          </button>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="file"
+                        ref={(el) => { fileInputRefs.current[order.id] = el }}
+                        onChange={(e) => handleFileChange(order.id, e)}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                      />
+                      <button 
+                        onClick={() => handleUploadInvoice(order.id)}
+                        className="flex-1 rounded-full px-3 py-2 text-sm flex items-center justify-center gap-1 bg-accent text-button-text hover:opacity-90"
+                      >
+                        <Upload size={14} />
+                        <span>Upload Invoice</span>
+                      </button>
+                      {canGeneratePO ? (
+                        <button 
+                          onClick={() => handleGeneratePO(order, 'json')}
+                          disabled={isJsonLoading(order.id)}
+                          className="flex-1 rounded-full px-3 py-2 text-sm flex items-center justify-center gap-1 bg-secondary text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isJsonLoading(order.id) ? (
+                            <Loader size="sm" color="white" />
+                          ) : (
+                            <FileText size={14} />
+                          )}
+                          <span>JSON</span>
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => handleViewPO(order.id)}
+                          disabled={isJsonLoading(order.id)}
+                          className="flex-1 rounded-full px-3 py-2 text-sm flex items-center justify-center gap-1 bg-secondary text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isJsonLoading(order.id) ? (
+                            <Loader size="sm" color="white" />
+                          ) : (
+                            <Eye size={14} />
+                          )}
+                          <span>JSON</span>
+                        </button>
                       )}
                     </div>
+                  </div>
                   )
                 })
               )}
-            </div>
+
+              {filteredOrders.length > 0 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredOrders.length}
+                  startIndex={startIndex}
+                  endIndex={Math.min(endIndex, filteredOrders.length)}
+                  onPageChange={setCurrentPage}
+                  itemLabel="invoices"
+                  variant="mobile"
+                />
+              )}
+            </>
+          )}
           </div>
-
-          {filteredOrders.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredOrders.length}
-              startIndex={startIndex}
-              endIndex={Math.min(endIndex, filteredOrders.length)}
-              onPageChange={setCurrentPage}
-              itemLabel="invoices"
-              variant="desktop"
-            />
-          )}
         </div>
-
-        {/* Mobile Card View */}
-        <div className="lg:hidden bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-            {paginatedOrders.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                No orders found matching your filters
-              </div>
-            ) : (
-              paginatedOrders.map((order, idx) => {
-                const poStyle = PO_STATUS_STYLES[order.poStatus]
-                const isSelected = selectedPOs.has(order.id)
-                const canGeneratePO = order.poStatus === 'Pending'
-                const isExpanded = expandedRows.has(order.id)
-
-                return (
-                  <div key={order.id} className={`p-4 border-b border-gray-200 last:border-b-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => togglePOSelection(order.id)}
-                        disabled={!canGeneratePO}
-                        className="rounded mt-1"
-                      />
-                      <div>
-                        <div className="font-medium text-secondary">{order.orderId}</div>
-                        {order.poStatus === 'Generated' && order.poNumber && (
-                          <div className="text-xs text-gray-500 mt-0.5">PO: {order.poNumber}</div>
-                        )}
-                        <button
-                          onClick={() => toggleRowExpansion(order.id)}
-                          className="flex items-center gap-1 text-sm text-gray-600 hover:text-accent transition-colors mt-1"
-                        >
-                          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                          <span>{order.vendor}</span>
-                        </button>
-                      </div>
-                    </div>
-                    <span 
-                      className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap"
-                      style={{
-                        backgroundColor: poStyle.bg,
-                        color: poStyle.color,
-                        borderColor: poStyle.border,
-                      }}
-                    >
-                      {order.poStatus}
-                    </span>
-                  </div>
-                  
-                  {isExpanded && (
-                    <div className="mb-3 ml-8 bg-gray-100 rounded-lg p-3">
-                      <div className="text-xs font-medium text-secondary mb-1">Items:</div>
-                      <div className="text-sm text-gray-700">{order.items}</div>
-                    </div>
-                  )}
-                  
-                  <div className="space-y-2 mb-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Qty:</span>
-                      <span className="font-medium">{order.confirmedQty}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Amount:</span>
-                      <span className="font-medium">₹{order.amount.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Account Invoice:</span>
-                      {order.poStatus === 'Generated' && order.accountInvoice ? (
-                        <button
-                          onClick={() => handleViewInvoice(order.accountInvoice!, 'Account')}
-                          className="flex items-center gap-1 text-accent hover:text-secondary transition-colors"
-                        >
-                          <Eye size={14} />
-                          <span className="font-medium">View</span>
-                        </button>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Vendor Invoice:</span>
-                      {order.vendorInvoice ? (
-                        <button
-                          onClick={() => handleViewInvoice(order.vendorInvoice!, 'Vendor')}
-                          className="flex items-center gap-1 text-accent hover:text-secondary transition-colors"
-                        >
-                          <Eye size={14} />
-                          <span className="font-medium">View</span>
-                        </button>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <input
-                      type="file"
-                      ref={(el) => { fileInputRefs.current[order.id] = el }}
-                      onChange={(e) => handleFileChange(order.id, e)}
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      className="hidden"
-                    />
-                    <button 
-                      onClick={() => handleUploadInvoice(order.id)}
-                      className="flex-1 rounded-full px-3 py-2 text-sm flex items-center justify-center gap-1 bg-accent text-button-text hover:opacity-90"
-                    >
-                      <Upload size={14} />
-                      <span>Upload Invoice</span>
-                    </button>
-                    {canGeneratePO ? (
-                      <button 
-                        onClick={() => handleGeneratePO(order, 'json')}
-                        disabled={isJsonLoading(order.id)}
-                        className="flex-1 rounded-full px-3 py-2 text-sm flex items-center justify-center gap-1 bg-secondary text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isJsonLoading(order.id) ? (
-                          <Loader size="sm" color="white" />
-                        ) : (
-                          <FileText size={14} />
-                        )}
-                        <span>JSON</span>
-                      </button>
-                    ) : (
-                      <button 
-                        onClick={() => handleViewPO(order.id)}
-                        disabled={isJsonLoading(order.id)}
-                        className="flex-1 rounded-full px-3 py-2 text-sm flex items-center justify-center gap-1 bg-secondary text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isJsonLoading(order.id) ? (
-                          <Loader size="sm" color="white" />
-                        ) : (
-                          <Eye size={14} />
-                        )}
-                        <span>JSON</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-                )
-              })
-            )}
-
-          {filteredOrders.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredOrders.length}
-              startIndex={startIndex}
-              endIndex={Math.min(endIndex, filteredOrders.length)}
-              onPageChange={setCurrentPage}
-              itemLabel="invoices"
-              variant="mobile"
-            />
-          )}
-        </div>
-      </div>
-      )}
 
       {/* Invoice Viewer Modal */}
       {viewingInvoice && (

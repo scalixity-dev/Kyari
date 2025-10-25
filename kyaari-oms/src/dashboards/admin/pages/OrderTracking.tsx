@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
@@ -393,15 +393,17 @@ const BoardView: React.FC<BoardViewProps> = ({ orders, onOrderMove, onOrderClick
 };
 
 const OrderTracking: React.FC = () => {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<FilterState>({
+  const [orders, setOrders] = React.useState<Order[]>(initialOrders);
+  const [viewMode, setViewMode] = React.useState<ViewMode>('list');
+  const [showFilters, setShowFilters] = React.useState(false);
+  const [filters, setFilters] = React.useState<FilterState>({
     vendor: '',
     status: '',
     qtyMin: '',
     qtyMax: ''
   });
+  // Loading state for list/table (shows Orders-like loading card)
+  const [isLoadingOrders, setIsLoadingOrders] = React.useState(false);
   const navigate = useNavigate();
 
   const handleOrderClick = (orderId: string) => {
@@ -578,17 +580,24 @@ const OrderTracking: React.FC = () => {
 
         {/* Main Content */}
         <div className={`${viewMode === 'board' ? 'bg-[var(--color-sharktank-bg)]' : ''} rounded-lg`}>
-          {viewMode === 'list' ? (
-            <ListView 
-              orders={filteredOrders} 
-              onOrderClick={handleOrderClick}
-              showFilters={showFilters}
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              onResetFilters={handleResetFilters}
-            />
+          {isLoadingOrders ? (
+            <div className="bg-white rounded-xl p-12 text-center">
+              <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-500">Loading orders...</p>
+            </div>
           ) : (
-            <BoardView orders={filteredOrders} onOrderMove={handleOrderMove} onOrderClick={handleOrderClick} />
+            viewMode === 'list' ? (
+              <ListView 
+                orders={filteredOrders} 
+                onOrderClick={handleOrderClick}
+                showFilters={showFilters}
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onResetFilters={handleResetFilters}
+              />
+            ) : (
+              <BoardView orders={filteredOrders} onOrderMove={handleOrderMove} onOrderClick={handleOrderClick} />
+            )
           )}
         </div>
 

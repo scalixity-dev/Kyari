@@ -46,6 +46,8 @@ export default function VendorTracking() {
     slaMin: '',
     slaMax: ''
   })
+  // Loading state for vendor table (shows Orders-style loading UI)
+  const [isLoadingVendors, setIsLoadingVendors] = useState(false)
   
   // Filter logic
   const filteredVendors = useMemo(() => {
@@ -256,96 +258,105 @@ export default function VendorTracking() {
           </div>
         )}
         
-        {/* Desktop Table View */}
-        <div className="hidden md:block bg-header-bg rounded-xl overflow-hidden">
-          <table className="w-full border-separate border-spacing-0">
-            <thead>
-              <tr style={{ background: 'var(--color-accent)' }}>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Vendor</th>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Fill rate</th>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>SLA</th>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Avg invoice (days)</th>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Avg ticket (days)</th>
-              </tr>
-            </thead>
-            <tbody>
+        {isLoadingVendors ? (
+          <div className="bg-white rounded-xl p-12 text-center">
+            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading vendors...</p>
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block bg-header-bg rounded-xl overflow-hidden">
+              <table className="w-full border-separate border-spacing-0">
+                <thead>
+                  <tr style={{ background: 'var(--color-accent)' }}>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Vendor</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Fill rate</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>SLA</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Avg invoice (days)</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Avg ticket (days)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageVendors.map((vendor) => (
+                    <tr 
+                      key={vendor.id}
+                      className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors cursor-pointer"
+                      onClick={() => handleVendorClick(vendor.id)}
+                    >
+                      <td className="p-3 font-semibold text-secondary">{vendor.name}</td>
+                      <td className={`p-3 text-sm font-semibold ${getPerformanceColor(vendor.fillRate, { good: 90, fair: 85 })}`}>
+                        {vendor.fillRate}%
+                      </td>
+                      <td className={`p-3 text-sm font-semibold ${getPerformanceColor(vendor.sla, { good: 88, fair: 83 })}`}>
+                        {vendor.sla}%
+                      </td>
+                      <td className="p-3 text-sm text-gray-700">{vendor.avgInvoice}</td>
+                      <td className="p-3 text-sm text-gray-700">{vendor.avgTicket}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {/* Desktop Pagination */}
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={filteredVendors.length}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                onPageChange={setPage}
+                variant="desktop"
+                itemLabel="vendors"
+              />
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
               {pageVendors.map((vendor) => (
-                <tr 
+                <div 
                   key={vendor.id}
-                  className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors cursor-pointer"
+                  className="rounded-xl p-4 border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => handleVendorClick(vendor.id)}
                 >
-                  <td className="p-3 font-semibold text-secondary">{vendor.name}</td>
-                  <td className={`p-3 text-sm font-semibold ${getPerformanceColor(vendor.fillRate, { good: 90, fair: 85 })}`}>
-                    {vendor.fillRate}%
-                  </td>
-                  <td className={`p-3 text-sm font-semibold ${getPerformanceColor(vendor.sla, { good: 88, fair: 83 })}`}>
-                    {vendor.sla}%
-                  </td>
-                  <td className="p-3 text-sm text-gray-700">{vendor.avgInvoice}</td>
-                  <td className="p-3 text-sm text-gray-700">{vendor.avgTicket}</td>
-                </tr>
+                  <div className="font-semibold text-secondary text-lg mb-3">{vendor.name}</div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <div className="text-gray-500 block mb-1">Fill Rate</div>
+                      <div className={`font-semibold ${getPerformanceColor(vendor.fillRate, { good: 90, fair: 85 })}`}>
+                        {vendor.fillRate}%
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 block mb-1">SLA</div>
+                      <div className={`font-semibold ${getPerformanceColor(vendor.sla, { good: 88, fair: 83 })}`}>
+                        {vendor.sla}%
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 block mb-1">Avg Invoice</div>
+                      <div className="font-medium">{vendor.avgInvoice} days</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 block mb-1">Avg Ticket</div>
+                      <div className="font-medium">{vendor.avgTicket} days</div>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-          {/* Desktop Pagination */}
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            totalItems={filteredVendors.length}
-            startIndex={startIndex}
-            endIndex={endIndex}
-            onPageChange={setPage}
-            variant="desktop"
-            itemLabel="vendors"
-          />
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="md:hidden space-y-3">
-          {pageVendors.map((vendor) => (
-            <div 
-              key={vendor.id}
-              className="rounded-xl p-4 border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 transition-colors"
-              onClick={() => handleVendorClick(vendor.id)}
-            >
-              <div className="font-semibold text-secondary text-lg mb-3">{vendor.name}</div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <div className="text-gray-500 block mb-1">Fill Rate</div>
-                  <div className={`font-semibold ${getPerformanceColor(vendor.fillRate, { good: 90, fair: 85 })}`}>
-                    {vendor.fillRate}%
-                  </div>
-                </div>
-                <div>
-                  <div className="text-gray-500 block mb-1">SLA</div>
-                  <div className={`font-semibold ${getPerformanceColor(vendor.sla, { good: 88, fair: 83 })}`}>
-                    {vendor.sla}%
-                  </div>
-                </div>
-                <div>
-                  <div className="text-gray-500 block mb-1">Avg Invoice</div>
-                  <div className="font-medium">{vendor.avgInvoice} days</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 block mb-1">Avg Ticket</div>
-                  <div className="font-medium">{vendor.avgTicket} days</div>
-                </div>
-              </div>
+              {/* Mobile Pagination */}
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={filteredVendors.length}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                onPageChange={setPage}
+                variant="mobile"
+                itemLabel="vendors"
+              />
             </div>
-          ))}
-          {/* Mobile Pagination */}
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            totalItems={filteredVendors.length}
-            startIndex={startIndex}
-            endIndex={endIndex}
-            onPageChange={setPage}
-            variant="mobile"
-            itemLabel="vendors"
-          />
-        </div>
+          </>
+        )}
       </div>
     </div>
   )

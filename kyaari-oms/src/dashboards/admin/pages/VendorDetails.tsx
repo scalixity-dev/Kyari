@@ -150,6 +150,8 @@ export default function VendorDetails() {
   
   // Filter state
   const [showFilters, setShowFilters] = useState(false)
+  // Loading state for Recent Orders table (shows Orders-style loading UI)
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false)
   const [filters, setFilters] = useState<FilterState>({
     orderNumber: '',
     status: '',
@@ -544,101 +546,110 @@ export default function VendorDetails() {
           </div>
         )}
         
-        {/* Desktop Table */}
-        <div className="hidden lg:block bg-white rounded-xl overflow-hidden shadow-md border border-gray-100">
-          <table className="w-full border-separate border-spacing-0">
-            <thead>
-              <tr className="" style={{ background: 'var(--color-accent)' }}>
-                <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
-                  Order Number
-                </th>
-                <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
-                  Date
-                </th>
-                <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
-                  Status
-                </th>
-                <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
-                  Items
-                </th>
-                <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
-                  Amount
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+        {isLoadingOrders ? (
+          <div className="bg-white rounded-xl p-12 text-center">
+            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading orders...</p>
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table */}
+            <div className="hidden lg:block bg-white rounded-xl overflow-hidden shadow-md border border-gray-100">
+              <table className="w-full border-separate border-spacing-0">
+                <thead>
+                  <tr className="" style={{ background: 'var(--color-accent)' }}>
+                    <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+                      Order Number
+                    </th>
+                    <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+                      Date
+                    </th>
+                    <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+                      Status
+                    </th>
+                    <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+                      Items
+                    </th>
+                    <th className="text-left p-3 font-heading font-normal text-xs uppercase tracking-wider" style={{ color: 'var(--color-button-text)' }}>
+                      Amount
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedOrders.map((order) => (
+                    <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
+                      <td className="p-3 font-semibold text-[var(--color-secondary)]">{order.orderNumber}</td>
+                      <td className="p-3 text-sm text-gray-600">{order.date}</td>
+                      <td className="p-3">
+                        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="p-3 text-sm text-gray-600">{order.items}</td>
+                      <td className="p-3 text-sm font-medium text-gray-900">{formatINR(order.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              {/* Desktop Pagination */}
+              {filteredOrders.length > 0 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredOrders.length}
+                  startIndex={startIndex}
+                  endIndex={endIndex}
+                  onPageChange={setCurrentPage}
+                  itemLabel="orders"
+                  variant="desktop"
+                />
+              )}
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="lg:hidden space-y-3">
               {paginatedOrders.map((order) => (
-                <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
-                  <td className="p-3 font-semibold text-[var(--color-secondary)]">{order.orderNumber}</td>
-                  <td className="p-3 text-sm text-gray-600">{order.date}</td>
-                  <td className="p-3">
+                <div key={order.id} className="rounded-xl p-4 border border-gray-200 bg-white">
+                  <div className="flex items-start justify-between mb-3">
+                    <h4 className="font-semibold text-[var(--color-secondary)] text-lg">{order.orderNumber}</h4>
                     <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
                       {order.status}
                     </span>
-                  </td>
-                  <td className="p-3 text-sm text-gray-600">{order.items}</td>
-                  <td className="p-3 text-sm font-medium text-gray-900">{formatINR(order.amount)}</td>
-                </tr>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-2 text-sm">
+                    <div>
+                      <span className="text-gray-500 block">Date</span>
+                      <span className="font-medium">{order.date}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block">Items</span>
+                      <span className="font-medium">{order.items}</span>
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-gray-100">
+                    <span className="text-gray-500 text-sm block mb-1">Amount</span>
+                    <span className="text-base font-bold text-[var(--color-heading)]">{formatINR(order.amount)}</span>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-          
-          {/* Desktop Pagination */}
-          {filteredOrders.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredOrders.length}
-              startIndex={startIndex}
-              endIndex={endIndex}
-              onPageChange={setCurrentPage}
-              itemLabel="orders"
-              variant="desktop"
-            />
-          )}
-        </div>
-
-        {/* Mobile Cards */}
-        <div className="lg:hidden space-y-3">
-          {paginatedOrders.map((order) => (
-            <div key={order.id} className="rounded-xl p-4 border border-gray-200 bg-white">
-              <div className="flex items-start justify-between mb-3">
-                <h4 className="font-semibold text-[var(--color-secondary)] text-lg">{order.orderNumber}</h4>
-                <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
-                  {order.status}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 mb-2 text-sm">
-                <div>
-                  <span className="text-gray-500 block">Date</span>
-                  <span className="font-medium">{order.date}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 block">Items</span>
-                  <span className="font-medium">{order.items}</span>
-                </div>
-              </div>
-              <div className="pt-2 border-t border-gray-100">
-                <span className="text-gray-500 text-sm block mb-1">Amount</span>
-                <span className="text-base font-bold text-[var(--color-heading)]">{formatINR(order.amount)}</span>
-              </div>
+              
+              {/* Mobile Pagination */}
+              {filteredOrders.length > 0 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredOrders.length}
+                  startIndex={startIndex}
+                  endIndex={endIndex}
+                  onPageChange={setCurrentPage}
+                  itemLabel="orders"
+                  variant="mobile"
+                />
+              )}
             </div>
-          ))}
-          
-          {/* Mobile Pagination */}
-          {filteredOrders.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredOrders.length}
-              startIndex={startIndex}
-              endIndex={endIndex}
-              onPageChange={setCurrentPage}
-              itemLabel="orders"
-              variant="mobile"
-            />
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
   )

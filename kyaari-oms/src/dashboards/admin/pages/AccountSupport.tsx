@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { Plus, Send, Paperclip, FileText, AlertTriangle, CheckSquare, Clock, Calendar as CalendarIcon } from 'lucide-react'
-import { CustomDropdown, KPICard, Pagination } from '../../../components'
+import { CustomDropdown, KPICard, Pagination, CSVPDFExportButton } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
 
@@ -133,6 +133,7 @@ const INITIAL_TICKETS: Ticket[] = [
 
 export default function AccountSupport() {
   const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS)
+  const [isLoadingTickets, setIsLoadingTickets] = useState(false)
 
   // filters
   const [filterIssue, setFilterIssue] = useState<IssueType | ''>('')
@@ -223,6 +224,37 @@ export default function AccountSupport() {
   useEffect(() => {
     setCurrentPage(1)
   }, [filterIssue, filterStatus, filterPriority, dateFrom, dateTo, search])
+
+  function handleExportCSV() {
+    const headers = ['Ticket ID', 'Invoice ID', 'Vendor', 'Issue Type', 'Priority', 'Status', 'Amount', 'Assigned To', 'Created', 'Updated']
+    const csvContent = [headers.join(','), ...filteredTickets.map(t => [t.id, t.invoiceId, `"${t.vendor}"`, t.issue, t.priority, t.status, typeof t.amount === 'number' ? t.amount : '', t.assignedTo, t.createdAt, t.updatedAt].join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `account-support-tickets-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  function handleExportPDF() {
+    let content = 'Account Support Tickets Report\n'
+    content += `Generated: ${new Date().toLocaleString()}\n`
+    content += '='.repeat(80) + '\n\n'
+    content += `Total Tickets: ${filteredTickets.length}\n\n`
+    content += filteredTickets.map(t => `Ticket: ${t.id}\nInvoice: ${t.invoiceId}\nVendor: ${t.vendor}\nIssue: ${t.issue}\nPriority: ${t.priority}\nStatus: ${t.status}\nAmount: ${typeof t.amount === 'number' ? `₹${t.amount.toLocaleString('en-IN')}` : '-'}\nAssigned To: ${t.assignedTo}\nCreated: ${t.createdAt}\nUpdated: ${t.updatedAt}\n${'-'.repeat(80)}\n`).join('\n')
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `account-support-tickets-${new Date().toISOString().split('T')[0]}.txt`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   function resetFilters() {
     setFilterIssue('')
@@ -514,12 +546,24 @@ export default function AccountSupport() {
             >
               Reset Filters
             </button>
+            <CSVPDFExportButton
+              onExportCSV={handleExportCSV}
+              onExportPDF={handleExportPDF}
+              buttonClassName="px-4 py-2 sm:py-2 rounded-xl !rounded-xl w-full sm:w-auto min-h-[44px] !min-h-[44px] sm:!min-h-[44px]"
+            />
           </div>
         </div>
       </div>
 
       {/* Table - Desktop view */}
       <div className="hidden lg:block bg-white rounded-xl overflow-hidden shadow-md border border-gray-100">
+        {isLoadingTickets ? (
+          <div className="p-12 text-center">
+            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading tickets...</p>
+          </div>
+        ) : (
+          <>
         <div className="overflow-x-auto">
           <table className="w-full border-separate border-spacing-0">
             <thead>
@@ -649,11 +693,18 @@ export default function AccountSupport() {
             variant="desktop"
           />
         )}
+        </>
+        )}
       </div>
 
       {/* Card View - Mobile */}
       <div className="lg:hidden space-y-3">
-        {paginatedTickets.length > 0 ? (
+        {isLoadingTickets ? (
+          <div className="bg-white rounded-xl p-12 text-center">
+            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading tickets...</p>
+          </div>
+        ) : paginatedTickets.length > 0 ? (
           paginatedTickets.map(t => (
             <div key={t.id} className="rounded-xl p-4 border border-gray-200 bg-white">
               <div className="flex items-start justify-between mb-3">

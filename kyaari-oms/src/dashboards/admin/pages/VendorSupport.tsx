@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { Plus, Send, Paperclip, FileText, AlertTriangle, CheckSquare, Clock, Calendar as CalendarIcon } from 'lucide-react'
-import { CustomDropdown, KPICard, Pagination } from '../../../components'
+import { CustomDropdown, KPICard, Pagination, CSVPDFExportButton } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
 
@@ -137,6 +137,9 @@ export default function VendorSupport() {
   // pagination
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
+
+  // Loading state for tickets table (shows Orders-style loading UI)
+  const [isLoadingTickets, setIsLoadingTickets] = useState(false)
 
   // modal + drawer
   const [showNewTicket, setShowNewTicket] = useState(false)
@@ -324,6 +327,60 @@ export default function VendorSupport() {
     }
   }, [drawerTicket?.messages])
 
+  const handleExportCSV = () => {
+    const headers = ['Ticket ID', 'Vendor', 'Issue Type', 'Priority', 'Status', 'Assigned To', 'Created', 'Updated']
+    const csvContent = [
+      headers.join(','),
+      ...filteredTickets.map(ticket => [
+        ticket.id,
+        `"${ticket.vendor}"`,
+        ticket.issue,
+        ticket.priority,
+        ticket.status,
+        ticket.assignedTo,
+        ticket.createdAt,
+        ticket.updatedAt
+      ].join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vendor-support-tickets-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const handleExportPDF = () => {
+    const content = [
+      'VENDOR SUPPORT TICKETS REPORT',
+      `Generated: ${new Date().toLocaleString()}`,
+      `Total Tickets: ${filteredTickets.length}`,
+      '',
+      '=== TICKETS ===',
+      ...filteredTickets.map(ticket => [
+        `Ticket: ${ticket.id}`,
+        `Vendor: ${ticket.vendor}`,
+        `Issue: ${ticket.issue}`,
+        `Priority: ${ticket.priority}`,
+        `Status: ${ticket.status}`,
+        `Assigned To: ${ticket.assignedTo}`,
+        `Created: ${ticket.createdAt}`,
+        `Updated: ${ticket.updatedAt}`,
+        '---'
+      ].join('\n'))
+    ].join('\n')
+    
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vendor-support-tickets-${new Date().toISOString().split('T')[0]}.txt`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-9  bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
@@ -489,12 +546,24 @@ export default function VendorSupport() {
             >
               Reset Filters
             </button>
+            <CSVPDFExportButton
+              onExportCSV={handleExportCSV}
+              onExportPDF={handleExportPDF}
+              buttonClassName="px-4 py-2 sm:py-2 rounded-xl !rounded-xl w-full sm:w-auto min-h-[44px] !min-h-[44px] sm:!min-h-[44px]"
+            />
           </div>
         </div>
       </div>
 
       {/* Table - Desktop view */}
       <div className="hidden lg:block bg-white rounded-xl overflow-hidden shadow-md border border-gray-100">
+        {isLoadingTickets ? (
+          <div className="p-12 text-center">
+            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading tickets...</p>
+          </div>
+        ) : (
+          <>
         <div className="overflow-x-auto">
           <table className="w-full border-separate border-spacing-0">
             <thead>
@@ -614,11 +683,18 @@ export default function VendorSupport() {
             variant="desktop"
           />
         )}
+        </>
+        )}
       </div>
 
       {/* Card View - Mobile */}
       <div className="lg:hidden space-y-3">
-        {paginatedTickets.length > 0 ? (
+        {isLoadingTickets ? (
+          <div className="bg-white rounded-xl p-12 text-center">
+            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading tickets...</p>
+          </div>
+        ) : paginatedTickets.length > 0 ? (
           paginatedTickets.map(t => (
             <div key={t.id} className="rounded-xl p-4 border border-gray-200 bg-white">
               <div className="flex items-start justify-between mb-3">
