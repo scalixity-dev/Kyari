@@ -288,6 +288,15 @@ export default function Support() {
   }, [])
 
   const handleExportCSV = () => {
+    const escapeCSVField = (field: string) => {
+      // Escape quotes by doubling them and wrap in quotes if contains special chars
+      const stringField = String(field ?? '')
+      if (stringField.includes('"') || stringField.includes(',') || stringField.includes('\n')) {
+        return `"${stringField.replace(/"/g, '""')}"`
+      }
+      return `"${stringField}"`
+    }
+
     const csvContent = [
       ['Ticket ID', 'Issue Title', 'Issue Type', 'Priority', 'Status', 'Assigned To', 'Created Date', 'Updated Date'],
       ...filteredTickets.map(ticket => [
@@ -300,7 +309,7 @@ export default function Support() {
         ticket.createdAt,
         ticket.updatedAt
       ])
-    ].map(row => row.map(field => `"${field}"`).join(',')).join('\n')
+    ].map(row => row.map(escapeCSVField).join(',')).join('\n')
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
@@ -311,6 +320,7 @@ export default function Support() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   const handleExportPDF = () => {
