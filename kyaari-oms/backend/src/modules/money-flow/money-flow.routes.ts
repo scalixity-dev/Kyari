@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../../middlewares/auth.middleware';
 import { MoneyFlowController } from './money-flow.controller';
 import { cacheService } from '../../services/cache.service';
@@ -6,17 +6,20 @@ import { cacheService } from '../../services/cache.service';
 const router = Router();
 
 // Cache middleware for GET routes
-const cacheResponse = (keyBuilder: (req: any) => string, ttlSeconds = 60) => {
-  return async (req: any, res: any, next: any) => {
+const cacheResponse = <T>(keyBuilder: (req: Request) => string, ttlSeconds = 60) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const key = keyBuilder(req);
-      const cached = await cacheService.get<any>(key);
+      const cached = await cacheService.get<T>(key);
       if (cached) {
         return res.json(cached);
       }
       const originalJson = res.json.bind(res);
-      res.json = (body: any) => {
-        cacheService.set(key, body, ttlSeconds).catch(() => {});
+      res.json = (body: T) => {
+        // Only cache successful responses (2xx status codes)
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          cacheService.set(key, body, ttlSeconds).catch(() => {});
+        }
         return originalJson(body);
       };
       next();
@@ -27,8 +30,8 @@ const cacheResponse = (keyBuilder: (req: any) => string, ttlSeconds = 60) => {
 };
 
 // Cache invalidation middleware for POST routes
-const invalidatePatterns = (patternsBuilder: (req: any) => string[]) => {
-  return async (req: any, _res: any, next: any) => {
+const invalidatePatterns = (patternsBuilder: (req: Request) => string[]) => {
+  return async (req: Request, _res: Response, next: NextFunction) => {
     try {
       const patterns = patternsBuilder(req);
       await Promise.all(patterns.map((p) => cacheService.invalidate(p)));

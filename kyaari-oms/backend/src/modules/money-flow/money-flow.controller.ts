@@ -34,11 +34,7 @@ export class MoneyFlowController {
 
       const kpis = await MoneyFlowService.getKPIs();
 
-      ResponseHelper.success(res, {
-        success: true,
-        data: { kpis },
-        message: 'Money flow KPIs fetched successfully'
-      });
+      ResponseHelper.success(res, { kpis }, 'Money flow KPIs fetched successfully');
     } catch (error) {
       logger.error('Failed to fetch money flow KPIs', { 
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -74,11 +70,7 @@ export class MoneyFlowController {
 
       const result = await MoneyFlowService.getTransactions(filters);
 
-      ResponseHelper.success(res, {
-        success: true,
-        data: result,
-        message: `Found ${result.pagination.total} transactions`
-      });
+      ResponseHelper.success(res, result, `Found ${result.pagination.total} transactions`);
     } catch (error) {
       logger.error('Failed to fetch money flow transactions', { 
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -114,11 +106,7 @@ export class MoneyFlowController {
 
       const trendData = await MoneyFlowService.getTrendData(trendRange);
 
-      ResponseHelper.success(res, {
-        success: true,
-        data: { trendData },
-        message: 'Money flow trend data fetched successfully'
-      });
+      ResponseHelper.success(res, { trendData }, 'Money flow trend data fetched successfully');
     } catch (error) {
       logger.error('Failed to fetch money flow trend data', { 
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -143,11 +131,7 @@ export class MoneyFlowController {
 
       const pieChartData = await MoneyFlowService.getPieChartData();
 
-      ResponseHelper.success(res, {
-        success: true,
-        data: { pieChartData },
-        message: 'Money flow pie chart data fetched successfully'
-      });
+      ResponseHelper.success(res, { pieChartData }, 'Money flow pie chart data fetched successfully');
     } catch (error) {
       logger.error('Failed to fetch money flow pie chart data', { 
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -191,11 +175,7 @@ export class MoneyFlowController {
 
       const completeData = await MoneyFlowService.getCompleteMoneyFlowData(filters, trendRange);
 
-      ResponseHelper.success(res, {
-        success: true,
-        data: completeData,
-        message: 'Complete money flow data fetched successfully'
-      });
+      ResponseHelper.success(res, completeData, 'Complete money flow data fetched successfully');
     } catch (error) {
       logger.error('Failed to fetch complete money flow data', { 
         error: error instanceof Error ? error.message : 'Unknown error',

@@ -71,7 +71,7 @@ class UserApiService {
         console.error('Response status:', error.response?.status);
         console.error('Response data:', error.response?.data);
         console.error('Request URL:', error.config?.url);
-        console.error('Request headers:', error.config?.headers);
+      
       }
       throw error;
     }
