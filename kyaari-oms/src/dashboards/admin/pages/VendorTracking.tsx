@@ -55,6 +55,8 @@ export default function VendorTracking() {
 
     fetchDashboardData()
   }, [])
+  // Loading state for vendor table (shows Orders-style loading UI)
+  const [isLoadingVendors, setIsLoadingVendors] = useState(false)
   
   // Filter logic
   const filteredVendors = useMemo(() => {

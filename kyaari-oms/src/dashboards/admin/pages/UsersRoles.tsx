@@ -477,7 +477,7 @@ export default function UsersRoles() {
   }
 
   return (
-    <div className="p-4 sm:p-6 font-sans text-primary min-h-[calc(100vh-4rem)] w-full" style={{ background: 'var(--color-sharktank-bg)' }}>
+    <div className="p-4 sm:p-10 font-sans text-primary min-h-[calc(100vh-4rem)] w-full" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Users & Roles</h1>
@@ -512,6 +512,12 @@ export default function UsersRoles() {
       </div>
 
       {/* Tab Content */}
+      {loading ? (
+        <div className="bg-white rounded-xl p-12 text-center">
+          <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading users...</p>
+        </div>
+      ) : (
       <div>
         {activeTab === 'admin' && (
           <div>
@@ -1383,6 +1389,7 @@ export default function UsersRoles() {
           )}
         </Modal>
       </div>
+      )}
     </div>
   )
 }

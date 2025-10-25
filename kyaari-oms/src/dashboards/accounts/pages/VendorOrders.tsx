@@ -294,10 +294,11 @@ export default function VendorOrders() {
         </div>
       </div>
 
-      {/* Loading State */}
+      {/* Loading State - Orders style card */}
       {loading && (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-accent)]"></div>
+        <div className="bg-white rounded-xl p-12 text-center">
+          <div className="w-12 h-12 border-4 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading vendor orders...</p>
         </div>
       )}
 

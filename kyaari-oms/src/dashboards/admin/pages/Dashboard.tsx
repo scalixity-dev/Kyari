@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 // import { useNavigate } from 'react-router-dom';
 import { Package, BarChart3, Wallet, FileText } from 'lucide-react'
 import { CSVPDFExportButton } from '../../../components'
@@ -228,7 +228,7 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="mb-6 lg:mb-8 ">
-        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Today's Overview</h2>
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-6 sm:mb-10 font-[var(--font-heading)]">Today's Overview</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
           {kpiData.map((kpi, index) => (
             <KPICard

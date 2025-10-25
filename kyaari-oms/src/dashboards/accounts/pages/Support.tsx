@@ -230,6 +230,9 @@ export default function AccountsSupport() {
   // pagination
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+  
+  // Loading state for table
+  const [loading, setLoading] = useState(false)
 
   // analytics
   const openTickets = tickets.filter(t => t.status === 'Open').length
@@ -583,7 +586,21 @@ export default function AccountsSupport() {
               </tr>
             </thead>
             <tbody>
-              {paginatedTickets.map((t) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="p-0">
+                    <div className="bg-white rounded-xl p-12 text-center">
+                      <div className="w-12 h-12 border-4 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                      <p className="text-gray-500">Loading tickets...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedTickets.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="p-6 text-center text-gray-500 text-sm">No tickets match current filters.</td>
+                </tr>
+              ) : (
+                paginatedTickets.map((t) => (
                 <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
                   <td className="p-3 font-semibold text-secondary text-sm whitespace-nowrap">{t.id}</td>
                   <td className="p-3 text-sm min-w-[200px] max-w-[300px]" title={t.issueTitle}>
@@ -619,11 +636,7 @@ export default function AccountsSupport() {
                     </div>
                   </td>
                 </tr>
-              ))}
-              {paginatedTickets.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="p-6 text-center text-gray-500 text-sm">No tickets match current filters.</td>
-                </tr>
+              ))
               )}
             </tbody>
           </table>
@@ -648,7 +661,12 @@ export default function AccountsSupport() {
 
       {/* Mobile Card View */}
       <div className="md:hidden space-y-3">
-        {paginatedTickets.length === 0 ? (
+        {loading ? (
+          <div className="bg-white rounded-xl p-12 text-center">
+            <div className="w-12 h-12 border-4 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading tickets...</p>
+          </div>
+        ) : paginatedTickets.length === 0 ? (
           <div className="rounded-xl p-4 border border-gray-200 bg-white text-center text-gray-500 text-sm">No tickets match current filters.</div>
         ) : (
           paginatedTickets.map((t) => (

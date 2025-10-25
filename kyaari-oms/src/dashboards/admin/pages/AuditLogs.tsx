@@ -142,6 +142,7 @@ export default function AuditLogs() {
   const [itemsPerPage] = useState(10)
   const [sortBy] = useState<'timestamp'>('timestamp')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false)
   
   const fromCalendarRef = useRef<HTMLDivElement>(null)
   const toCalendarRef = useRef<HTMLDivElement>(null)
@@ -324,15 +325,8 @@ export default function AuditLogs() {
               className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto mb-2"
             />
             
-            {/* Filter action buttons (slimmer on sm+) */}
+            {/* Filter action buttons (slimmer on sm+) - Apply removed per request; keep Reset */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(1)}
-                className="w-full sm:w-[140px] px-4 py-3 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
-                style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
-              >
-                Apply
-              </button>
               <button
                 onClick={handleResetFilters}
                 className="w-full sm:w-[140px] px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
@@ -454,7 +448,13 @@ export default function AuditLogs() {
       </div>
 
       {/* Table Container */}
-      <div className="overflow-x-auto rounded-lg shadow-sm">
+      <div className="overflow-x-auto rounded-lg shadow-sm bg-white">
+        {isLoadingLogs ? (
+          <div className="p-12 text-center">
+            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading audit logs...</p>
+          </div>
+        ) : (
         <table className="min-w-full">
           <thead className="bg-[var(--color-accent)]">
             <tr>
@@ -530,6 +530,7 @@ export default function AuditLogs() {
             )}
           </tbody>
         </table>
+        )}
       </div>
 
       {/* Pagination */}

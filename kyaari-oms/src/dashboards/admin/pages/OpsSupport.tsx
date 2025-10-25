@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { Plus, Send, Paperclip, FileText, AlertTriangle, Clock, Calendar as CalendarIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { CustomDropdown, KPICard, Pagination } from '../../../components'
+import { CustomDropdown, KPICard, Pagination, CSVPDFExportButton } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
 
@@ -141,6 +141,7 @@ const INITIAL_TICKETS: Ticket[] = [
 
 export default function OpsSupport() {
   const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS)
+  const [isLoadingTickets, setIsLoadingTickets] = useState(false)
 
   const [filterIssue, setFilterIssue] = useState<IssueType | ''>('')
   const [filterStatus, setFilterStatus] = useState<TicketStatus | ''>('')
@@ -224,6 +225,37 @@ export default function OpsSupport() {
   useEffect(() => {
     setCurrentPage(1)
   }, [filterIssue, filterStatus, filterPriority, dateFrom, dateTo, search])
+
+  function handleExportCSV() {
+    const headers = ['Ticket ID', 'Store Name', 'Order ID', 'Issue Type', 'Priority', 'Status', 'Assigned To', 'SLA Hours', 'Created', 'Updated']
+    const csvContent = [headers.join(','), ...filteredTickets.map(t => [t.id, `"${t.store}"`, t.orderId, t.issue, t.priority, t.status, t.assignedTo, t.slaHours, t.createdAt, t.updatedAt].join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `ops-support-tickets-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  function handleExportPDF() {
+    let content = 'OPS Support Tickets Report\n'
+    content += `Generated: ${new Date().toLocaleString()}\n`
+    content += '='.repeat(80) + '\n\n'
+    content += `Total Tickets: ${filteredTickets.length}\n\n`
+    content += filteredTickets.map(t => `Ticket: ${t.id}\nStore: ${t.store}\nOrder: ${t.orderId}\nIssue: ${t.issue}\nPriority: ${t.priority}\nStatus: ${t.status}\nAssigned To: ${t.assignedTo}\nSLA: ${t.slaHours} hrs\nCreated: ${t.createdAt}\nUpdated: ${t.updatedAt}\n${'-'.repeat(80)}\n`).join('\n')
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `ops-support-tickets-${new Date().toISOString().split('T')[0]}.txt`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   function resetFilters() {
     setFilterIssue('')
@@ -534,12 +566,24 @@ export default function OpsSupport() {
             >
               Reset Filters
             </button>
+            <CSVPDFExportButton
+              onExportCSV={handleExportCSV}
+              onExportPDF={handleExportPDF}
+              buttonClassName="px-4 py-2 sm:py-2 rounded-xl !rounded-xl w-full sm:w-auto min-h-[44px] !min-h-[44px] sm:!min-h-[44px]"
+            />
           </div>
         </div>
       </div>
 
       {/* Table - Desktop view (hidden on mobile) */}
       <div className="hidden lg:block bg-header-bg rounded-xl overflow-hidden">
+        {isLoadingTickets ? (
+          <div className="p-12 text-center">
+            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading tickets...</p>
+          </div>
+        ) : (
+          <>
         <div className="overflow-x-auto">
           <table className="w-full border-separate border-spacing-0">
             <thead>
@@ -654,11 +698,18 @@ export default function OpsSupport() {
             variant="desktop"
           />
         )}
+        </>
+        )}
       </div>
 
       {/* Card View - Mobile (visible on mobile and tablet) */}
       <div className="lg:hidden space-y-3 sm:space-y-4">
-        {paginatedTickets.length > 0 ? (
+        {isLoadingTickets ? (
+          <div className="bg-white rounded-xl p-12 text-center">
+            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading tickets...</p>
+          </div>
+        ) : paginatedTickets.length > 0 ? (
           paginatedTickets.map(t => (
             <div key={t.id} className="bg-white rounded-xl p-4 border border-gray-200">
               <div className="flex items-start justify-between gap-2 mb-3">
