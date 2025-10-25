@@ -108,7 +108,7 @@ router.put(
   validateOrderIdParam,
   validateOrderStatusUpdate,
   invalidatePatterns((req) => [
-    `order-tracking:*:${req.user?.userId}`,
+    `order-tracking:${req.user?.userId}:*`,
     `order-tracking-summary:${req.user?.userId}`,
     `order-tracking-detail:${req.params.id}:*`
   ]),

@@ -111,12 +111,11 @@ export const MoneyFlowApi = {
    */
   async getTransactions(filters: MoneyFlowFilters): Promise<MoneyFlowTransactionsResponse> {
     const query: Record<string, any> = {}
-    if (filters.status) query.status = filters.status
+    if (filters.status && filters.status !== 'All') query.status = filters.status
     if (filters.searchQuery) query.searchQuery = filters.searchQuery
     if (filters.sortOrder) query.sortOrder = filters.sortOrder
     if (filters.page) query.page = filters.page
     if (filters.limit) query.limit = filters.limit
-
     const res = await api.get<MoneyFlowTransactionsResponse>('/api/money-flow/transactions', {
       params: query
     })
