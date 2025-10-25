@@ -17,6 +17,8 @@ import {
 } from 'recharts'
 import { KPICard } from '../../../components'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../../../components/ui/chart"
+import { MoneyFlowApi, type MoneyFlowKPIDto, type MoneyFlowTransactionDto, type MoneyFlowTrendDataDto, type MoneyFlowPieChartDto } from '../../../services/moneyFlowApi'
+import toast from 'react-hot-toast'
 
 type TrendRange = 'Weekly' | 'Monthly' | 'Yearly'
 
@@ -256,61 +258,74 @@ function PieChart({ pending, cleared }: { pending: number; cleared: number }) {
 }
 
 export default function MoneyFlow() {
-  // mock data
-  const kpis = [
-    { 
-      title: 'Total Payments Pending', 
-      value: '₹2,34,500', 
-      subtitle: '23 invoices',
-      icon: <Wallet size={32} />
-    },
-    { 
-      title: 'Payments Released This Month', 
-      value: '₹5,60,000', 
-      subtitle: '42 payouts',
-      icon: <FileText size={32} />
-    },
-    { 
-      title: 'Vendor with Highest Outstanding', 
-      value: 'GreenLeaf Farms', 
-      subtitle: '₹75,000',
-      icon: <Users size={32} />
-    }
-  ]
-
-  const transactions = [
-    { id: 'INV-1009', vendor: 'BloomWorks', amount: '₹3,200', status: 'Released', date: '2025-09-14' },
-    { id: 'INV-1008', vendor: 'GreenLeaf Farms', amount: '₹11,500', status: 'Pending', date: '2025-09-13' },
-    { id: 'INV-1007', vendor: 'HappyPlant Co', amount: '₹6,400', status: 'Released', date: '2025-09-13' },
-    { id: 'INV-1006', vendor: 'SharkTank Ltd', amount: '₹19,000', status: 'Approved', date: '2025-09-13' },
-    { id: 'INV-1005', vendor: 'HappyPlant Co', amount: '₹23,800', status: 'Released', date: '2025-09-12' },
-    { id: 'INV-1004', vendor: 'GreenLeaf Farms', amount: '₹75,000', status: 'Pending', date: '2025-09-11' },
-    { id: 'INV-1003', vendor: 'SharkTank Ltd', amount: '₹45,000', status: 'Approved', date: '2025-09-08' },
-    { id: 'INV-1002', vendor: 'HappyPlant Co', amount: '₹8,200', status: 'Released', date: '2025-09-05' },
-    { id: 'INV-1001', vendor: 'GreenLeaf Farms', amount: '₹12,500', status: 'Pending', date: '2025-09-02' }
-  ]
-
-  // Trend datasets (mock)
+  // State for real data
+  const [kpis, setKpis] = React.useState<MoneyFlowKPIDto[]>([])
+  const [transactions, setTransactions] = React.useState<MoneyFlowTransactionDto[]>([])
+  const [trendData, setTrendData] = React.useState<MoneyFlowTrendDataDto>({ labels: [], pending: [], cleared: [] })
+  const [pieChartData, setPieChartData] = React.useState<MoneyFlowPieChartDto>({ pending: 0, cleared: 0, total: 0, pendingPercent: 0, clearedPercent: 0 })
+  const [loading, setLoading] = React.useState(true)
   const [trendRange, setTrendRange] = React.useState<TrendRange>('Monthly')
-  const weeklyData: LineChartData = {
-    labels: ['W1', 'W2', 'W3', 'W4'],
-    pending: [80000, 60000, 50000, 70000],
-    cleared: [320000, 280000, 350000, 300000]
-  }
-  const monthlyData: LineChartData = {
-    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-    pending: [50000, 40000, 45000, 52000, 47000, 43000, 48000, 46000, 49000, 51000, 53000, 55000],
-    cleared: [120000, 95000, 130000, 110000, 150000, 125000, 140000, 135000, 160000, 155000, 170000, 180000]
-  }
-  const yearlyData: LineChartData = {
-    labels: ['2022','2023','2024','2025'],
-    pending: [520000, 480000, 510000, 495000],
-    cleared: [1350000, 1480000, 1620000, 1750000]
-  }
-  const trendData = trendRange === 'Weekly' ? weeklyData : trendRange === 'Yearly' ? yearlyData : monthlyData
 
-  const pending = transactions.filter((t) => t.status.toLowerCase() === 'pending').length
-  const cleared = transactions.filter((t) => t.status.toLowerCase() === 'released' || t.status.toLowerCase() === 'approved').length
+  // Load data on component mount
+  React.useEffect(() => {
+    loadData()
+  }, [trendRange])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [kpisRes, transactionsRes, trendRes, pieChartRes] = await Promise.all([
+        MoneyFlowApi.getKPIs(),
+        MoneyFlowApi.getTransactions({ status: 'All', page: 1, limit: 10 }),
+        MoneyFlowApi.getTrendData({ range: trendRange }),
+        MoneyFlowApi.getPieChartData()
+      ])
+
+      // Safely set KPIs
+      if (kpisRes && kpisRes.data && kpisRes.data.kpis) {
+        setKpis(kpisRes.data.kpis)
+      } else {
+        setKpis([])
+      }
+
+      // Safely set transactions
+      if (transactionsRes && transactionsRes.data && transactionsRes.data.transactions) {
+        setTransactions(transactionsRes.data.transactions)
+        setTotalPages(transactionsRes.data.pagination?.totalPages || 1)
+        setTotalItems(transactionsRes.data.pagination?.total || 0)
+      } else {
+        setTransactions([])
+        setTotalPages(1)
+        setTotalItems(0)
+      }
+
+      // Safely set trend data
+      if (trendRes && trendRes.data && trendRes.data.trendData) {
+        setTrendData(trendRes.data.trendData)
+      } else {
+        setTrendData({ labels: [], pending: [], cleared: [] })
+      }
+
+      // Safely set pie chart data
+      if (pieChartRes && pieChartRes.data && pieChartRes.data.pieChartData) {
+        setPieChartData(pieChartRes.data.pieChartData)
+      } else {
+        setPieChartData({ pending: 0, cleared: 0, total: 0, pendingPercent: 0, clearedPercent: 0 })
+      }
+    } catch (error) {
+      console.error('Failed to load money flow data:', error)
+      toast.error('Failed to load money flow data')
+      // Set default values on error
+      setKpis([])
+      setTransactions([])
+      setTrendData({ labels: [], pending: [], cleared: [] })
+      setPieChartData({ pending: 0, cleared: 0, total: 0, pendingPercent: 0, clearedPercent: 0 })
+      setTotalPages(1)
+      setTotalItems(0)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Filters and search state
   const [statusFilter, setStatusFilter] = React.useState<'All' | 'Pending' | 'Released' | 'Approved'>('All')
@@ -321,74 +336,93 @@ export default function MoneyFlow() {
   const [statusOpen, setStatusOpen] = React.useState(false)
   const [sortOpen, setSortOpen] = React.useState(false)
   const [page, setPage] = React.useState(1)
+  const [totalPages, setTotalPages] = React.useState(1)
+  const [totalItems, setTotalItems] = React.useState(0)
   const pageSize = 10
 
-  const filteredTransactions = transactions
-    .filter((t) => {
-      if (statusFilter !== 'All' && t.status !== statusFilter) return false
-      if (!searchQuery.trim()) return true
-      const q = searchQuery.toLowerCase()
-      return t.id.toLowerCase().includes(q) || t.vendor.toLowerCase().includes(q)
-    })
-    .sort((a, b) => {
-      const diff = new Date(b.date).getTime() - new Date(a.date).getTime()
-      return sortOrder === 'Latest' ? diff : -diff
-    })
+  // Load filtered transactions
+  const loadFilteredTransactions = async () => {
+    try {
+      const res = await MoneyFlowApi.getTransactions({
+        status: statusFilter,
+        searchQuery: searchQuery.trim() || undefined,
+        sortOrder,
+        page,
+        limit: pageSize
+      })
+      
+      // Check if response has the expected structure
+      if (res && res.data && res.data.transactions && res.data.pagination) {
+        setTransactions(res.data.transactions)
+        setTotalPages(res.data.pagination.totalPages || 1)
+        setTotalItems(res.data.pagination.total || 0)
+      } else {
+        console.error('Unexpected API response structure:', res)
+        toast.error('Invalid response from server')
+        setTransactions([])
+        setTotalPages(1)
+        setTotalItems(0)
+      }
+    } catch (error) {
+      console.error('Failed to load transactions:', error)
+      toast.error('Failed to load transactions')
+      setTransactions([])
+      setTotalPages(1)
+      setTotalItems(0)
+    }
+  }
+
+  // Load filtered transactions when filters change
+  React.useEffect(() => {
+    loadFilteredTransactions()
+  }, [statusFilter, sortOrder, searchQuery, page])
 
   // Reset to first page when filters change
   React.useEffect(() => {
     setPage(1)
   }, [statusFilter, sortOrder, searchQuery])
 
-  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize))
-  const startIndex = (page - 1) * pageSize
-  const endIndex = Math.min(startIndex + pageSize, filteredTransactions.length)
-  const pageTransactions = filteredTransactions.slice(startIndex, endIndex)
-
   // Export functions
-  const handleExportCSV = () => {
-    const headers = ['Invoice ID', 'Vendor', 'Amount', 'Status', 'Date']
-    const csvContent = [
-      headers.join(','),
-      ...filteredTransactions.map(t => [
-        t.id,
-        `"${t.vendor}"`,
-        t.amount,
-        t.status,
-        t.date
-      ].join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `money-flow-transactions-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    window.URL.revokeObjectURL(url)
+  const handleExportCSV = async () => {
+    try {
+      const blob = await MoneyFlowApi.exportCSV({
+        status: statusFilter,
+        searchQuery: searchQuery.trim() || undefined,
+        sortOrder
+      })
+      
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `money-flow-transactions-${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('CSV exported successfully')
+    } catch (error) {
+      console.error('Failed to export CSV:', error)
+      toast.error('Failed to export CSV')
+    }
   }
 
-  const handleExportPDF = () => {
-    const content = [
-      'MONEY FLOW TRANSACTIONS REPORT',
-      `Generated: ${new Date().toLocaleString()}`,
-      `Total Transactions: ${filteredTransactions.length}`,
-      `Filter: ${statusFilter}`,
-      `Sort: ${sortOrder}`,
-      '',
-      '=== TRANSACTIONS ===',
-      ...filteredTransactions.map(t => 
-        `${t.id} | ${t.vendor} | ${t.amount} | ${t.status} | ${t.date}`
-      )
-    ].join('\n')
-    
-    const blob = new Blob([content], { type: 'text/plain' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `money-flow-transactions-${new Date().toISOString().split('T')[0]}.txt`
-    a.click()
-    window.URL.revokeObjectURL(url)
+  const handleExportPDF = async () => {
+    try {
+      const blob = await MoneyFlowApi.exportPDF({
+        status: statusFilter,
+        searchQuery: searchQuery.trim() || undefined,
+        sortOrder
+      })
+      
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `money-flow-transactions-${new Date().toISOString().split('T')[0]}.txt`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('PDF exported successfully')
+    } catch (error) {
+      console.error('Failed to export PDF:', error)
+      toast.error('Failed to export PDF')
+    }
   }
 
   return (
@@ -401,15 +435,33 @@ export default function MoneyFlow() {
 
       <div className="mb-4 sm:mb-6 lg:mb-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 py-8 sm:py-10 gap-6 sm:gap-8 xl:gap-6">
-          {kpis.map((k, i) => (
-            <KPICard 
-              key={i} 
-              title={k.title} 
-              value={k.value} 
-              subtitle={k.subtitle}
-              icon={k.icon}
-            />
-          ))}
+          {loading ? (
+            // Loading skeleton for KPIs
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white p-6 rounded-lg shadow-md border border-white/10 animate-pulse">
+                <div className="h-8 bg-gray-200 rounded mb-4"></div>
+                <div className="h-12 bg-gray-200 rounded mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+              </div>
+            ))
+          ) : (
+            kpis.map((k, i) => {
+              const iconMap = {
+                'Wallet': <Wallet size={32} />,
+                'FileText': <FileText size={32} />,
+                'Users': <Users size={32} />
+              }
+              return (
+                <KPICard 
+                  key={i} 
+                  title={k.title} 
+                  value={k.value} 
+                  subtitle={k.subtitle}
+                  icon={iconMap[k.icon as keyof typeof iconMap] || <Wallet size={32} />}
+                />
+              )
+            })
+          )}
         </div>
       </div>
 
@@ -420,7 +472,7 @@ export default function MoneyFlow() {
 
           {/* Pending vs Cleared - Full Width */}
           <div className="mb-4 sm:mb-6">
-            <PieChart pending={pending} cleared={cleared} />
+            <PieChart pending={pieChartData.pending} cleared={pieChartData.cleared} />
           </div>
 
           {isLoadingTransactions ? (
@@ -506,12 +558,23 @@ export default function MoneyFlow() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pageTransactions.length === 0 ? (
+                  {loading ? (
+                    // Loading skeleton for table
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="border-b border-gray-100 bg-white">
+                        <td className="p-3"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
+                        <td className="p-3"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
+                        <td className="p-3"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
+                        <td className="p-3"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
+                        <td className="p-3"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
+                      </tr>
+                    ))
+                  ) : !transactions || transactions.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-6 py-8 text-center text-gray-500">No transactions found</td>
                     </tr>
                   ) : (
-                    pageTransactions.map((t) => (
+                    (transactions || []).map((t) => (
                       <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
                         <td className="p-3 font-semibold text-secondary text-sm">{t.id}</td>
                         <td className="p-3 text-sm text-gray-700">{t.vendor}</td>
@@ -537,9 +600,9 @@ export default function MoneyFlow() {
               <Pagination
                 currentPage={page}
                 totalPages={totalPages}
-                totalItems={filteredTransactions.length}
-                startIndex={startIndex}
-                endIndex={endIndex}
+                totalItems={totalItems}
+                startIndex={(page - 1) * pageSize + 1}
+                endIndex={Math.min(page * pageSize, totalItems)}
                 onPageChange={setPage}
                 variant="desktop"
                 itemLabel="transactions"
@@ -548,13 +611,13 @@ export default function MoneyFlow() {
 
             {/* Mobile cards */}
             <div className="md:hidden space-y-3">
-              {pageTransactions.length === 0 ? (
+              {!transactions || transactions.length === 0 ? (
                 <div className="rounded-xl p-4 border border-gray-200 bg-white text-center text-gray-500">
                   No transactions found
                 </div>
               ) : (
                 <>
-                  {pageTransactions.map((t) => (
+                  {(transactions || []).map((t) => (
                     <div key={t.id} className="rounded-xl p-4 border border-gray-200 bg-white">
                       <div className="flex justify-between items-start mb-3">
                         <div className="font-semibold text-secondary text-lg">{t.id}</div>
@@ -587,9 +650,9 @@ export default function MoneyFlow() {
               <Pagination
                 currentPage={page}
                 totalPages={totalPages}
-                totalItems={filteredTransactions.length}
-                startIndex={startIndex}
-                endIndex={endIndex}
+                totalItems={totalItems}
+                startIndex={(page - 1) * pageSize + 1}
+                endIndex={Math.min(page * pageSize, totalItems)}
                 onPageChange={setPage}
                 variant="mobile"
                 itemLabel="transactions"

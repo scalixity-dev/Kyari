@@ -21,6 +21,9 @@ import grnRoutes from './routes/grn.routes';
 import paymentRoutes from './modules/payments/payment.routes';
 import ticketRoutes from './modules/tickets/ticket.routes';
 import globalSearchRoutes from './modules/global-search/global-search.routes';
+import orderTrackingRoutes from './modules/order-tracking/order-tracking.routes';
+import vendorTrackingRoutes from './modules/vendor-tracking/vendor-tracking.routes';
+import moneyFlowRoutes from './modules/money-flow/money-flow.routes';
 import { errorHandler, notFoundHandler, rateLimiter } from './middlewares/error.middleware';
 import { logger } from './utils/logger';
 
@@ -113,7 +116,9 @@ app.use('/api/grn', grnRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/global-search', globalSearchRoutes);
-
+app.use('/api/order-tracking', orderTrackingRoutes);
+app.use('/api/vendor-tracking', vendorTrackingRoutes);
+app.use('/api/money-flow', moneyFlowRoutes);
 // 404 handler
 app.use(notFoundHandler);
 
