@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Plus, Send, Paperclip, Clock, AlertTriangle, CheckSquare, Calendar as CalendarIcon } from 'lucide-react'
-import { CustomDropdown, KPICard } from '../../../components'
+import { CustomDropdown, KPICard, CSVPDFExportButton } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { Pagination } from '../../../components/ui/Pagination'
 import { format } from 'date-fns'
@@ -306,6 +306,38 @@ export default function VendorSupport() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const handleExportCSV = () => {
+    const csvContent = [
+      ['Ticket ID', 'Issue Title', 'Issue Type', 'Priority', 'Status', 'Assigned To', 'Created Date', 'Updated Date'],
+      ...filteredTickets.map(ticket => [
+        ticket.id,
+        ticket.issueTitle,
+        ticket.issueType,
+        ticket.priority,
+        ticket.status,
+        ticket.assignedTo,
+        ticket.createdAt,
+        ticket.updatedAt
+      ])
+    ].map(row => row.map(field => `"${field}"`).join(',')).join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `vendor_support_tickets_export_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handleExportPDF = () => {
+    // For now, we'll export as CSV since PDF generation would require additional libraries
+    // In a real implementation, you might use libraries like jsPDF or html2canvas
+    handleExportCSV()
+  }
+
   return (
     <div className="py-4 px-4 sm:px-6 md:px-8 lg:px-9 sm:py-6 lg:py-8 min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden" style={{ background: 'var(--color-sharktank-bg)' }}>
       {/* Header */}
@@ -479,8 +511,13 @@ export default function VendorSupport() {
       </div>
 
       {/* Vendor Support Tickets heading */}
-      <div className="mb-3 sm:mb-4">
+      <div className="mb-3 sm:mb-4 flex items-center justify-between">
         <h2 className="text-base sm:text-lg md:text-xl font-semibold text-secondary">All Support Tickets</h2>
+        <CSVPDFExportButton
+          onExportCSV={handleExportCSV}
+          onExportPDF={handleExportPDF}
+          label="Export"
+        />
       </div>
 
       {/* Desktop/Tablet Table - Horizontal Scroll */}

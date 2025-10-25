@@ -538,19 +538,12 @@ export default function ReceivedOrders() {
         <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
           <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
             <button
-              onClick={() => {/* Apply filters */}}
-              className="flex-1 sm:w-[140px] px-4 py-2.5 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
-              style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
-            >
-              Apply
-            </button>
-            <button
               onClick={() => {
                 setFilters({order: '', vendor: '', fromDate: '', toDate: '', status: 'all'})
                 setFromDateCalendar(undefined)
                 setToDateCalendar(undefined)
               }}
-              className="flex-1 sm:w-[140px] px-4 py-2.5 sm:py-2 bg-white text-secondary border border-secondary rounded-2xl font-medium hover:bg-secondary hover:text-white transition-colors duration-200 text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
+              className="w-full sm:w-[140px] px-4 py-2.5 sm:py-2 bg-white text-secondary border border-secondary rounded-2xl font-medium hover:bg-secondary hover:text-white transition-colors duration-200 text-sm min-h-[44px] sm:min-h-auto cursor-pointer"
             >
               Reset
             </button>

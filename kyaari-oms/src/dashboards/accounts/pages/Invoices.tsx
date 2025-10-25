@@ -321,12 +321,19 @@ function AccountsInvoices() {
 
   const selectedPOCount = selectedPOs.size
 
+  // Reset filters function
+  function resetFilters() {
+    setSearchQuery('')
+    setStatusFilter('All')
+    setCurrentPage(1)
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:pl-9 xl:p-9 2xl:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6 lg:mb-8">
-        <h2 className="text-2xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-2">Invoice Management</h2>
-        <p className="text-sm text-[var(--color-heading)]">Manage Purchase Orders and Vendor Invoices</p>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Invoice Management</h1>
+        <p className="text-sm sm:text-base text-gray-600">Manage Purchase Orders and Vendor Invoices</p>
       </div>
 
       {/* Loading State */}
@@ -364,7 +371,7 @@ function AccountsInvoices() {
 
         {/* Filters */}
         <div className="mb-4 xl:mb-5 2xl:mb-6 bg-white rounded-xl shadow-md p-3 sm:p-4 xl:p-5 2xl:p-6 border border-gray-200">
-          <div className="flex flex-col sm:flex-row gap-3 xl:gap-4 2xl:gap-5 xl:items-center">
+          <div className="flex flex-col sm:flex-row gap-3 xl:gap-4 2xl:gap-5 items-stretch sm:items-end">
             {/* Search Bar */}
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none z-10" size={18} />
@@ -384,7 +391,18 @@ function AccountsInvoices() {
                 options={statusOptions}
                 onChange={(value) => setStatusFilter(value as 'All' | POStatus)}
                 placeholder="Select Status"
+                className="[&>button]:py-2 [&>button]:xl:py-2.5 [&>button]:2xl:py-3"
               />
+            </div>
+
+            {/* Reset Button */}
+            <div className="flex justify-end sm:justify-start">
+              <button 
+                onClick={resetFilters} 
+                className="bg-white text-secondary border border-secondary rounded-xl px-3 sm:px-4 py-2.5 text-xs sm:text-sm hover:bg-gray-50 transition-colors duration-200 min-h-[44px]"
+              >
+                Reset
+              </button>
             </div>
           </div>
         </div>
@@ -392,7 +410,7 @@ function AccountsInvoices() {
         <div className="hidden lg:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
           {/* Table head bar */}
           <div className="bg-[#C3754C] text-white">
-            <div className="grid grid-cols-[50px_90px_90px_1fr_0.8fr_0.9fr_0.8fr_0.8fr_0.8fr_150px] xl:grid-cols-[60px_100px_100px_1.2fr_0.9fr_1fr_0.9fr_0.9fr_0.9fr_170px] 2xl:grid-cols-[70px_120px_120px_1.3fr_1fr_1.1fr_1fr_1fr_1fr_190px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-3 xl:py-4 2xl:py-5 font-['Quicksand'] font-bold text-sm xl:text-base 2xl:text-lg leading-[100%] tracking-[0] text-center">
+            <div className="grid grid-cols-[50px_90px_90px_1fr_0.8fr_0.9fr_0.8fr_0.8fr_0.8fr_150px] xl:grid-cols-[60px_100px_100px_1.2fr_0.9fr_1fr_0.9fr_0.9fr_0.9fr_170px] 2xl:grid-cols-[70px_120px_120px_1.3fr_1fr_1.1fr_1fr_1fr_1fr_190px] gap-2 xl:gap-3 2xl:gap-4 px-3 xl:px-4 2xl:px-6 py-3 xl:py-4 2xl:py-5 font-['Fraunces'] text-sm xl:text-base 2xl:text-lg leading-[100%] tracking-[0] text-center">
               <div className="flex items-center justify-center">
                 <input
                   type="checkbox"

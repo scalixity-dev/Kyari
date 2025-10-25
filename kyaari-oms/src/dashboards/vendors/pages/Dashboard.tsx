@@ -380,8 +380,11 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="mb-6 lg:mb-8">
-        <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Today's Overview</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mt-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-heading)] mb-2">Today's Overview</h2>
+        <p className="text-sm sm:text-base text-[var(--color-primary)]">
+          Monitor your daily performance and key metrics
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mt-8 sm:mt-12">
           {kpiData.map((kpi, index) => (
             <KPICard
               key={index}
