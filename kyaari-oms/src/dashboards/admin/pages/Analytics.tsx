@@ -412,12 +412,12 @@ export default function Analytics() {
       })
     }
     
+    setShowReport(true)
     setIsLoadingReport(true)
     // Simulate a brief loading delay for better UX
     setTimeout(() => {
       setReportData(data)
-      setReportPage(1) // Reset to first page when generating new report
-      setShowReport(true)
+      setReportPage(1)
       setIsLoadingReport(false)
     }, 500)
   }
