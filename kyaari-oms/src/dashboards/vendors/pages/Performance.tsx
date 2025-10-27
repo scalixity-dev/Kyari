@@ -16,104 +16,26 @@ import {
   ChartLegendContent,
   type ChartConfig 
 } from '../../../components/ui/chart'
+import { performanceApi, type KPICardsData, type PerformanceInsightsData, type PerformanceGoalsData, type PerformanceTrendsData, type RejectionReasonsData, type WeeklyOrderFulfillmentData, type SLABreachAnalysisData } from '../../../services/performanceApi'
+import toast from 'react-hot-toast'
 
-interface PerformanceData {
-  fillRate: number
-  rejectionRate: number
-  slaBreaches: number
-  pendingPayments: number
-  releasedPayments: number
-  totalOrders: number
-  completedOrders: number
-  rejectedOrders: number
+// State interfaces
+interface PerformanceState {
+  kpiData: KPICardsData | null;
+  insightsData: PerformanceInsightsData | null;
+  goalsData: PerformanceGoalsData | null;
+  trendsData: PerformanceTrendsData | null;
+  rejectionReasonsData: RejectionReasonsData | null;
+  weeklyFulfillmentData: WeeklyOrderFulfillmentData | null;
+  slaBreachAnalysisData: SLABreachAnalysisData | null;
+  loading: boolean;
+  error: string | null;
 }
 
-const performanceData: PerformanceData = {
-  fillRate: 92.5,
-  rejectionRate: 4.2,
-  slaBreaches: 3,
-  pendingPayments: 45600,
-  releasedPayments: 128400,
-  totalOrders: 156,
-  completedOrders: 144,
-  rejectedOrders: 12
-}
+// Chart data will be populated from API
 
-// Sample data for charts - Monthly data
-const fillRateTrendMonthly = [
-  { period: 'May', fillRate: 88.2, rejectionRate: 6.1 },
-  { period: 'Jun', fillRate: 90.1, rejectionRate: 5.8 },
-  { period: 'Jul', fillRate: 91.5, rejectionRate: 4.9 },
-  { period: 'Aug', fillRate: 89.8, rejectionRate: 5.2 },
-  { period: 'Sep', fillRate: 92.5, rejectionRate: 4.2 }
-]
 
-// Weekly data for single month view
-const fillRateTrendWeekly = [
-  { period: 'Week 1', fillRate: 89.5, rejectionRate: 5.2 },
-  { period: 'Week 2', fillRate: 91.8, rejectionRate: 4.1 },
-  { period: 'Week 3', fillRate: 93.2, rejectionRate: 3.8 },
-  { period: 'Week 4', fillRate: 92.1, rejectionRate: 4.6 }
-]
 
-// Daily data for single week view
-const fillRateTrendDaily = [
-  { period: 'Mon', fillRate: 90.0, rejectionRate: 5.0 },
-  { period: 'Tue', fillRate: 94.5, rejectionRate: 3.2 },
-  { period: 'Wed', fillRate: 88.7, rejectionRate: 6.1 },
-  { period: 'Thu', fillRate: 92.3, rejectionRate: 4.5 },
-  { period: 'Fri', fillRate: 95.1, rejectionRate: 2.8 },
-  { period: 'Sat', fillRate: 91.4, rejectionRate: 4.2 },
-  { period: 'Sun', fillRate: 89.8, rejectionRate: 5.5 }
-]
-
-const slaBreachData = [
-  { type: 'Order Confirmation', count: 12, target: 2 },
-  { type: 'Dispatch Marking', count: 8, target: 1 },
-  { type: 'Invoice Upload', count: 5, target: 1 }
-]
-
-const rejectionReasons = [
-  { name: 'Quality Issues', value: 35, color: '#ef4444' },
-  { name: 'Stock Unavailable', value: 28, color: '#f97316' },
-  { name: 'Price Mismatch', value: 20, color: 'var(--color-accent)' },
-  { name: 'Late Delivery', value: 17, color: '#6b7280' }
-]
-
-// Monthly payment data
-const paymentTrendMonthly = [
-  { period: 'May', pending: 52000, released: 98000 },
-  { period: 'Jun', pending: 48000, released: 112000 },
-  { period: 'Jul', pending: 39000, released: 125000 },
-  { period: 'Aug', pending: 42000, released: 118000 },
-  { period: 'Sep', pending: 45600, released: 128400 }
-]
-
-// Weekly payment data for single month view
-const paymentTrendWeekly = [
-  { period: 'Week 1', pending: 52000, released: 31000 },
-  { period: 'Week 2', pending: 48000, released: 35200 },
-  { period: 'Week 3', pending: 41000, released: 32800 },
-  { period: 'Week 4', pending: 45600, released: 29400 }
-]
-
-// Daily payment data for single week view
-const paymentTrendDaily = [
-  { period: 'Mon', pending: 48000, released: 18500 },
-  { period: 'Tue', pending: 46200, released: 22100 },
-  { period: 'Wed', pending: 44800, released: 19800 },
-  { period: 'Thu', pending: 47100, released: 21200 },
-  { period: 'Fri', pending: 45600, released: 24600 },
-  { period: 'Sat', pending: 43200, released: 16800 },
-  { period: 'Sun', pending: 41500, released: 15200 }
-]
-
-const orderFulfillmentData = [
-  { week: 'Week 1', delivered: 35, rejected: 2, pending: 8 },
-  { week: 'Week 2', delivered: 42, rejected: 1, pending: 5 },
-  { week: 'Week 3', delivered: 38, rejected: 3, pending: 6 },
-  { week: 'Week 4', delivered: 29, rejected: 6, pending: 4 }
-]
 
 // Chart configurations for shadcn charts
 const fillRateChartConfig = {
@@ -184,6 +106,102 @@ const orderFulfillmentChartConfig = {
 } satisfies ChartConfig
 
 export default function Performance() {
+  // State management
+  const [performanceState, setPerformanceState] = useState<PerformanceState>({
+    kpiData: null,
+    insightsData: null,
+    goalsData: null,
+    trendsData: null,
+    rejectionReasonsData: null,
+    weeklyFulfillmentData: null,
+    slaBreachAnalysisData: null,
+    loading: true,
+    error: null
+  });
+
+  const [timeRange, setTimeRange] = useState<'1W' | '1M' | '3M' | '6M' | '1Y'>('3M')
+  const [dateRange, setDateRange] = useState({
+    from: '2025-05-01',
+    to: '2025-09-29'
+  })
+  const [useCustomDateRange, setUseCustomDateRange] = useState(false)
+  const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
+  const [dateFromDate, setDateFromDate] = useState<Date | undefined>()
+  const [dateToDate, setDateToDate] = useState<Date | undefined>()
+  const [showFromCalendar, setShowFromCalendar] = useState(false)
+  const [showToCalendar, setShowToCalendar] = useState(false)
+  const fromCalendarRef = useRef<HTMLDivElement>(null)
+  const toCalendarRef = useRef<HTMLDivElement>(null)
+  const [activePieIndex, setActivePieIndex] = useState(0)
+
+  // Fetch performance data
+  const fetchPerformanceData = async () => {
+    try {
+      setPerformanceState(prev => ({ ...prev, loading: true, error: null }));
+      
+      const queryParams = {
+        timeRange,
+        startDate: useCustomDateRange ? dateRange.from : undefined,
+        endDate: useCustomDateRange ? dateRange.to : undefined,
+      };
+
+      console.log('🔍 Performance API Debug - Query Params:', queryParams);
+
+      const [kpiData, insightsData, goalsData, trendsData, rejectionReasonsData, weeklyFulfillmentData, slaBreachAnalysisData] = await Promise.all([
+        performanceApi.getKPICards(queryParams),
+        performanceApi.getPerformanceInsights(queryParams),
+        performanceApi.getPerformanceGoals(queryParams),
+        performanceApi.getPerformanceTrends(queryParams),
+        performanceApi.getRejectionReasons(queryParams),
+        performanceApi.getWeeklyOrderFulfillment(),
+        performanceApi.getSLABreachAnalysis(queryParams)
+      ]);
+
+      console.log('📊 Performance API Debug - KPI Data:', kpiData);
+      console.log('💡 Performance API Debug - Insights Data:', insightsData);
+      console.log('🎯 Performance API Debug - Goals Data:', goalsData);
+      console.log('📈 Performance API Debug - Trends Data:', trendsData);
+      console.log('🚫 Performance API Debug - Rejection Reasons Data:', rejectionReasonsData);
+      console.log('📦 Performance API Debug - Weekly Fulfillment Data:', weeklyFulfillmentData);
+      console.log('⏰ Performance API Debug - SLA Breach Analysis Data:', slaBreachAnalysisData);
+
+      setPerformanceState({
+        kpiData,
+        insightsData,
+        goalsData,
+        trendsData,
+        rejectionReasonsData,
+        weeklyFulfillmentData,
+        slaBreachAnalysisData,
+        loading: false,
+        error: null
+      });
+
+      console.log('✅ Performance API Debug - All data loaded successfully');
+    } catch (error) {
+      console.error('❌ Performance API Debug - Error fetching performance data:', error);
+      console.error('❌ Performance API Debug - Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        response: (error as any)?.response?.data,
+        status: (error as any)?.response?.status
+      });
+      
+      setPerformanceState(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Failed to load performance data'
+      }));
+      toast.error('Failed to load performance data');
+    }
+  };
+
+  // Load data on component mount and when filters change
+  useEffect(() => {
+    fetchPerformanceData();
+  }, [timeRange, useCustomDateRange, dateRange.from, dateRange.to]);
+
+  // Utility functions
   const downloadFile = (content: string, filename: string, mimeType: string) => {
     const blob = new Blob([content], { type: mimeType })
     const url = URL.createObjectURL(blob)
@@ -220,26 +238,34 @@ export default function Performance() {
     return lines.join('\n')
   }
   const handleExportCSV = () => {
-    const { fillRateData, paymentData } = getDataForTimeRange()
+    if (!performanceState.kpiData || !performanceState.trendsData) {
+      toast.error('No data available to export');
+      return;
+    }
 
     const kpiRows = [
-      { metric: 'Fill Rate (%)', value: performanceData.fillRate },
-      { metric: 'Rejection Rate (%)', value: performanceData.rejectionRate },
-      { metric: 'SLA Breaches', value: performanceData.slaBreaches },
-      { metric: 'Pending Payments', value: performanceData.pendingPayments },
-      { metric: 'Released Payments', value: performanceData.releasedPayments },
-      { metric: 'Total Orders', value: performanceData.totalOrders },
-      { metric: 'Completed Orders', value: performanceData.completedOrders },
-      { metric: 'Rejected Orders', value: performanceData.rejectedOrders }
+      { metric: 'Fill Rate (%)', value: performanceState.kpiData.fillRate },
+      { metric: 'Rejection Rate (%)', value: performanceState.kpiData.rejectionRate },
+      { metric: 'SLA Breaches', value: performanceState.kpiData.slaBreaches },
+      { metric: 'Pending Payments', value: performanceState.kpiData.pendingPayments },
+      { metric: 'Released Payments', value: performanceState.kpiData.releasedPayments },
+      { metric: 'Total Orders', value: performanceState.kpiData.totalOrders },
+      { metric: 'Completed Orders', value: performanceState.kpiData.completedOrders },
+      { metric: 'Rejected Orders', value: performanceState.kpiData.rejectedOrders }
     ]
 
-    const fillRateRows = fillRateData.map((d) => ({ period: d.period, fillRate: d.fillRate, rejectionRate: d.rejectionRate }))
-    const paymentRows = paymentData.map((d) => ({ period: d.period, pending: d.pending, released: d.released }))
+    const trendsRows = performanceState.trendsData.trends.map((d) => ({ 
+      period: d.period, 
+      fillRate: d.fillRate, 
+      rejectionRate: d.rejectionRate,
+      totalOrders: d.totalOrders,
+      completedOrders: d.completedOrders,
+      rejectedOrders: d.rejectedOrders
+    }))
 
     const sections = [
       ['# KPI Snapshot', toCSV(kpiRows, ['metric', 'value'])],
-      ['# Fill Rate & Rejection Trend', toCSV(fillRateRows, ['period', 'fillRate', 'rejectionRate'])],
-      ['# Payment Summary', toCSV(paymentRows, ['period', 'pending', 'released'])]
+      ['# Performance Trends', toCSV(trendsRows, ['period', 'fillRate', 'rejectionRate', 'totalOrders', 'completedOrders', 'rejectedOrders'])]
     ]
 
     const content = sections.map(([title, csv]) => [title, csv].filter(Boolean).join('\n')).join('\n\n')
@@ -248,7 +274,10 @@ export default function Performance() {
   }
 
   const handleExportPDF = () => {
-    const { fillRateData, paymentData } = getDataForTimeRange()
+    if (!performanceState.kpiData || !performanceState.trendsData) {
+      toast.error('No data available to export');
+      return;
+    }
 
     const html = `
       <html>
@@ -276,34 +305,24 @@ export default function Performance() {
             <table>
               <thead><tr><th>Metric</th><th>Value</th></tr></thead>
               <tbody>
-                <tr><td>Fill Rate (%)</td><td>${performanceData.fillRate}</td></tr>
-                <tr><td>Rejection Rate (%)</td><td>${performanceData.rejectionRate}</td></tr>
-                <tr><td>SLA Breaches</td><td>${performanceData.slaBreaches}</td></tr>
-                <tr><td>Pending Payments</td><td>${performanceData.pendingPayments}</td></tr>
-                <tr><td>Released Payments</td><td>${performanceData.releasedPayments}</td></tr>
-                <tr><td>Total Orders</td><td>${performanceData.totalOrders}</td></tr>
-                <tr><td>Completed Orders</td><td>${performanceData.completedOrders}</td></tr>
-                <tr><td>Rejected Orders</td><td>${performanceData.rejectedOrders}</td></tr>
+                <tr><td>Fill Rate (%)</td><td>${performanceState.kpiData.fillRate}</td></tr>
+                <tr><td>Rejection Rate (%)</td><td>${performanceState.kpiData.rejectionRate}</td></tr>
+                <tr><td>SLA Breaches</td><td>${performanceState.kpiData.slaBreaches}</td></tr>
+                <tr><td>Pending Payments</td><td>₹${performanceState.kpiData.pendingPayments.toLocaleString()}</td></tr>
+                <tr><td>Released Payments</td><td>₹${performanceState.kpiData.releasedPayments.toLocaleString()}</td></tr>
+                <tr><td>Total Orders</td><td>${performanceState.kpiData.totalOrders}</td></tr>
+                <tr><td>Completed Orders</td><td>${performanceState.kpiData.completedOrders}</td></tr>
+                <tr><td>Rejected Orders</td><td>${performanceState.kpiData.rejectedOrders}</td></tr>
               </tbody>
             </table>
           </div>
 
           <div class="card">
-            <h2>Fill Rate & Rejection Trend</h2>
+            <h2>Performance Trends</h2>
             <table>
-              <thead><tr><th>Period</th><th>Fill Rate</th><th>Rejection Rate</th></tr></thead>
+              <thead><tr><th>Period</th><th>Fill Rate</th><th>Rejection Rate</th><th>Total Orders</th><th>Completed</th><th>Rejected</th></tr></thead>
               <tbody>
-                ${fillRateData.map((d) => `<tr><td>${d.period}</td><td>${d.fillRate}</td><td>${d.rejectionRate}</td></tr>`).join('')}
-              </tbody>
-            </table>
-          </div>
-
-          <div class="card">
-            <h2>Payment Summary</h2>
-            <table>
-              <thead><tr><th>Period</th><th>Pending</th><th>Released</th></tr></thead>
-              <tbody>
-                ${paymentData.map((d) => `<tr><td>${d.period}</td><td>${d.pending}</td><td>${d.released}</td></tr>`).join('')}
+                ${performanceState.trendsData.trends.map((d) => `<tr><td>${d.period}</td><td>${d.fillRate}%</td><td>${d.rejectionRate}%</td><td>${d.totalOrders}</td><td>${d.completedOrders}</td><td>${d.rejectedOrders}</td></tr>`).join('')}
               </tbody>
             </table>
           </div>
@@ -347,20 +366,28 @@ export default function Performance() {
     }, 250)
   }
 
-  const [timeRange, setTimeRange] = useState<'1W' | '1M' | '3M' | '6M' | '1Y'>('3M')
-  const [dateRange, setDateRange] = useState({
-    from: '2025-05-01',
-    to: '2025-09-29'
-  })
-  const [useCustomDateRange, setUseCustomDateRange] = useState(false)
-  const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
-  const [dateFromDate, setDateFromDate] = useState<Date | undefined>()
-  const [dateToDate, setDateToDate] = useState<Date | undefined>()
-  const [showFromCalendar, setShowFromCalendar] = useState(false)
-  const [showToCalendar, setShowToCalendar] = useState(false)
-  const fromCalendarRef = useRef<HTMLDivElement>(null)
-  const toCalendarRef = useRef<HTMLDivElement>(null)
-  const [activePieIndex, setActivePieIndex] = useState(0)
+  // Get data based on current selection
+  const getDataForTimeRange = () => {
+    if (!performanceState.trendsData) {
+      return { fillRateData: [], paymentData: [] };
+    }
+    
+    return {
+      fillRateData: performanceState.trendsData.trends.map(trend => ({
+        period: trend.period,
+        fillRate: trend.fillRate,
+        rejectionRate: trend.rejectionRate
+      })),
+      paymentData: performanceState.trendsData.trends.map(trend => ({
+        period: trend.period,
+        pending: performanceState.kpiData?.pendingPayments || 0,
+        released: performanceState.kpiData?.releasedPayments || 0
+      }))
+    };
+  };
+
+  // Get data based on current selection
+  const { fillRateData, paymentData } = getDataForTimeRange();
 
   // Hook to detect screen size
   useEffect(() => {
@@ -403,61 +430,6 @@ export default function Performance() {
       default: return { axis: 12, tooltip: 13, legend: 12 }
     }
   }
-
-  // Function to get appropriate data based on time range
-  const getDataForTimeRange = () => {
-    if (useCustomDateRange) {
-      // For custom range, use monthly data filtered by date range
-      return {
-        fillRateData: filterDataByDateRange(fillRateTrendMonthly, 'period'),
-        paymentData: filterDataByDateRange(paymentTrendMonthly, 'period')
-      }
-    }
-
-    switch (timeRange) {
-      case '1W':
-        return {
-          fillRateData: fillRateTrendDaily,
-          paymentData: paymentTrendDaily
-        }
-      case '1M':
-        return {
-          fillRateData: fillRateTrendWeekly,
-          paymentData: paymentTrendWeekly
-        }
-      case '3M':
-      case '6M':
-      case '1Y':
-      default:
-        return {
-          fillRateData: fillRateTrendMonthly,
-          paymentData: paymentTrendMonthly
-        }
-    }
-  }
-
-  // Function to filter data based on date range
-  const filterDataByDateRange = (data: { [key: string]: string | number }[], dateField: string = 'period') => {
-    if (!useCustomDateRange) return data
-    
-    return data.filter((item) => {
-      // For demo purposes, we'll use month names to simulate date filtering
-      // In a real app, you'd have actual date values to filter with
-      const fieldValue = item[dateField]
-      const monthIndex = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        .indexOf(typeof fieldValue === 'string' ? fieldValue.substring(0, 3) : '')
-      
-      if (monthIndex === -1) return true // Keep items that don't match month pattern
-      
-      const fromMonth = new Date(dateRange.from).getMonth()
-      const toMonth = new Date(dateRange.to).getMonth()
-      
-      return monthIndex >= fromMonth && monthIndex <= toMonth
-    })
-  }
-
-  // Get data based on current selection
-  const { fillRateData, paymentData } = getDataForTimeRange()
 
   // Get chart title based on time range
   const getChartTitle = (baseTitle: string) => {
@@ -630,35 +602,57 @@ export default function Performance() {
       {/* Key Performance Metrics */}
       <div className="mb-6 lg:mb-8">
         <h2 className="text-lg sm:text-xl md:text-2xl text-[var(--color-heading)] mb-4 sm:mb-6 font-[var(--font-heading)]">Key Metrics</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mt-8">
-          <KPICard
-            title="Fill Rate"
-            value={`${performanceData.fillRate}%`}
-            icon={<CheckSquare size={32} />}
-            subtitle="Orders successfully fulfilled"
-          />
-          
-          <KPICard
-            title="Rejection Rate"
-            value={`${performanceData.rejectionRate}%`}
-            icon={<X size={32} />}
-            subtitle="Orders rejected or declined"
-          />
-          
-          <KPICard
-            title="SLA Breaches"
-            value={performanceData.slaBreaches.toString()}
-            icon={<AlertTriangle size={32} />}
-            subtitle="This month's SLA violations"
-          />
-          
-          <KPICard
-            title="Payment Status"
-            value={`₹${(performanceData.pendingPayments / 1000).toFixed(0)}K`}
-            icon={<Wallet size={32} />}
-            subtitle={`₹${(performanceData.releasedPayments / 1000).toFixed(0)}K released`}
-          />
-        </div>
+        {performanceState.loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mt-8">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white p-6 rounded-xl shadow-md border border-white/20 animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-full"></div>
+              </div>
+            ))}
+          </div>
+        ) : performanceState.error ? (
+          <div className="text-center py-8">
+            <p className="text-red-500 mb-4">{performanceState.error}</p>
+            <button 
+              onClick={fetchPerformanceData}
+              className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:bg-[var(--color-accent)]/90"
+            >
+              Retry
+            </button>
+          </div>
+        ) : performanceState.kpiData ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mt-8">
+            <KPICard
+              title="Fill Rate"
+              value={`${performanceState.kpiData.fillRate}%`}
+              icon={<CheckSquare size={32} />}
+              subtitle="Orders successfully fulfilled"
+            />
+            
+            <KPICard
+              title="Rejection Rate"
+              value={`${performanceState.kpiData.rejectionRate}%`}
+              icon={<X size={32} />}
+              subtitle="Orders rejected or declined"
+            />
+            
+            <KPICard
+              title="SLA Breaches"
+              value={performanceState.kpiData.slaBreaches.toString()}
+              icon={<AlertTriangle size={32} />}
+              subtitle="This month's SLA violations"
+            />
+            
+            <KPICard
+              title="Payment Status"
+              value={`₹${(performanceState.kpiData.pendingPayments / 1000).toFixed(1)}K`}
+              icon={<Wallet size={32} />}
+              subtitle={`₹${(performanceState.kpiData.releasedPayments / 1000).toFixed(1)}K released`}
+            />
+          </div>
+        ) : null}
       </div>
 
       {/* Performance Insights & Goals */}
@@ -666,65 +660,76 @@ export default function Performance() {
         {/* Performance Insights */}
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
           <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-4">Performance Insights</h3>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full mt-2" style={{ backgroundColor: 'var(--color-secondary)' }}></div>
-              <div>
-                <p className="text-sm font-medium text-gray-800">Excellent Fill Rate</p>
-                <p className="text-xs text-gray-600">Your 92.5% fill rate is above industry average of 88%</p>
-              </div>
+          {performanceState.loading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-start gap-3 animate-pulse">
+                  <div className="w-2 h-2 rounded-full bg-gray-200 mt-2"></div>
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-full"></div>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full mt-2" style={{ backgroundColor: 'var(--color-accent)' }}></div>
-              <div>
-                <p className="text-sm font-medium text-gray-800">SLA Improvement Needed</p>
-                <p className="text-xs text-gray-600">Focus on order confirmation times to reduce SLA breaches</p>
-              </div>
+          ) : performanceState.insightsData ? (
+            <div className="space-y-4">
+              {performanceState.insightsData.insights.map((insight, index) => (
+                <div key={index} className="flex items-start gap-3">
+                  <div 
+                    className="w-2 h-2 rounded-full mt-2" 
+                    style={{ backgroundColor: insight.color === 'green' ? 'var(--color-secondary)' : insight.color === 'orange' ? 'var(--color-accent)' : '#3b82f6' }}
+                  ></div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{insight.title}</p>
+                    <p className="text-xs text-gray-600">{insight.description}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-              <div>
-                <p className="text-sm font-medium text-gray-800">Payment Processing</p>
-                <p className="text-xs text-gray-600">₹45.6K pending payments, expected release in 3-5 days</p>
-              </div>
-            </div>
-          </div>
+          ) : (
+            <p className="text-gray-500 text-sm">No insights available</p>
+          )}
         </div>
 
         {/* Performance Goals */}
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
           <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)] mb-4">Performance Goals</h3>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Fill Rate Target</span>
-                <span className="text-sm text-gray-600">92.5% / 95%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="h-2 rounded-full" style={{ width: '97.4%', backgroundColor: 'var(--color-secondary)' }}></div>
-              </div>
+          {performanceState.loading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2"></div>
+                </div>
+              ))}
             </div>
-            
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Rejection Rate Target</span>
-                <span className="text-sm text-gray-600">4.2% / 3%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-red-500 h-2 rounded-full" style={{ width: '71.4%' }}></div>
-              </div>
+          ) : performanceState.goalsData ? (
+            <div className="space-y-4">
+              {performanceState.goalsData.goals.map((goal, index) => (
+                <div key={index}>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">{goal.name}</span>
+                    <span className="text-sm text-gray-600">{goal.current}{goal.unit} / {goal.target}{goal.unit}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="h-2 rounded-full" 
+                      style={{ 
+                        width: `${Math.min(goal.progress, 100)}%`, 
+                        backgroundColor: goal.status === 'achieved' ? 'var(--color-secondary)' : 'var(--color-accent)' 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
             </div>
-            
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">SLA Compliance</span>
-                <span className="text-sm text-gray-600">97% / 100%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="h-2 rounded-full" style={{ width: '97%', backgroundColor: 'var(--color-accent)' }}></div>
-              </div>
-            </div>
-          </div>
+          ) : (
+            <p className="text-gray-500 text-sm">No goals data available</p>
+          )}
         </div>
       </div>
 
@@ -738,45 +743,55 @@ export default function Performance() {
             </h3>
             <TrendingUpIcon className="w-4 h-4 sm:w-5 sm:h-5" color="var(--color-secondary)" />
           </div>
-          <ChartContainer config={fillRateChartConfig} className="h-[250px] w-full">
-            <LineChart data={fillRateData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis 
-                dataKey="period" 
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tick={{ fontSize: getChartFontSizes().axis }}
-              />
-              <YAxis 
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tick={{ fontSize: getChartFontSizes().axis }}
-              />
-              <ChartTooltip 
-                content={<ChartTooltipContent className="bg-white" />} 
-                cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
-              />
-              <ChartLegend content={<ChartLegendContent />} />
-              <Line 
-                type="monotone" 
-                dataKey="fillRate" 
-                stroke="var(--color-fillRate)" 
-                strokeWidth={2}
-                dot={{ fill: 'var(--color-fillRate)', r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="rejectionRate" 
-                stroke="var(--color-rejectionRate)" 
-                strokeWidth={2}
-                dot={{ fill: 'var(--color-rejectionRate)', r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ChartContainer>
+          {performanceState.loading ? (
+            <div className="h-[250px] flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent)]"></div>
+            </div>
+          ) : fillRateData.length > 0 ? (
+            <ChartContainer config={fillRateChartConfig} className="h-[250px] w-full">
+              <LineChart data={fillRateData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis 
+                  dataKey="period" 
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tick={{ fontSize: getChartFontSizes().axis }}
+                />
+                <YAxis 
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tick={{ fontSize: getChartFontSizes().axis }}
+                />
+                <ChartTooltip 
+                  content={<ChartTooltipContent className="bg-white" />} 
+                  cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Line 
+                  type="monotone" 
+                  dataKey="fillRate" 
+                  stroke="var(--color-fillRate)" 
+                  strokeWidth={2}
+                  dot={{ fill: 'var(--color-fillRate)', r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="rejectionRate" 
+                  stroke="var(--color-rejectionRate)" 
+                  strokeWidth={2}
+                  dot={{ fill: 'var(--color-rejectionRate)', r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ChartContainer>
+          ) : (
+            <div className="h-[250px] flex items-center justify-center text-gray-500">
+              No data available
+            </div>
+          )}
         </div>
 
         {/* Payment Summary */}
@@ -787,57 +802,67 @@ export default function Performance() {
             </h3>
             <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
           </div>
-          <ChartContainer config={paymentChartConfig} className="h-[250px] w-full">
-            <AreaChart data={paymentData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="fillReleased" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-released)" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="var(--color-released)" stopOpacity={0.1}/>
-                </linearGradient>
-                <linearGradient id="fillPending" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-pending)" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="var(--color-pending)" stopOpacity={0.1}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis 
-                dataKey="period" 
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tick={{ fontSize: getChartFontSizes().axis }}
-              />
-              <YAxis 
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tick={{ fontSize: getChartFontSizes().axis }}
-                tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
-              />
-              <ChartTooltip 
-                content={<ChartTooltipContent 
-                  formatter={(value) => [`₹${((value as number) / 1000).toFixed(0)}K`, '']}
-                  className="bg-white"
-                />}
-                cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
-              />
-              <ChartLegend content={<ChartLegendContent />} />
-              <Area
-                type="monotone"
-                dataKey="released"
-                stroke="var(--color-released)"
-                fill="url(#fillReleased)"
-                strokeWidth={2}
-              />
-              <Area
-                type="monotone"
-                dataKey="pending"
-                stroke="var(--color-pending)"
-                fill="url(#fillPending)"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ChartContainer>
+          {performanceState.loading ? (
+            <div className="h-[250px] flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent)]"></div>
+            </div>
+          ) : paymentData.length > 0 ? (
+            <ChartContainer config={paymentChartConfig} className="h-[250px] w-full">
+              <AreaChart data={paymentData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="fillReleased" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-released)" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="var(--color-released)" stopOpacity={0.1}/>
+                  </linearGradient>
+                  <linearGradient id="fillPending" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-pending)" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="var(--color-pending)" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis 
+                  dataKey="period" 
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tick={{ fontSize: getChartFontSizes().axis }}
+                />
+                <YAxis 
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tick={{ fontSize: getChartFontSizes().axis }}
+                  tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
+                />
+                <ChartTooltip 
+                  content={<ChartTooltipContent 
+                    formatter={(value) => [`₹${((value as number) / 1000).toFixed(0)}K`, '']}
+                    className="bg-white"
+                  />}
+                  cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Area
+                  type="monotone"
+                  dataKey="released"
+                  stroke="var(--color-released)"
+                  fill="url(#fillReleased)"
+                  strokeWidth={2}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="pending"
+                  stroke="var(--color-pending)"
+                  fill="url(#fillPending)"
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ChartContainer>
+          ) : (
+            <div className="h-[250px] flex items-center justify-center text-gray-500">
+              No data available
+            </div>
+          )}
         </div>
       </div>
 
@@ -849,130 +874,214 @@ export default function Performance() {
             <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">SLA Breach Analysis</h3>
             <Clock className="w-4 h-4 sm:w-5 sm:h-5" color="var(--color-accent)" />
           </div>
-          <ChartContainer config={slaChartConfig} className="h-[450px] w-full">
-            <BarChart data={slaBreachData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis 
-                dataKey="type" 
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tick={{ fontSize: getChartFontSizes().axis }}
-                angle={-15}
-                textAnchor="end"
-                height={60}
-              />
-              <YAxis 
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tick={{ fontSize: getChartFontSizes().axis }}
-              />
-              <ChartTooltip 
-                content={<ChartTooltipContent className="bg-white" />}
-                cursor={{ fill: 'hsl(var(--muted))', opacity: 0.15 }}
-              />
-              <ChartLegend content={<ChartLegendContent />} />
-              <Bar 
-                dataKey="count" 
-                fill="var(--color-count)" 
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar 
-                dataKey="target" 
-                fill="var(--color-target)" 
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ChartContainer>
+          {performanceState.loading ? (
+            <div className="h-[450px] flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent)]"></div>
+            </div>
+          ) : performanceState.slaBreachAnalysisData && performanceState.slaBreachAnalysisData.chartData.length > 0 ? (
+            <>
+              <ChartContainer config={slaChartConfig} className="h-[300px] w-full">
+                <BarChart data={performanceState.slaBreachAnalysisData.chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis 
+                    dataKey="type" 
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tick={{ fontSize: getChartFontSizes().axis }}
+                    angle={-15}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis 
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tick={{ fontSize: getChartFontSizes().axis }}
+                  />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent className="bg-white" />}
+                    cursor={{ fill: 'hsl(var(--muted))', opacity: 0.15 }}
+                  />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Bar 
+                    dataKey="count" 
+                    fill="var(--color-count)" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar 
+                    dataKey="target" 
+                    fill="var(--color-target)" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ChartContainer>
+              
+              {/* SLA Summary Stats */}
+              {performanceState.slaBreachAnalysisData.summary && (
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-lg font-semibold text-gray-900">
+                      {performanceState.slaBreachAnalysisData.summary.totalOrders}
+                    </div>
+                    <div className="text-xs text-gray-600">Total Orders</div>
+                  </div>
+                  <div className="text-center p-3 bg-red-50 rounded-lg">
+                    <div className="text-lg font-semibold text-red-700">
+                      {performanceState.slaBreachAnalysisData.summary.breachedOrders}
+                    </div>
+                    <div className="text-xs text-red-600">Breached</div>
+                  </div>
+                  <div className="text-center p-3 bg-green-50 rounded-lg">
+                    <div className="text-lg font-semibold text-green-700">
+                      {performanceState.slaBreachAnalysisData.summary.compliantOrders}
+                    </div>
+                    <div className="text-xs text-green-600">Compliant</div>
+                  </div>
+                  <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <div className="text-lg font-semibold text-blue-700">
+                      {performanceState.slaBreachAnalysisData.summary.slaComplianceRate}%
+                    </div>
+                    <div className="text-xs text-blue-600">Compliance Rate</div>
+                  </div>
+                </div>
+              )}
+              
+              {/* SLA Benchmark Info */}
+              {performanceState.slaBreachAnalysisData.summary && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <div className="text-sm text-blue-800">
+                    <span className="font-semibold">SLA Benchmark:</span> {performanceState.slaBreachAnalysisData.summary.slaBenchmark} days 
+                    <span className="ml-2">(Avg: {performanceState.slaBreachAnalysisData.summary.avgFulfillmentTime} days + {performanceState.slaBreachAnalysisData.summary.bufferPercentage}% buffer)</span>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="h-[450px] flex items-center justify-center text-gray-500">
+              No SLA breach data available
+            </div>
+          )}
         </div>
 
         {/* Rejection Reasons */}
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Rejection Reasons</h3>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <BarChart3 className="w-4 h-4 text-red-500" />
-              <span className="text-xs sm:text-sm">
-                Total: {rejectionReasons.reduce((sum, item) => sum + item.value, 0)}%
-              </span>
+            {performanceState.rejectionReasonsData && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <BarChart3 className="w-4 h-4 text-red-500" />
+                <span className="text-xs sm:text-sm">
+                  Total: {performanceState.rejectionReasonsData.summary.totalRejections} rejections
+                </span>
+              </div>
+            )}
+          </div>
+          {performanceState.loading ? (
+            <div className="h-[300px] flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent)]"></div>
             </div>
-          </div>
-          <ChartContainer config={rejectionChartConfig} className="mx-auto aspect-square max-h-[300px]">
-            <PieChart>
-              <ChartTooltip 
-                cursor={false}
-                content={<ChartTooltipContent 
-                  hideLabel
-                  className="bg-white"
-                />}
-              />
-              <Pie
-                data={rejectionReasons}
-                dataKey="value"
-                nameKey="name"
-                innerRadius={screenSize === 'mobile' ? 50 : 60}
-                strokeWidth={5}
-                activeIndex={activePieIndex}
-                activeShape={({
-                  outerRadius = 0,
-                  ...props
-                }: any) => (
-                  <g>
-                    <Sector {...props} outerRadius={outerRadius + 10} />
-                    <Sector
-                      {...props}
-                      outerRadius={outerRadius + 25}
-                      innerRadius={outerRadius + 12}
-                    />
-                  </g>
-                )}
-                onMouseEnter={(_, index) => setActivePieIndex(index)}
-              >
-                {rejectionReasons.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.color}
+          ) : performanceState.rejectionReasonsData && performanceState.rejectionReasonsData.categories.length > 0 ? (
+            <>
+              <ChartContainer config={rejectionChartConfig} className="mx-auto aspect-square max-h-[300px]">
+                <PieChart>
+                  <ChartTooltip 
+                    cursor={false}
+                    content={<ChartTooltipContent 
+                      hideLabel
+                      className="bg-white"
+                    />}
                   />
+                  <Pie
+                    data={performanceState.rejectionReasonsData.categories.map(category => ({
+                      name: category.reason,
+                      value: category.percentage,
+                      color: category.reason === 'Stock Unavailable' ? '#f97316' :
+                             category.reason === 'Quality Issue' ? '#ef4444' :
+                             category.reason === 'Price Mismatch' ? 'var(--color-accent)' :
+                             category.reason === 'Late Delivery' ? '#6b7280' : '#9ca3af'
+                    }))}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={screenSize === 'mobile' ? 50 : 60}
+                    strokeWidth={5}
+                    activeIndex={activePieIndex}
+                    activeShape={({
+                      outerRadius = 0,
+                      ...props
+                    }: any) => (
+                      <g>
+                        <Sector {...props} outerRadius={outerRadius + 10} />
+                        <Sector
+                          {...props}
+                          outerRadius={outerRadius + 25}
+                          innerRadius={outerRadius + 12}
+                        />
+                      </g>
+                    )}
+                    onMouseEnter={(_, index) => setActivePieIndex(index)}
+                  >
+                    {performanceState.rejectionReasonsData.categories.map((category, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={category.reason === 'Stock Unavailable' ? '#f97316' :
+                               category.reason === 'Quality Issue' ? '#ef4444' :
+                               category.reason === 'Price Mismatch' ? 'var(--color-accent)' :
+                               category.reason === 'Late Delivery' ? '#6b7280' : '#9ca3af'}
+                      />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ChartContainer>
+              
+              {/* Interactive Legend */}
+              <div className="mt-6 space-y-2">
+                {performanceState.rejectionReasonsData.categories.map((category, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setActivePieIndex(index)}
+                    onMouseEnter={() => setActivePieIndex(index)}
+                    className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 ${
+                      activePieIndex === index
+                        ? 'bg-gray-100 shadow-sm'
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        style={{ 
+                          backgroundColor: category.reason === 'Stock Unavailable' ? '#f97316' :
+                                         category.reason === 'Quality Issue' ? '#ef4444' :
+                                         category.reason === 'Price Mismatch' ? 'var(--color-accent)' :
+                                         category.reason === 'Late Delivery' ? '#6b7280' : '#9ca3af'
+                        }}
+                      />
+                      <span className="text-sm font-medium text-gray-700">
+                        {category.reason}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-900">
+                        {category.percentage}%
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        ({category.count})
+                      </span>
+                      {activePieIndex === index && (
+                        <div className="w-2 h-2 rounded-full bg-gray-400" />
+                      )}
+                    </div>
+                  </button>
                 ))}
-              </Pie>
-            </PieChart>
-          </ChartContainer>
-          
-          {/* Interactive Legend */}
-          <div className="mt-6 space-y-2">
-            {rejectionReasons.map((reason, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() => setActivePieIndex(index)}
-                onMouseEnter={() => setActivePieIndex(index)}
-                className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 ${
-                  activePieIndex === index
-                    ? 'bg-gray-100 shadow-sm'
-                    : 'hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-3 h-3 rounded-full flex-shrink-0" 
-                    style={{ backgroundColor: reason.color }}
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    {reason.name}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-gray-900">
-                    {reason.value}%
-                  </span>
-                  {activePieIndex === index && (
-                    <div className="w-2 h-2 rounded-full bg-gray-400" />
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
+              </div>
+            </>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-gray-500">
+              No rejection data available
+            </div>
+          )}
         </div>
       </div>
 
@@ -982,44 +1091,86 @@ export default function Performance() {
           <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Weekly Order Fulfillment</h3>
           <Package className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
         </div>
-        <ChartContainer config={orderFulfillmentChartConfig} className="h-[300px] w-full">
-          <BarChart data={orderFulfillmentData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis 
-              dataKey="week" 
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tick={{ fontSize: getChartFontSizes().axis }}
-            />
-            <YAxis 
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tick={{ fontSize: getChartFontSizes().axis }}
-            />
-            <ChartTooltip 
-              content={<ChartTooltipContent className="bg-white" />}
-              cursor={{ fill: 'hsl(var(--muted))', opacity: 0.15 }}
-            />
-            <ChartLegend content={<ChartLegendContent />} />
-            <Bar 
-              dataKey="delivered" 
-              fill="var(--color-delivered)" 
-              radius={[4, 4, 0, 0]}
-            />
-            <Bar 
-              dataKey="rejected" 
-              fill="var(--color-rejected)" 
-              radius={[4, 4, 0, 0]}
-            />
-            <Bar 
-              dataKey="pending" 
-              fill="var(--color-pending)" 
-              radius={[4, 4, 0, 0]}
-            />
-          </BarChart>
-        </ChartContainer>
+        {performanceState.loading ? (
+          <div className="h-[300px] flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent)]"></div>
+          </div>
+        ) : performanceState.weeklyFulfillmentData && performanceState.weeklyFulfillmentData.weeklyData.length > 0 ? (
+          <>
+            <ChartContainer config={orderFulfillmentChartConfig} className="h-[300px] w-full">
+              <BarChart data={performanceState.weeklyFulfillmentData.weeklyData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis 
+                  dataKey="week" 
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tick={{ fontSize: getChartFontSizes().axis }}
+                />
+                <YAxis 
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tick={{ fontSize: getChartFontSizes().axis }}
+                />
+                <ChartTooltip 
+                  content={<ChartTooltipContent className="bg-white" />}
+                  cursor={{ fill: 'hsl(var(--muted))', opacity: 0.15 }}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar 
+                  dataKey="delivered" 
+                  fill="var(--color-delivered)" 
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar 
+                  dataKey="rejected" 
+                  fill="var(--color-rejected)" 
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar 
+                  dataKey="pending" 
+                  fill="var(--color-pending)" 
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ChartContainer>
+            
+            {/* Summary Stats */}
+            {performanceState.weeklyFulfillmentData.summary && (
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-lg font-semibold text-gray-900">
+                    {performanceState.weeklyFulfillmentData.summary.totalOrders}
+                  </div>
+                  <div className="text-xs text-gray-600">Total Orders</div>
+                </div>
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  <div className="text-lg font-semibold text-green-700">
+                    {performanceState.weeklyFulfillmentData.summary.totalDelivered}
+                  </div>
+                  <div className="text-xs text-green-600">Delivered</div>
+                </div>
+                <div className="text-center p-3 bg-red-50 rounded-lg">
+                  <div className="text-lg font-semibold text-red-700">
+                    {performanceState.weeklyFulfillmentData.summary.totalRejected}
+                  </div>
+                  <div className="text-xs text-red-600">Rejected</div>
+                </div>
+                <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                  <div className="text-lg font-semibold text-yellow-700">
+                    {performanceState.weeklyFulfillmentData.summary.totalPending}
+                  </div>
+                  <div className="text-xs text-yellow-600">Pending</div>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="h-[300px] flex items-center justify-center text-gray-500">
+            No weekly fulfillment data available
+          </div>
+        )}
       </div>
 
     </div>
