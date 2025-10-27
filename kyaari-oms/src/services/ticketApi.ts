@@ -8,6 +8,47 @@ export interface TicketComment {
   user?: { id: string; name: string; email?: string }
 }
 
+export interface TicketChatMessage {
+  id: string
+  ticketId: string
+  senderId: string
+  message?: string
+  attachments?: any[]
+  messageType: 'TEXT' | 'FILE' | 'IMAGE' | 'SYSTEM'
+  createdAt: string
+  updatedAt: string
+  sender: {
+    id: string
+    name: string
+    email: string
+    role: string
+    companyName?: string
+  }
+}
+
+export interface TicketChatResponse {
+  success: boolean
+  data: {
+    messages: TicketChatMessage[]
+    pagination: { page: number; limit: number; total: number; hasMore: boolean }
+    ticket: {
+      id: string
+      ticketNumber: string
+      title: string
+      status: string
+      priority: string
+    }
+    participants: Array<{
+      id: string
+      name: string
+      email: string
+      role: string
+      type: string
+      companyName?: string
+    }>
+  }
+}
+
 export interface TicketListItem {
   id: string
   ticketNumber: string
@@ -76,6 +117,41 @@ export const TicketApi = {
   async listAttachments(ticketId: string) {
     const res = await api.get<{ success: boolean; data: Array<{ id: string; fileName: string; fileType: string; url: string; uploadedBy: string; uploadedAt: string }> }>(
       `/api/tickets/${ticketId}/attachments`
+    )
+    return res.data
+  },
+
+  // Chat-related methods
+  async getChatMessages(ticketId: string, page: number = 1, limit: number = 50) {
+    const res = await api.get<TicketChatResponse>(`/api/tickets/${ticketId}/chat`, { 
+      params: { page, limit } 
+    })
+    return res.data
+  },
+
+  async sendChatMessage(ticketId: string, message: string, messageType: 'TEXT' | 'SYSTEM' = 'TEXT') {
+    const res = await api.post<{ success: boolean; data: { message: TicketChatMessage } }>(
+      `/api/tickets/${ticketId}/chat`, 
+      { message, messageType }
+    )
+    return res.data
+  },
+
+  async uploadChatFile(ticketId: string, file: File, message?: string) {
+    const form = new FormData()
+    form.append('file', file)
+    if (message) form.append('message', message)
+    const res = await api.post<{ success: boolean; data: { message: TicketChatMessage; attachment: any } }>(
+      `/api/tickets/${ticketId}/chat/upload`,
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    )
+    return res.data
+  },
+
+  async getChatParticipants(ticketId: string) {
+    const res = await api.get<{ success: boolean; data: { ticket: any; participants: any[] } }>(
+      `/api/tickets/${ticketId}/chat/participants`
     )
     return res.data
   }
