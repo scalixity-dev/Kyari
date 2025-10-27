@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { Plus, Send, Paperclip, FileText, AlertTriangle, CheckSquare, Clock, Calendar as CalendarIcon } from 'lucide-react'
-import { CustomDropdown, KPICard, Pagination } from '../../../components'
+import { CustomDropdown, KPICard, Pagination, CSVPDFExportButton } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
 
@@ -223,6 +223,41 @@ export default function AccountSupport() {
   useEffect(() => {
     setCurrentPage(1)
   }, [filterIssue, filterStatus, filterPriority, dateFrom, dateTo, search])
+
+  function handleExportCSV() {
+    const headers = ['Ticket ID', 'Invoice ID', 'Vendor', 'Issue Type', 'Priority', 'Status', 'Amount', 'Assigned To', 'Created', 'Updated']
+    const csvContent = [headers.join(','), ...filteredTickets.map(t => [t.id, t.invoiceId, `"${t.vendor}"`, t.issue, t.priority, t.status, typeof t.amount === 'number' ? t.amount : '', t.assignedTo, t.createdAt, t.updatedAt].join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `account-support-tickets-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    // Revoke the object URL after a short delay to prevent memory leaks
+    setTimeout(() => URL.revokeObjectURL(url), 100)
+  }
+
+  function handleExportPDF() {
+    let content = 'Account Support Tickets Report\n'
+    content += `Generated: ${new Date().toLocaleString()}\n`
+    content += '='.repeat(80) + '\n\n'
+    content += `Total Tickets: ${filteredTickets.length}\n\n`
+    content += filteredTickets.map(t => `Ticket: ${t.id}\nInvoice: ${t.invoiceId}\nVendor: ${t.vendor}\nIssue: ${t.issue}\nPriority: ${t.priority}\nStatus: ${t.status}\nAmount: ${typeof t.amount === 'number' ? `₹${t.amount.toLocaleString('en-IN')}` : '-'}\nAssigned To: ${t.assignedTo}\nCreated: ${t.createdAt}\nUpdated: ${t.updatedAt}\n${'-'.repeat(80)}\n`).join('\n')
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `account-support-tickets-${new Date().toISOString().split('T')[0]}.txt`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    // Revoke the object URL after a short delay to prevent memory leaks
+    setTimeout(() => URL.revokeObjectURL(url), 100)
+  }
 
   function resetFilters() {
     setFilterIssue('')
@@ -514,6 +549,11 @@ export default function AccountSupport() {
             >
               Reset Filters
             </button>
+            <CSVPDFExportButton
+              onExportCSV={handleExportCSV}
+              onExportPDF={handleExportPDF}
+              buttonClassName="px-4 py-2 sm:py-2 rounded-xl !rounded-xl w-full sm:w-auto min-h-[44px] !min-h-[44px] sm:!min-h-[44px]"
+            />
           </div>
         </div>
       </div>

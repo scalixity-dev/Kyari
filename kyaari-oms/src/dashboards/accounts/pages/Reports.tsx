@@ -189,6 +189,8 @@ function AccountsReports() {
     setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(cleanup, 1500) }, 250)
   }
   const [timeRange, setTimeRange] = useState<TimeRange>('weekly')
+  // Loading state for tables (shows Orders-style loading card inside table areas)
+  const [loading, setLoading] = useState(false)
   
   // Payment Aging Filters
   const [agingVendorFilter, setAgingVendorFilter] = useState('')
@@ -494,10 +496,16 @@ function AccountsReports() {
                 <div className="flex-1 text-center">Oldest Invoice</div>
               </div>
             </div>
+
             {/* Body */}
             <div className="bg-white">
               <div className="py-2">
-                {paginatedPaymentAging.length === 0 ? (
+                {loading ? (
+                  <div className="bg-white rounded-xl p-12 text-center">
+                    <div className="w-12 h-12 border-4 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-500">Loading payment aging...</p>
+                  </div>
+                ) : paginatedPaymentAging.length === 0 ? (
                   <div className="px-6 py-8 text-center text-gray-500">No records match the current filters</div>
                 ) : (
                   paginatedPaymentAging.map((record) => {
@@ -505,26 +513,20 @@ function AccountsReports() {
                     return (
                       <div key={record.vendor} className="flex justify-between px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center hover:bg-gray-50">
                         <div className="flex-1 text-xs md:text-sm font-medium text-gray-800 text-center">{record.vendor}</div>
-                        <div className="flex-1 text-xs md:text-sm font-semibold text-[var(--color-primary)] text-center">
-                          ₹{record.outstandingAmount.toLocaleString('en-IN')}
-                        </div>
+                        <div className="flex-1 text-xs md:text-sm font-semibold text-[var(--color-primary)] text-center">₹{record.outstandingAmount.toLocaleString('en-IN')}</div>
                         <div className="flex-1 flex items-center justify-center">
-                          <span
-                            className={`inline-block px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap ${
-                              record.avgDaysPending > 30
-                                ? 'bg-red-100 text-red-700 border border-red-300'
-                                : record.avgDaysPending > 15
-                                ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
-                                : 'bg-green-100 text-green-700 border border-green-300'
-                            }`}
-                          >
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                            record.avgDaysPending > 30
+                              ? 'bg-red-100 text-red-700 border border-red-300'
+                              : record.avgDaysPending > 15
+                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                              : 'bg-green-100 text-green-700 border border-green-300'
+                          }`}>
                             {record.avgDaysPending} days
                           </span>
                         </div>
                         <div className="flex-1 text-center">
-                          <div className={`text-xs sm:text-sm ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
-                            {record.oldestInvoiceDate}
-                          </div>
+                          <div className={`text-xs sm:text-sm ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>{record.oldestInvoiceDate}</div>
                           <div className={`text-xs flex items-center justify-center gap-1 mt-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
                             {isOverdue && <AlertTriangle size={12} className="sm:w-3.5 sm:h-3.5" />}
                             <span>{record.oldestInvoiceDays} days old</span>
@@ -536,6 +538,7 @@ function AccountsReports() {
                 )}
               </div>
             </div>
+
             {filteredPaymentAging.length > 0 && (
               <Pagination
                 currentPage={agingCurrentPage}
@@ -552,7 +555,12 @@ function AccountsReports() {
 
           {/* Mobile Card View - Visible only on Mobile */}
           <div className="md:hidden">
-            {paginatedPaymentAging.length === 0 ? (
+            {loading ? (
+              <div className="bg-white rounded-xl p-12 text-center">
+                <div className="w-12 h-12 border-4 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-500">Loading payment aging...</p>
+              </div>
+            ) : paginatedPaymentAging.length === 0 ? (
               <div className="px-4 py-8 text-center text-gray-500 bg-white">No records match the current filters</div>
             ) : (
               <div className="bg-white divide-y divide-gray-200">
@@ -564,30 +572,24 @@ function AccountsReports() {
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="text-xs text-gray-600">Outstanding Amount:</span>
-                          <span className="text-sm font-semibold text-[var(--color-primary)]">
-                            ₹{record.outstandingAmount.toLocaleString('en-IN')}
-                          </span>
+                          <span className="text-sm font-semibold text-[var(--color-primary)]">₹{record.outstandingAmount.toLocaleString('en-IN')}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-xs text-gray-600">Avg Days Pending:</span>
-                          <span
-                            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                              record.avgDaysPending > 30
-                                ? 'bg-red-100 text-red-700 border border-red-300'
-                                : record.avgDaysPending > 15
-                                ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
-                                : 'bg-green-100 text-green-700 border border-green-300'
-                            }`}
-                          >
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                            record.avgDaysPending > 30
+                              ? 'bg-red-100 text-red-700 border border-red-300'
+                              : record.avgDaysPending > 15
+                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                              : 'bg-green-100 text-green-700 border border-green-300'
+                          }`}>
                             {record.avgDaysPending} days
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-xs text-gray-600">Oldest Invoice:</span>
                           <div className="text-right">
-                            <div className={`text-sm ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
-                              {record.oldestInvoiceDate}
-                            </div>
+                            <div className={`text-sm ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>{record.oldestInvoiceDate}</div>
                             <div className={`text-xs flex items-center justify-end gap-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
                               {isOverdue && <AlertTriangle size={12} />}
                               <span>{record.oldestInvoiceDays} days old</span>
@@ -767,7 +769,12 @@ function AccountsReports() {
             {/* Body */}
             <div className="bg-white">
               <div className="py-2">
-                {paginatedCompliance.length === 0 ? (
+                {loading ? (
+                  <div className="bg-white rounded-xl p-12 text-center">
+                    <div className="w-12 h-12 border-4 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-500">Loading compliance data...</p>
+                  </div>
+                ) : paginatedCompliance.length === 0 ? (
                   <div className="px-6 py-8 text-center text-gray-500">No records match the current filters</div>
                 ) : (
                   paginatedCompliance.map((record) => (
@@ -833,7 +840,12 @@ function AccountsReports() {
 
           {/* Mobile Card View - Visible only on Mobile */}
           <div className="md:hidden">
-            {paginatedCompliance.length === 0 ? (
+            {loading ? (
+              <div className="bg-white rounded-xl p-12 text-center">
+                <div className="w-12 h-12 border-4 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-500">Loading compliance data...</p>
+              </div>
+            ) : paginatedCompliance.length === 0 ? (
               <div className="px-4 py-8 text-center text-gray-500 bg-white">No records match the current filters</div>
             ) : (
               <div className="bg-white divide-y divide-gray-200">
@@ -1084,7 +1096,12 @@ function AccountsReports() {
             {/* Body */}
             <div className="bg-white">
               <div className="py-2">
-                {paginatedSLABreaches.length === 0 ? (
+                {loading ? (
+                  <div className="bg-white rounded-xl p-12 text-center">
+                    <div className="w-12 h-12 border-4 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-500">Loading SLA breaches...</p>
+                  </div>
+                ) : paginatedSLABreaches.length === 0 ? (
                   <div className="px-6 py-8 text-center text-gray-500">No records match the current filters</div>
                 ) : (
                   paginatedSLABreaches.map((record) => {

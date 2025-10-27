@@ -128,7 +128,7 @@ function AccountsDashboard() {
 
       {/* KPI Cards */}
       <div className="mb-6 lg:mb-8">
-        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6">Today's Overview</h2>
+        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-10">Today's Overview</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 sm:gap-4 mt-12 sm:mt-8">
           {kpis.map((kpi) => (
             <KPICard key={kpi.title} {...kpi} />

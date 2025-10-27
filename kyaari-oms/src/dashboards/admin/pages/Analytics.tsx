@@ -247,6 +247,7 @@ export default function Analytics() {
   })
   const [reportData, setReportData] = useState<unknown[]>([])
   const [showReport, setShowReport] = useState(false)
+  const [isLoadingReport, setIsLoadingReport] = useState(false)
   const [fulfillmentView, setFulfillmentView] = useState<'weekly' | 'monthly'>('monthly')
   const [selectedMonth, setSelectedMonth] = useState<string>('Sep')
   const [selectedYear, setSelectedYear] = useState<string>('2025')
@@ -411,9 +412,14 @@ export default function Analytics() {
       })
     }
     
-    setReportData(data)
-    setReportPage(1) // Reset to first page when generating new report
     setShowReport(true)
+    setIsLoadingReport(true)
+    // Simulate a brief loading delay for better UX
+    setTimeout(() => {
+      setReportData(data)
+      setReportPage(1)
+      setIsLoadingReport(false)
+    }, 500)
   }
 
   const handleExportPDF = async () => {
@@ -1568,7 +1574,12 @@ export default function Analytics() {
               Report: {selectedMetric} ({reportData.length} records)
             </h3>
             
-            {reportData.length === 0 ? (
+            {isLoadingReport ? (
+              <div className="bg-white rounded-xl p-12 text-center border border-gray-200">
+                <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-500">Generating report...</p>
+              </div>
+            ) : reportData.length === 0 ? (
               <div className="text-center py-8 sm:py-12 bg-white border border-gray-200 rounded-lg">
                 <div className="flex justify-center mb-2">
                   <FileText size={40} className="text-gray-400 sm:w-12 sm:h-12" />
