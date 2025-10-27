@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../config/database';
 import { logger } from '../../utils/logger';
 import { ResponseHelper } from '../../utils/response';
 import { performanceService } from './performance.service';
 
-const prisma = new PrismaClient();
+// use shared prisma from config/database
 
 export class PerformanceController {
 
@@ -473,7 +473,7 @@ export class PerformanceController {
           name: 'Rejection Rate Target',
           current: Math.round(rejectionRate * 100) / 100,
           target: targets.rejectionRate,
-          progress: Math.min(((targets.rejectionRate - rejectionRate) / targets.rejectionRate) * 100, 100),
+progress: Math.max(0, Math.min(((targets.rejectionRate - rejectionRate) / targets.rejectionRate) * 100, 100)),
           unit: '%',
           status: rejectionRate <= targets.rejectionRate ? 'achieved' : 'in-progress'
         },
@@ -541,27 +541,38 @@ export class PerformanceController {
         };
       } else {
         switch (timeRange) {
-          case '1W':
+          case '1W': {
             const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             dateFilter.assignedAt = { gte: oneWeekAgo, lte: now };
             break;
-          case '1M':
+          }
+          case '1M': {
             const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
             dateFilter.assignedAt = { gte: oneMonthAgo, lte: now };
             break;
-          case '3M':
+          }
+          case '3M': {
             const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
             dateFilter.assignedAt = { gte: threeMonthsAgo, lte: now };
             break;
-          case '6M':
+          }
+          case '6M': {
             const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
             dateFilter.assignedAt = { gte: sixMonthsAgo, lte: now };
             break;
-          case '1Y':
+          }
+          case '1Y': {
             const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
             dateFilter.assignedAt = { gte: oneYearAgo, lte: now };
             break;
+          }
         }
+      }
+
+      if (startDate || endDate) {
+        const gte = startDate ? new Date(startDate) : undefined;
+        const lte = endDate ? new Date(endDate) : undefined;
+        dateFilter.assignedAt = { ...(gte && { gte }), ...(lte && { lte }) };
       }
 
       // Get orders grouped by time period from AssignedOrderItem
