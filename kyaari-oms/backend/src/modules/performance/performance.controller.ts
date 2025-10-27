@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../config/database';
 import { logger } from '../../utils/logger';
 import { ResponseHelper } from '../../utils/response';
 import { performanceService } from './performance.service';
 
-const prisma = new PrismaClient();
+// use shared prisma from config/database
 
 export class PerformanceController {
 
