@@ -4,10 +4,11 @@ import { CustomDropdown, KPICard, CSVPDFExportButton } from '../../../components
 import { Calendar } from '../../../components/ui/calendar'
 import { Pagination } from '../../../components/ui/Pagination'
 import { format } from 'date-fns'
+import { TicketApi, type TicketListItem } from '../../../services/ticketApi'
 
 type IssueType = 'Invoice Mismatch' | 'Duplicate Entry' | 'Payment Pending' | 'Payment Delay' | 'Others'
-type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent'
-type TicketStatus = 'Open' | 'In Progress' | 'Resolved'
+type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
 
 type Message = {
   id: string
@@ -18,90 +19,86 @@ type Message = {
   attachments?: { name: string; url: string }[]
 }
 
+// Update to match the API structure
 type Ticket = {
   id: string
-  issueTitle: string
-  issueType: IssueType
-  priority: TicketPriority
+  ticketNumber: string
   status: TicketStatus
-  assignedTo: string
+  priority: TicketPriority
   createdAt: string
   updatedAt: string
+  goodsReceiptNote?: {
+    id: string
+    dispatch?: {
+      vendor: { companyName: string; user?: { email?: string } }
+      items: Array<{ assignedOrderItem: { orderItem: { order: { orderNumber?: string; clientOrderId?: string } } } }>
+    }
+  }
+  _count?: { comments: number; attachments: number }
+  // Additional fields for backward compatibility with UI
+  issueTitle?: string
+  issueType?: IssueType
+  assignedTo?: string
   messages?: Message[]
 }
 
 const PRIORITY_STYLES: Record<TicketPriority, { bg: string; color: string; border: string }> = {
-  Low: { bg: '#E5E7EB', color: '#111827', border: '#D1D5DB' },
-  Medium: { bg: '#FEF9C3', color: '#92400E', border: '#FEF08A' },
-  High: { bg: '#FFEDD5', color: '#9A3412', border: '#FED7AA' },
-  Urgent: { bg: '#FEE2E2', color: '#DC2626', border: '#FECACA' },
+  LOW: { bg: '#E5E7EB', color: '#111827', border: '#D1D5DB' },
+  MEDIUM: { bg: '#FEF9C3', color: '#92400E', border: '#FEF08A' },
+  HIGH: { bg: '#FFEDD5', color: '#9A3412', border: '#FED7AA' },
+  URGENT: { bg: '#FEE2E2', color: '#DC2626', border: '#FECACA' },
 }
 
 const STATUS_STYLES: Record<TicketStatus, { bg: string; color: string; border: string }> = {
-  Open: { bg: '#FEF9C3', color: '#92400E', border: '#FEF08A' },
-  'In Progress': { bg: '#DBEAFE', color: '#1E3A8A', border: '#BFDBFE' },
-  Resolved: { bg: '#D1FAE5', color: '#065F46', border: '#A7F3D0' },
+  OPEN: { bg: '#FEF9C3', color: '#92400E', border: '#FEF08A' },
+  IN_PROGRESS: { bg: '#DBEAFE', color: '#1E3A8A', border: '#BFDBFE' },
+  RESOLVED: { bg: '#D1FAE5', color: '#065F46', border: '#A7F3D0' },
+  CLOSED: { bg: '#E5E7EB', color: '#111827', border: '#D1D5DB' },
 }
 
-const INITIAL_TICKETS: Ticket[] = [
-  { 
-    id: 'TKT-V001', 
-    issueTitle: 'Payment delay for Invoice #INV-8895',
-    issueType: 'Payment Delay', 
-    priority: 'High',
-    status: 'Open',
-    assignedTo: 'Admin Support',
-    createdAt: '2025-09-25', 
-    updatedAt: '2025-09-25',
-    messages: [
-      { 
-        id: 'msg-1', 
-        sender: 'vendor', 
-        senderName: 'Vendor', 
-        text: 'Payment for Invoice #INV-8895 still pending. Please advise expected release date.', 
-        timestamp: 'Sep 25, 2025 10:01 AM' 
-      },
-      { 
-        id: 'msg-2', 
-        sender: 'admin', 
-        senderName: 'Admin Support', 
-        text: 'Acknowledged. Checking with finance and will update shortly.', 
-        timestamp: 'Sep 25, 2025 10:32 AM' 
-      },
-    ]
-  },
-  { 
-    id: 'TKT-V002', 
-    issueTitle: 'Dispatch label not generated for ORD-12320',
-    issueType: 'Others', 
-    priority: 'Medium',
-    status: 'In Progress',
-    assignedTo: 'Admin Support',
-    createdAt: '2025-09-21', 
-    updatedAt: '2025-09-21',
-    messages: [
-      { id: 'msg-3', sender: 'vendor', senderName: 'Vendor', text: 'Label not generated for ORD-12320.', timestamp: 'Sep 21, 2025 08:42 AM' },
-      { id: 'msg-4', sender: 'admin', senderName: 'Admin Support', text: 'Raised to Operations. Awaiting update.', timestamp: 'Sep 21, 2025 09:05 AM' },
-    ]
-  },
-  { 
-    id: 'TKT-V003', 
-    issueTitle: 'Invoice INV-8890 rejected',
-    issueType: 'Invoice Mismatch', 
-    priority: 'Low',
-    status: 'Resolved',
-    assignedTo: 'Admin Support',
-    createdAt: '2025-09-22', 
-    updatedAt: '2025-09-22',
-    messages: [
-      { id: 'msg-5', sender: 'vendor', senderName: 'Vendor', text: 'Invoice INV-8890 shows rejected.', timestamp: 'Sep 22, 2025 11:01 AM' },
-      { id: 'msg-6', sender: 'admin', senderName: 'Admin Support', text: 'Corrected tax code. Please re-check.', timestamp: 'Sep 22, 2025 02:11 PM' },
-    ]
-  },
-]
-
 export default function VendorSupport() {
-  const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS)
+  const [tickets, setTickets] = useState<Ticket[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch tickets from API
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        setIsLoading(true)
+        const response = await TicketApi.list({
+          status: 'all',
+          page: 1,
+          limit: 100
+        })
+        
+        if (response.success) {
+          // Transform API data to match UI expectations
+          const transformedTickets: Ticket[] = response.data.tickets.map((apiTicket: TicketListItem) => ({
+            id: apiTicket.id,
+            ticketNumber: apiTicket.ticketNumber,
+            status: apiTicket.status,
+            priority: apiTicket.priority,
+            createdAt: apiTicket.createdAt,
+            updatedAt: apiTicket.updatedAt,
+            goodsReceiptNote: apiTicket.goodsReceiptNote,
+            _count: apiTicket._count,
+            // Derive UI fields from API data
+            issueTitle: `Ticket ${apiTicket.ticketNumber}`,
+            assignedTo: 'Support Team',
+            messages: []
+          }))
+          
+          setTickets(transformedTickets)
+        }
+      } catch (error) {
+        console.error('Failed to fetch tickets:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchTickets()
+  }, [])
 
   // filters
   const [filterIssue, setFilterIssue] = useState<IssueType | ''>('')
@@ -140,9 +137,9 @@ export default function VendorSupport() {
   const itemsPerPage = 10
 
   // analytics
-  const openTickets = tickets.filter(t => t.status === 'Open').length
-  const inProgressTickets = tickets.filter(t => t.status === 'In Progress').length
-  const resolvedThisWeek = tickets.filter(t => t.status === 'Resolved').length
+  const openTickets = tickets.filter(t => t.status === 'OPEN').length
+  const inProgressTickets = tickets.filter(t => t.status === 'IN_PROGRESS').length
+  const resolvedThisWeek = tickets.filter(t => t.status === 'RESOLVED').length
   const avgResolutionHours = 4.2
 
   const filteredTickets = tickets.filter(t => {
@@ -163,7 +160,7 @@ export default function VendorSupport() {
       }
     }
     
-    if (search && !(t.id.toLowerCase().includes(search.toLowerCase()) || t.issueTitle.toLowerCase().includes(search.toLowerCase()))) return false
+    if (search && !(t.id.toLowerCase().includes(search.toLowerCase()) || (t.issueTitle?.toLowerCase().includes(search.toLowerCase())))) return false
     return true
   })
 
@@ -197,10 +194,11 @@ export default function VendorSupport() {
     }
     const newTicket: Ticket = {
       id: `TKT-V${String(4 + tickets.length).padStart(3, '0')}`,
+      ticketNumber: `TKT-V${String(4 + tickets.length).padStart(3, '0')}`,
       issueTitle: draftIssueTitle,
       issueType: draftIssue as IssueType,
       priority: draftPriority as TicketPriority,
-      status: 'Open',
+      status: 'OPEN',
       assignedTo: '-',
       createdAt: new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString().split('T')[0],
@@ -223,7 +221,7 @@ export default function VendorSupport() {
   }
 
   function resolveTicket(t: Ticket) {
-    setTickets(prev => prev.map(x => x.id === t.id ? { ...x, status: 'Resolved', updatedAt: new Date().toISOString().split('T')[0] } : x))
+    setTickets(prev => prev.map(x => x.id === t.id ? { ...x, status: 'RESOLVED' as TicketStatus, updatedAt: new Date().toISOString().split('T')[0] } : x))
   }
 
   function sendMessage() {
@@ -359,8 +357,16 @@ export default function VendorSupport() {
         </button>
       </div>
 
-      {/* Analytics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6 pt-6 sm:pt-8 pb-4 sm:pb-6">
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <span className="ml-3 text-gray-600">Loading tickets...</span>
+        </div>
+      ) : (
+        <>
+          {/* Analytics Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 mb-6 pt-6 sm:pt-8 pb-4 sm:pb-6">
         <KPICard
           title="Open Tickets"
           value={openTickets}
@@ -926,6 +932,8 @@ export default function VendorSupport() {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   )

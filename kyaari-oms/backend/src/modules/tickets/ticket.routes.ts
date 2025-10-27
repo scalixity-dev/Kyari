@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { TicketCommentsController } from './ticket-comments.controller';
 import { TicketController } from './ticket.controller';
+import { TicketChatController } from './ticket-chat.controller';
 import { authenticate } from '../../middlewares/auth.middleware';
 import { TicketAttachmentsController } from './ticket-attachments.controller';
 import { cacheService } from '../../services/cache.service';
@@ -91,6 +92,38 @@ router.post(
     `user:${req.user?.userId}:/api/tickets/${req.params.ticketId}/attachments*`,
   ]),
   TicketAttachmentsController.upload
+);
+
+// Chat endpoints (with cache invalidation)
+router.get(
+  '/:ticketId/chat',
+  authenticate,
+  cacheResponse((req) => `user:${req.user?.userId}:/api/tickets/${req.params.ticketId}/chat?${new URLSearchParams(req.query as any).toString()}`, 30),
+  TicketChatController.getChatMessages
+);
+router.post(
+  '/:ticketId/chat',
+  authenticate,
+  invalidatePatterns((req) => [
+    `user:${req.user?.userId}:/api/tickets*`,
+    `user:*:/api/tickets/${req.params.ticketId}/chat*`,
+  ]),
+  TicketChatController.sendChatMessage
+);
+router.post(
+  '/:ticketId/chat/upload',
+  authenticate,
+  invalidatePatterns((req) => [
+    `user:${req.user?.userId}:/api/tickets*`,
+    `user:*:/api/tickets/${req.params.ticketId}/chat*`,
+  ]),
+  TicketChatController.uploadFile
+);
+router.get(
+  '/:ticketId/chat/participants',
+  authenticate,
+  cacheResponse((req) => `user:${req.user?.userId}:/api/tickets/${req.params.ticketId}/chat/participants`, 300),
+  TicketChatController.getParticipants
 );
 
 export default router;
