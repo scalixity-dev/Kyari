@@ -98,6 +98,13 @@ enum TicketPriority {
   URGENT
 }
 
+enum MessageType {
+  TEXT
+  FILE
+  IMAGE
+  SYSTEM
+}
+
 enum NotificationPriority {
   LOW
   NORMAL
@@ -160,6 +167,9 @@ model User {
   // Notification relations
   deviceTokens    DeviceToken[]
   notificationLogs NotificationLog[]
+  
+  // Chat relations
+  sentTicketMessages TicketChat[] @relation("SentTicketMessages")
   
   @@index([email])
   @@index([status])
@@ -596,15 +606,36 @@ model Ticket {
   assigneeId         String?
   assignee           User?          @relation("AssignedToUser", fields: [assigneeId], references: [id], onDelete: SetNull)
   resolvedAt         DateTime?
+  lastMessageAt      DateTime?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   comments           TicketComment[]
   attachments        Attachment[]
+  chats              TicketChat[]
   @@index([status])
   @@index([priority])
   @@index([assigneeId])
   @@map("tickets")
 }
+
+model TicketChat {
+  id          String      @id @default(cuid())
+  ticketId    String
+  senderId    String
+  message     String?     @db.Text
+  attachments Json?
+  messageType MessageType @default(TEXT)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  ticket      Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender      User   @relation("SentTicketMessages", fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId, createdAt])
+  @@index([senderId])
+  @@map("ticket_chats")
+}
+
 model TicketComment {
   id        String   @id @default(cuid())
   ticketId  String
