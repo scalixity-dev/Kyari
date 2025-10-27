@@ -81,6 +81,7 @@ export class PerformanceController {
           vendorId,
           status: { in: ['PENDING_CONFIRMATION', 'VENDOR_CONFIRMED_FULL', 'VENDOR_CONFIRMED_PARTIAL', 'INVOICED'] },
           assignedAt: {
+            ...dateFilter.assignedAt,
             lt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // More than 3 days old
           }
         }
@@ -117,26 +118,34 @@ export class PerformanceController {
         }
       });
 
-      // Calculate pending and released payments
+      // Calculate pending and released payments (deduplicate by purchase order)
       let pendingPayments = 0;
       let releasedPayments = 0;
 
+      // Collect unique purchase orders to avoid double counting
+      const uniquePurchaseOrders = new Map();
+      
       verifiedOrders.forEach(grnItem => {
         const purchaseOrder = grnItem.assignedOrderItem.purchaseOrderItem?.purchaseOrder;
         if (purchaseOrder) {
-          const orderAmount = Number(purchaseOrder.totalAmount);
-          
-          if (purchaseOrder.payment) {
-            // Payment exists - check status
-            if (purchaseOrder.payment.status === 'COMPLETED') {
-              releasedPayments += orderAmount;
-            } else if (purchaseOrder.payment.status === 'PENDING') {
-              pendingPayments += orderAmount;
-            }
-          } else {
-            // No payment record exists - this is pending
+          uniquePurchaseOrders.set(purchaseOrder.id, purchaseOrder);
+        }
+      });
+
+      // Process each unique purchase order once
+      uniquePurchaseOrders.forEach(purchaseOrder => {
+        const orderAmount = Number(purchaseOrder.totalAmount);
+        
+        if (purchaseOrder.payment) {
+          // Payment exists - check status
+          if (purchaseOrder.payment.status === 'COMPLETED') {
+            releasedPayments += orderAmount;
+          } else if (purchaseOrder.payment.status === 'PENDING') {
             pendingPayments += orderAmount;
           }
+        } else {
+          // No payment record exists - this is pending
+          pendingPayments += orderAmount;
         }
       });
 
@@ -223,9 +232,10 @@ export class PerformanceController {
           where: {
             vendorId,
             status: { in: ['PENDING_CONFIRMATION', 'VENDOR_CONFIRMED_FULL', 'VENDOR_CONFIRMED_PARTIAL', 'INVOICED'] },
-            assignedAt: {
-              lt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // More than 3 days old
-            }
+            AND: [
+              { assignedAt: dateFilter.assignedAt },
+              { assignedAt: { lt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) } } // More than 3 days old
+            ]
           }
         })
       ]);
@@ -307,13 +317,22 @@ export class PerformanceController {
 
       // Calculate pending payments for insights
       let pendingPaymentsForInsight = 0;
+      const seenPurchaseOrderIds = new Set<string>();
+      
       verifiedOrdersForInsight.forEach(grnItem => {
         const purchaseOrder = grnItem.assignedOrderItem.purchaseOrderItem?.purchaseOrder;
-        if (purchaseOrder) {
-          const orderAmount = Number(purchaseOrder.totalAmount);
+        if (purchaseOrder && purchaseOrder.id) {
+          // Skip if we've already processed this purchase order
+          if (seenPurchaseOrderIds.has(purchaseOrder.id)) {
+            return;
+          }
           
+          // Mark this purchase order as seen
+          seenPurchaseOrderIds.add(purchaseOrder.id);
+          
+          // Add to pending payments if payment is absent or status is PENDING
           if (!purchaseOrder.payment || purchaseOrder.payment.status === 'PENDING') {
-            pendingPaymentsForInsight += orderAmount;
+            pendingPaymentsForInsight += Number(purchaseOrder.totalAmount);
           }
         }
       });
@@ -421,9 +440,10 @@ export class PerformanceController {
           where: {
             vendorId,
             status: { in: ['PENDING_CONFIRMATION', 'VENDOR_CONFIRMED_FULL', 'VENDOR_CONFIRMED_PARTIAL', 'INVOICED'] },
-            assignedAt: {
-              lt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // More than 3 days old
-            }
+            AND: [
+              { assignedAt: dateFilter.assignedAt },
+              { assignedAt: { lt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) } } // More than 3 days old
+            ]
           }
         })
       ]);
@@ -796,12 +816,15 @@ export class PerformanceController {
       // Sort by count (highest first)
       rejectionStats.sort((a, b) => b.count - a.count);
 
+      // Get completed orders count for rejection rate calculation
+      const completedCount = await prisma.assignedOrderItem.count({
+        where: { vendorId, status: { in: ['COMPLETED', 'VERIFIED_OK', 'DISPATCHED'] }, ...dateFilter }
+      });
+
       ResponseHelper.success(res, {
         summary: {
           totalRejections,
-          rejectionRate: totalRejections > 0 ? Math.round((totalRejections / (totalRejections + await prisma.assignedOrderItem.count({
-            where: { vendorId, status: { in: ['COMPLETED', 'VERIFIED_OK', 'DISPATCHED'] }, ...dateFilter }
-          }))) * 100) : 0
+          rejectionRate: totalRejections > 0 ? Math.round((totalRejections / (totalRejections + completedCount)) * 100) : 0
         },
         categories: rejectionStats,
         timeRange: {
@@ -830,12 +853,13 @@ export class PerformanceController {
           // Group by day
           key = date.toLocaleDateString('en-US', { weekday: 'short' });
           break;
-        case '1M':
+        case '1M': {
           // Group by week
           const weekStart = new Date(date);
           weekStart.setDate(date.getDate() - date.getDay());
           key = `Week ${Math.ceil(date.getDate() / 7)}`;
           break;
+        }
         case '3M':
         case '6M':
         case '1Y':

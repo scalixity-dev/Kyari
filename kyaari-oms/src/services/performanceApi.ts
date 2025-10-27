@@ -6,6 +6,8 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const API_URL = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
 
 // Performance API Types
+export type ISODateString = string;
+
 export interface KPICardsData {
   fillRate: number;
   rejectionRate: number;
@@ -86,8 +88,8 @@ export interface RejectionReasonOrder {
   productName: string;
   quantity: number;
   remarks: string | null;
-  rejectedAt: Date;
-  orderCreatedAt: Date;
+  rejectedAt: ISODateString;
+  orderCreatedAt: ISODateString;
 }
 
 export interface RejectionCategory {
@@ -105,8 +107,8 @@ export interface RejectionReasonsData {
   };
   categories: RejectionCategory[];
   timeRange: {
-    startDate: Date;
-    endDate: Date;
+    startDate: ISODateString;
+    endDate: ISODateString;
   };
 }
 
@@ -127,8 +129,8 @@ export interface WeeklyOrderFulfillmentData {
     totalPending: number;
   };
   timeRange: {
-    startDate: Date;
-    endDate: Date;
+    startDate: ISODateString;
+    endDate: ISODateString;
   };
 }
 
@@ -138,7 +140,7 @@ export interface SLABreachOrder {
   productName: string;
   status: string;
   daysSinceAssigned: number;
-  assignedAt: Date;
+  assignedAt: ISODateString;
 }
 
 export interface SLABreachAnalysisData {
@@ -162,8 +164,8 @@ export interface SLABreachAnalysisData {
     target: number;
   }[];
   timeRange: {
-    startDate: Date;
-    endDate: Date;
+    startDate: ISODateString;
+    endDate: ISODateString;
   };
 }
 

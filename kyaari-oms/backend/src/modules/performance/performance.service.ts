@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../config/database';
 import { logger } from '../../utils/logger';
 
-const prisma = new PrismaClient();
+
 
 export class PerformanceService {
 
@@ -76,9 +76,10 @@ export class PerformanceService {
         where: {
           vendorId,
           status: { in: ['PENDING_CONFIRMATION', 'VENDOR_CONFIRMED_FULL', 'VENDOR_CONFIRMED_PARTIAL', 'INVOICED'] },
-          assignedAt: {
-            lt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // More than 3 days old
-          }
+          AND: [
+            { assignedAt: dateFilter.assignedAt },
+            { assignedAt: { lt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) } } // More than 3 days old
+          ]
         }
       });
     } catch (error) {
@@ -122,13 +123,23 @@ export class PerformanceService {
         }
       });
 
-      // Calculate pending and released payments
+
+      // Calculate pending and released payments (deduplicate by purchase order)
       let pendingPayments = 0;
       let releasedPayments = 0;
+      const seenPurchaseOrderIds = new Set<string>();
 
       verifiedOrders.forEach(grnItem => {
         const purchaseOrder = grnItem.assignedOrderItem.purchaseOrderItem?.purchaseOrder;
-        if (purchaseOrder) {
+        if (purchaseOrder && purchaseOrder.id) {
+          // Skip if we've already processed this purchase order
+          if (seenPurchaseOrderIds.has(purchaseOrder.id)) {
+            return;
+          }
+          
+          // Mark this purchase order as seen
+          seenPurchaseOrderIds.add(purchaseOrder.id);
+          
           const orderAmount = Number(purchaseOrder.totalAmount);
           
           if (purchaseOrder.payment) {
@@ -537,12 +548,15 @@ export class PerformanceService {
       // Sort by count (highest first)
       rejectionStats.sort((a, b) => b.count - a.count);
 
+      // Get completed orders count for rejection rate calculation
+      const completedCount = await prisma.assignedOrderItem.count({
+        where: { vendorId, status: { in: ['COMPLETED', 'VERIFIED_OK', 'DISPATCHED'] }, ...dateFilter }
+      });
+
       return {
         summary: {
           totalRejections,
-          rejectionRate: totalRejections > 0 ? Math.round((totalRejections / (totalRejections + await prisma.assignedOrderItem.count({
-            where: { vendorId, status: { in: ['COMPLETED', 'VERIFIED_OK', 'DISPATCHED'] }, ...dateFilter }
-          }))) * 100) : 0
+          rejectionRate: totalRejections > 0 ? Math.round((totalRejections / (totalRejections + completedCount)) * 100) : 0
         },
         categories: rejectionStats,
         timeRange: {
@@ -647,12 +661,13 @@ export class PerformanceService {
           // Group by day
           key = date.toLocaleDateString('en-US', { weekday: 'short' });
           break;
-        case '1M':
+        case '1M': {
           // Group by week
           const weekStart = new Date(date);
           weekStart.setDate(date.getDate() - date.getDay());
           key = `Week ${Math.ceil(date.getDate() / 7)}`;
           break;
+        }
         case '3M':
         case '6M':
         case '1Y':
