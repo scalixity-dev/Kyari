@@ -521,27 +521,38 @@ export class PerformanceController {
         };
       } else {
         switch (timeRange) {
-          case '1W':
+          case '1W': {
             const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             dateFilter.assignedAt = { gte: oneWeekAgo, lte: now };
             break;
-          case '1M':
+          }
+          case '1M': {
             const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
             dateFilter.assignedAt = { gte: oneMonthAgo, lte: now };
             break;
-          case '3M':
+          }
+          case '3M': {
             const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
             dateFilter.assignedAt = { gte: threeMonthsAgo, lte: now };
             break;
-          case '6M':
+          }
+          case '6M': {
             const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
             dateFilter.assignedAt = { gte: sixMonthsAgo, lte: now };
             break;
-          case '1Y':
+          }
+          case '1Y': {
             const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
             dateFilter.assignedAt = { gte: oneYearAgo, lte: now };
             break;
+          }
         }
+      }
+
+      if (startDate || endDate) {
+        const gte = startDate ? new Date(startDate) : undefined;
+        const lte = endDate ? new Date(endDate) : undefined;
+        dateFilter.assignedAt = { ...(gte && { gte }), ...(lte && { lte }) };
       }
 
       // Get orders grouped by time period from AssignedOrderItem
