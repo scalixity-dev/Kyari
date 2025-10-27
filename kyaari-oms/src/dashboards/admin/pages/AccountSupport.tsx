@@ -133,7 +133,6 @@ const INITIAL_TICKETS: Ticket[] = [
 
 export default function AccountSupport() {
   const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS)
-  const [isLoadingTickets, setIsLoadingTickets] = useState(false)
 
   // filters
   const [filterIssue, setFilterIssue] = useState<IssueType | ''>('')
@@ -237,6 +236,8 @@ export default function AccountSupport() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    // Revoke the object URL after a short delay to prevent memory leaks
+    setTimeout(() => URL.revokeObjectURL(url), 100)
   }
 
   function handleExportPDF() {
@@ -254,6 +255,8 @@ export default function AccountSupport() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    // Revoke the object URL after a short delay to prevent memory leaks
+    setTimeout(() => URL.revokeObjectURL(url), 100)
   }
 
   function resetFilters() {
@@ -557,13 +560,6 @@ export default function AccountSupport() {
 
       {/* Table - Desktop view */}
       <div className="hidden lg:block bg-white rounded-xl overflow-hidden shadow-md border border-gray-100">
-        {isLoadingTickets ? (
-          <div className="p-12 text-center">
-            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading tickets...</p>
-          </div>
-        ) : (
-          <>
         <div className="overflow-x-auto">
           <table className="w-full border-separate border-spacing-0">
             <thead>
@@ -693,18 +689,11 @@ export default function AccountSupport() {
             variant="desktop"
           />
         )}
-        </>
-        )}
       </div>
 
       {/* Card View - Mobile */}
       <div className="lg:hidden space-y-3">
-        {isLoadingTickets ? (
-          <div className="bg-white rounded-xl p-12 text-center">
-            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading tickets...</p>
-          </div>
-        ) : paginatedTickets.length > 0 ? (
+        {paginatedTickets.length > 0 ? (
           paginatedTickets.map(t => (
             <div key={t.id} className="rounded-xl p-4 border border-gray-200 bg-white">
               <div className="flex items-start justify-between mb-3">

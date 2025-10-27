@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Eye, ChevronRight, X, ChevronDown, Package, Calendar as CalendarIcon } from 'lucide-react'
-import { CustomDropdown } from '../../../components'
+import { CustomDropdown, LoadingCard } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { Pagination } from '../../../components/ui/Pagination'
 import { AccountsAssignmentApiService } from '../../../services/accountsAssignmentApi'
@@ -295,12 +295,7 @@ export default function VendorOrders() {
       </div>
 
       {/* Loading State - Orders style card */}
-      {loading && (
-        <div className="bg-white rounded-xl p-12 text-center">
-          <div className="w-12 h-12 border-4 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading vendor orders...</p>
-        </div>
-      )}
+      {loading && <LoadingCard message="Loading vendor orders..." />}
 
       {/* Empty State */}
       {!loading && orders.length === 0 && (
