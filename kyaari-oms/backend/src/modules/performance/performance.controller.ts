@@ -453,7 +453,7 @@ export class PerformanceController {
           name: 'Rejection Rate Target',
           current: Math.round(rejectionRate * 100) / 100,
           target: targets.rejectionRate,
-          progress: Math.min(((targets.rejectionRate - rejectionRate) / targets.rejectionRate) * 100, 100),
+progress: Math.max(0, Math.min(((targets.rejectionRate - rejectionRate) / targets.rejectionRate) * 100, 100)),
           unit: '%',
           status: rejectionRate <= targets.rejectionRate ? 'achieved' : 'in-progress'
         },
