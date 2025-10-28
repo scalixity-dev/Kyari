@@ -41,6 +41,69 @@ export class PaymentController {
     }
   }
 
+  static async aging(req: Request, res: Response) {
+    try {
+      const vendorIdsParam = (req.query.vendors as string | undefined) || '';
+      const vendorIds = vendorIdsParam
+        ? vendorIdsParam.split(',').map((v) => v.trim()).filter((v) => v.length > 0)
+        : undefined;
+      const data = await PaymentService.getVendorsPaymentAging(vendorIds);
+      return res.json({ success: true, data });
+    } catch (error: any) {
+      logger.error('Failed to fetch payment aging', { error: error.message });
+      return res.status(500).json({ success: false, error: 'Failed to fetch payment aging' });
+    }
+  }
+
+  static async compliance(req: Request, res: Response) {
+    try {
+      const vendorIdsParam = (req.query.vendors as string | undefined) || '';
+      const vendorIds = vendorIdsParam
+        ? vendorIdsParam.split(',').map((v) => v.trim()).filter((v) => v.length > 0)
+        : undefined;
+      const data = await PaymentService.getInvoiceCompliance(vendorIds);
+      return res.json({ success: true, data });
+    } catch (error: any) {
+      logger.error('Failed to fetch invoice compliance', { error: error.message });
+      return res.status(500).json({ success: false, error: 'Failed to fetch invoice compliance' });
+    }
+  }
+
+  static async slaBreaches(_req: Request, res: Response) {
+    try {
+      const data = await PaymentService.getSlaBreaches();
+      return res.json({ success: true, data });
+    } catch (error: any) {
+      logger.error('Failed to fetch SLA breaches', { error: error.message });
+      return res.status(500).json({ success: false, error: 'Failed to fetch SLA breaches' });
+    }
+  }
+
+  static async trends(req: Request, res: Response) {
+    try {
+      const granularityParam = (req.query.granularity as string | undefined) || 'weekly';
+      const periodsParam = req.query.periods as string | undefined;
+      const granularity = ['weekly', 'monthly', 'yearly'].includes(granularityParam) ? granularityParam as 'weekly' | 'monthly' | 'yearly' : 'weekly';
+      const periods = periodsParam ? Math.max(1, Math.min(12, parseInt(periodsParam))) : (granularity === 'yearly' ? 4 : 4);
+      const data = await PaymentService.getPaymentTrends(granularity, periods);
+      return res.json({ success: true, data });
+    } catch (error: any) {
+      logger.error('Failed to fetch payment trends', { error: error.message });
+      return res.status(500).json({ success: false, error: 'Failed to fetch payment trends' });
+    }
+  }
+
+  static async summary(req: Request, res: Response) {
+    try {
+      const granularityParam = (req.query.granularity as string | undefined) || 'weekly';
+      const granularity = ['weekly', 'monthly', 'yearly'].includes(granularityParam) ? granularityParam as 'weekly' | 'monthly' | 'yearly' : 'weekly';
+      const data = await PaymentService.getPaymentSummary(granularity);
+      return res.json({ success: true, data });
+    } catch (error: any) {
+      logger.error('Failed to fetch payment summary', { error: error.message });
+      return res.status(500).json({ success: false, error: 'Failed to fetch payment summary' });
+    }
+  }
   static async editAmount(req: Request, res: Response) {
     try {
       const parse = editAmountSchema.safeParse(req.body);

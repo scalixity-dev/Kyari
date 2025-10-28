@@ -40,6 +40,41 @@ router.get(
   PaymentController.list
 );
 
+router.get(
+  '/aging',
+  authenticate,
+  cacheResponse((req) => `user:${req.user?.userId}:/api/payments/aging?${new URLSearchParams(req.query as any).toString()}`, 300),
+  PaymentController.aging
+);
+
+router.get(
+  '/compliance',
+  authenticate,
+  cacheResponse((req) => `user:${req.user?.userId}:/api/payments/compliance?${new URLSearchParams(req.query as any).toString()}`, 300),
+  PaymentController.compliance
+);
+
+router.get(
+  '/sla-breaches',
+  authenticate,
+  cacheResponse((_req) => `global:/api/payments/sla-breaches`, 300),
+  PaymentController.slaBreaches
+);
+
+router.get(
+  '/trends',
+  authenticate,
+  cacheResponse((req) => `user:${req.user?.userId}:/api/payments/trends?${new URLSearchParams(req.query as any).toString()}`, 300),
+  PaymentController.trends
+);
+
+router.get(
+  '/summary',
+  authenticate,
+  cacheResponse((req) => `user:${req.user?.userId}:/api/payments/summary?${new URLSearchParams(req.query as any).toString()}`, 120),
+  PaymentController.summary
+);
+
 router.post(
   '/edit-amount',
   authenticate,

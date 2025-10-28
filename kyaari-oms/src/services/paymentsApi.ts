@@ -59,6 +59,55 @@ export const PaymentsApi = {
       { purchaseOrderId, deliveryStatus }
     )
     return res.data
+  },
+
+  async aging(vendors?: string[]) {
+    const params: Record<string, string> = {}
+    if (vendors && vendors.length > 0) {
+      params.vendors = vendors.join(',')
+    }
+    const res = await api.get<{ success: boolean; data: Array<{ vendorId: string; vendorName: string; outstandingAmount: number; avgPendingDays: number; oldestInvoiceDate: string | null }> }>(
+      '/api/payments/aging',
+      { params }
+    )
+    return res.data
+  },
+
+  async compliance(vendors?: string[]) {
+    const params: Record<string, string> = {}
+    if (vendors && vendors.length > 0) {
+      params.vendors = vendors.join(',')
+    }
+    const res = await api.get<{ success: boolean; data: { vendors: Array<{ vendorId: string; vendor: string; totalInvoices: number; compliantPercentage: number; issuesFound: number }>; overallComplianceRate: number } }>(
+      '/api/payments/compliance',
+      { params }
+    )
+    return res.data
+  },
+
+  async slaBreaches() {
+    const res = await api.get<{ success: boolean; data: { items: Array<{ slaType: string; breachCount: number; avgDelayDays: number }>; totalBreaches: number; avgDelayAcrossAll: number } }>(
+      '/api/payments/sla-breaches'
+    )
+    return res.data
+  },
+
+  async trends(granularity: 'weekly' | 'monthly' | 'yearly' = 'weekly', periods?: number) {
+    const params: Record<string, string | number> = { granularity }
+    if (periods) params.periods = periods
+    const res = await api.get<{ success: boolean; data: Array<{ period: string; released: number; pending: number }> }>(
+      '/api/payments/trends',
+      { params }
+    )
+    return res.data
+  },
+
+  async summary(granularity: 'weekly' | 'monthly' | 'yearly' = 'weekly') {
+    const res = await api.get<{ success: boolean; data: { released: number; pending: number } }>(
+      '/api/payments/summary',
+      { params: { granularity } }
+    )
+    return res.data
   }
 }
 

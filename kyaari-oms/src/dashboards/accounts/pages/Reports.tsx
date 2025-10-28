@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { PaymentsApi } from '../../../services/paymentsApi'
 import { BarChart3, AlertTriangle, CheckSquare, Clock, Wallet } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -36,52 +37,17 @@ type SLABreachRecord = {
 
 type TimeRange = 'weekly' | 'monthly' | 'yearly'
 
-// Mock data
-const PAYMENT_AGING_DATA: PaymentAgingRecord[] = [
-  { vendor: 'GreenLeaf Co', outstandingAmount: 125000, avgDaysPending: 18, oldestInvoiceDate: '2025-09-05', oldestInvoiceDays: 26 },
-  { vendor: 'Clay Works', outstandingAmount: 89000, avgDaysPending: 12, oldestInvoiceDate: '2025-09-15', oldestInvoiceDays: 16 },
-  { vendor: 'Urban Roots', outstandingAmount: 156000, avgDaysPending: 35, oldestInvoiceDate: '2025-08-20', oldestInvoiceDays: 42 },
-  { vendor: 'Plantify', outstandingAmount: 45000, avgDaysPending: 8, oldestInvoiceDate: '2025-09-20', oldestInvoiceDays: 11 },
-  { vendor: 'EcoGarden Solutions', outstandingAmount: 210000, avgDaysPending: 41, oldestInvoiceDate: '2025-08-15', oldestInvoiceDays: 47 },
-  { vendor: 'Flower Garden', outstandingAmount: 78000, avgDaysPending: 28, oldestInvoiceDate: '2025-08-28', oldestInvoiceDays: 34 },
-]
+// Live data state (replaces mock)
+const computeDaysOld = (isoDate: string | null): number => {
+  if (!isoDate) return 0
+  const d = new Date(isoDate)
+  const ms = Date.now() - d.getTime()
+  return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)))
+}
 
-const COMPLIANCE_DATA: ComplianceRecord[] = [
-  { vendor: 'GreenLeaf Co', totalInvoices: 45, compliantPercentage: 95, issuesFound: 2 },
-  { vendor: 'Clay Works', totalInvoices: 38, compliantPercentage: 100, issuesFound: 0 },
-  { vendor: 'Urban Roots', totalInvoices: 52, compliantPercentage: 88, issuesFound: 6 },
-  { vendor: 'Plantify', totalInvoices: 29, compliantPercentage: 96, issuesFound: 1 },
-  { vendor: 'EcoGarden Solutions', totalInvoices: 67, compliantPercentage: 82, issuesFound: 12 },
-  { vendor: 'Flower Garden', totalInvoices: 41, compliantPercentage: 90, issuesFound: 4 },
-]
+// Live compliance data will be loaded via API
 
-const SLA_BREACH_DATA: SLABreachRecord[] = [
-  { slaType: 'Invoice Validation', breachCount: 12, avgDelayDays: 3.5 },
-  { slaType: 'Payment Release', breachCount: 8, avgDelayDays: 5.2 },
-  { slaType: 'Delivery Confirmation', breachCount: 15, avgDelayDays: 2.8 },
-  { slaType: 'Vendor Response Time', breachCount: 6, avgDelayDays: 4.1 },
-]
 
-const PAYMENT_WEEKLY_DATA = [
-  { period: 'Week 1', released: 850000, pending: 125000 },
-  { period: 'Week 2', released: 920000, pending: 156000 },
-  { period: 'Week 3', released: 780000, pending: 98000 },
-  { period: 'Week 4', released: 1050000, pending: 203000 },
-]
-
-const PAYMENT_MONTHLY_DATA = [
-  { period: 'Jun', released: 3200000, pending: 450000 },
-  { period: 'Jul', released: 3800000, pending: 520000 },
-  { period: 'Aug', released: 3500000, pending: 380000 },
-  { period: 'Sep', released: 4100000, pending: 703000 },
-]
-
-const PAYMENT_YEARLY_DATA = [
-  { period: '2022', released: 38500000, pending: 5200000 },
-  { period: '2023', released: 42800000, pending: 6100000 },
-  { period: '2024', released: 45200000, pending: 5900000 },
-  { period: '2025', released: 31700000, pending: 4100000 },
-]
 
 
 function AccountsReports() {
@@ -195,15 +161,21 @@ function AccountsReports() {
   // Payment Aging Filters
   const [agingVendorFilter, setAgingVendorFilter] = useState('')
   const [agingStatusFilter, setAgingStatusFilter] = useState<string>('all')
+  const [agingData, setAgingData] = useState<PaymentAgingRecord[]>([])
   
   // Compliance Filters
   const [complianceVendorFilter, setComplianceVendorFilter] = useState('')
   const [complianceFilter, setComplianceFilter] = useState<string>('all')
+  const [complianceData, setComplianceData] = useState<ComplianceRecord[]>([])
+  const [overallCompliance, setOverallCompliance] = useState<number>(0)
   
   // SLA Filters
   const [slaTypeFilter, setSlaTypeFilter] = useState<string>('all')
   const [slaBreachSeverity, setSlaBreachSeverity] = useState<string>('all')
   const [slaDelaySeverity, setSlaDelaySeverity] = useState<string>('all')
+  const [slaBreachData, setSlaBreachData] = useState<SLABreachRecord[]>([])
+  const [totalSlaBreaches, setTotalSlaBreaches] = useState<number>(0)
+  const [avgDelayAcrossAll, setAvgDelayAcrossAll] = useState<number>(0)
 
   // Pagination for each table
   const [agingCurrentPage, setAgingCurrentPage] = useState(1)
@@ -211,19 +183,96 @@ function AccountsReports() {
   const [slaCurrentPage, setSlaCurrentPage] = useState(1)
   const itemsPerPage = 10
 
-  // Calculate summary metrics
-  const summaryMetrics = useMemo(() => {
-    const totalOutstanding = PAYMENT_AGING_DATA.reduce((sum, item) => sum + item.outstandingAmount, 0)
-    const avgCompliance = Math.round(COMPLIANCE_DATA.reduce((sum, item) => sum + item.compliantPercentage, 0) / COMPLIANCE_DATA.length)
-    const totalBreaches = SLA_BREACH_DATA.reduce((sum, item) => sum + item.breachCount, 0)
-    const currentData = timeRange === 'weekly' 
-      ? PAYMENT_WEEKLY_DATA 
-      : timeRange === 'monthly' 
-        ? PAYMENT_MONTHLY_DATA 
-        : PAYMENT_YEARLY_DATA
-    const paymentsReleased = currentData[currentData.length - 1]?.released || 0
-    const pendingPayments = currentData[currentData.length - 1]?.pending || 0
+  // Fetch aging data
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    PaymentsApi.aging()
+      .then((resp) => {
+        if (!mounted) return
+        const items = (resp?.data || []).map((r) => {
+          const oldestDays = computeDaysOld(r.oldestInvoiceDate)
+          const record: PaymentAgingRecord = {
+            vendor: r.vendorName,
+            outstandingAmount: r.outstandingAmount,
+            avgDaysPending: r.avgPendingDays,
+            oldestInvoiceDate: r.oldestInvoiceDate || '',
+            oldestInvoiceDays: oldestDays,
+          }
+          return record
+        })
+        setAgingData(items)
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => { mounted = false }
+  }, [])
 
+  // Fetch compliance data
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    PaymentsApi.compliance()
+      .then((resp) => {
+        if (!mounted) return
+        const rows = (resp?.data?.vendors || []).map(v => ({
+          vendor: v.vendor,
+          totalInvoices: v.totalInvoices,
+          compliantPercentage: v.compliantPercentage,
+          issuesFound: v.issuesFound
+        }))
+        setComplianceData(rows)
+        setOverallCompliance(resp?.data?.overallComplianceRate || 0)
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => { mounted = false }
+  }, [])
+
+  // Fetch SLA breaches data
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    PaymentsApi.slaBreaches()
+      .then((resp) => {
+        if (!mounted) return
+        const items = (resp?.data?.items || []).map(item => ({
+          slaType: item.slaType,
+          breachCount: item.breachCount,
+          avgDelayDays: item.avgDelayDays
+        }))
+        setSlaBreachData(items)
+        setTotalSlaBreaches(resp?.data?.totalBreaches || 0)
+        setAvgDelayAcrossAll(resp?.data?.avgDelayAcrossAll || 0)
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => { mounted = false }
+  }, [])
+
+  // Calculate summary metrics
+  const [paymentsReleased, setPaymentsReleased] = useState(0)
+  const [pendingPayments, setPendingPayments] = useState(0)
+
+  useEffect(() => {
+    let mounted = true
+    PaymentsApi.summary(timeRange)
+      .then((resp) => {
+        if (!mounted) return
+        setPaymentsReleased(resp?.data?.released || 0)
+        setPendingPayments(resp?.data?.pending || 0)
+      })
+      .catch(() => {})
+    return () => { mounted = false }
+  }, [timeRange])
+
+  const summaryMetrics = useMemo(() => {
+    const totalOutstanding = agingData.reduce((sum, item) => sum + item.outstandingAmount, 0)
+    const avgCompliance = overallCompliance
+    const totalBreaches = totalSlaBreaches
     return {
       totalOutstanding,
       avgCompliance,
@@ -231,11 +280,11 @@ function AccountsReports() {
       paymentsReleased,
       pendingPayments,
     }
-  }, [timeRange])
+  }, [agingData, overallCompliance, totalSlaBreaches, paymentsReleased, pendingPayments])
 
   // Filter Payment Aging data
   const filteredPaymentAging = useMemo(() => {
-    let filtered = PAYMENT_AGING_DATA
+    let filtered = agingData
     
     // Vendor filter
     if (agingVendorFilter) {
@@ -253,11 +302,11 @@ function AccountsReports() {
     }
     
     return filtered
-  }, [agingVendorFilter, agingStatusFilter])
+  }, [agingVendorFilter, agingStatusFilter, agingData])
 
   // Filter Compliance data
   const filteredCompliance = useMemo(() => {
-    let filtered = COMPLIANCE_DATA
+    let filtered = complianceData
     
     // Vendor filter
     if (complianceVendorFilter) {
@@ -275,11 +324,11 @@ function AccountsReports() {
     }
     
     return filtered
-  }, [complianceVendorFilter, complianceFilter])
+  }, [complianceVendorFilter, complianceFilter, complianceData])
 
   // Filter SLA data
   const filteredSLABreaches = useMemo(() => {
-    let filtered = SLA_BREACH_DATA
+    let filtered = slaBreachData
     
     // SLA Type filter
     if (slaTypeFilter !== 'all') {
@@ -307,7 +356,7 @@ function AccountsReports() {
     }
     
     return filtered
-  }, [slaTypeFilter, slaBreachSeverity, slaDelaySeverity])
+  }, [slaTypeFilter, slaBreachSeverity, slaDelaySeverity, slaBreachData])
 
   // Pagination calculations for Payment Aging
   const agingTotalPages = Math.ceil(filteredPaymentAging.length / itemsPerPage)
@@ -340,11 +389,22 @@ function AccountsReports() {
     setSlaCurrentPage(1)
   }, [slaTypeFilter, slaBreachSeverity, slaDelaySeverity])
 
-  const paymentChartData = timeRange === 'weekly' 
-    ? PAYMENT_WEEKLY_DATA 
-    : timeRange === 'monthly' 
-      ? PAYMENT_MONTHLY_DATA 
-      : PAYMENT_YEARLY_DATA
+  const [paymentChartData, setPaymentChartData] = useState<Array<{ period: string; released: number; pending: number }>>([])
+
+  // Fetch trends whenever timeRange changes
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    PaymentsApi.trends(timeRange)
+      .then((resp) => {
+        if (!mounted) return
+        setPaymentChartData(resp?.data || [])
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => { mounted = false }
+  }, [timeRange])
 
   return (
     <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
@@ -1239,10 +1299,10 @@ function AccountsReports() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs sm:text-sm">
               <div className="flex items-center gap-2 text-red-800 font-medium">
                 <AlertTriangle size={14} className="sm:w-4 sm:h-4" />
-                <span>Total SLA Breaches: <strong>{filteredSLABreaches.reduce((sum, r) => sum + r.breachCount, 0)}</strong></span>
+                <span>Total SLA Breaches: <strong>{totalSlaBreaches}</strong></span>
               </div>
               <div className="text-red-700">
-                Avg Delay Across All Types: <strong>{filteredSLABreaches.length > 0 ? (filteredSLABreaches.reduce((sum, r) => sum + r.avgDelayDays, 0) / filteredSLABreaches.length).toFixed(1) : '0.0'} days</strong>
+                Avg Delay Across All Types: <strong>{avgDelayAcrossAll.toFixed(1)} days</strong>
               </div>
             </div>
           </div>
