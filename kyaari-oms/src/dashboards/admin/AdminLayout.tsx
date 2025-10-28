@@ -1,23 +1,12 @@
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
+import { useNotifications } from '../../hooks/useNotifications'
+import type { Notification as AppNotification } from '../../services/notifications'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, Users, Bell, Wallet, MapPin, BarChart3, FileText, Search, ChevronRight, X, Clock, CheckSquare, Menu } from 'lucide-react'
-
-type NotificationType = 'order' | 'user' | 'system' | 'report' | 'audit'
-
-interface Notification {
-  id: string
-  type: NotificationType
-  title: string
-  message: string
-  timestamp: Date
-  isRead: boolean
-  action?: {
-    label: string
-    path: string
-  }
-}
+import { LayoutDashboard, Package, Users, Bell, Wallet, MapPin, BarChart3, FileText, ChevronRight, X, Clock, CheckSquare, Menu, AlertCircle } from 'lucide-react'
+import kyariLogo from '../../assets/kyariLogo.webp'
+import { MegaSearch } from '../../components'
 
 type NavItem = {
   to: string
@@ -37,80 +26,28 @@ const navItems: NavItem[] = [
   { to: '/admin/audit-logs', icon: FileText, label: 'Audit Logs' }
 ]
 
-// Admin-specific sample notifications
-const sampleNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'user',
-    title: 'New User Registration',
-    message: 'Vendor "TechCorp Solutions" has requested account approval',
-    timestamp: new Date(Date.now() - 3 * 60 * 1000), // 3 minutes ago
-    isRead: false,
-    action: { label: 'Review User', path: '/admin/users' }
-  },
-  {
-    id: '2',
-    type: 'order',
-    title: 'High Value Order Alert',
-    message: 'Order #ORD-2025-015 worth ₹2,50,000 requires approval',
-    timestamp: new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago
-    isRead: false,
-    action: { label: 'Review Order', path: '/admin/orders' }
-  },
-  {
-    id: '3',
-    type: 'system',
-    title: 'System Performance Alert',
-    message: 'Database query response time increased by 25%',
-    timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-    isRead: false,
-    action: { label: 'View Analytics', path: '/admin/analytics' }
-  },
-  {
-    id: '4',
-    type: 'audit',
-    title: 'Security Audit Complete',
-    message: 'Monthly security audit report is ready for review',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    isRead: true,
-    action: { label: 'View Report', path: '/admin/audit-logs' }
-  },
-  {
-    id: '5',
-    type: 'report',
-    title: 'Weekly Revenue Report',
-    message: 'Revenue increased by 15% compared to last week',
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-    isRead: true,
-    action: { label: 'View Analytics', path: '/admin/analytics' }
-  },
-  {
-    id: '6',
-    type: 'user',
-    title: 'Role Permission Change',
-    message: 'Operations Manager role permissions updated',
-    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-    isRead: false,
-    action: { label: 'View Users', path: '/admin/users' }
-  }
-]
-
 function AdminLayout() {
   const { logout, user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [search, setSearch] = useState('')
+  
+  // Use real notification hook with FCM + light polling
+  const { 
+    notifications, 
+    unreadCount, 
+    markAsRead,
+    markAllAsRead,
+    refreshNotifications,
+  } = useNotifications()
+  
   const [showProfile, setShowProfile] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
-  const [notifications, setNotifications] = useState<Notification[]>(sampleNotifications)
   const [trackingOpen, setTrackingOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const notificationsRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
-  
-  const unreadCount = notifications.filter(n => !n.isRead).length
 
   // Check if screen is mobile/tablet
   useEffect(() => {
@@ -158,54 +95,39 @@ function AdminLayout() {
     }
   }, [sidebarOpen, isMobile])
 
-  function handleSearchSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!search) return
-    // navigate to a search results page (not implemented) with query
-    navigate(`/admin/search?q=${encodeURIComponent(search)}`)
-  }
 
   function handleLogout() {
     logout()
     navigate('/')
   }
 
-  function markAsRead(notificationId: string) {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId ? { ...notif, isRead: true } : notif
-      )
-    )
-  }
-
-  function markAllAsRead() {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, isRead: true }))
-    )
-  }
-
-  function handleNotificationClick(notification: Notification) {
+  function handleNotificationClick(notification: AppNotification) {
     markAsRead(notification.id)
-    if (notification.action) {
-      navigate(notification.action.path)
+    // Navigate based on orderId if available
+    if (notification.metadata?.orderId) {
+      navigate(`/admin/orders`)
     }
     setShowNotifications(false)
   }
 
-  function getNotificationIcon(type: NotificationType) {
+  function getNotificationIcon(type: string) {
+    // Check for specific notification types first
+    if (type.includes('INVOICE')) return FileText
+    if (type.includes('TICKET') || type.includes('ISSUE')) return AlertCircle
+    
+    // Fallback to generic types
     switch (type) {
-      case 'order': return Package
-      case 'user': return Users
-      case 'system': return Bell
-      case 'report': return BarChart3
-      case 'audit': return FileText
+      case 'critical': return Bell
+      case 'info': return Package
+      case 'reminder': return Clock
       default: return Bell
     }
   }
 
-  function formatTimeAgo(date: Date) {
+  function formatTimeAgo(date: Date | string) {
     const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    const dateObj = typeof date === 'string' ? new Date(date) : date
+    const diffInMinutes = Math.floor((now.getTime() - dateObj.getTime()) / (1000 * 60))
     
     if (diffInMinutes < 1) return 'Just now'
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`
@@ -217,6 +139,7 @@ function AdminLayout() {
     return `${diffInDays}d ago`
   }
 
+
   function handleNavClick() {
     if (isMobile) {
       setSidebarOpen(false)
@@ -224,7 +147,7 @@ function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--color-happyplant-bg)', width: '100%', minHeight: '100vh', boxSizing: 'border-box', overflowX: 'hidden' }}>
+    <div className="min-h-screen" style={{ background: 'var(--color-sharktank-bg)', width: '100%', minHeight: '100vh', boxSizing: 'border-box', overflowX: 'hidden' }}>
       {/* Mobile Overlay */}
       {isMobile && sidebarOpen && (
         <div 
@@ -252,7 +175,12 @@ function AdminLayout() {
         <div>
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: 28, fontWeight: 600 }}>Kyari</div>
+              <img 
+                src={kyariLogo} 
+                alt="Kyari Logo" 
+                className="h-8"
+                style={{ filter: 'brightness(0) invert(1)' }}
+              />
               {!isMobile && <div className="text-sm text-white/70 mt-1">Admin Portal</div>}
             </div>
             {/* Mobile Close Button */}
@@ -431,21 +359,11 @@ function AdminLayout() {
           {!isMobile && <div className="flex-1" />}
 
           <div className="flex items-center gap-4">
-            <form onSubmit={handleSearchSubmit} className={`flex items-center gap-3 ${isMobile ? 'flex-1 mx-3' : 'w-80'}`}>
-              <div className={`relative ${isMobile ? 'w-full' : 'w-full'}`}>
-                <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-secondary)' }}>
-                  <Search size={18} />
-                </div>
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={isMobile ? "Search..." : "Mega Search"}
-                  className={`pl-11 pr-3 h-9 rounded-md bg-white text-[var(--color-secondary)] placeholder-[var(--color-secondary)] outline-none transition-all ${
-                    isMobile ? 'w-full' : 'w-full'
-                  }`}
-                />
-              </div>
-            </form>
+            <MegaSearch 
+              isMobile={isMobile} 
+              userRole="ADMIN" 
+              placeholder="Mega Search"
+            />
 
             <div className="flex items-center gap-4">
             <div className="relative" ref={notificationsRef}>
@@ -471,6 +389,16 @@ function AdminLayout() {
                   <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">Admin Notifications</h3>
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          refreshNotifications();
+                        }}
+                        className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
+                        title="Refresh notifications"
+                      >
+                        <ChevronRight size={14} />
+                        Refresh
+                      </button>
                       {unreadCount > 0 && (
                         <button
                           onClick={markAllAsRead}
@@ -499,30 +427,29 @@ function AdminLayout() {
                     ) : (
                       notifications.map((notification) => {
                         const IconComponent = getNotificationIcon(notification.type)
+                        const isUnread = notification.status !== 'READ' && !notification.readAt
                         return (
                           <div
                             key={notification.id}
                             onClick={() => handleNotificationClick(notification)}
                             className={`px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                              !notification.isRead ? 'bg-blue-50' : ''
+                              isUnread ? 'bg-blue-50' : ''
                             }`}
                           >
                             <div className="flex items-start gap-3">
                               <div className={`p-2 rounded-full flex-shrink-0 ${
-                                notification.type === 'order' ? 'bg-green-100 text-green-600' :
-                                notification.type === 'user' ? 'bg-purple-100 text-purple-600' :
-                                notification.type === 'system' ? 'bg-blue-100 text-blue-600' :
-                                notification.type === 'audit' ? 'bg-red-100 text-red-600' :
-                                'bg-orange-100 text-orange-600'
+                                notification.priority === 'HIGH' || notification.priority === 'URGENT' ? 'bg-red-100 text-red-600' :
+                                notification.priority === 'MEDIUM' ? 'bg-orange-100 text-orange-600' :
+                                'bg-blue-100 text-blue-600'
                               }`}>
                                 <IconComponent size={16} />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
-                                  <h4 className={`text-sm font-medium ${!notification.isRead ? 'text-gray-900' : 'text-gray-700'}`}>
+                                  <h4 className={`text-sm font-medium ${isUnread ? 'text-gray-900' : 'text-gray-700'}`}>
                                     {notification.title}
                                   </h4>
-                                  {!notification.isRead && (
+                                  {isUnread && (
                                     <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
                                   )}
                                 </div>
@@ -530,11 +457,11 @@ function AdminLayout() {
                                 <div className="flex items-center justify-between mt-2">
                                   <span className="text-xs text-gray-400 flex items-center gap-1">
                                     <Clock size={12} />
-                                    {formatTimeAgo(notification.timestamp)}
+                                    {formatTimeAgo(notification.createdAt)}
                                   </span>
-                                  {notification.action && (
+                                  {notification.metadata?.orderId && (
                                     <span className="text-xs text-blue-600 font-medium">
-                                      {notification.action.label} →
+                                      Order: {notification.metadata?.orderId}
                                     </span>
                                   )}
                                 </div>

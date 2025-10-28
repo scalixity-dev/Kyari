@@ -1,6 +1,6 @@
 export interface CreateOrderDto {
   orderNumber: string;
-  primaryVendorId: string;
+  primaryVendorId?: string;
   items: CreateOrderItemDto[];
 }
 

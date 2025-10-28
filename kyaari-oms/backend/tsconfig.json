@@ -11,7 +11,7 @@
       "~/*": ["./*"]
     },
     "typeRoots": ["./node_modules/@types", "./src/types"],
-    "types": ["node", "express"],
+    "types": ["node", "express", "jest"],
     "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

@@ -12,10 +12,19 @@ import { assignmentRoutes } from './modules/assignments/assignment.routes';
 import { workflowRoutes } from './modules/workflow/workflow.routes';
 import { validationRoutes } from './modules/validation/validation.routes';
 import { opsVerificationRoutes } from './modules/ops-verification/ops-verification.routes';
+import receivedOrdersRoutes from './modules/ops-verification/received-orders.routes';
 import { reportingRoutes } from './modules/reporting/reporting.routes';
 import { notificationRoutes } from './modules/notifications/notification.routes';
+import invoiceRoutes from './modules/invoices/invoice.routes';
 import dispatchRoutes from './routes/dispatch.routes';
 import grnRoutes from './routes/grn.routes';
+import paymentRoutes from './modules/payments/payment.routes';
+import ticketRoutes from './modules/tickets/ticket.routes';
+import globalSearchRoutes from './modules/global-search/global-search.routes';
+import orderTrackingRoutes from './modules/order-tracking/order-tracking.routes';
+import vendorTrackingRoutes from './modules/vendor-tracking/vendor-tracking.routes';
+import moneyFlowRoutes from './modules/money-flow/money-flow.routes';
+import { performanceRoutes } from './modules/performance/performance.routes';
 import { errorHandler, notFoundHandler, rateLimiter } from './middlewares/error.middleware';
 import { logger } from './utils/logger';
 
@@ -55,7 +64,12 @@ app.use(cors({
 }));
 
 // Rate limiting (adjust as needed for your use case)
-app.use(rateLimiter(100, 15 * 60 * 1000)); // 100 requests per 15 minutes
+// More lenient in development, stricter in production
+const rateLimit = env.NODE_ENV === 'production' 
+  ? { max: 100, window: 15 * 60 * 1000 } // Production: 100 requests per 15 minutes
+  : { max: 1000, window: 15 * 60 * 1000 }; // Development: 1000 requests per 15 minutes
+
+app.use(rateLimiter(rateLimit.max, rateLimit.window));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -94,11 +108,19 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/api/workflow', workflowRoutes);
 app.use('/api/validation', validationRoutes);
 app.use('/api/ops-verification', opsVerificationRoutes);
+app.use('/api/ops/received-orders', receivedOrdersRoutes);
 app.use('/api/reporting', reportingRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/invoices', invoiceRoutes);
 app.use('/api/dispatches', dispatchRoutes);
 app.use('/api/grn', grnRoutes);
-
+app.use('/api/payments', paymentRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/global-search', globalSearchRoutes);
+app.use('/api/order-tracking', orderTrackingRoutes);
+app.use('/api/vendor-tracking', vendorTrackingRoutes);
+app.use('/api/money-flow', moneyFlowRoutes);
+app.use('/api/performance', performanceRoutes);
 // 404 handler
 app.use(notFoundHandler);
 

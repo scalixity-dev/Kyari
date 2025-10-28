@@ -1,10 +1,9 @@
 // React import removed - using automatic JSX runtime
-import React from 'react'
+import * as React from 'react'
 import { Wallet, FileText, Users, Search, ChevronDown } from 'lucide-react'
+import { CSVPDFExportButton, Pagination } from '../../../components'
 import {
   ResponsiveContainer,
-  LineChart as RechartsLineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -12,47 +11,14 @@ import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
-  Legend
+  AreaChart,
+  Area,
+  Sector
 } from 'recharts'
-
-interface KPICardProps {
-  title: string;
-  value: number | string;
-  icon: React.ReactNode;
-  color: string;
-  subtitle?: string;
-}
-
-function KPICard({ title, value, icon, color, subtitle }: KPICardProps) {
-  const iconBgClass =
-    color === 'blue'
-      ? 'bg-blue-600'
-      : color === 'orange'
-      ? 'bg-[#C3754C]'
-      : color === 'green'
-      ? 'bg-green-600'
-      : color === 'red'
-      ? 'bg-red-600'
-      : 'bg-gray-600'
-  
-  return (
-    <div className={`bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible`}>
-      <div className={`absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full ${iconBgClass} text-white shadow-md`}>
-        {React.isValidElement(icon)
-          ? React.cloneElement(
-              icon as React.ReactElement<{ color?: string; size?: number }>,
-              { color: 'white', size: 32 }
-            )
-          : icon}
-      </div>
-      <div className="flex flex-col items-center text-center w-full">
-        <h3 className="font-['Fraunces'] font-bold text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2">{title}</h3>
-        <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{value}</div>
-        {subtitle && <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">{subtitle}</div>}
-      </div>
-    </div>
-  )
-}
+import { KPICard } from '../../../components'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../../../components/ui/chart"
+import { MoneyFlowApi, type MoneyFlowKPIDto, type MoneyFlowTransactionDto, type MoneyFlowTrendDataDto, type MoneyFlowPieChartDto } from '../../../services/moneyFlowApi'
+import toast from 'react-hot-toast'
 
 type TrendRange = 'Weekly' | 'Monthly' | 'Yearly'
 
@@ -68,6 +34,17 @@ function LineChart({ data, range, onChangeRange }: { data: LineChartData; range:
     pending: data.pending[i] ?? 0,
     cleared: data.cleared[i] ?? 0
   }))
+
+  const chartConfig = {
+    cleared: {
+      label: "Cleared",
+      color: "var(--color-secondary)",
+    },
+    pending: {
+      label: "Pending",
+      color: "var(--color-accent)",
+    },
+  }
 
   return (
     <div className="bg-white p-3 sm:p-4 md:p-5 rounded-lg shadow-md border border-white/10">
@@ -85,72 +62,195 @@ function LineChart({ data, range, onChangeRange }: { data: LineChartData; range:
           ))}
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={300} className="sm:!h-[360px]">
-        <RechartsLineChart data={chartData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
-          <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} />
-          <YAxis tickFormatter={(val) => `₹${Number(val / 1000).toLocaleString()}k`} tick={{ fontSize: 10 }} />
-          <Tooltip formatter={(value: number | string) => `₹${Number(value).toLocaleString()}`} />
-          <Legend wrapperStyle={{ fontSize: '14px', paddingTop: 8 }} />
-          <Line type="monotone" dataKey="cleared" name="Cleared" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
-          <Line type="monotone" dataKey="pending" name="Pending" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
-        </RechartsLineChart>
-      </ResponsiveContainer>
+      <ChartContainer config={chartConfig} className="h-[300px] sm:h-[360px] w-full">
+        <AreaChart data={chartData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="fillCleared" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="var(--color-secondary)" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="var(--color-secondary)" stopOpacity={0.1} />
+            </linearGradient>
+            <linearGradient id="fillPending" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0.1} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
+          <XAxis 
+            dataKey="name" 
+            tick={{ fill: '#64748b', fontSize: 11 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis 
+            tickFormatter={(val) => `₹${Number(val / 1000).toLocaleString()}k`} 
+            tick={{ fontSize: 10 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <ChartTooltip 
+            cursor={{ stroke: '#cbd5e1', strokeWidth: 1 }}
+            content={<ChartTooltipContent 
+              formatter={(value) => [`₹${Number(value).toLocaleString()}`, ""]}
+              className="bg-white"
+            />}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="cleared" 
+            stroke="var(--color-secondary)" 
+            strokeWidth={2}
+            fill="url(#fillCleared)"
+            fillOpacity={1}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="pending" 
+            stroke="var(--color-accent)" 
+            strokeWidth={2}
+            fill="url(#fillPending)"
+            fillOpacity={1}
+          />
+        </AreaChart>
+      </ChartContainer>
     </div>
   )
 }
 
 function PieChart({ pending, cleared }: { pending: number; cleared: number }) {
-  const data = [
-    { name: 'Pending', value: pending },
-    { name: 'Cleared', value: cleared }
-  ]
-  const colors = ['#dd6b20', '#48bb78']
+  const [activePieIndex, setActivePieIndex] = React.useState<number | undefined>(undefined)
+  
   const total = pending + cleared
+  const pendingPercent = total ? Math.round((pending / total) * 100) : 0
+  const clearedPercent = total ? Math.round((cleared / total) * 100) : 0
+
+  const pieChartData = [
+    { name: 'Pending', value: pendingPercent, count: pending, fill: 'var(--color-accent)' },
+    { name: 'Cleared', value: clearedPercent, count: cleared, fill: 'var(--color-secondary)' }
+  ]
+
+  // Custom render function for active pie sector (makes it bigger on hover with animation)
+  const renderActiveShape = (props: any) => {
+    const {
+      cx,
+      cy,
+      innerRadius,
+      outerRadius,
+      startAngle,
+      endAngle,
+      fill,
+    } = props
+
+    return (
+      <g>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 15} // Expand by 15px on hover
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+          style={{
+            filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.2))',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        />
+      </g>
+    )
+  }
 
   return (
-    <div className="bg-white p-3 sm:p-4 md:p-6 rounded-xl shadow-md border border-white/20">
-      <div className="text-center text-base sm:text-lg font-semibold text-[color:var(--color-heading)] mb-3 sm:mb-4">Pending vs Cleared</div>
-      <ResponsiveContainer width="100%" height={200} className="sm:!h-[220px]">
-        <RechartsPieChart>
-          <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="45%" outerRadius="70%" paddingAngle={2} label={false}>
-            {data.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-            ))}
-          </Pie>
-          <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '11px' }} />
-          <Tooltip formatter={(value: number | string) => `${value}`} />
-        </RechartsPieChart>
-      </ResponsiveContainer>
+    <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-white/20">
+      <h3 className="text-base sm:text-lg font-semibold text-[color:var(--color-heading)] mb-4 sm:mb-6">Pending vs Cleared</h3>
       
-      {/* Enhanced invoice breakdown similar to Dashboard */}
-      <div className="mt-3 sm:mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
-          <div className="text-xs sm:text-sm text-gray-500 font-medium">Total Invoices</div>
-          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{total}</div>
-          <div className="text-xs sm:text-sm text-gray-400">This period</div>
-        </div>
-        <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
-          <div className="text-xs sm:text-sm text-gray-500 font-medium">Processing Rate</div>
-          <div className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">{total ? Math.round((cleared / total) * 100) : 0}%</div>
-          <div className="text-xs sm:text-sm text-gray-400">Completion rate</div>
-        </div>
-      </div>
+      {/* Two column layout: Left for content, Right for pie chart */}
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+        {/* Left side: Content */}
+        <div className="flex-1 w-full">
+          {/* Summary Stats */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div>
+              <div className="text-sm text-gray-500 mb-2 font-medium">Total Invoices</div>
+              <div className="text-3xl sm:text-4xl font-extrabold text-gray-900">{total}</div>
+              <div className="text-xs sm:text-sm text-gray-400 mt-1">This period</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500 mb-2 font-medium">Processing Rate</div>
+              <div className="text-3xl sm:text-4xl font-extrabold text-gray-900">{clearedPercent}%</div>
+              <div className="text-xs sm:text-sm text-gray-400 mt-1">Completion rate</div>
+            </div>
+          </div>
 
-      <div className="mt-3 sm:mt-4 space-y-3 sm:space-y-0 sm:grid sm:grid-cols-1 lg:grid-cols-2 sm:gap-3">
-        <div className="flex items-center gap-3 text-sm text-gray-700 font-medium">
-          <span className="w-3 h-3 rounded-sm bg-[var(--color-warning)] block flex-shrink-0" />
-          <div className="min-w-0">
-            <div className="font-semibold text-sm">Pending</div>
-            <div className="text-xs sm:text-sm text-gray-400 truncate">{pending} invoices</div>
+          {/* Legend */}
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <span className="w-4 h-4 rounded-full block flex-shrink-0 mt-0.5" style={{ background: 'var(--color-accent)' }} />
+              <div>
+                <div className="text-sm font-semibold text-gray-700 mb-0.5">Pending</div>
+                <div className="text-xs text-gray-500">{pending} invoices • {pendingPercent}%</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="w-4 h-4 rounded-full block flex-shrink-0 mt-0.5" style={{ background: 'var(--color-secondary)' }} />
+              <div>
+                <div className="text-sm font-semibold text-gray-700 mb-0.5">Cleared</div>
+                <div className="text-xs text-gray-500">{cleared} invoices • {clearedPercent}%</div>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-sm text-gray-700 font-medium">
-          <span className="w-3 h-3 rounded-sm bg-[var(--color-success)] block flex-shrink-0" />
-          <div className="min-w-0">
-            <div className="font-semibold text-sm">Cleared</div>
-            <div className="text-xs sm:text-sm text-gray-400 truncate">{cleared} invoices</div>
-          </div>
+
+        {/* Right side: Interactive Donut Chart - Centered */}
+        <div className="flex-shrink-0 flex items-center justify-center w-full lg:w-auto">
+          <ResponsiveContainer width={280} height={280}>
+            <RechartsPieChart>
+              <Pie 
+                activeIndex={activePieIndex}
+                activeShape={renderActiveShape}
+                data={pieChartData}
+                cx="50%" 
+                cy="50%" 
+                innerRadius={75} 
+                outerRadius={115} 
+                paddingAngle={2}
+                strokeWidth={0}
+                dataKey="value"
+                onMouseEnter={(_, index) => setActivePieIndex(index)}
+                onMouseLeave={() => setActivePieIndex(undefined)}
+                animationBegin={0}
+                animationDuration={400}
+                animationEasing="ease-in-out"
+              >
+                {pieChartData.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.fill}
+                    style={{
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      cursor: 'pointer'
+                    }}
+                  />
+                ))}
+              </Pie>
+              <Tooltip 
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload
+                    return (
+                      <div className="rounded-lg border bg-white p-3 shadow-lg">
+                        <div className="font-semibold text-gray-900">{data.name}</div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          <div>{data.value}% of total</div>
+                          <div>{data.count} invoices</div>
+                        </div>
+                      </div>
+                    )
+                  }
+                  return null
+                }}
+              />
+            </RechartsPieChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
@@ -158,113 +258,210 @@ function PieChart({ pending, cleared }: { pending: number; cleared: number }) {
 }
 
 export default function MoneyFlow() {
-  // mock data
-  const kpis = [
-    { 
-      title: 'Total Payments Pending', 
-      value: '₹2,34,500', 
-      subtitle: '23 invoices',
-      icon: <Wallet size={32} />,
-      color: 'orange'
-    },
-    { 
-      title: 'Payments Released This Month', 
-      value: '₹5,60,000', 
-      subtitle: '42 payouts',
-      icon: <FileText size={32} />,
-      color: 'orange'
-    },
-    { 
-      title: 'Vendor with Highest Outstanding', 
-      value: 'GreenLeaf Farms', 
-      subtitle: '₹75,000',
-      icon: <Users size={32} />,
-      color: 'orange'
-    }
-  ]
-
-  const transactions = [
-    { id: 'INV-1009', vendor: 'BloomWorks', amount: '₹3,200', status: 'Released', date: '2025-09-14' },
-    { id: 'INV-1008', vendor: 'GreenLeaf Farms', amount: '₹11,500', status: 'Pending', date: '2025-09-13' },
-    { id: 'INV-1007', vendor: 'HappyPlant Co', amount: '₹6,400', status: 'Released', date: '2025-09-13' },
-    { id: 'INV-1006', vendor: 'SharkTank Ltd', amount: '₹19,000', status: 'Approved', date: '2025-09-13' },
-    { id: 'INV-1005', vendor: 'HappyPlant Co', amount: '₹23,800', status: 'Released', date: '2025-09-12' },
-    { id: 'INV-1004', vendor: 'GreenLeaf Farms', amount: '₹75,000', status: 'Pending', date: '2025-09-11' },
-    { id: 'INV-1003', vendor: 'SharkTank Ltd', amount: '₹45,000', status: 'Approved', date: '2025-09-08' },
-    { id: 'INV-1002', vendor: 'HappyPlant Co', amount: '₹8,200', status: 'Released', date: '2025-09-05' },
-    { id: 'INV-1001', vendor: 'GreenLeaf Farms', amount: '₹12,500', status: 'Pending', date: '2025-09-02' }
-  ]
-
-  // Trend datasets (mock)
+  // State for real data
+  const [kpis, setKpis] = React.useState<MoneyFlowKPIDto[]>([])
+  const [transactions, setTransactions] = React.useState<MoneyFlowTransactionDto[]>([])
+  const [trendData, setTrendData] = React.useState<MoneyFlowTrendDataDto>({ labels: [], pending: [], cleared: [] })
+  const [pieChartData, setPieChartData] = React.useState<MoneyFlowPieChartDto>({ pending: 0, cleared: 0, total: 0, pendingPercent: 0, clearedPercent: 0 })
+  const [loading, setLoading] = React.useState(true)
   const [trendRange, setTrendRange] = React.useState<TrendRange>('Monthly')
-  const weeklyData: LineChartData = {
-    labels: ['W1', 'W2', 'W3', 'W4'],
-    pending: [80000, 60000, 50000, 70000],
-    cleared: [320000, 280000, 350000, 300000]
-  }
-  const monthlyData: LineChartData = {
-    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-    pending: [50000, 40000, 45000, 52000, 47000, 43000, 48000, 46000, 49000, 51000, 53000, 55000],
-    cleared: [120000, 95000, 130000, 110000, 150000, 125000, 140000, 135000, 160000, 155000, 170000, 180000]
-  }
-  const yearlyData: LineChartData = {
-    labels: ['2022','2023','2024','2025'],
-    pending: [520000, 480000, 510000, 495000],
-    cleared: [1350000, 1480000, 1620000, 1750000]
-  }
-  const trendData = trendRange === 'Weekly' ? weeklyData : trendRange === 'Yearly' ? yearlyData : monthlyData
 
-  const pending = transactions.filter((t) => t.status.toLowerCase() === 'pending').length
-  const cleared = transactions.filter((t) => t.status.toLowerCase() === 'released' || t.status.toLowerCase() === 'approved').length
+  // Load data on component mount
+  React.useEffect(() => {
+    loadData()
+  }, [trendRange])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [kpisRes, transactionsRes, trendRes, pieChartRes] = await Promise.all([
+        MoneyFlowApi.getKPIs(),
+        MoneyFlowApi.getTransactions({ status: 'All', page: 1, limit: 10 }),
+        MoneyFlowApi.getTrendData({ range: trendRange }),
+        MoneyFlowApi.getPieChartData()
+      ])
+
+      // Safely set KPIs
+      if (kpisRes && kpisRes.data && kpisRes.data.kpis) {
+        setKpis(kpisRes.data.kpis)
+      } else {
+        setKpis([])
+      }
+
+      // Safely set transactions
+      if (transactionsRes && transactionsRes.data && transactionsRes.data.transactions) {
+        setTransactions(transactionsRes.data.transactions)
+        setTotalPages(transactionsRes.data.pagination?.totalPages || 1)
+        setTotalItems(transactionsRes.data.pagination?.total || 0)
+      } else {
+        setTransactions([])
+        setTotalPages(1)
+        setTotalItems(0)
+      }
+
+      // Safely set trend data
+      if (trendRes && trendRes.data && trendRes.data.trendData) {
+        setTrendData(trendRes.data.trendData)
+      } else {
+        setTrendData({ labels: [], pending: [], cleared: [] })
+      }
+
+      // Safely set pie chart data
+      if (pieChartRes && pieChartRes.data && pieChartRes.data.pieChartData) {
+        setPieChartData(pieChartRes.data.pieChartData)
+      } else {
+        setPieChartData({ pending: 0, cleared: 0, total: 0, pendingPercent: 0, clearedPercent: 0 })
+      }
+    } catch (error) {
+      console.error('Failed to load money flow data:', error)
+      toast.error('Failed to load money flow data')
+      // Set default values on error
+      setKpis([])
+      setTransactions([])
+      setTrendData({ labels: [], pending: [], cleared: [] })
+      setPieChartData({ pending: 0, cleared: 0, total: 0, pendingPercent: 0, clearedPercent: 0 })
+      setTotalPages(1)
+      setTotalItems(0)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Filters and search state
   const [statusFilter, setStatusFilter] = React.useState<'All' | 'Pending' | 'Released' | 'Approved'>('All')
   const [sortOrder, setSortOrder] = React.useState<'Latest' | 'Oldest'>('Latest')
   const [searchQuery, setSearchQuery] = React.useState('')
+  // Loading state for transactions table (used to show Orders-like loading UI)
+  const [isLoadingTransactions, setIsLoadingTransactions] = React.useState(false)
   const [statusOpen, setStatusOpen] = React.useState(false)
   const [sortOpen, setSortOpen] = React.useState(false)
   const [page, setPage] = React.useState(1)
-  const pageSize = 5
+  const [totalPages, setTotalPages] = React.useState(1)
+  const [totalItems, setTotalItems] = React.useState(0)
+  const pageSize = 10
 
-  const filteredTransactions = transactions
-    .filter((t) => {
-      if (statusFilter !== 'All' && t.status !== statusFilter) return false
-      if (!searchQuery.trim()) return true
-      const q = searchQuery.toLowerCase()
-      return t.id.toLowerCase().includes(q) || t.vendor.toLowerCase().includes(q)
-    })
-    .sort((a, b) => {
-      const diff = new Date(b.date).getTime() - new Date(a.date).getTime()
-      return sortOrder === 'Latest' ? diff : -diff
-    })
+  // Load filtered transactions
+  const loadFilteredTransactions = async () => {
+    try {
+      const res = await MoneyFlowApi.getTransactions({
+        status: statusFilter,
+        searchQuery: searchQuery.trim() || undefined,
+        sortOrder,
+        page,
+        limit: pageSize
+      })
+      
+      // Check if response has the expected structure
+      if (res && res.data && res.data.transactions && res.data.pagination) {
+        setTransactions(res.data.transactions)
+        setTotalPages(res.data.pagination.totalPages || 1)
+        setTotalItems(res.data.pagination.total || 0)
+      } else {
+        console.error('Unexpected API response structure:', res)
+        toast.error('Invalid response from server')
+        setTransactions([])
+        setTotalPages(1)
+        setTotalItems(0)
+      }
+    } catch (error) {
+      console.error('Failed to load transactions:', error)
+      toast.error('Failed to load transactions')
+      setTransactions([])
+      setTotalPages(1)
+      setTotalItems(0)
+    }
+  }
+
+  // Load filtered transactions when filters change
+  React.useEffect(() => {
+    loadFilteredTransactions()
+  }, [statusFilter, sortOrder, searchQuery, page])
 
   // Reset to first page when filters change
   React.useEffect(() => {
     setPage(1)
   }, [statusFilter, sortOrder, searchQuery])
 
-  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize))
-  const startIndex = (page - 1) * pageSize
-  const endIndex = Math.min(startIndex + pageSize, filteredTransactions.length)
-  const pageTransactions = filteredTransactions.slice(startIndex, endIndex)
+  // Export functions
+  const handleExportCSV = async () => {
+    try {
+      const blob = await MoneyFlowApi.exportCSV({
+        status: statusFilter,
+        searchQuery: searchQuery.trim() || undefined,
+        sortOrder
+      })
+      
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `money-flow-transactions-${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('CSV exported successfully')
+    } catch (error) {
+      console.error('Failed to export CSV:', error)
+      toast.error('Failed to export CSV')
+    }
+  }
+
+  const handleExportPDF = async () => {
+    try {
+      const blob = await MoneyFlowApi.exportPDF({
+        status: statusFilter,
+        searchQuery: searchQuery.trim() || undefined,
+        sortOrder
+      })
+      
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `money-flow-transactions-${new Date().toISOString().split('T')[0]}.txt`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('PDF exported successfully')
+    } catch (error) {
+      console.error('Failed to export PDF:', error)
+      toast.error('Failed to export PDF')
+    }
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-9 bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
-     
+      {/* Page Header */}
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Money Flow</h1>
+        <p className="text-sm sm:text-base text-gray-600">Track payments, invoices, and financial transactions</p>
+      </div>
 
       <div className="mb-4 sm:mb-6 lg:mb-8">
-        <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--color-heading)] mb-4 sm:mb-6">Money Flow</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 py-8 sm:py-10 gap-6 sm:gap-8 xl:gap-6">
-          {kpis.map((k, i) => (
-            <KPICard 
-              key={i} 
-              title={k.title} 
-              value={k.value} 
-              subtitle={k.subtitle}
-              icon={k.icon}
-              color={k.color}
-            />
-          ))}
+          {loading ? (
+            // Loading skeleton for KPIs
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white p-6 rounded-lg shadow-md border border-white/10 animate-pulse">
+                <div className="h-8 bg-gray-200 rounded mb-4"></div>
+                <div className="h-12 bg-gray-200 rounded mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+              </div>
+            ))
+          ) : (
+            kpis.map((k, i) => {
+              const iconMap = {
+                'Wallet': <Wallet size={32} />,
+                'FileText': <FileText size={32} />,
+                'Users': <Users size={32} />
+              }
+              return (
+                <KPICard 
+                  key={i} 
+                  title={k.title} 
+                  value={k.value} 
+                  subtitle={k.subtitle}
+                  icon={iconMap[k.icon as keyof typeof iconMap] || <Wallet size={32} />}
+                />
+              )
+            })
+          )}
         </div>
       </div>
 
@@ -275,13 +472,19 @@ export default function MoneyFlow() {
 
           {/* Pending vs Cleared - Full Width */}
           <div className="mb-4 sm:mb-6">
-            <PieChart pending={pending} cleared={cleared} />
+            <PieChart pending={pieChartData.pending} cleared={pieChartData.cleared} />
           </div>
 
+          {isLoadingTransactions ? (
+            <div className="bg-white rounded-xl p-12 text-center">
+              <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-500">Loading transactions...</p>
+            </div>
+          ) : (
           <div className="py-4 sm:py-6">
             {/* Header controls row */}
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
-              <div className="text-2xl sm:text-3xl md:text-[28px] font-extrabold text-[color:var(--color-secondary)]">Transactions</div>
+              <div className="text-2xl sm:text-3xl md:text-[28px] font-extrabold text-[var(--color-heading)] font-[var(--font-heading)]">Transactions</div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 lg:gap-6 w-full lg:w-auto">
                 <div className="relative w-full sm:flex-1 lg:w-[320px]">
                   <Search size={18} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 sm:w-5 sm:h-5 text-[#424242]" />
@@ -298,7 +501,7 @@ export default function MoneyFlow() {
                     <button
                       type="button"
                       onClick={() => { setStatusOpen((s) => !s); setSortOpen(false) }}
-                      className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-['Quicksand'] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap"
+                      className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-[var(--font-heading)] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap"
                       aria-haspopup="listbox"
                       aria-expanded={statusOpen}
                       aria-controls="status-menu"
@@ -318,7 +521,7 @@ export default function MoneyFlow() {
                     <button
                       type="button"
                       onClick={() => { setSortOpen((s) => !s); setStatusOpen(false) }}
-                      className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-['Quicksand'] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap"
+                      className="h-10 px-0 bg-transparent border-0 text-gray-700 flex items-center gap-1 font-[var(--font-heading)] font-bold text-base sm:text-lg md:text-[20px] leading-[100%] tracking-[0] whitespace-nowrap"
                       aria-haspopup="listbox"
                       aria-expanded={sortOpen}
                       aria-controls="sort-menu"
@@ -334,165 +537,129 @@ export default function MoneyFlow() {
                       </div>
                     )}
                   </div>
+                  <CSVPDFExportButton
+                    onExportCSV={handleExportCSV}
+                    onExportPDF={handleExportPDF}
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Table container styled to match screenshot - Hidden on mobile, visible on tablet+ */}
-            <div className="hidden md:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
-              {/* Table head bar */}
-              <div className="bg-[#C3754C] text-white">
-                <div className="grid grid-cols-[1.2fr_1.8fr_1.1fr_1.1fr_1.1fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-['Quicksand'] font-bold text-sm md:text-base lg:text-[18px] xl:text-[20px] leading-[100%] tracking-[0] text-center">
-                  <div>Invoice ID</div>
-                  <div>Vendor</div>
-                  <div>Amount</div>
-                  <div>Status</div>
-                  <div>Date</div>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="bg-white">
-                <div className="py-2">
-                  <div>
-                    {pageTransactions.length === 0 ? (
-                      <div className="px-6 py-8 text-center text-gray-500">No transactions found</div>
-                    ) : (
-                      pageTransactions.map((t) => (
-                        <div key={t.id} className="grid grid-cols-[1.2fr_1.8fr_1.1fr_1.1fr_1.1fr] gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center text-center hover:bg-gray-50 font-bold">
-                          <div className="text-xs md:text-sm font-medium text-gray-800 truncate">{t.id}</div>
-                          <div className="text-xs md:text-sm text-gray-700 truncate">{t.vendor}</div>
-                          <div className="text-xs md:text-sm font-semibold text-gray-900">{t.amount}</div>
-                          <div className="flex items-center justify-center">
-                            <span className={`${t.status === 'Pending' ? 'bg-amber-50 text-amber-600' : t.status === 'Released' ? 'bg-green-50 text-green-600' : 'bg-sky-50 text-sky-600'} inline-block px-2 py-1 rounded-md text-xs font-semibold`}>
-                              {t.status}
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-500">{t.date}</div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
+            {/* Desktop Table - Hidden on mobile, visible on tablet+ */}
+            <div className="hidden md:block bg-header-bg rounded-xl overflow-hidden">
+              <table className="w-full border-separate border-spacing-0">
+                <thead>
+                  <tr style={{ background: 'var(--color-accent)' }}>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Invoice ID</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Vendor</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Amount</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Status</th>
+                    <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    // Loading skeleton for table
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="border-b border-gray-100 bg-white">
+                        <td className="p-3"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
+                        <td className="p-3"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
+                        <td className="p-3"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
+                        <td className="p-3"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
+                        <td className="p-3"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
+                      </tr>
+                    ))
+                  ) : !transactions || transactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500">No transactions found</td>
+                    </tr>
+                  ) : (
+                    (transactions || []).map((t) => (
+                      <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
+                        <td className="p-3 font-semibold text-secondary text-sm">{t.id}</td>
+                        <td className="p-3 text-sm text-gray-700">{t.vendor}</td>
+                        <td className="p-3 text-sm font-semibold text-secondary">{t.amount}</td>
+                        <td className="p-3">
+                          <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            t.status === 'Pending' 
+                              ? 'bg-amber-50 text-amber-600' 
+                              : t.status === 'Released' 
+                              ? 'bg-green-50 text-green-600' 
+                              : 'bg-sky-50 text-sky-600'
+                          }`}>
+                            {t.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-sm text-gray-500">{t.date}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
               {/* Pagination controls (desktop) */}
-              <div className="flex items-center justify-between px-3 md:px-4 lg:px-6 py-3 bg-white border-t border-gray-100">
-                <div className="text-xs text-gray-500">Showing {filteredTransactions.length === 0 ? 0 : startIndex + 1}-{endIndex} of {filteredTransactions.length}</div>
-                <div className="flex items-center gap-1 md:gap-2">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-700 disabled:opacity-40"
-                    aria-label="Previous page"
-                  >
-                    <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPage(p)}
-                      className={`min-w-7 h-7 md:min-w-8 md:h-8 px-1.5 md:px-2 rounded-md border text-xs md:text-sm ${page === p ? 'bg-[var(--color-secondary)] text-white border-[var(--color-secondary)]' : 'border-gray-200 text-gray-700 bg-white'}`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-700 disabled:opacity-40"
-                    aria-label="Next page"
-                  >
-                    <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                startIndex={(page - 1) * pageSize + 1}
+                endIndex={Math.min(page * pageSize, totalItems)}
+                onPageChange={setPage}
+                variant="desktop"
+                itemLabel="transactions"
+              />
             </div>
 
-            {/* Mobile cards keep parity */}
-            <div className="md:hidden mt-3 space-y-3">
-              {pageTransactions.length === 0 ? (
-                <div className="border border-gray-200 rounded-lg p-8 bg-white text-center text-gray-500">
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
+              {!transactions || transactions.length === 0 ? (
+                <div className="rounded-xl p-4 border border-gray-200 bg-white text-center text-gray-500">
                   No transactions found
                 </div>
               ) : (
                 <>
-                  {pageTransactions.map((t) => (
-                    <div key={t.id} className="border border-gray-200 rounded-lg p-3.5 sm:p-4 bg-white shadow-sm">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="font-semibold text-sm text-[color:var(--color-heading)]">{t.id}</div>
-                        <span className={`${t.status === 'Pending' ? 'bg-amber-50 text-amber-600' : t.status === 'Released' ? 'bg-green-50 text-green-600' : 'bg-sky-50 text-sky-600'} px-2 py-1 rounded-md font-semibold text-xs`}>{t.status}</span>
+                  {(transactions || []).map((t) => (
+                    <div key={t.id} className="rounded-xl p-4 border border-gray-200 bg-white">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="font-semibold text-secondary text-lg">{t.id}</div>
+                        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          t.status === 'Pending' 
+                            ? 'bg-amber-50 text-amber-600' 
+                            : t.status === 'Released' 
+                            ? 'bg-green-50 text-green-600' 
+                            : 'bg-sky-50 text-sky-600'
+                        }`}>
+                          {t.status}
+                        </span>
                       </div>
-                      <div className="text-sm text-gray-700 mb-1 font-medium">{t.vendor}</div>
-                      <div className="flex justify-between items-end">
-                        <div className="font-bold text-base text-[color:var(--color-heading)]">{t.amount}</div>
-                        <div className="text-xs text-gray-500">{t.date}</div>
+                      <div className="text-sm text-gray-600 mb-3">{t.vendor}</div>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-500 block">Amount</span>
+                          <span className="font-bold text-lg text-secondary">{t.amount}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-gray-500 block">Date</span>
+                          <span className="font-medium">{t.date}</span>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </>
               )}
               {/* Pagination controls (mobile) */}
-              <div className="flex items-center justify-between px-1 py-2">
-                <div className="text-xs text-gray-500">{filteredTransactions.length === 0 ? 'No results' : `Showing ${startIndex + 1}-${endIndex} of ${filteredTransactions.length}`}</div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="h-8 px-3 rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 text-sm font-medium">Prev</button>
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-8 px-3 rounded-md border border-gray-200 text-gray-700 disabled:opacity-40 text-sm font-medium">Next</button>
-                </div>
-              </div>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                startIndex={(page - 1) * pageSize + 1}
+                endIndex={Math.min(page * pageSize, totalItems)}
+                onPageChange={setPage}
+                variant="mobile"
+                itemLabel="transactions"
+              />
             </div>
           </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-6">
-        <div className="bg-white p-3 sm:p-4 md:p-5 rounded-lg shadow-md border border-white/10">
-          <h3 className="mt-0 mb-3 sm:mb-4 text-base sm:text-lg font-semibold text-[color:var(--color-heading)]">Reconciliation Summary</h3>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-            <div className="text-center sm:text-left">
-              <div className="text-xs sm:text-sm text-gray-500 mb-1">Cleared invoices</div>
-              <div className="text-xl sm:text-2xl font-bold text-[color:var(--color-heading)]">{cleared}</div>
-            </div>
-            <div className="text-center sm:text-left">
-              <div className="text-xs sm:text-sm text-gray-500 mb-1">Mismatched invoices</div>
-              <div className="text-xl sm:text-2xl font-bold text-amber-600">2</div>
-            </div>
-          </div>
-          <div className="mt-3 sm:mt-4 p-3 bg-blue-50 rounded-lg">
-            <div className="text-xs sm:text-sm text-blue-700 leading-relaxed">
-              <strong>Quick notes:</strong> Review mismatched invoices and update payment statuses accordingly.
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-3 sm:p-4 md:p-5 rounded-lg shadow-md border border-white/10">
-          <h3 className="mt-0 mb-3 sm:mb-4 text-base sm:text-lg font-semibold text-[color:var(--color-heading)]">Recent Activity</h3>
-          <div className="space-y-2.5 sm:space-y-3">
-            <div className="flex items-start gap-2.5 sm:gap-3 p-2 sm:p-2.5 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></div>
-              <div className="min-w-0">
-                <div className="text-xs sm:text-sm font-medium leading-tight">Released payment INV-1005</div>
-                <div className="text-xs text-gray-500 mt-0.5">to HappyPlant Co • 09/12</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2.5 sm:gap-3 p-2 sm:p-2.5 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-amber-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></div>
-              <div className="min-w-0">
-                <div className="text-xs sm:text-sm font-medium leading-tight">Validation flagged mismatch</div>
-                <div className="text-xs text-gray-500 mt-0.5">on INV-1004 • 09/11</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2.5 sm:gap-3 p-2 sm:p-2.5 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></div>
-              <div className="min-w-0">
-                <div className="text-xs sm:text-sm font-medium leading-tight">Approved INV-1003</div>
-                <div className="text-xs text-gray-500 mt-0.5">for SharkTank Ltd • 09/08</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+          )}
     </div>
   )
 }

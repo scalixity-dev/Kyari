@@ -127,6 +127,16 @@ class OrderApiService {
     return response.data.data;
   }
 
+  async updateOrder(id: string, data: CreateOrderRequest): Promise<Order> {
+    const response = await api.put<{
+      success: boolean;
+      data: Order;
+    }>(`/api/orders/${id}`, data, {
+      headers: this.getAuthHeader()
+    });
+    return response.data.data;
+  }
+
   async updateOrderStatus(id: string, status: string): Promise<Order> {
     const response = await api.put<{
       success: boolean;
@@ -157,6 +167,44 @@ class OrderApiService {
       headers: this.getAuthHeader()
     });
     return response.data.data;
+  }
+
+  async uploadExcel(file: File): Promise<{
+    successCount: number;
+    failedCount: number;
+    errors: { orderNumber: string; error: string }[];
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.post<{
+      success: boolean;
+      data: {
+        successCount: number;
+        failedCount: number;
+        errors: { orderNumber: string; error: string }[];
+        createdOrders: Order[];
+      };
+    }>('/api/orders/upload-excel', formData, {
+      headers: {
+        ...this.getAuthHeader(),
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return {
+      successCount: response.data.data.successCount,
+      failedCount: response.data.data.failedCount,
+      errors: response.data.data.errors
+    };
+  }
+
+  async downloadExcelTemplate(): Promise<Blob> {
+    const response = await api.get('/api/orders/excel-template', {
+      headers: this.getAuthHeader(),
+      responseType: 'blob'
+    });
+    return response.data;
   }
 }
 

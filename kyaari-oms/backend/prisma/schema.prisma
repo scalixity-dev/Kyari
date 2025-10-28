@@ -98,6 +98,13 @@ enum TicketPriority {
   URGENT
 }
 
+enum MessageType {
+  TEXT
+  FILE
+  IMAGE
+  SYSTEM
+}
+
 enum NotificationPriority {
   LOW
   NORMAL
@@ -160,6 +167,9 @@ model User {
   // Notification relations
   deviceTokens    DeviceToken[]
   notificationLogs NotificationLog[]
+  
+  // Chat relations
+  sentTicketMessages TicketChat[] @relation("SentTicketMessages")
   
   @@index([email])
   @@index([status])
@@ -358,8 +368,8 @@ model Order {
   totalValue      Decimal?    @db.Decimal(12, 2)
   createdById     String?
   createdBy       User?       @relation("CreatedByAdmin", fields: [createdById], references: [id], onDelete: SetNull)
-  primaryVendorId String
-  primaryVendor   VendorProfile @relation("PrimaryVendorForOrder", fields: [primaryVendorId], references: [id], onDelete: Restrict)
+  primaryVendorId String?
+  primaryVendor   VendorProfile? @relation("PrimaryVendorForOrder", fields: [primaryVendorId], references: [id], onDelete: Restrict)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   deletedAt       DateTime?
@@ -462,17 +472,21 @@ model PurchaseOrderItem {
   @@map("purchase_order_items")
 }
 model VendorInvoice {
-  id                String        @id @default(cuid())
-  purchaseOrderId   String        @unique
-  purchaseOrder     PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
-  invoiceNumber     String
-  invoiceDate       DateTime
-  invoiceAmount     Decimal       @db.Decimal(12, 2)
-  status            InvoiceStatus @default(PENDING_VERIFICATION)
-  attachmentId      String?       @unique
-  attachment        Attachment?   @relation(fields: [attachmentId], references: [id], onDelete: SetNull)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  id                      String        @id @default(cuid())
+  purchaseOrderId         String        @unique
+  purchaseOrder           PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  invoiceNumber           String
+  invoiceDate             DateTime
+  invoiceAmount           Decimal       @db.Decimal(12, 2)
+  status                  InvoiceStatus @default(PENDING_VERIFICATION)
+  attachmentId            String?       @unique
+  attachment              Attachment?   @relation("MainInvoiceAttachment", fields: [attachmentId], references: [id], onDelete: SetNull)
+  accountsAttachmentId    String?       @unique
+  accountsAttachment      Attachment?   @relation("AccountsInvoiceAttachment", fields: [accountsAttachmentId], references: [id], onDelete: SetNull)
+  vendorAttachmentId      String?       @unique
+  vendorAttachment        Attachment?   @relation("VendorInvoiceAttachment", fields: [vendorAttachmentId], references: [id], onDelete: SetNull)
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
   @@index([status])
   @@map("vendor_invoices")
 }
@@ -592,15 +606,36 @@ model Ticket {
   assigneeId         String?
   assignee           User?          @relation("AssignedToUser", fields: [assigneeId], references: [id], onDelete: SetNull)
   resolvedAt         DateTime?
+  lastMessageAt      DateTime?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   comments           TicketComment[]
   attachments        Attachment[]
+  chats              TicketChat[]
   @@index([status])
   @@index([priority])
   @@index([assigneeId])
   @@map("tickets")
 }
+
+model TicketChat {
+  id          String      @id @default(cuid())
+  ticketId    String
+  senderId    String
+  message     String?     @db.Text
+  attachments Json?
+  messageType MessageType @default(TEXT)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  ticket      Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender      User   @relation("SentTicketMessages", fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId, createdAt])
+  @@index([senderId])
+  @@map("ticket_chats")
+}
+
 model TicketComment {
   id        String   @id @default(cuid())
   ticketId  String
@@ -616,22 +651,24 @@ model TicketComment {
 // == 7. UTILITY MODELS
 // =======================================
 model Attachment {
-  id            String         @id @default(cuid())
-  fileName      String
-  originalName  String
-  fileType      String         @db.VarChar(100)
-  mimeType      String         @db.VarChar(100)
-  fileSize      Int
-  s3Key         String         @unique
-  s3Url         String         @unique
-  uploadedBy    String?
-  ticketId      String?
-  ticket        Ticket?        @relation(fields: [ticketId], references: [id], onDelete: SetNull)
-  dispatchId    String?
-  dispatch      Dispatch?      @relation("DispatchAttachments", fields: [dispatchId], references: [id], onDelete: SetNull)
-  vendorInvoice VendorInvoice? @relation
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                        String         @id @default(cuid())
+  fileName                  String
+  originalName              String
+  fileType                  String         @db.VarChar(100)
+  mimeType                  String         @db.VarChar(100)
+  fileSize                  Int
+  s3Key                     String         @unique
+  s3Url                     String         @unique
+  uploadedBy                String?
+  ticketId                  String?
+  ticket                    Ticket?        @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  dispatchId                String?
+  dispatch                  Dispatch?      @relation("DispatchAttachments", fields: [dispatchId], references: [id], onDelete: SetNull)
+  mainInvoice               VendorInvoice? @relation("MainInvoiceAttachment")
+  accountsInvoice           VendorInvoice? @relation("AccountsInvoiceAttachment")
+  vendorInvoice             VendorInvoice? @relation("VendorInvoiceAttachment")
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
   @@index([ticketId])
   @@index([dispatchId])
   @@index([uploadedBy])

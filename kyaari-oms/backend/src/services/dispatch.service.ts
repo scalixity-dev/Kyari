@@ -2,7 +2,9 @@ import { prisma } from '../config/database';
 import { CreateDispatchRequest, DispatchResponse } from '../modules/dispatch/dispatch.dto';
 import { APP_CONSTANTS } from '../config/constants';
 import s3Service, { MulterFile } from './s3.service';
-import { DispatchStatus, AssignmentStatus } from '@prisma/client';
+import { DispatchStatus, AssignmentStatus, NotificationPriority } from '@prisma/client';
+import { notificationService } from '../modules/notifications/notification.service';
+import { logger } from '../utils/logger';
 
 class DispatchService {
   /**
@@ -54,7 +56,7 @@ class DispatchService {
       throw new Error('Some assignments are already dispatched');
     }
 
-    // Create dispatch with items in a transaction
+    // Create dispatch with items in a transaction (with increased timeout)
     const dispatch = await prisma.$transaction(async (tx) => {
       // Create dispatch
       const newDispatch = await tx.dispatch.create({
@@ -79,30 +81,35 @@ class DispatchService {
             }),
           },
         },
-        include: {
-          items: {
-            include: {
-              assignedOrderItem: {
-                include: {
-                  orderItem: {
-                    include: {
-                      order: true,
-                    },
+      include: {
+        items: {
+          include: {
+            assignedOrderItem: {
+              include: {
+                orderItem: {
+                  include: {
+                    order: true,
+                  },
+                },
+                purchaseOrderItem: {
+                  include: {
+                    purchaseOrder: true,
                   },
                 },
               },
             },
           },
-          vendor: {
-            include: {
-              user: {
-                select: {
-                  email: true,
-                },
+        },
+        vendor: {
+          include: {
+            user: {
+              select: {
+                email: true,
               },
             },
           },
         },
+      },
       });
 
       // Update assignment statuses to DISPATCHED
@@ -131,7 +138,21 @@ class DispatchService {
       });
 
       return newDispatch;
+    }, {
+      maxWait: 10000, // Maximum time to wait for transaction to start (10 seconds)
+      timeout: 15000, // Maximum time for transaction to complete (15 seconds)
     });
+
+    // Send notification about dispatch creation
+    try {
+      await this.sendDispatchCreatedNotification(dispatch);
+    } catch (notificationError) {
+      // Don't fail the dispatch creation if notification fails
+      logger.warn('Failed to send dispatch creation notification', {
+        dispatchId: dispatch.id,
+        error: notificationError instanceof Error ? notificationError.message : 'Unknown error'
+      });
+    }
 
     return this.formatDispatchResponse(dispatch);
   }
@@ -157,6 +178,11 @@ class DispatchService {
                     order: true,
                   },
                 },
+                purchaseOrderItem: {
+                  include: {
+                    purchaseOrder: true,
+                  },
+                },
               },
             },
           },
@@ -171,6 +197,26 @@ class DispatchService {
           },
         },
         attachments: true,
+        goodsReceiptNote: {
+          include: {
+            ticket: {
+              select: {
+                id: true,
+                ticketNumber: true,
+                status: true,
+              },
+            },
+            items: {
+              select: {
+                id: true,
+                status: true,
+                receivedQuantity: true,
+                discrepancyQuantity: true,
+                damageReported: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -220,11 +266,45 @@ class DispatchService {
                       order: true,
                     },
                   },
+                  purchaseOrderItem: {
+                    include: {
+                      purchaseOrder: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          vendor: {
+            include: {
+              user: {
+                select: {
+                  email: true,
                 },
               },
             },
           },
           attachments: true,
+          goodsReceiptNote: {
+            include: {
+              ticket: {
+                select: {
+                  id: true,
+                  ticketNumber: true,
+                  status: true,
+                },
+              },
+              items: {
+                select: {
+                  id: true,
+                  status: true,
+                  receivedQuantity: true,
+                  discrepancyQuantity: true,
+                  damageReported: true,
+                },
+              },
+            },
+          },
         },
         skip,
         take: limit,
@@ -233,8 +313,40 @@ class DispatchService {
       prisma.dispatch.count({ where }),
     ]);
 
+    // Generate presigned URLs for attachments
+    const dispatchesWithPresignedUrls = await Promise.all(
+      dispatches.map(async (dispatch) => {
+        if (!dispatch.attachments || dispatch.attachments.length === 0) {
+          return dispatch;
+        }
+
+        const attachmentsWithUrls = await Promise.all(
+          dispatch.attachments.map(async (att) => {
+            if (att.s3Key) {
+              try {
+                const presignedUrl = await s3Service.getPresignedUrl(att.s3Key);
+                return {
+                  ...att,
+                  s3Url: presignedUrl
+                };
+              } catch (error) {
+                console.error('Failed to generate presigned URL for attachment', { error, s3Key: att.s3Key });
+                return att;
+              }
+            }
+            return att;
+          })
+        );
+
+        return {
+          ...dispatch,
+          attachments: attachmentsWithUrls
+        };
+      })
+    );
+
     return {
-      dispatches: dispatches.map((d) => this.formatDispatchResponse(d)),
+      dispatches: dispatchesWithPresignedUrls.map((d) => this.formatDispatchResponse(d)),
       pagination: {
         page,
         limit,
@@ -324,22 +436,26 @@ class DispatchService {
    * Format dispatch response
    */
   private formatDispatchResponse(dispatch: any): DispatchResponse {
+    // Extract PO number from the first item (all items should have the same PO)
+    const poNumber = dispatch.items?.[0]?.assignedOrderItem?.purchaseOrderItem?.purchaseOrder?.poNumber || null;
+
     return {
       id: dispatch.id,
       vendorId: dispatch.vendorId,
-      vendorEmail: dispatch.vendor.user.email,
+      vendorEmail: dispatch.vendor?.user?.email || 'N/A',
       awbNumber: dispatch.awbNumber,
       logisticsPartner: dispatch.logisticsPartner,
       dispatchDate: dispatch.dispatchDate.toISOString(),
       estimatedDeliveryDate: dispatch.estimatedDeliveryDate?.toISOString(),
       status: dispatch.status,
       remarks: dispatch.remarks,
+      poNumber: poNumber,
       items: dispatch.items.map((item: any) => ({
         id: item.id,
         assignmentId: item.assignmentId,
         orderItemId: item.orderItemId,
         productName: item.assignedOrderItem.orderItem.productName,
-        sku: item.assignedOrderItem.orderItem.sku,
+        sku: item.assignedOrderItem.orderItem.sku || '',
         dispatchedQuantity: item.dispatchedQuantity,
         orderNumber: item.assignedOrderItem.orderItem.order.orderNumber,
       })),
@@ -351,9 +467,64 @@ class DispatchService {
         mimeType: att.mimeType,
         uploadedAt: att.createdAt.toISOString(),
       })),
+      goodsReceiptNote: dispatch.goodsReceiptNote ? {
+        id: dispatch.goodsReceiptNote.id,
+        grnNumber: dispatch.goodsReceiptNote.grnNumber,
+        status: dispatch.goodsReceiptNote.status,
+        verifiedAt: dispatch.goodsReceiptNote.verifiedAt?.toISOString(),
+        operatorRemarks: dispatch.goodsReceiptNote.operatorRemarks,
+        ticket: dispatch.goodsReceiptNote.ticket || null,
+        items: dispatch.goodsReceiptNote.items || []
+      } : null,
       createdAt: dispatch.createdAt.toISOString(),
       updatedAt: dispatch.updatedAt.toISOString(),
     };
+  }
+
+  /**
+   * Send notification about dispatch creation
+   */
+  private async sendDispatchCreatedNotification(dispatch: any) {
+    try {
+      // Get order numbers for the dispatch
+      const orderNumbers = Array.from(new Set(
+        dispatch.items.map((item: any) => item.assignedOrderItem.orderItem.order.orderNumber)
+      ));
+
+      // Get vendor information
+      const vendorName = dispatch.vendor?.user?.companyName || 'Unknown Vendor';
+
+      // Send notification to OPERATIONS role about new dispatch
+      await notificationService.sendNotificationToRole(
+        ['OPERATIONS'],
+        {
+          title: 'New Dispatch Created',
+          body: `${vendorName} has dispatched orders: ${orderNumbers.join(', ')}. AWB: ${dispatch.awbNumber}`,
+          priority: NotificationPriority.NORMAL,
+          data: {
+            dispatchId: dispatch.id,
+            awbNumber: dispatch.awbNumber,
+            vendorId: dispatch.vendorId,
+            orderNumbers: orderNumbers.join(','),
+            logisticsPartner: dispatch.logisticsPartner
+          }
+        }
+      );
+
+      logger.info('Dispatch creation notification sent successfully', {
+        dispatchId: dispatch.id,
+        awbNumber: dispatch.awbNumber,
+        orderNumbers,
+        vendorName
+      });
+
+    } catch (error) {
+      logger.error('Error sending dispatch creation notification', {
+        dispatchId: dispatch.id,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw error;
+    }
   }
 }
 

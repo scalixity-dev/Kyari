@@ -13,6 +13,7 @@ import {
   OrderItemDto,
   AssignedOrderItemDto
 } from './order.dto';
+import type { ParsedOrderData } from '../../services/excel.service';
 
 type OrderWithDetails = Order & {
   primaryVendor: VendorProfile;
@@ -52,6 +53,9 @@ export class OrderService {
       // Send notification to primary vendor about new order assignment (URGENT priority)
       await this.sendOrderAssignmentNotification(order, data);
       
+      // Send confirmation notification to admin who created the order
+      await this.sendOrderCreationNotification(order, data, createdById);
+      
       return await this.getOrderById(order.id);
     } catch (error) {
       logger.error('Failed to create order', { 
@@ -88,6 +92,13 @@ export class OrderService {
 
     if (!order) {
       throw new Error('Order not found');
+    }
+
+    // Handle case where primaryVendor might be null
+    if (!order.primaryVendor) {
+      // If no primary vendor, we need to handle the DTO mapping differently
+      const orderWithoutVendor = order as any;
+      return this.mapToOrderDtoWithoutVendor(orderWithoutVendor);
     }
 
     return this.mapToOrderDto(order as OrderWithDetails);
@@ -181,22 +192,24 @@ export class OrderService {
       }
     }
 
-    // Validate primary vendor exists and is active
-    const vendor = await prisma.vendorProfile.findUnique({
-      where: { id: data.primaryVendorId },
-      include: { user: true }
-    });
+    // Validate primary vendor exists and is active (only if vendorId is provided)
+    if (data.primaryVendorId) {
+      const vendor = await prisma.vendorProfile.findUnique({
+        where: { id: data.primaryVendorId },
+        include: { user: true }
+      });
 
-    if (!vendor) {
-      throw new Error('Primary vendor not found');
-    }
+      if (!vendor) {
+        throw new Error('Primary vendor not found');
+      }
 
-    if (vendor.user.status !== 'ACTIVE') {
-      throw new Error('Primary vendor is not active');
-    }
+      if (vendor.user.status !== 'ACTIVE') {
+        throw new Error('Primary vendor is not active');
+      }
 
-    if (!vendor.verified) {
-      throw new Error('Primary vendor is not verified');
+      if (!vendor.verified) {
+        throw new Error('Primary vendor is not verified');
+      }
     }
   }
 
@@ -210,12 +223,12 @@ export class OrderService {
       // Create order record
       const order = await tx.order.create({
         data: {
-          clientOrderId: data.orderNumber, // Use orderNumber as clientOrderId
+          clientOrderId: data.orderNumber,
           orderNumber: data.orderNumber,
-          primaryVendorId: data.primaryVendorId,
+          ...(data.primaryVendorId && { primaryVendorId: data.primaryVendorId }),
           status: 'RECEIVED',
           source: 'MANUAL_ENTRY',
-          totalValue: totalOrderValue, // Calculated from item pricing
+          totalValue: totalOrderValue,
           createdById
         }
       });
@@ -235,16 +248,18 @@ export class OrderService {
           }
         });
 
-        // Auto-create assigned order item for primary vendor
-        await tx.assignedOrderItem.create({
-          data: {
-            orderItemId: orderItem.id,
-            vendorId: data.primaryVendorId,
-            assignedQuantity: itemData.quantity,
-            status: 'PENDING_CONFIRMATION',
-            assignedById: createdById
-          }
-        });
+        // Auto-create assigned order item for primary vendor (only if vendorId is provided)
+        if (data.primaryVendorId) {
+          await tx.assignedOrderItem.create({
+            data: {
+              orderItemId: orderItem.id,
+              vendorId: data.primaryVendorId,
+              assignedQuantity: itemData.quantity,
+              status: 'PENDING_CONFIRMATION',
+              assignedById: createdById
+            }
+          });
+        }
       }
 
       // Create audit log
@@ -256,7 +271,7 @@ export class OrderService {
           entityId: order.id,
           metadata: {
             orderNumber: data.orderNumber,
-            primaryVendorId: data.primaryVendorId,
+            primaryVendorId: data.primaryVendorId || undefined,
             itemCount: data.items.length
           }
         }
@@ -274,6 +289,28 @@ export class OrderService {
       source: order.source,
       primaryVendor: this.mapToVendorSummaryDto(order.primaryVendor),
       items: order.items.map(item => this.mapToOrderItemDto(item)),
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      createdBy: order.createdBy ? {
+        id: order.createdBy.id,
+        name: order.createdBy.name
+      } : undefined
+    };
+  }
+
+  private mapToOrderDtoWithoutVendor(order: any): OrderDto {
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      source: order.source,
+      primaryVendor: {
+        id: 'N/A',
+        companyName: 'Not Assigned',
+        contactPersonName: 'N/A',
+        contactPhone: 'N/A'
+      },
+      items: order.items.map((item: any) => this.mapToOrderItemDto(item)),
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
       createdBy: order.createdBy ? {
@@ -331,11 +368,134 @@ export class OrderService {
       status: order.status,
       itemCount: order.items.length,
       primaryVendor: {
-        companyName: order.primaryVendor.companyName
+        companyName: order.primaryVendor?.companyName || 'Not Assigned'
       },
       createdAt: order.createdAt,
       pricingStatus: 'complete' // Always complete since pricing is mandatory
     };
+  }
+
+  async updateOrder(orderId: string, data: CreateOrderDto, updatedById: string): Promise<OrderDto> {
+    try {
+      // Check if order exists
+      const existingOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          items: {
+            include: {
+              assignedItems: true
+            }
+          }
+        }
+      });
+
+      if (!existingOrder) {
+        throw new Error('Order not found');
+      }
+
+      // Only allow updates if order is in RECEIVED status
+      if (existingOrder.status !== 'RECEIVED') {
+        throw new Error(`Order with status ${existingOrder.status} cannot be updated. Only orders with RECEIVED status can be edited.`);
+      }
+
+      // Check if any items have been confirmed by vendor
+      const hasConfirmedAssignments = existingOrder.items.some(item =>
+        item.assignedItems.some(assigned => assigned.confirmedQuantity !== null)
+      );
+
+      if (hasConfirmedAssignments) {
+        throw new Error('Order cannot be updated as vendor has already confirmed some items');
+      }
+
+      // Validate new order data
+      await this.validateOrderData(data);
+
+      // Update order in transaction
+      await prisma.$transaction(async (tx) => {
+        // Delete existing assigned items
+        for (const item of existingOrder.items) {
+          await tx.assignedOrderItem.deleteMany({
+            where: { orderItemId: item.id }
+          });
+        }
+
+        // Delete existing order items
+        await tx.orderItem.deleteMany({
+          where: { orderId }
+        });
+
+        // Calculate total order value from new items
+        const totalOrderValue = data.items.reduce((sum, item) => {
+          return sum + (item.pricePerUnit * item.quantity);
+        }, 0);
+
+        // Update order
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            orderNumber: data.orderNumber,
+            ...(data.primaryVendorId && { primaryVendorId: data.primaryVendorId }),
+            totalValue: totalOrderValue,
+            updatedAt: new Date()
+          }
+        });
+
+        // Create new order items
+        for (const itemData of data.items) {
+          const totalItemPrice = itemData.pricePerUnit * itemData.quantity;
+          
+          const orderItem = await tx.orderItem.create({
+            data: {
+              orderId,
+              productName: itemData.productName,
+              sku: itemData.sku,
+              quantity: itemData.quantity,
+              pricePerUnit: itemData.pricePerUnit,
+              totalPrice: totalItemPrice
+            }
+          });
+
+          // Auto-create assigned order item for vendor (only if vendorId is provided)
+          if (data.primaryVendorId) {
+            await tx.assignedOrderItem.create({
+              data: {
+                orderItemId: orderItem.id,
+                vendorId: data.primaryVendorId,
+                assignedQuantity: itemData.quantity,
+                status: 'PENDING_CONFIRMATION',
+                assignedById: updatedById
+              }
+            });
+          }
+        }
+
+        // Create audit log
+        await tx.auditLog.create({
+          data: {
+            actorUserId: updatedById,
+            action: APP_CONSTANTS.AUDIT_ACTIONS.ORDER_UPDATE || 'ORDER_UPDATE',
+            entityType: 'Order',
+            entityId: orderId,
+            metadata: {
+              orderNumber: data.orderNumber,
+              primaryVendorId: data.primaryVendorId || undefined,
+              itemCount: data.items.length
+            }
+          }
+        });
+      });
+
+      logger.info('Order updated successfully', { 
+        orderId, 
+        orderNumber: data.orderNumber,
+        updatedById 
+      });
+
+      return await this.getOrderById(orderId);
+    } catch (error) {
+      logger.error('Failed to update order', { error, orderId });
+      throw error;
+    }
   }
 
   async deleteOrder(orderId: string, deletedById: string): Promise<void> {
@@ -508,6 +668,128 @@ export class OrderService {
       logger.error('Failed to assign vendor to order', { error, orderId, vendorId });
       throw error;
     }
+  }
+
+  private async sendOrderAssignmentNotification(order: Order, data: CreateOrderDto): Promise<void> {
+    if (!data.primaryVendorId) {
+      return; // Skip notification if no vendor assigned
+    }
+
+    try {
+      const vendor = await prisma.vendorProfile.findUnique({
+        where: { id: data.primaryVendorId }
+      });
+
+      if (!vendor) {
+        return;
+      }
+
+      await notificationService.sendNotificationToUser(
+        vendor.userId,
+        {
+          title: 'New Order Assigned',
+          body: `You have been assigned a new order: ${data.orderNumber}`,
+          priority: NotificationPriority.URGENT,
+          data: {
+            type: 'ORDER_ASSIGNMENT',
+            orderId: order.id,
+            orderNumber: data.orderNumber
+          }
+        }
+      );
+    } catch (error) {
+      logger.error('Failed to send order assignment notification', { 
+        orderId: order.id, 
+        vendorId: data.primaryVendorId,
+        error 
+      });
+      // Don't throw - notification failure shouldn't block order creation
+    }
+  }
+
+  private async sendOrderCreationNotification(order: Order, data: CreateOrderDto, createdById: string): Promise<void> {
+    try {
+      await notificationService.sendNotificationToUser(
+        createdById,
+        {
+          title: 'Order Created Successfully',
+          body: `Order ${data.orderNumber} has been created and assigned to vendor. You will be notified when the vendor responds.`,
+          priority: NotificationPriority.NORMAL,
+          data: {
+            type: 'ORDER_CREATED',
+            orderId: order.id,
+            orderNumber: data.orderNumber
+          }
+        }
+      );
+    } catch (error) {
+      logger.error('Failed to send order creation notification', { 
+        orderId: order.id, 
+        createdById,
+        error 
+      });
+      // Don't throw error as notification failure shouldn't fail order creation
+    }
+  }
+
+  async createOrdersFromExcel(
+    parsedOrders: ParsedOrderData[], 
+    createdById: string
+  ): Promise<{
+    successCount: number;
+    failedCount: number;
+    errors: { orderNumber: string; error: string }[];
+    createdOrders: OrderDto[];
+  }> {
+    const results = {
+      successCount: 0,
+      failedCount: 0,
+      errors: [] as { orderNumber: string; error: string }[],
+      createdOrders: [] as OrderDto[]
+    };
+
+    for (const orderData of parsedOrders) {
+      try {
+        // Convert to CreateOrderDto format
+        const createOrderDto: CreateOrderDto = {
+          orderNumber: orderData.orderNumber,
+          primaryVendorId: orderData.vendorId || undefined,
+          items: orderData.items
+        };
+
+        // Create the order
+        const createdOrder = await this.createOrder(createOrderDto, createdById);
+        
+        results.successCount++;
+        results.createdOrders.push(createdOrder);
+        
+        logger.info('Order created from Excel', { 
+          orderNumber: orderData.orderNumber,
+          itemCount: orderData.items.length,
+          hasVendor: !!orderData.vendorId
+        });
+      } catch (error) {
+        results.failedCount++;
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        results.errors.push({
+          orderNumber: orderData.orderNumber,
+          error: errorMessage
+        });
+        
+        logger.error('Failed to create order from Excel', { 
+          orderNumber: orderData.orderNumber,
+          error: errorMessage 
+        });
+      }
+    }
+
+    logger.info('Excel upload completed', {
+      total: parsedOrders.length,
+      success: results.successCount,
+      failed: results.failedCount
+    });
+
+    return results;
   }
 }
 

@@ -416,9 +416,20 @@ export class DeviceTokenService {
    * Validate FCM token format
    */
   private isValidFCMToken(token: string): boolean {
-    // Basic FCM token validation
-    // FCM tokens are usually 140-180 characters long and contain alphanumeric characters, hyphens, and underscores
-    const fcmTokenPattern = /^[A-Za-z0-9_-]{140,180}$/;
+    // FCM token validation - tokens can be 140-200+ characters
+    // Modern FCM tokens can contain: alphanumeric, hyphens, underscores, and colons
+    // Some tokens from newer Firebase SDK versions can be even longer (up to 250 chars)
+    if (!token || typeof token !== 'string') {
+      return false;
+    }
+    
+    // Check length (FCM tokens are typically 140-250 characters)
+    if (token.length < 140 || token.length > 500) {
+      return false;
+    }
+    
+    // Check for valid characters (alphanumeric, hyphens, underscores, colons)
+    const fcmTokenPattern = /^[A-Za-z0-9_:-]+$/;
     return fcmTokenPattern.test(token);
   }
 
@@ -463,6 +474,43 @@ export class DeviceTokenService {
         deviceType,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  }
+
+  /**
+   * Remove a device token by its ID
+   * Used when the frontend wants to remove a specific token
+   */
+  async removeTokenById(tokenId: string, userId: string): Promise<boolean> {
+    try {
+      const result = await prisma.deviceToken.deleteMany({
+        where: {
+          id: tokenId,
+          userId
+        }
+      });
+
+      if (result.count > 0) {
+        logger.info('Device token removed by ID', {
+          tokenId,
+          userId,
+          removedCount: result.count
+        });
+        return true;
+      } else {
+        logger.warn('Device token not found for removal', {
+          tokenId,
+          userId
+        });
+        return false;
+      }
+    } catch (error) {
+      logger.error('Failed to remove device token by ID', {
+        tokenId,
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return false;
     }
   }
 }

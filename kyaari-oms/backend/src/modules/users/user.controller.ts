@@ -29,6 +29,20 @@ export class UserController {
    */
   async getUsers(req: Request, res: Response): Promise<void> {
     try {
+      // Filter out sensitive headers for logging
+      const safeHeaders = {
+        'content-type': req.headers['content-type'],
+        'user-agent': req.headers['user-agent'],
+        'accept': req.headers['accept'],
+        'accept-language': req.headers['accept-language']
+      };
+
+      logger.info('Get users request received', {
+        query: req.query,
+        user: req.user,
+        headers: safeHeaders
+      });
+
       const { role, status, page = '1', limit = '50' } = req.query;
       
       const pageNum = parseInt(page as string, 10);
@@ -42,6 +56,7 @@ export class UserController {
         offset
       };
 
+      logger.info('Fetching users with filters', { filters });
       const result = await userService.listUsers(filters);
 
       ResponseHelper.success(res, {

@@ -2,12 +2,35 @@ import { app } from './app';
 import { env } from './config/env';
 import { logger } from './utils/logger';
 import { prisma } from './config/database';
+import { redisConfig } from './config/redis.config';
+import { SchedulerService } from './services/scheduler.service';
+import { initializeFirebase } from './config/firebase.config';
 
 const startServer = async () => {
   try {
     // Test database connection
     await prisma.$connect();
     logger.info('Database connected successfully');
+
+    // Initialize Redis if enabled
+    if (env.REDIS_ENABLED) {
+      await redisConfig.connect();
+      logger.info('Redis caching enabled');
+    } else {
+      logger.info('Redis caching disabled');
+    }
+
+    // Initialize Firebase for notifications
+    const firebaseInitialized = initializeFirebase();
+    if (firebaseInitialized) {
+      logger.info('🔥 Firebase initialized successfully for notifications');
+    } else {
+      logger.warn('Firebase initialization skipped - notifications will be simulated');
+    }
+
+    // Initialize and start token cleanup scheduler
+    const scheduler = SchedulerService.getInstance();
+    scheduler.startTokenCleanup();
 
     // Start server
     const server = app.listen(env.PORT, () => {
@@ -20,10 +43,19 @@ const startServer = async () => {
     const gracefulShutdown = async (signal: string) => {
       logger.info(`${signal} received, shutting down gracefully`);
       
+      // Stop scheduler
+      scheduler.stopTokenCleanup();
+      
       server.close(async () => {
         logger.info('HTTP server closed');
         
         try {
+          // Disconnect Redis
+          if (env.REDIS_ENABLED) {
+            await redisConfig.disconnect();
+          }
+          
+          // Disconnect database
           await prisma.$disconnect();
           logger.info('Database disconnected');
           process.exit(0);

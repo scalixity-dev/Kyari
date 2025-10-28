@@ -1,21 +1,16 @@
-import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthProvider'
-import type { User } from '../services/api'
-
-type Props = {
-  children: React.ReactElement
-  redirectTo?: string
-  requiredRole?: User['role'] | User['role'][]
-  fallbackRoute?: string
-}
+import type { ReactElement } from 'react'
 
 export default function ProtectedRoute({ 
   children, 
   redirectTo = '/', 
   requiredRole,
-  fallbackRoute = '/unauthorized' 
-}: Props) {
+}: {
+  children: ReactElement
+  redirectTo?: string
+  requiredRole?: string | string[]
+}) {
   const { user, loading, isAuthenticated } = useAuth()
   const location = useLocation()
 

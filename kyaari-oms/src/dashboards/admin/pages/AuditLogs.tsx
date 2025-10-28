@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { FileText, Calendar as CalendarIcon } from 'lucide-react'
-import { CustomDropdown } from '../../../components'
+import { Calendar as CalendarIcon } from 'lucide-react'
+import { CustomDropdown, CSVPDFExportButton, Pagination } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
 
@@ -139,9 +139,10 @@ export default function AuditLogs() {
   const [showFromCalendar, setShowFromCalendar] = useState(false)
   const [showToCalendar, setShowToCalendar] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [itemsPerPage] = useState(10)
   const [sortBy] = useState<'timestamp'>('timestamp')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false)
   
   const fromCalendarRef = useRef<HTMLDivElement>(null)
   const toCalendarRef = useRef<HTMLDivElement>(null)
@@ -263,6 +264,42 @@ export default function AuditLogs() {
     window.URL.revokeObjectURL(url)
   }
 
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'Admin':
+        return { bg: '#DBEAFE', text: '#1E3A8A', border: '#BFDBFE' } // Blue
+      case 'Vendor':
+        return { bg: '#D1FAE5', text: '#065F46', border: '#A7F3D0' } // Green
+      case 'Accounts':
+        return { bg: '#FEF9C3', text: '#92400E', border: '#FEF08A' } // Yellow
+      case 'Ops':
+        return { bg: '#FFEDD5', text: '#9A3412', border: '#FED7AA' } // Orange
+      case 'Store Operator':
+        return { bg: '#E0E7FF', text: '#3730A3', border: '#C7D2FE' } // Indigo
+      default:
+        return { bg: '#F3F4F6', text: '#374151', border: '#E5E7EB' } // Gray
+    }
+  }
+
+  const getModuleColor = (module: string) => {
+    switch (module) {
+      case 'Orders':
+        return { bg: '#DBEAFE', text: '#1E3A8A', border: '#BFDBFE' } // Blue
+      case 'Vendors':
+        return { bg: '#D1FAE5', text: '#065F46', border: '#A7F3D0' } // Green
+      case 'Payments':
+        return { bg: '#FEF9C3', text: '#92400E', border: '#FEF08A' } // Yellow
+      case 'Tickets':
+        return { bg: '#FFEDD5', text: '#9A3412', border: '#FED7AA' } // Orange
+      case 'Users':
+        return { bg: '#E0E7FF', text: '#3730A3', border: '#C7D2FE' } // Indigo
+      case 'Analytics':
+        return { bg: '#FCE7F3', text: '#831843', border: '#FBCFE8' } // Pink
+      default:
+        return { bg: '#F3F4F6', text: '#374151', border: '#E5E7EB' } // Gray
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen overflow-x-auto bg-[var(--color-sharktank-bg)] font-sans w-full overflow-x-hidden">
       {/* Header */}
@@ -288,15 +325,8 @@ export default function AuditLogs() {
               className="w-full px-3 py-3 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto mb-2"
             />
             
-            {/* Filter action buttons (slimmer on sm+) */}
+            {/* Filter action buttons (slimmer on sm+) - Apply removed per request; keep Reset */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(1)}
-                className="w-full sm:w-[140px] px-4 py-3 sm:py-2 rounded-md text-white font-medium text-sm min-h-[44px] sm:min-h-auto"
-                style={{ backgroundColor: '#C3754C', color: '#F5F3E7' }}
-              >
-                Apply
-              </button>
               <button
                 onClick={handleResetFilters}
                 className="w-full sm:w-[140px] px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 text-sm min-h-[44px] sm:min-h-auto"
@@ -411,191 +441,108 @@ export default function AuditLogs() {
 
       {/* Export Controls (separate) */}
       <div className="flex justify-end gap-3 mb-4">
-        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-          <button
-            onClick={handleExportCSV}
-            className="flex bg-white items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
-          >
-            <FileText size={16} className="flex-shrink-0" />
-            <span>Export CSV</span>
-          </button>
-          <button
-            onClick={handleExportPDF}
-            className="flex bg-white items-center justify-center gap-2 px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto min-h-[44px] sm:min-h-auto"
-          >
-            <FileText size={16} className="flex-shrink-0" />
-            <span>Export PDF</span>
-          </button>
-        </div>
+        <CSVPDFExportButton
+          onExportCSV={handleExportCSV}
+          onExportPDF={handleExportPDF}
+        />
       </div>
 
       {/* Table Container */}
-  <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-
-        {/* Desktop Table */}
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full min-w-[800px]">
-            <thead style={{ backgroundColor: 'var(--color-accent)', borderTopLeftRadius: '0.5rem', borderTopRightRadius: '0.5rem' }} className="rounded-t-lg">
+      <div className="overflow-x-auto rounded-lg shadow-sm bg-white">
+        {isLoadingLogs ? (
+          <div className="p-12 text-center">
+            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading audit logs...</p>
+          </div>
+        ) : (
+        <table className="min-w-full">
+          <thead className="bg-[var(--color-accent)]">
+            <tr>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                <button
+                  onClick={handleSort}
+                  className="flex items-center gap-1 hover:text-gray-200"
+                >
+                  Timestamp
+                  <span className="text-gray-300">↕</span>
+                </button>
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                User
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                Role
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                Action
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                Module
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white">
+            {paginatedLogs.length === 0 ? (
               <tr>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                  <button
-                    onClick={handleSort}
-                    className="flex items-center gap-1 hover:text-gray-700 min-h-[44px] lg:min-h-auto"
-                  >
-                    Timestamp
-                    <span className="text-gray-400">↕</span>
-                  </button>
-                </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                  Action
-                </th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                  Module
-                </th>
+                <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                  No audit logs found
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-900">
-                    <div className="font-medium">{formatTimestamp(log.timestamp)}</div>
+            ) : (
+              paginatedLogs.map((log) => (
+                <tr key={log.id} className="bg-white hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatTimestamp(log.timestamp)}
                   </td>
-                  <td className="px-4 sm:px-6 py-4">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{log.user}</div>
-                      <div className="text-sm text-gray-500 break-all">{log.userEmail}</div>
-                    </div>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    <div className="font-medium">{log.user}</div>
+                    <div className="text-gray-500">{log.userEmail}</div>
                   </td>
-                  <td className="px-4 sm:px-6 py-4">
-                    <span className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <span 
+                      className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full border"
+                      style={{
+                        backgroundColor: getRoleColor(log.role).bg,
+                        color: getRoleColor(log.role).text,
+                        borderColor: getRoleColor(log.role).border
+                      }}
+                    >
                       {log.role}
                     </span>
                   </td>
-                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-900 max-w-xs">
-                    <div className="line-clamp-2">{log.action}</div>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {log.action}
                   </td>
-                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-900">
-                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-700">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <span 
+                      className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full border"
+                      style={{
+                        backgroundColor: getModuleColor(log.module).bg,
+                        color: getModuleColor(log.module).text,
+                        borderColor: getModuleColor(log.module).border
+                      }}
+                    >
                       {log.module}
                     </span>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Card Layout */}
-        <div className="lg:hidden">
-          {paginatedLogs.map((log) => (
-            <div key={log.id} className="border-b border-gray-200 p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0 pr-3">
-                  <div className="text-sm font-medium text-gray-900 mb-1">{log.user}</div>
-                  <div className="text-xs text-gray-500 break-all">{log.userEmail}</div>
-                </div>
-                <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                  <span className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                    {log.role}
-                  </span>
-                  <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-700">
-                    {log.module}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="text-sm text-gray-900 mb-3 leading-relaxed">
-                {log.action}
-              </div>
-              
-              <div className="text-xs text-gray-500 font-medium">
-                {formatTimestamp(log.timestamp)}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center gap-2 order-2 sm:order-1">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-auto"
-              >
-                <span>←</span>
-                <span>Previous</span>
-              </button>
-              
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number
-                  if (totalPages <= 5) {
-                    pageNum = i + 1
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i
-                  } else {
-                    pageNum = currentPage - 2 + i
-                  }
-                  
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 sm:px-4 py-3 sm:py-2 text-sm rounded-md min-h-[44px] sm:min-h-auto ${
-                        currentPage === pageNum
-                          ? 'text-white'
-                          : 'text-gray-700 hover:bg-gray-50 border border-gray-300'
-                      }`}
-                      style={currentPage === pageNum ? { backgroundColor: 'var(--color-accent)' } : undefined}
-                    >
-                      {pageNum}
-                    </button>
-                  )
-                })}
-                {totalPages > 5 && currentPage < totalPages - 2 && (
-                  <>
-                    <span className="px-2 text-gray-500 text-sm">...</span>
-                    <button
-                      onClick={() => setCurrentPage(totalPages)}
-                      className={`px-3 sm:px-4 py-3 sm:py-2 text-sm rounded-md min-h-[44px] sm:min-h-auto ${
-                        currentPage === totalPages
-                          ? 'text-white'
-                          : 'text-gray-700 hover:bg-gray-50 border border-gray-300'
-                      }`}
-                      style={currentPage === totalPages ? { backgroundColor: 'var(--color-accent)' } : undefined}
-                    >
-                      {totalPages}
-                    </button>
-                  </>
-                )}
-              </div>
-              
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-auto"
-              >
-                <span>Next</span>
-                <span>→</span>
-              </button>
-            </div>
-            
-            <div className="text-sm text-gray-700 order-1 sm:order-2">
-              Page {currentPage} of {totalPages}
-            </div>
-          </div>
+              ))
+            )}
+          </tbody>
+        </table>
         )}
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={filteredAndSortedLogs.length}
+        startIndex={(currentPage - 1) * itemsPerPage}
+        endIndex={Math.min(currentPage * itemsPerPage, filteredAndSortedLogs.length)}
+        onPageChange={setCurrentPage}
+        itemLabel="logs"
+      />
     </div>
   )
 }

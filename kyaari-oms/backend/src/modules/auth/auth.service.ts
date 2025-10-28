@@ -187,7 +187,7 @@ export class AuthService {
     }
   }
 
-  async refreshTokens(refreshToken: string, ipAddress?: string, userAgent?: string): Promise<{ accessToken: string }> {
+  async refreshTokens(refreshToken: string, ipAddress?: string, userAgent?: string): Promise<{ accessToken: string; refreshToken: string }> {
     try {
       const payload = await jwtService.verifyRefreshToken(refreshToken);
       
@@ -197,7 +197,18 @@ export class AuthService {
         include: { user: { include: { roles: { include: { role: true } } } } }
       });
 
-      if (!storedToken || storedToken.revokedAt) {
+      if (!storedToken) {
+        throw new Error('Refresh token not found');
+      }
+
+      if (storedToken.revokedAt) {
+        // Security: Token reuse detected - revoke entire token family
+        logger.warn('Token reuse detected, revoking entire token family', { 
+          tokenFamily: storedToken.family,
+          userId: storedToken.userId,
+          ipAddress
+        });
+        await this.revokeTokenFamily(storedToken.family, 'Token reuse detected', ipAddress);
         throw new Error('Invalid refresh token');
       }
 
@@ -219,13 +230,14 @@ export class AuthService {
         roles
       });
 
+      // Generate new refresh token with same family (proper token rotation)
       const newRefreshToken = await jwtService.generateRefreshToken({
         userId: storedToken.userId,
         family: storedToken.family
       });
 
-      // Store new refresh token
-      await this.storeRefreshToken(
+      // Store new refresh token with retry logic for unique constraint
+      await this.storeRefreshTokenWithRetry(
         storedToken.userId,
         newRefreshToken,
         storedToken.family,
@@ -246,7 +258,7 @@ export class AuthService {
 
       logger.info('Tokens refreshed successfully', { userId: storedToken.userId });
 
-      return { accessToken: newAccessToken };
+      return { accessToken: newAccessToken, refreshToken: newRefreshToken };
     } catch (error) {
       logger.error('Token refresh failed', { error });
       throw error;
@@ -295,6 +307,17 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
 
+    // Clean up expired and revoked tokens for this user to prevent hash collisions
+    await prisma.refreshToken.deleteMany({
+      where: {
+        userId,
+        OR: [
+          { expiresAt: { lt: new Date() } },
+          { revokedAt: { not: null } }
+        ]
+      }
+    });
+
     await prisma.refreshToken.create({
       data: {
         userId,
@@ -307,8 +330,85 @@ export class AuthService {
     });
   }
 
+  private async storeRefreshTokenWithRetry(
+    userId: string,
+    token: string,
+    family: string,
+    ipAddress?: string,
+    userAgent?: string,
+    maxRetries: number = 3
+  ): Promise<void> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.storeRefreshToken(userId, token, family, ipAddress, userAgent);
+        return; // Success, exit the retry loop
+      } catch (error: any) {
+        lastError = error;
+        
+        // If it's a unique constraint violation, try to clean up and regenerate
+        if (error?.code === 'P2002' && error?.meta?.target?.includes('tokenHash')) {
+          logger.warn(`Token hash collision on attempt ${attempt}, cleaning up expired tokens`, { userId, family });
+          
+          // Clean up expired tokens for this user
+          await prisma.refreshToken.deleteMany({
+            where: {
+              userId,
+              expiresAt: { lt: new Date() }
+            }
+          });
+          
+          // If not the last attempt, regenerate token with additional entropy
+          if (attempt < maxRetries) {
+            // Add a small delay and extra randomness to avoid collisions
+            await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+            token = await jwtService.generateRefreshToken({
+              userId,
+              family,
+              jti: crypto.randomUUID() // Add unique JWT ID
+            });
+            continue;
+          }
+        }
+        
+        // If it's not a unique constraint error or we've exceeded retries, throw
+        if (attempt === maxRetries) {
+          throw lastError;
+        }
+      }
+    }
+  }
+
   private async hashToken(token: string): Promise<string> {
     return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  /**
+   * Revoke entire token family - used when token reuse is detected
+   */
+  private async revokeTokenFamily(family: string, reason: string, ipAddress?: string): Promise<number> {
+    const result = await prisma.refreshToken.updateMany({
+      where: { 
+        family,
+        revokedAt: null // Only revoke active tokens in the family
+      },
+      data: { 
+        revokedAt: new Date()
+        // TODO: Add revokedReason and revokedByIp after schema migration
+        // revokedReason: reason,
+        // revokedByIp: ipAddress
+      }
+    });
+
+    logger.info('Token family revoked', { 
+      family, 
+      reason, 
+      revokedCount: result.count,
+      ipAddress 
+    });
+
+    return result.count;
   }
 
   /**
@@ -508,6 +608,61 @@ export class AuthService {
         userAgent
       }
     });
+  }
+
+  /**
+   * Cleanup expired refresh tokens
+   */
+  async cleanupExpiredTokens(): Promise<{ deletedCount: number }> {
+    try {
+      const now = new Date();
+      
+      // Delete expired refresh tokens
+      const deleteResult = await prisma.refreshToken.deleteMany({
+        where: {
+          OR: [
+            { expiresAt: { lt: now } },
+            { revokedAt: { not: null } }
+          ]
+        }
+      });
+
+      logger.info('Expired refresh tokens cleaned up', { 
+        deletedCount: deleteResult.count 
+      });
+
+      return { deletedCount: deleteResult.count };
+    } catch (error) {
+      logger.error('Failed to cleanup expired tokens', { error });
+      throw new Error('Token cleanup failed');
+    }
+  }
+
+  /**
+   * Cleanup tokens for a specific user
+   */
+  async revokeAllUserTokens(userId: string): Promise<{ revokedCount: number }> {
+    try {
+      const updateResult = await prisma.refreshToken.updateMany({
+        where: {
+          userId,
+          revokedAt: null
+        },
+        data: {
+          revokedAt: new Date()
+        }
+      });
+
+      logger.info('All user tokens revoked', { 
+        userId, 
+        revokedCount: updateResult.count 
+      });
+
+      return { revokedCount: updateResult.count };
+    } catch (error) {
+      logger.error('Failed to revoke user tokens', { error, userId });
+      throw new Error('Token revocation failed');
+    }
   }
 }
 

@@ -22,6 +22,7 @@ declare module 'lucide-react' {
   export const Search: LucideIcon
   export const Upload: LucideIcon
   export const AlertTriangle: LucideIcon
+  export const AlertCircle: LucideIcon
   export const Info: LucideIcon
   export const Clock: LucideIcon
   export const Calendar: LucideIcon

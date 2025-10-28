@@ -1,30 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
-import { LayoutDashboard, Package, Bell, Users, CheckSquare, FileText, Wallet, MapPin, Eye } from 'lucide-react';
+import { LayoutDashboard, Package, Bell, Users, CheckSquare, FileText, Wallet, MapPin, Eye, Filter } from 'lucide-react';
+import { KPICard, CustomDropdown, CSVPDFExportButton } from '../../../components';
+import { OrderTrackingApi } from '../../../services/orderTrackingApi';
+import type { OrderTrackingItem, OrderTrackingSummary, OrderTrackingFilters } from '../../../services/orderTrackingApi';
 
 // TypeScript types
 type Status = "Received" | "Assigned" | "Confirmed" | "Invoiced" | "Dispatched" | "Verified" | "Paid";
-type Order = { id: string; vendor: string; qty: number; status: Status };
-
 type ViewMode = 'list' | 'board';
-
-// Sample order data with mixed statuses
-const initialOrders: Order[] = [
-  { id: "ORD-001", vendor: "Green Valley Farms", qty: 250, status: "Received" },
-  { id: "ORD-002", vendor: "Organic Harvest Co", qty: 180, status: "Assigned" },
-  { id: "ORD-003", vendor: "Fresh Fields Ltd", qty: 320, status: "Confirmed" },
-  { id: "ORD-004", vendor: "Nature's Best", qty: 95, status: "Invoiced" },
-  { id: "ORD-005", vendor: "Farm Fresh Direct", qty: 210, status: "Dispatched" },
-  { id: "ORD-006", vendor: "Golden Harvest", qty: 165, status: "Verified" },
-  { id: "ORD-007", vendor: "Eco Greens", qty: 275, status: "Paid" },
-  { id: "ORD-008", vendor: "Valley Organics", qty: 140, status: "Received" },
-  { id: "ORD-009", vendor: "Sunrise Farms", qty: 190, status: "Assigned" },
-  { id: "ORD-010", vendor: "Pure Harvest", qty: 300, status: "Confirmed" },
-  { id: "ORD-011", vendor: "Green Earth Co", qty: 85, status: "Invoiced" },
-  { id: "ORD-012", vendor: "Natural Foods Inc", qty: 225, status: "Dispatched" },
-];
 
 const statusColumns: Status[] = ["Received", "Assigned", "Confirmed", "Invoiced", "Dispatched", "Verified", "Paid"];
 
@@ -65,7 +50,7 @@ const getStatusColor = (status: Status): string => {
 };
 
 interface OrderCardProps {
-  order: Order;
+  order: OrderTrackingItem;
   index: number;
   isDragDisabled?: boolean;
   onOrderClick?: (orderId: string) => void;
@@ -88,13 +73,13 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, index, isDragDisabled = fa
         `}
       >
         <div className="font-semibold text-[var(--color-heading)] text-sm sm:text-base mb-1">
-          {order.id}
+          {order.orderNumber}
         </div>
         <div className="text-gray-600 text-sm mb-2 leading-relaxed">
-          {order.vendor}
+          {order.vendor.companyName}
         </div>
         <div className="text-gray-500 text-xs sm:text-sm">
-          Qty: {order.qty}
+          Qty: {order.quantity}
         </div>
       </div>
     )}
@@ -102,98 +87,198 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, index, isDragDisabled = fa
 );
 
 interface ListViewProps {
-  orders: Order[];
+  orders: OrderTrackingItem[];
   onOrderClick?: (orderId: string) => void;
+  showFilters: boolean;
+  filters: FilterState;
+  onFilterChange: (key: keyof FilterState, value: string) => void;
+  onResetFilters: () => void;
+  loading?: boolean;
 }
 
-const ListView: React.FC<ListViewProps> = ({ orders, onOrderClick }) => (
-  <div className="bg-white rounded-xl shadow-md border border-white/20 overflow-hidden">
-    {/* Desktop Table View */}
-    <div className="hidden md:block overflow-x-auto w-full">
-      <table className="w-full min-w-full table-fixed border-separate border-spacing-0">
-        <thead className="bg-[var(--color-accent)] sticky top-0 z-10">
-          <tr>
-            <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">
-              Order ID
-            </th>
-            <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">
-              Vendor
-            </th>
-            <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">
-              Quantity
-            </th>
-            <th className="text-left px-4 lg:px-6 py-3 font-semibold text-[var(--color-button-text)] text-sm">
-              Status
-            </th>
-          </tr>
-        </thead>
-  <tbody className="bg-white divide-y divide-gray-200">
-          {orders.map((order) => (
-            <tr
-              key={order.id}
-              onClick={() => onOrderClick?.(order.id)}
-              className="hover:bg-gray-50 transition-colors cursor-pointer"
-            >
-              <td className="px-4 lg:px-6 py-4 font-medium text-[var(--color-heading)]">
-                {order.id}
-              </td>
-              <td className="px-4 lg:px-6 py-4 text-gray-700">
-                {order.vendor}
-              </td>
-              <td className="px-4 lg:px-6 py-4 text-gray-600">
-                {order.qty}
-              </td>
-              <td className="px-4 lg:px-6 py-4">
-                <span className={`
-                  inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-                  ${getStatusColor(order.status)}
-                `}>
-                  {order.status}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+interface FilterState {
+  vendor: string;
+  status: string;
+  qtyMin: string;
+  qtyMax: string;
+  search: string;
+}
 
-    {/* Mobile Card View */}
-    <div className="md:hidden space-y-1">
-      {orders.map((order, index) => (
-        <div
-          key={order.id}
-          onClick={() => onOrderClick?.(order.id)}
-          className={`
-            p-4 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-100 transition-colors active:bg-gray-200
-            ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
-          `}
-        >
-          <div className="flex items-start justify-between mb-3">
-            <div className="font-semibold text-[var(--color-heading)] text-base">
-              {order.id}
+interface ListViewProps {
+  orders: OrderTrackingItem[];
+  onOrderClick?: (orderId: string) => void;
+  showFilters: boolean;
+  filters: FilterState;
+  onFilterChange: (key: keyof FilterState, value: string) => void;
+  onResetFilters: () => void;
+}
+
+const ListView: React.FC<ListViewProps> = ({ 
+  orders, 
+  onOrderClick, 
+  showFilters, 
+  filters, 
+  onFilterChange, 
+  onResetFilters
+}) => {
+
+  // Get unique vendors for dropdown
+  const uniqueVendors = Array.from(new Set((orders || []).map(o => o.vendor.companyName))).sort();
+
+  return (
+    <div>
+      {/* Filter Section */}
+      {showFilters && (
+        <div className="bg-white border border-secondary/20 rounded-xl p-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => onFilterChange('search', e.target.value)}
+              placeholder="Search by order number..."
+              className="px-3 py-2.5 rounded-xl border border-gray-300 text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200"
+            />
+            <CustomDropdown
+              value={filters.status}
+              onChange={(value) => onFilterChange('status', value)}
+              options={[
+                { value: '', label: 'All Status' },
+                ...statusColumns.map(s => ({ value: s, label: s }))
+              ]}
+              placeholder="All Status"
+            />
+            <CustomDropdown
+              value={filters.vendor}
+              onChange={(value) => onFilterChange('vendor', value)}
+              options={[
+                { value: '', label: 'All Vendors' },
+                ...uniqueVendors.map(v => ({ value: v, label: v }))
+              ]}
+              placeholder="All Vendors"
+            />
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Quantity Range</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={filters.qtyMin}
+                  onChange={(e) => onFilterChange('qtyMin', e.target.value)}
+                  placeholder="Min"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px]"
+                />
+                <input
+                  type="number"
+                  value={filters.qtyMax}
+                  onChange={(e) => onFilterChange('qtyMax', e.target.value)}
+                  placeholder="Max"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px]"
+                />
+              </div>
             </div>
-            <span className={`
-              inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border flex-shrink-0
-              ${getStatusColor(order.status)}
-            `}>
-              {order.status}
-            </span>
           </div>
-          <div className="text-gray-700 text-sm mb-2 leading-relaxed">
-            {order.vendor}
-          </div>
-          <div className="text-gray-600 text-sm">
-            <span className="font-medium">Quantity:</span> {order.qty}
+          <div className="flex justify-center sm:justify-end">
+            <button 
+              onClick={onResetFilters} 
+              className="bg-white text-secondary border border-secondary rounded-lg px-6 py-2.5 text-sm hover:bg-gray-50 transition-colors"
+            >
+              Reset Filters
+            </button>
           </div>
         </div>
-      ))}
+      )}
+
+      <div className="bg-header-bg rounded-xl overflow-hidden">
+        {/* Desktop Table View */}
+        <div className="hidden md:block">
+          <div className="overflow-x-auto">
+            <table className="w-full border-separate border-spacing-0">
+              <thead>
+                <tr style={{ background: 'var(--color-accent)' }}>
+                  <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                    Order ID
+                  </th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                Vendor
+              </th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                Quantity
+              </th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                Status
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {(orders || []).map((order) => (
+              <tr
+                key={order.id}
+                onClick={() => onOrderClick?.(order.id)}
+                className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors cursor-pointer"
+              >
+                <td className="p-3 font-semibold text-secondary">
+                  {order.orderNumber}
+                </td>
+                <td className="p-3 text-sm text-gray-700">
+                  {order.vendor.companyName}
+                </td>
+                <td className="p-3 text-sm text-gray-600">
+                  {order.quantity}
+                </td>
+                <td className="p-3">
+                  <span className={`
+                    inline-block px-2.5 py-1 rounded-full text-xs font-semibold border
+                    ${getStatusColor(order.status)}
+                  `}>
+                    {order.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+            </table>
+          </div>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {(orders || []).map((order) => (
+          <div
+            key={order.id}
+            onClick={() => onOrderClick?.(order.id)}
+            className="rounded-xl p-4 border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="font-semibold text-secondary text-lg">
+                {order.orderNumber}
+              </div>
+              <span className={`
+                inline-block px-2.5 py-1 rounded-full text-xs font-semibold border flex-shrink-0
+                ${getStatusColor(order.status)}
+              `}>
+                {order.status}
+              </span>
+            </div>
+            <div className="text-sm text-gray-600 mb-3">
+              {order.vendor.companyName}
+            </div>
+            <div className="grid grid-cols-1 gap-2 text-sm">
+              <div>
+                <span className="text-gray-500">Quantity: </span>
+                <span className="font-medium">{order.quantity}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface BoardColumnProps {
   status: Status;
-  orders: Order[];
+  orders: OrderTrackingItem[];
   onOrderClick?: (orderId: string) => void;
 }
 
@@ -204,7 +289,7 @@ const BoardColumn: React.FC<BoardColumnProps> = ({ status, orders, onOrderClick 
         {status}
       </h3>
       <span className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full">
-        {orders.length}
+        {orders?.length || 0}
       </span>
     </div>
     
@@ -219,7 +304,7 @@ const BoardColumn: React.FC<BoardColumnProps> = ({ status, orders, onOrderClick 
             transition-colors duration-200
           `}
         >
-          {orders.map((order, orderIndex) => (
+          {(orders || []).map((order, orderIndex) => (
             <OrderCard
               key={order.id}
               order={order}
@@ -235,16 +320,16 @@ const BoardColumn: React.FC<BoardColumnProps> = ({ status, orders, onOrderClick 
 );
 
 interface BoardViewProps {
-  orders: Order[];
+  orders: OrderTrackingItem[];
   onOrderMove: (result: DropResult) => void;
   onOrderClick?: (orderId: string) => void;
 }
 
 const BoardView: React.FC<BoardViewProps> = ({ orders, onOrderMove, onOrderClick }) => {
   const ordersByStatus = statusColumns.reduce((acc, status) => {
-    acc[status] = orders.filter(order => order.status === status);
+    acc[status] = (orders || []).filter(order => order.status === status);
     return acc;
-  }, {} as Record<Status, Order[]>);
+  }, {} as Record<Status, OrderTrackingItem[]>);
 
   return (
     <DragDropContext onDragEnd={onOrderMove}>
@@ -265,15 +350,82 @@ const BoardView: React.FC<BoardViewProps> = ({ orders, onOrderMove, onOrderClick
 };
 
 const OrderTracking: React.FC = () => {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [orders, setOrders] = useState<OrderTrackingItem[]>([]);
+  const [summary, setSummary] = useState<OrderTrackingSummary | null>(null);
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    vendor: '',
+    status: '',
+    qtyMin: '',
+    qtyMax: '',
+    search: ''
+  });
   const navigate = useNavigate();
+
+  // Load all data once on component mount
+  useEffect(() => {
+    loadOrderTrackingData();
+  }, []);
+
+  const loadOrderTrackingData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all orders without filters (like PaymentRelease does)
+      const response = await OrderTrackingApi.getOrderTracking({
+        page: 1,
+        limit: 100,
+        filters: undefined // No filters - get all data
+      });
+
+      if (response.success) {
+        // Store all orders (like PaymentRelease does)
+        const allOrders = response.data.orders && response.data.orders.length > 0 
+          ? response.data.orders 
+          : response.data.summary?.recentOrders || [];
+        
+        setOrders(allOrders);
+        
+        // Set summary data from the main response
+        if (response.data.summary) {
+          setSummary(response.data.summary);
+        }
+      }
+    } catch (error) {
+      // Handle error silently
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Client-side filtering with useMemo (like PaymentRelease)
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      // Status filter
+      if (filters.status && order.status !== filters.status) return false;
+      
+      // Vendor filter
+      if (filters.vendor && !order.vendor.companyName.toLowerCase().includes(filters.vendor.toLowerCase())) return false;
+      
+      // Search filter
+      if (filters.search && !order.orderNumber.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      
+      // Quantity range filters
+      if (filters.qtyMin && order.quantity < parseInt(filters.qtyMin)) return false;
+      if (filters.qtyMax && order.quantity > parseInt(filters.qtyMax)) return false;
+      
+      return true;
+    });
+  }, [orders, filters]);
+
 
   const handleOrderClick = (orderId: string) => {
     navigate(`/admin/orders/${orderId}`);
   };
 
-  const handleOrderMove = (result: DropResult) => {
+  const handleOrderMove = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
     // If no destination, return early
@@ -288,25 +440,112 @@ const OrderTracking: React.FC = () => {
     }
 
     // Find the order being moved
-    const orderToMove = orders.find(order => order.id === draggableId);
+    const orderToMove = (orders || []).find(order => order.id === draggableId);
     if (!orderToMove) return;
 
-    // Update the order's status
     const newStatus = destination.droppableId as Status;
-    const updatedOrders = orders.map(order =>
-      order.id === draggableId
-        ? { ...order, status: newStatus }
-        : order
-    );
 
-    setOrders(updatedOrders);
+    try {
+      // Update the order's status via API
+      const response = await OrderTrackingApi.updateOrderStatus(draggableId, {
+        orderItemId: draggableId,
+        newStatus,
+        remarks: `Status changed from ${orderToMove.status} to ${newStatus}`
+      });
+
+      if (response.success) {
+        // Update local state
+        const updatedOrders = (orders || []).map(order =>
+          order.id === draggableId
+            ? { ...order, status: newStatus }
+            : order
+        );
+        setOrders(updatedOrders);
+        
+        // Reload order tracking data to update summary counts
+        loadOrderTrackingData();
+      }
+    } catch (error) {
+      // Handle error silently
+    }
   };
+
+  const handleFilterChange = (key: keyof FilterState, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      vendor: '',
+      status: '',
+      qtyMin: '',
+      qtyMax: '',
+      search: ''
+    });
+  };
+
+
+  const handleExportCSV = async () => {
+    try {
+      // Export with current filters
+      const apiFilters: OrderTrackingFilters = {};
+      
+      if (filters.vendor) apiFilters.vendor = filters.vendor;
+      if (filters.qtyMin) apiFilters.qtyMin = parseInt(filters.qtyMin);
+      if (filters.qtyMax) apiFilters.qtyMax = parseInt(filters.qtyMax);
+      if (filters.search) apiFilters.search = filters.search;
+      // Note: status filter is applied client-side, so we don't send it to API
+
+      const blob = await OrderTrackingApi.exportToCSV(
+        Object.keys(apiFilters).length > 0 ? apiFilters : undefined
+      );
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `order-tracking-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      // Handle error silently
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      // Export with current filters
+      const apiFilters: OrderTrackingFilters = {};
+      
+      if (filters.vendor) apiFilters.vendor = filters.vendor;
+      if (filters.qtyMin) apiFilters.qtyMin = parseInt(filters.qtyMin);
+      if (filters.qtyMax) apiFilters.qtyMax = parseInt(filters.qtyMax);
+      if (filters.search) apiFilters.search = filters.search;
+      // Note: status filter is applied client-side, so we don't send it to API
+
+      const blob = await OrderTrackingApi.exportToPDF(
+        Object.keys(apiFilters).length > 0 ? apiFilters : undefined
+      );
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `order-tracking-${new Date().toISOString().split('T')[0]}.txt`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      // Handle error silently
+    }
+  };
+
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-[var(--color-sharktank-bg)] min-h-screen font-sans w-full overflow-x-hidden">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[var(--color-heading)] mb-6 font-[var(--font-heading)]">
-          Order Tracking
-        </h1>
+        {/* Page Header */}
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Order Tracking</h1>
+          <p className="text-sm sm:text-base text-gray-600">Track and monitor order status in real-time</p>
+        </div>
 
         {/* View Toggle */}
         <div className="mb-4 sm:mb-6">
@@ -350,36 +589,60 @@ const OrderTracking: React.FC = () => {
         {/* Orders Summary */}
         <div className="mt-10 sm:mt-12 mb-4 sm:mb-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4">
           {statusColumns.map(status => {
-            const count = orders.filter(order => order.status === status).length;
+            const statusCounts = summary?.statusCounts || {};
+            const count = statusCounts[status] || 0;
             const icon = getStatusIcon(status);
             return (
-              <div
+              <KPICard
                 key={status}
-                className="bg-[var(--color-happyplant-bg)] p-6 pt-10 rounded-xl shadow-sm text-center relative"
-              >
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 sm:w-14 sm:h-14 bg-[var(--color-accent)] rounded-full p-2.5 sm:p-3 flex items-center justify-center text-white shadow-md">
-                  {React.isValidElement(icon)
-                    ? React.cloneElement(icon as any, { className: 'text-white', size: 28 } as any)
-                    : icon}
-                </div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-1">{status}</h3>
-                <div className="text-2xl font-bold text-gray-900 mt-1">{count}</div>
-              </div>
+                title={status}
+                value={count}
+                icon={icon}
+              />
             );
           })}
         </div>
 
+        {/* Filter and Export Buttons - Only for List View */}
+        {viewMode === 'list' && (
+          <div className="flex flex-col sm:flex-row justify-end gap-2 mb-4">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors min-h-[44px] sm:min-h-auto w-full sm:w-auto"
+            >
+              <Filter size={16} className="flex-shrink-0" />
+              <span className="text-sm">Filter</span>
+            </button>
+            <CSVPDFExportButton
+              onExportCSV={handleExportCSV}
+              onExportPDF={handleExportPDF}
+            />
+          </div>
+        )}
+
         {/* Main Content */}
-        <div className={`${viewMode === 'board' ? 'bg-[var(--color-sharktank-bg)] border-0' : 'bg-white border border-gray-200'} rounded-lg shadow-sm`}>
-          {viewMode === 'list' ? (
-            <ListView orders={orders} onOrderClick={handleOrderClick} />
+        <div className={`${viewMode === 'board' ? 'bg-[var(--color-sharktank-bg)]' : ''} rounded-lg`}>
+          {loading ? (
+            <div className="bg-white rounded-xl p-12 text-center">
+              <div className="w-12 h-12 border-4 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-500">Loading orders...</p>
+            </div>
+          ) : viewMode === 'list' ? (
+            <ListView 
+              orders={filteredOrders} 
+              onOrderClick={handleOrderClick}
+              showFilters={showFilters}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onResetFilters={handleResetFilters}
+            />
           ) : (
-            <BoardView orders={orders} onOrderMove={handleOrderMove} onOrderClick={handleOrderClick} />
+            <BoardView orders={filteredOrders} onOrderMove={handleOrderMove} onOrderClick={handleOrderClick} />
           )}
         </div>
 
         {/* Empty State (if no orders) */}
-        {orders.length === 0 && (
+        {!loading && (!filteredOrders || filteredOrders.length === 0) && (
           <div className="text-center py-8 sm:py-12">
             <div className="text-gray-400 text-lg sm:text-xl mb-2">No orders found</div>
             <div className="text-gray-500 text-sm sm:text-base">

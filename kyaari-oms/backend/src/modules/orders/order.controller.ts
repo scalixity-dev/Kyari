@@ -8,6 +8,7 @@ import {
 } from './order.validators';
 import { ResponseHelper } from '../../utils/response';
 import { logger } from '../../utils/logger';
+import { excelService } from '../../services/excel.service';
 
 export class OrderController {
   
@@ -31,6 +32,41 @@ export class OrderController {
     } catch (error) {
       logger.error('Order creation controller error', { error, body: req.body });
       ResponseHelper.error(res, error instanceof Error ? error.message : 'Failed to create order');
+    }
+  }
+
+  async updateOrder(req: Request, res: Response): Promise<void> {
+    try {
+      const orderIdValidation = validateSchema(orderIdSchema, req.params);
+      if (!orderIdValidation.success) {
+        ResponseHelper.validationError(res, orderIdValidation.errors);
+        return;
+      }
+
+      const bodyValidation = validateSchema(createOrderSchema, req.body);
+      if (!bodyValidation.success) {
+        ResponseHelper.validationError(res, bodyValidation.errors);
+        return;
+      }
+
+      const userId = req.user?.userId;
+      if (!userId) {
+        ResponseHelper.unauthorized(res, 'Authentication required');
+        return;
+      }
+
+      const result = await orderService.updateOrder(orderIdValidation.data.id, bodyValidation.data, userId);
+
+      ResponseHelper.success(res, result, 'Order updated successfully');
+    } catch (error) {
+      logger.error('Order update controller error', { error, orderId: req.params.id });
+      
+      if (error instanceof Error && error.message.includes('cannot be updated')) {
+        ResponseHelper.error(res, error.message, 400);
+        return;
+      }
+      
+      ResponseHelper.error(res, error instanceof Error ? error.message : 'Failed to update order');
     }
   }
 
@@ -176,6 +212,71 @@ export class OrderController {
       }
       
       ResponseHelper.error(res, error instanceof Error ? error.message : 'Failed to assign vendor');
+    }
+  }
+
+  async uploadOrdersExcel(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.file) {
+        ResponseHelper.error(res, 'No file uploaded', 400);
+        return;
+      }
+
+      const userId = req.user?.userId;
+      if (!userId) {
+        ResponseHelper.unauthorized(res, 'Authentication required');
+        return;
+      }
+
+      // Validate file type
+      const allowedMimeTypes = [
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      ];
+
+      if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        ResponseHelper.error(res, 'Invalid file type. Please upload an Excel file (.xls or .xlsx)', 400);
+        return;
+      }
+
+      // Parse Excel file
+      const parsedOrders = excelService.parseOrdersExcel(req.file.buffer);
+
+      if (parsedOrders.length === 0) {
+        ResponseHelper.error(res, 'No valid orders found in Excel file', 400);
+        return;
+      }
+
+      // Create orders
+      const result = await orderService.createOrdersFromExcel(parsedOrders, userId);
+
+      ResponseHelper.success(res, result, `Successfully created ${result.successCount} orders`, 201);
+    } catch (error) {
+      logger.error('Excel upload controller error', { error });
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Missing required columns') || 
+            error.message.includes('must be') ||
+            error.message.includes('Row ')) {
+          ResponseHelper.error(res, error.message, 400);
+          return;
+        }
+      }
+      
+      ResponseHelper.error(res, error instanceof Error ? error.message : 'Failed to upload orders');
+    }
+  }
+
+  async downloadExcelTemplate(req: Request, res: Response): Promise<void> {
+    try {
+      const templateBuffer = excelService.generateSampleTemplate();
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=order_template.xlsx');
+      res.send(templateBuffer);
+    } catch (error) {
+      logger.error('Download template controller error', { error });
+      ResponseHelper.error(res, error instanceof Error ? error.message : 'Failed to generate template');
     }
   }
 }

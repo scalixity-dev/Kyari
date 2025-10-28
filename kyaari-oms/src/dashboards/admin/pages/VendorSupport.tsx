@@ -1,6 +1,8 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react'
-import { Plus, Send, Paperclip, FileText, AlertTriangle, CheckSquare, Clock } from 'lucide-react'
-import { CustomDropdown } from '../../../components'
+import { useMemo, useState, useEffect, useRef } from 'react'
+import { Plus, Send, Paperclip, FileText, AlertTriangle, CheckSquare, Clock, Calendar as CalendarIcon } from 'lucide-react'
+import { CustomDropdown, KPICard, Pagination, CSVPDFExportButton } from '../../../components'
+import { Calendar } from '../../../components/ui/calendar'
+import { format } from 'date-fns'
 
 type IssueType = 'Payment' | 'SLA Breach' | 'Order Delay' | 'Onboarding' | 'Others'
 type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent'
@@ -42,44 +44,6 @@ const STATUS_STYLES: Record<TicketStatus, { bg: string; color: string; border: s
   Closed: { bg: '#E5E7EB', color: '#111827', border: '#D1D5DB' },
 }
 
-interface KPICardProps {
-  title: string;
-  value: number | string;
-  icon: React.ReactNode;
-  color: string;
-  subtitle?: string;
-}
-
-function KPICard({ title, value, icon, color, subtitle }: KPICardProps) {
-  const iconBgClass =
-    color === 'blue'
-      ? 'bg-blue-600'
-      : color === 'orange'
-      ? 'bg-[#C3754C]'
-      : color === 'green'
-      ? 'bg-green-600'
-      : color === 'red'
-      ? 'bg-red-600'
-      : 'bg-gray-600'
-  
-  return (
-    <div className="bg-[#ECDDC9] pt-12 sm:pt-16 pb-4 sm:pb-6 px-4 sm:px-6 rounded-xl shadow-sm flex flex-col items-center gap-2 sm:gap-3 border border-gray-200 relative overflow-visible">
-      <div className={`absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full ${iconBgClass} text-white shadow-md`}>
-        {React.isValidElement(icon)
-          ? React.cloneElement(
-              icon as React.ReactElement<{ color?: string; size?: number }>,
-              { color: 'white', size: 32 }
-            )
-          : icon}
-      </div>
-      <div className="flex flex-col items-center text-center w-full">
-        <h3 className="font-heading text-sm sm:text-base md:text-[18px] leading-[110%] tracking-[0] text-center text-[#2d3748] mb-1 sm:mb-2 font-semibold">{title}</h3>
-        <div className="text-2xl sm:text-3xl font-bold text-[#2d3748] mb-1 sm:mb-2">{value}</div>
-        {subtitle && <div className="text-xs sm:text-sm text-orange-600 font-semibold leading-tight">{subtitle}</div>}
-      </div>
-    </div>
-  )
-}
 
 const INITIAL_TICKETS: Ticket[] = [
   { 
@@ -164,12 +128,40 @@ export default function VendorSupport() {
   const [filterVendor, setFilterVendor] = useState('')
   const [filterStatus, setFilterStatus] = useState<TicketStatus | ''>('')
   const [filterPriority, setFilterPriority] = useState<TicketPriority | ''>('')
-  const [filterDate, setFilterDate] = useState('')
+  const [dateFrom, setDateFrom] = useState<Date>()
+  const [dateTo, setDateTo] = useState<Date>()
+  const [showFromCalendar, setShowFromCalendar] = useState(false)
+  const [showToCalendar, setShowToCalendar] = useState(false)
   const [search, setSearch] = useState('')
+
+  // pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
+
+  // Loading state for tickets table (shows Orders-style loading UI)
+  const [isLoadingTickets, setIsLoadingTickets] = useState(false)
 
   // modal + drawer
   const [showNewTicket, setShowNewTicket] = useState(false)
   const [drawerTicket, setDrawerTicket] = useState<Ticket | null>(null)
+  
+  const fromCalendarRef = useRef<HTMLDivElement>(null)
+  const toCalendarRef = useRef<HTMLDivElement>(null)
+
+  // Close calendars when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fromCalendarRef.current && !fromCalendarRef.current.contains(event.target as Node)) {
+        setShowFromCalendar(false)
+      }
+      if (toCalendarRef.current && !toCalendarRef.current.contains(event.target as Node)) {
+        setShowToCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   // new ticket draft
@@ -197,17 +189,33 @@ export default function VendorSupport() {
       if (filterVendor && t.vendor !== filterVendor) return false
       if (filterStatus && t.status !== filterStatus) return false
       if (filterPriority && t.priority !== filterPriority) return false
-      if (filterDate && t.createdAt !== filterDate) return false
+      if (dateFrom && new Date(t.createdAt) < dateFrom) return false
+      if (dateTo && new Date(t.createdAt) > dateTo) return false
       if (search && !(t.id.toLowerCase().includes(search.toLowerCase()) || t.vendor.toLowerCase().includes(search.toLowerCase()))) return false
       return true
     })
-  }, [tickets, filterVendor, filterStatus, filterPriority, filterDate, search])
+  }, [tickets, filterVendor, filterStatus, filterPriority, dateFrom, dateTo, search])
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredTickets.length / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, filteredTickets.length)
+  const paginatedTickets = useMemo(() => 
+    filteredTickets.slice(startIndex, endIndex),
+    [filteredTickets, startIndex, endIndex]
+  )
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [tickets, filterVendor, filterStatus, filterPriority, dateFrom, dateTo, search])
 
   function resetFilters() {
     setFilterVendor('')
     setFilterStatus('')
     setFilterPriority('')
-    setFilterDate('')
+    setDateFrom(undefined)
+    setDateTo(undefined)
     setSearch('')
   }
 
@@ -319,15 +327,72 @@ export default function VendorSupport() {
     }
   }, [drawerTicket?.messages])
 
+  const handleExportCSV = () => {
+    const headers = ['Ticket ID', 'Vendor', 'Issue Type', 'Priority', 'Status', 'Assigned To', 'Created', 'Updated']
+    const csvContent = [
+      headers.join(','),
+      ...filteredTickets.map(ticket => [
+        ticket.id,
+        `"${ticket.vendor}"`,
+        ticket.issue,
+        ticket.priority,
+        ticket.status,
+        ticket.assignedTo,
+        ticket.createdAt,
+        ticket.updatedAt
+      ].join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vendor-support-tickets-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const handleExportPDF = () => {
+    const content = [
+      'VENDOR SUPPORT TICKETS REPORT',
+      `Generated: ${new Date().toLocaleString()}`,
+      `Total Tickets: ${filteredTickets.length}`,
+      '',
+      '=== TICKETS ===',
+      ...filteredTickets.map(ticket => [
+        `Ticket: ${ticket.id}`,
+        `Vendor: ${ticket.vendor}`,
+        `Issue: ${ticket.issue}`,
+        `Priority: ${ticket.priority}`,
+        `Status: ${ticket.status}`,
+        `Assigned To: ${ticket.assignedTo}`,
+        `Created: ${ticket.createdAt}`,
+        `Updated: ${ticket.updatedAt}`,
+        '---'
+      ].join('\n'))
+    ].join('\n')
+    
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vendor-support-tickets-${new Date().toISOString().split('T')[0]}.txt`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-9  bg-[color:var(--color-sharktank-bg)] min-h-[calc(100vh-4rem)] font-sans w-full overflow-x-hidden">
       {/* Header */}
       <div className="mb-4 sm:mb-6 lg:mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-[var(--color-heading)]">Vendor Support</h2>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-heading mb-2">Vendor Support</h1>
+            <p className="text-sm sm:text-base text-gray-600">Manage vendor-related tickets and inquiries</p>
+          </div>
           <button
             onClick={() => setShowNewTicket(true)}
-            className="bg-accent text-button-text rounded-full px-4 sm:px-5 py-2.5 min-h-[44px] border border-transparent flex items-center justify-center gap-2 whitespace-nowrap flex-shrink-0 w-full sm:w-auto"
+            className="bg-accent text-button-text rounded-xl px-4 sm:px-5 py-2.5 min-h-[44px] border border-transparent flex items-center justify-center gap-2 whitespace-nowrap flex-shrink-0 w-full sm:w-auto"
           >
             <Plus size={18} className="sm:w-4 sm:h-4" />
             <span className="text-sm sm:text-base">Raise New Ticket</span>
@@ -335,34 +400,30 @@ export default function VendorSupport() {
         </div>
         
         {/* Analytics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 pt-12 sm:pt-12 pb-8 sm:pb-10 gap-6 sm:gap-8 xl:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 pt-6 sm:pt-8 pb-4 sm:pb-6 gap-6 sm:gap-8 xl:gap-6">
         <KPICard 
           title="Open Tickets" 
           value={openCount}
           subtitle={`${openCount} pending`}
           icon={<FileText size={32} />}
-          color="orange"
         />
         <KPICard 
           title="SLA Breaches" 
           value={slaBreaches}
           subtitle="Urgent attention"
           icon={<AlertTriangle size={32} />}
-          color="orange"
         />
         <KPICard 
           title="Resolved This Week" 
           value={resolvedThisWeek}
           subtitle={`${resolvedThisWeek} completed`}
           icon={<CheckSquare size={32} />}
-          color="orange"
         />
         <KPICard 
           title="Avg Resolution Time" 
           value={`${avgResolutionHours} hrs`}
           subtitle="Response time"
           icon={<Clock size={32} />}
-          color="orange"
         />
         </div>
       </div>
@@ -409,12 +470,67 @@ export default function VendorSupport() {
               placeholder="Priority"
               className="w-full"
             />
-            <input 
-              type="date" 
-              value={filterDate} 
-              onChange={e => setFilterDate(e.target.value)} 
-              className="px-3 py-2 min-h-[44px] rounded-xl border border-gray-300 w-full hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200" 
-            />
+            <div className="flex flex-col gap-2">
+              <div className="relative" ref={fromCalendarRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFromCalendar(!showFromCalendar)
+                    setShowToCalendar(false)
+                  }}
+                  className="w-full px-3 py-3 text-sm border border-gray-300 rounded-xl hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] flex items-center justify-between text-left"
+                >
+                  <span className={dateFrom ? "text-gray-900" : "text-gray-500"}>
+                    {dateFrom ? format(dateFrom, "PPP") : "From date"}
+                  </span>
+                  <CalendarIcon className="h-4 w-4 text-gray-500" />
+                </button>
+                {showFromCalendar && (
+                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full">
+                    <Calendar
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={(date) => {
+                        setDateFrom(date)
+                        setShowFromCalendar(false)
+                      }}
+                      initialFocus
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="relative" ref={toCalendarRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowToCalendar(!showToCalendar)
+                    setShowFromCalendar(false)
+                  }}
+                  className="w-full px-3 py-3 text-sm border border-gray-300 rounded-xl hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] flex items-center justify-between text-left"
+                >
+                  <span className={dateTo ? "text-gray-900" : "text-gray-500"}>
+                    {dateTo ? format(dateTo, "PPP") : "To date"}
+                  </span>
+                  <CalendarIcon className="h-4 w-4 text-gray-500" />
+                </button>
+                {showToCalendar && (
+                  <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-md shadow-lg w-full">
+                    <Calendar
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={(date) => {
+                        setDateTo(date)
+                        setShowToCalendar(false)
+                      }}
+                      initialFocus
+                      disabled={(date) => dateFrom ? date < dateFrom : false}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           {/* Second row: Search and Reset */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -426,76 +542,257 @@ export default function VendorSupport() {
             />
             <button 
               onClick={resetFilters} 
-              className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 min-h-[44px] w-full sm:w-auto hover:bg-secondary hover:text-white transition-colors duration-200 whitespace-nowrap"
+              className="bg-white text-secondary border border-secondary rounded-xl px-4 py-2 min-h-[44px] w-full sm:w-auto hover:bg-secondary hover:text-white transition-colors duration-200 whitespace-nowrap"
             >
               Reset Filters
             </button>
+            <CSVPDFExportButton
+              onExportCSV={handleExportCSV}
+              onExportPDF={handleExportPDF}
+              buttonClassName="px-4 py-2 sm:py-2 rounded-xl !rounded-xl w-full sm:w-auto min-h-[44px] !min-h-[44px] sm:!min-h-[44px]"
+            />
           </div>
         </div>
       </div>
 
-      {/* Table - Desktop view (hidden on mobile) */}
-      <div className="hidden md:block rounded-xl shadow-md overflow-hidden border border-white/10 bg-white/70">
+      {/* Table - Desktop view */}
+      <div className="hidden lg:block bg-white rounded-xl overflow-hidden shadow-md border border-gray-100">
+        {isLoadingTickets ? (
+          <div className="p-12 text-center">
+            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading tickets...</p>
+          </div>
+        ) : (
+          <>
         <div className="overflow-x-auto">
-          {/* Table head bar */}
-          <div className="bg-[#C3754C] text-white min-w-max">
-            <div className="flex gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-4 md:py-4 lg:py-5 font-heading font-bold text-sm md:text-base lg:text-[18px] leading-[100%] tracking-[0]">
-              <div className="w-24 text-center flex-shrink-0">Ticket ID</div>
-              <div className="w-40 text-center flex-shrink-0">Vendor Name</div>
-              <div className="w-36 text-center flex-shrink-0">Issue Type</div>
-              <div className="w-24 text-center flex-shrink-0">Priority</div>
-              <div className="w-28 text-center flex-shrink-0">Status</div>
-              <div className="w-28 text-center flex-shrink-0">Assigned To</div>
-              <div className="w-40 text-center flex-shrink-0">Created / Updated</div>
-              <div className="flex-1 min-w-[280px] text-center">Actions</div>
-            </div>
-          </div>
-
-          {/* Body */}
-          <div className="bg-white min-w-max">
-            <div className="py-2">
-              {filteredTickets.length === 0 ? (
-                <div className="px-6 py-8 text-center text-gray-500">No tickets match current filters.</div>
-              ) : (
-                filteredTickets.map((t) => (
-                  <div key={t.id} className="flex gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 lg:px-6 py-3 md:py-4 items-center hover:bg-gray-50">
-                    <div className="w-24 text-xs md:text-sm font-medium text-gray-800 text-center flex-shrink-0">{t.id}</div>
-                    <div className="w-40 text-xs md:text-sm text-gray-700 text-center truncate flex-shrink-0">{t.vendor}</div>
-                    <div className="w-36 text-xs md:text-sm text-gray-700 text-center truncate flex-shrink-0">{t.issue}</div>
-                    <div className="w-24 flex items-center justify-center flex-shrink-0">
-                      {(() => {
-                        const st = PRIORITY_STYLES[t.priority]
-                        return (
-                          <span className="inline-block px-2 py-1 rounded-md text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
-                            {t.priority}
-                          </span>
-                        )
-                      })()}
+          <table className="w-full border-separate border-spacing-0">
+            <thead>
+              <tr className="" style={{ background: 'var(--color-accent)' }}>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                  Ticket ID
+                </th>
+                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                  Vendor Name
+                </th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                Issue Type
+              </th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                Priority
+              </th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                Status
+              </th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                Assigned To
+              </th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                Created / Updated
+              </th>
+              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedTickets.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="p-6 text-center text-gray-500">
+                  No tickets match current filters.
+                </td>
+              </tr>
+            ) : (
+              paginatedTickets.map((t) => (
+                <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
+                  <td className="p-3 font-semibold text-[var(--color-secondary)]">{t.id}</td>
+                  <td className="p-3 text-sm text-gray-700">{t.vendor}</td>
+                  <td className="p-3 text-sm text-gray-700">{t.issue}</td>
+                  <td className="p-3">
+                    {(() => {
+                      const st = PRIORITY_STYLES[t.priority]
+                      return (
+                        <span 
+                          className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
+                          style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}
+                        >
+                          {t.priority}
+                        </span>
+                      )
+                    })()}
+                  </td>
+                  <td className="p-3">
+                    {(() => {
+                      const st = STATUS_STYLES[t.status]
+                      return (
+                        <span 
+                          className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
+                          style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}
+                        >
+                          {t.status}
+                        </span>
+                      )
+                    })()}
+                  </td>
+                  <td className="p-3 text-sm text-gray-700">{t.assignedTo}</td>
+                  <td className="p-3 text-xs text-gray-500">{t.createdAt} / {t.updatedAt}</td>
+                  <td className="p-3">
+                    <div className="flex items-center gap-1.5">
+                      <button 
+                        onClick={() => setDrawerTicket(t)} 
+                        className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95"
+                      >
+                        View
+                      </button>
+                      <button 
+                        onClick={() => assignTicket(t)} 
+                        className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600"
+                      >
+                        Assign
+                      </button>
+                      <button 
+                        onClick={() => resolveTicket(t)} 
+                        className="bg-green-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-600"
+                      >
+                        Resolve
+                      </button>
+                      <button 
+                        onClick={() => closeTicket(t)} 
+                        className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600"
+                      >
+                        Close
+                      </button>
                     </div>
-                    <div className="w-28 flex items-center justify-center flex-shrink-0">
-                      {(() => {
-                        const st = STATUS_STYLES[t.status]
-                        return (
-                          <span className="inline-block px-2 py-1 rounded-md text-xs font-semibold border whitespace-nowrap" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
-                            {t.status}
-                          </span>
-                        )
-                      })()}
-                    </div>
-                    <div className="w-28 text-xs md:text-sm text-gray-700 text-center truncate flex-shrink-0">{t.assignedTo}</div>
-                    <div className="w-40 text-xs text-gray-500 text-center whitespace-nowrap flex-shrink-0">{t.createdAt} / {t.updatedAt}</div>
-                    <div className="flex-1 min-w-[280px] flex gap-1 justify-center">
-                      <button onClick={() => setDrawerTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 py-1 text-xs hover:bg-secondary hover:text-white transition-colors whitespace-nowrap">View</button>
-                      <button onClick={() => assignTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 py-1 text-xs hover:bg-secondary hover:text-white transition-colors whitespace-nowrap">Assign</button>
-                      <button onClick={() => resolveTicket(t)} className="bg-white text-green-600 border border-green-600 rounded-full px-2 py-1 text-xs hover:bg-green-600 hover:text-white transition-colors whitespace-nowrap">Resolve</button>
-                      <button onClick={() => closeTicket(t)} className="bg-white text-red-600 border border-red-600 rounded-full px-2 py-1 text-xs hover:bg-red-600 hover:text-white transition-colors whitespace-nowrap">Close</button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
         </div>
+        
+        {/* Desktop Pagination */}
+        {filteredTickets.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTickets.length}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setCurrentPage}
+            itemLabel="tickets"
+            variant="desktop"
+          />
+        )}
+        </>
+        )}
+      </div>
+
+      {/* Card View - Mobile */}
+      <div className="lg:hidden space-y-3">
+        {isLoadingTickets ? (
+          <div className="bg-white rounded-xl p-12 text-center">
+            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading tickets...</p>
+          </div>
+        ) : paginatedTickets.length > 0 ? (
+          paginatedTickets.map(t => (
+            <div key={t.id} className="rounded-xl p-4 border border-gray-200 bg-white">
+              <div className="flex items-start justify-between mb-3">
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-semibold text-[var(--color-secondary)] text-lg">{t.id}</h4>
+                  <p className="text-sm text-gray-600 mt-0.5">{t.vendor}</p>
+                </div>
+                <div className="flex gap-1 flex-shrink-0">
+                  {(() => {
+                    const st = PRIORITY_STYLES[t.priority]
+                    return (
+                      <span 
+                        className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
+                        style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}
+                      >
+                        {t.priority}
+                      </span>
+                    )
+                  })()}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                <div>
+                  <span className="text-gray-500 block">Issue Type</span>
+                  <span className="font-medium">{t.issue}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block">Status</span>
+                  {(() => {
+                    const st = STATUS_STYLES[t.status]
+                    return (
+                      <span 
+                        className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border"
+                        style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}
+                      >
+                        {t.status}
+                      </span>
+                    )
+                  })()}
+                </div>
+                <div>
+                  <span className="text-gray-500 block">Assigned To</span>
+                  <span className="font-medium">{t.assignedTo}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block">Created</span>
+                  <span className="font-medium">{t.createdAt}</span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button 
+                  onClick={() => setDrawerTicket(t)} 
+                  className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95"
+                >
+                  View
+                </button>
+                <button 
+                  onClick={() => assignTicket(t)} 
+                  className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600"
+                >
+                  Assign
+                </button>
+                <button 
+                  onClick={() => resolveTicket(t)} 
+                  className="bg-green-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-600"
+                >
+                  Resolve
+                </button>
+                <button 
+                  onClick={() => closeTicket(t)} 
+                  className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-xl p-6 border border-gray-200 bg-white text-center text-gray-500">
+            No tickets match current filters.
+          </div>
+        )}
+        
+        {/* Mobile Pagination */}
+        {filteredTickets.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTickets.length}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setCurrentPage}
+            itemLabel="tickets"
+            variant="mobile"
+          />
+        )}
       </div>
 
       {/* Card View - Mobile (visible on mobile and tablet) */}

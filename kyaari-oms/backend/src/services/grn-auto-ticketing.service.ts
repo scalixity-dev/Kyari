@@ -45,7 +45,7 @@ export class GRNAutoTicketingService {
     message: string;
   }> {
     try {
-      // Start transaction
+      // Start transaction with increased timeout
       const result = await prisma.$transaction(async (tx) => {
         // 1. Update GRN status based on verification
         const hasAnyMismatch = grnData.mismatches.some(
@@ -166,6 +166,9 @@ export class GRNAutoTicketingService {
         }
 
         return { grn: updatedGRN, ticket };
+      }, {
+        maxWait: 15000, // Maximum time to wait for transaction to start (15 seconds)
+        timeout: 30000, // Maximum time for transaction to complete (30 seconds)
       });
 
       logger.info('GRN verification processed successfully', {
@@ -183,9 +186,9 @@ export class GRNAutoTicketingService {
                                    result.ticket.priority === 'HIGH' ? '🚨 HIGH PRIORITY' : 
                                    result.ticket.priority === 'MEDIUM' ? '⚠️ MEDIUM' : 'LOW';
 
-          // Notify Operations, Admin, and QC teams
+          // Notify Operations, Admin, QC, and Accounts teams
           await notificationService.sendNotificationToRole(
-            ['OPERATIONS', 'ADMIN', 'QC'],
+            ['OPERATIONS', 'ADMIN', 'QC', 'ACCOUNTS'],
             {
               title: `${ticketPriorityText} GRN Ticket Created`,
               body: `Ticket ${result.ticket.ticketNumber} created for GRN ${grnData.grnNumber}. Immediate review required.`,
@@ -415,27 +418,85 @@ export class GRNAutoTicketingService {
   }
 
   /**
-   * Generate unique ticket number
+   * Generate unique ticket number with retry logic to prevent duplicates
    */
   private static async generateTicketNumber(tx: any): Promise<string> {
-    const today = new Date();
-    const yearMonth = today.toISOString().slice(0, 7).replace('-', ''); // YYYYMM
+    const maxRetries = 5;
     
-    // Get the count of tickets created today
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
-    
-    const todayTicketsCount = await tx.ticket.count({
-      where: {
-        createdAt: {
-          gte: startOfDay,
-          lt: endOfDay
-        }
-      }
-    });
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const today = new Date();
+        const yearMonth = today.toISOString().slice(0, 7).replace('-', ''); // YYYYMM
+        const dayOfMonth = today.getDate().toString().padStart(2, '0');
+        
+        // Use timestamp in milliseconds + random component for uniqueness
+        const timestamp = Date.now();
+        const milliseconds = timestamp.toString().slice(-3); // Last 3 digits of milliseconds
+        const random = Math.floor(Math.random() * 100).toString().padStart(2, '0'); // Random 00-99
+        
+        // Find the last ticket number for today to get sequence
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+        
+        const lastTicket = await tx.ticket.findFirst({
+          where: {
+            createdAt: {
+              gte: startOfDay,
+              lt: endOfDay
+            },
+            ticketNumber: {
+              startsWith: `TKT-${yearMonth}${dayOfMonth}`
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          select: {
+            ticketNumber: true
+          }
+        });
 
-    const sequenceNumber = (todayTicketsCount + 1).toString().padStart(3, '0');
-    return `TKT-${yearMonth}-${sequenceNumber}`;
+        let sequenceNumber = 1;
+        if (lastTicket) {
+          // Extract sequence from last ticket number (format: TKT-YYYYMMDD-XXX-YY)
+          const parts = lastTicket.ticketNumber.split('-');
+          if (parts.length >= 3) {
+            const lastSeq = parseInt(parts[2]);
+            if (!isNaN(lastSeq)) {
+              sequenceNumber = lastSeq + 1;
+            }
+          }
+        }
+
+        const sequence = sequenceNumber.toString().padStart(3, '0');
+        const ticketNumber = `TKT-${yearMonth}${dayOfMonth}-${sequence}-${random}`;
+        
+        // Verify uniqueness before returning
+        const existing = await tx.ticket.findUnique({
+          where: { ticketNumber }
+        });
+        
+        if (!existing) {
+          return ticketNumber;
+        }
+        
+        // If duplicate found, wait a bit and retry
+        await new Promise(resolve => setTimeout(resolve, 50 * (attempt + 1)));
+        
+      } catch (error) {
+        logger.warn(`Ticket number generation attempt ${attempt + 1} failed`, { error });
+        if (attempt === maxRetries - 1) {
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100 * (attempt + 1)));
+      }
+    }
+    
+    // Ultimate fallback: use timestamp + UUID-like random string
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const yearMonth = new Date().toISOString().slice(0, 7).replace('-', '');
+    return `TKT-${yearMonth}-${timestamp}-${randomStr}`;
   }
 
   /**
@@ -526,6 +587,9 @@ export class GRNAutoTicketingService {
         }
 
         return ticket;
+      }, {
+        maxWait: 15000, // Maximum time to wait for transaction to start (15 seconds)
+        timeout: 30000, // Maximum time for transaction to complete (30 seconds)
       });
 
       logger.info('Ticket status updated', {
