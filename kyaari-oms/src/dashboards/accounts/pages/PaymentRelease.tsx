@@ -88,6 +88,20 @@ function AccountsPaymentRelease() {
           params.orderId = filterOrderId
         }
         const res = await PaymentsApi.list(params)
+        // Debug: inspect API response for invoice amounts
+        console.log('[PaymentRelease] list params:', params)
+        console.log('[PaymentRelease] list response (sample):', {
+          pagination: res?.data?.pagination,
+          first3: (res?.data?.items || []).slice(0, 3).map((i) => ({
+            id: i.id,
+            vendor: i.vendor,
+            orderId: i.orderId,
+            invoiceNumber: i.invoiceNumber,
+            invoiceAmount: i.invoiceAmount,
+            deliveryVerified: i.deliveryVerified,
+            paymentStatus: i.paymentStatus,
+          }))
+        })
         setPayments(res.data.items)
       } catch (e) {
         console.error('Failed to load payments', e)
