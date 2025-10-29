@@ -5,6 +5,7 @@ import { Pagination } from '../../../components/ui/Pagination'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
 import { TicketApi, type TicketListItem, type TicketComment } from '../../../services/ticketApi'
+import TicketChatPanel from '../../../components/tickets/TicketChatPanel'
 
 interface Ticket {
   id: string
@@ -112,6 +113,9 @@ export default function TicketManagement() {
   const [newAttachment, setNewAttachment] = useState<File | null>(null)
   const [pagination, setPagination] = useState<{ page: number; limit: number; total: number }>({ page: 1, limit: 20, total: 0 })
   const [viewingAttachment, setViewingAttachment] = useState<{ url: string; type: 'image' | 'pdf' | 'unknown'; name: string } | null>(null)
+  
+  // Chat-related state
+  const [chatPanelOpen, setChatPanelOpen] = useState(false)
 
   // pagination
   const [currentPage, setCurrentPage] = useState(1)
@@ -292,6 +296,11 @@ export default function TicketManagement() {
     setNewComment('')
     setNewAttachment(null)
     setCommentModalOpen(true)
+  }
+
+  const handleOpenChat = (ticket: Ticket) => {
+    setSelectedTicket(ticket)
+    setChatPanelOpen(true)
   }
 
   const submitStatusUpdate = () => {
@@ -626,6 +635,13 @@ export default function TicketManagement() {
                         <FileText size={12} />
                         Comment
                       </button>
+                      <button
+                        onClick={() => handleOpenChat(ticket)}
+                        className="bg-purple-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-purple-600 flex items-center gap-1"
+                      >
+                        <FileText size={12} />
+                        Chat
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -693,6 +709,13 @@ export default function TicketManagement() {
                 >
                   <FileText size={12} />
                   Comment
+                </button>
+                <button
+                  onClick={() => handleOpenChat(ticket)}
+                  className="bg-purple-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-purple-600 flex items-center gap-1"
+                >
+                  <FileText size={12} />
+                  Chat
                 </button>
               </div>
             </div>
@@ -983,6 +1006,21 @@ export default function TicketManagement() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Chat Panel */}
+      {selectedTicket && (
+        <TicketChatPanel
+          ticketId={selectedTicket.id}
+          isOpen={chatPanelOpen}
+          onClose={() => setChatPanelOpen(false)}
+          ticketData={{
+            ticketNumber: selectedTicket.ticketNumber,
+            title: selectedTicket.issueDescription,
+            status: selectedTicket.status,
+            priority: selectedTicket.priority
+          }}
+        />
       )}
     </div>
   )
