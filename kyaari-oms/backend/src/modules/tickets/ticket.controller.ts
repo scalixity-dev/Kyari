@@ -72,7 +72,12 @@ export class TicketController {
     } catch (error: any) {
       const message = error?.message === 'Ticket not found' || error?.message === 'Invalid status' ? error.message : 'Failed to update ticket status';
       logger.error('Failed to update ticket status', { error: error?.message });
-      const status = error?.message === 'Ticket not found' ? 404 : 500;
+      const status =
+        error?.message === 'Ticket not found'
+          ? 404
+          : error?.message === 'Invalid status'
+            ? 400
+            : 500;
       return res.status(status).json({ success: false, error: message });
     }
   }
