@@ -683,19 +683,25 @@ export class ReceivedOrdersController {
         });
       }
 
-      // Map frontend dispatch item IDs to GRN item IDs
-      const grnItemsMap = new Map(
-        grn.items.map(grnItem => [grnItem.dispatchItemId, grnItem.id])
+      // Map frontend IDs to GRN item IDs (support both dispatchItemId and assignedOrderItemId)
+      const grnItemsByDispatch = new Map(
+        grn.items.map((grnItem) => [grnItem.dispatchItemId, grnItem.id])
+      );
+      const grnItemsByAssignment = new Map(
+        grn.items.map((grnItem) => [grnItem.assignedOrderItemId, grnItem.id])
       );
 
       // Update mismatches with correct GRN item IDs
-      const correctedMismatches = mismatches.map(mismatch => {
-        // Find the corresponding GRN item ID using the dispatch item ID
-        const grnItemId = grnItemsMap.get(mismatch.grnItemId) || mismatch.grnItemId;
-        
+      const correctedMismatches = mismatches.map((mismatch) => {
+        // Prefer mapping via dispatch item id, fallback to assigned order item id
+        const mappedGrnItemId =
+          grnItemsByDispatch.get(mismatch.grnItemId) ||
+          grnItemsByAssignment.get(mismatch.assignedOrderItemId) ||
+          mismatch.grnItemId;
+
         return {
           ...mismatch,
-          grnItemId: grnItemId,
+          grnItemId: mappedGrnItemId,
         };
       });
 
@@ -776,6 +782,7 @@ export class ReceivedOrdersController {
               goodsReceiptNote: {
                 select: {
                   status: true,
+                  ticket: { select: { id: true, status: true } },
                 },
               },
             },
@@ -790,16 +797,35 @@ export class ReceivedOrdersController {
         dispatchesWithGRN.forEach((dispatch) => {
           if (!dispatch.goodsReceiptNote) {
             pending++;
-          } else if (dispatch.goodsReceiptNote.status === 'VERIFIED_OK') {
+            return;
+          }
+
+          // Treat GRNs with an active ticket as mismatch (current mismatches)
+          if (
+            dispatch.goodsReceiptNote.ticket &&
+            (dispatch.goodsReceiptNote.ticket.status === 'OPEN' || dispatch.goodsReceiptNote.ticket.status === 'IN_PROGRESS')
+          ) {
+            mismatch++;
+            return;
+          }
+
+          // Verified OK
+          if (dispatch.goodsReceiptNote.status === 'VERIFIED_OK') {
             verified++;
-          } else if (
+            return;
+          }
+
+          // Historic/explicit mismatch statuses
+          if (
             dispatch.goodsReceiptNote.status === 'VERIFIED_MISMATCH' ||
             dispatch.goodsReceiptNote.status === 'PARTIALLY_VERIFIED'
           ) {
             mismatch++;
-          } else {
-            pending++;
+            return;
           }
+
+          // Default to pending
+          pending++;
         });
 
         return {
@@ -820,6 +846,103 @@ export class ReceivedOrdersController {
         success: false,
         error: 'Failed to fetch metrics',
       });
+    }
+  }
+
+  /**
+   * Get vendor-wise mismatch analysis
+   * GET /api/ops/received-orders/vendor-mismatch
+   */
+  async getVendorMismatchAnalysis(req: Request, res: Response) {
+    try {
+      // Optional date filters for dispatchDate
+      const dateFrom = req.query.dateFrom as string | undefined;
+      const dateTo = req.query.dateTo as string | undefined;
+
+      const baseWhere: Record<string, unknown> = {
+        status: { in: ['DISPATCHED', 'IN_TRANSIT', 'DELIVERED'] },
+      };
+
+      if (dateFrom || dateTo) {
+        (baseWhere as { dispatchDate?: Record<string, Date> }).dispatchDate = {};
+        if (dateFrom) {
+          (baseWhere as { dispatchDate: Record<string, Date> }).dispatchDate.gte = new Date(dateFrom);
+        }
+        if (dateTo) {
+          (baseWhere as { dispatchDate: Record<string, Date> }).dispatchDate.lte = new Date(dateTo);
+        }
+      }
+
+      // Total orders per vendor (eligible dispatches)
+      const totals = await prisma.dispatch.groupBy({
+        by: ['vendorId'],
+        where: baseWhere,
+        _count: { _all: true },
+      });
+
+      // Mismatch orders per vendor: count dispatches whose GRN has an active ticket (current mismatches)
+      const mismatches = await prisma.dispatch.groupBy({
+        by: ['vendorId'],
+        where: {
+          ...baseWhere,
+          goodsReceiptNote: {
+            is: {
+              ticket: {
+                is: {
+                  status: { in: ['OPEN', 'IN_PROGRESS'] },
+                },
+              },
+            },
+          },
+        },
+        _count: { _all: true },
+      });
+
+      const vendorIds = Array.from(new Set(totals.map(t => t.vendorId)));
+
+      if (vendorIds.length === 0) {
+        return res.json({ success: true, data: [] });
+      }
+
+      // Fetch vendor details
+      const vendors = await prisma.vendorProfile.findMany({
+        where: { id: { in: vendorIds } },
+        include: { user: true },
+      });
+
+      const mismatchMap = new Map<string, number>();
+      mismatches.forEach((m: { vendorId: string; _count: { _all: number } }) => mismatchMap.set(m.vendorId, m._count._all));
+
+      const getPerformanceLabel = (percentage: number): 'Excellent' | 'Good' | 'Needs Attention' => {
+        if (percentage <= 2) return 'Excellent';
+        if (percentage <= 5) return 'Good';
+        return 'Needs Attention';
+      };
+
+      const rows = totals.map((t: { vendorId: string; _count: { _all: number } }) => {
+        const vendor = vendors.find((v: { id: string }) => v.id === t.vendorId);
+        const totalOrders = t._count._all;
+        const mismatchOrders = mismatchMap.get(t.vendorId) ?? 0;
+        const mismatchPercentage = totalOrders > 0 ? Math.round((mismatchOrders / totalOrders) * 1000) / 10 : 0; // one decimal
+        const performance = getPerformanceLabel(mismatchPercentage);
+        return {
+          vendorName: vendor?.companyName ?? 'Unknown Vendor',
+          vendorId: vendor?.id ?? t.vendorId,
+          totalOrders: totalOrders,
+          mismatchOrders: mismatchOrders,
+          mismatchPercentage: mismatchPercentage,
+          performance,
+          contactEmail: vendor?.user?.email ?? null,
+        };
+      });
+
+      // Sort by mismatch percentage desc
+      rows.sort((a, b) => b.mismatchPercentage - a.mismatchPercentage);
+
+      return res.json({ success: true, data: rows });
+    } catch (error) {
+      logger.error('Error getting vendor-wise mismatch analysis', { error });
+      return res.status(500).json({ success: false, error: 'Failed to fetch vendor mismatch analysis' });
     }
   }
 }
