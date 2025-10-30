@@ -458,7 +458,7 @@ function AccountsInvoices() {
                             <div className="text-[10px] xl:text-xs 2xl:text-sm font-medium text-gray-800 truncate">
                               {order.poStatus === 'Generated' && order.poNumber ? order.poNumber : '—'}
                             </div>
-                            <div className="flex items-center justify-center min-w-0">
+                            <div className="flex items-start pl-4 min-w-0">
                               <button
                                 onClick={() => toggleRowExpansion(order.id)}
                                 className="flex items-center gap-0.5 xl:gap-1 hover:text-accent transition-colors text-[10px] xl:text-xs 2xl:text-sm text-gray-700 min-w-0 max-w-full"

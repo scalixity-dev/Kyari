@@ -47,7 +47,7 @@ const PartialConfirmModal: React.FC<PartialConfirmModalProps & { submitting?: bo
       <div className="bg-white rounded-t-2xl sm:rounded-xl p-4 sm:p-6 w-full max-w-md mx-0 sm:mx-4 max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slide-up sm:animate-none">
         <div className="flex items-center justify-between mb-3 sm:mb-4 sticky top-0 bg-white pb-3 sm:pb-0 sm:static z-10">
           <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Partial Confirmation</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1" disabled={submitting}>
             <X size={20} />
           </button>
         </div>
@@ -93,7 +93,8 @@ const PartialConfirmModal: React.FC<PartialConfirmModalProps & { submitting?: bo
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 sm:py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1"
+              className="flex-1 px-4 py-2 sm:py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1 disabled:cursor-not-allowed"
+              disabled={submitting}
             >
               Cancel
             </button>
@@ -139,7 +140,7 @@ const DeclineReasonModal: React.FC<DeclineReasonModalProps & { submitting?: bool
       <div className="bg-white rounded-t-2xl sm:rounded-xl p-4 sm:p-6 w-full max-w-md mx-0 sm:mx-4 max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slide-up sm:animate-none">
         <div className="flex items-center justify-between mb-3 sm:mb-4 sticky top-0 bg-white pb-3 sm:pb-0 sm:static z-10">
           <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Decline Product</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1" disabled={submitting}>
             <X size={20} />
           </button>
         </div>
@@ -176,7 +177,8 @@ const DeclineReasonModal: React.FC<DeclineReasonModalProps & { submitting?: bool
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 sm:py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1"
+              className="flex-1 px-4 py-2 sm:py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1 disabled:cursor-not-allowed"
+              disabled={submitting}
             >
               Cancel
             </button>
@@ -817,16 +819,18 @@ export default function Orders() {
                             </button>
                             <button
                               onClick={() => handleProductConfirmPartial(order.id, product.id)}
-                              className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 flex items-center gap-1"
+                              className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 flex items-center gap-1 disabled:bg-gray-400 disabled:cursor-not-allowed"
                               title="Confirm Partial"
+                              disabled={loadingFullByProduct[`${order.id}:${product.id}`]}
                             >
                               <FileText size={12} />
                               Partial
                             </button>
                             <button
                               onClick={() => handleProductDecline(order.id, product.id)}
-                              className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 flex items-center gap-1"
+                              className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 flex items-center gap-1 disabled:bg-gray-400 disabled:cursor-not-allowed"
                               title="Decline"
+                              disabled={loadingFullByProduct[`${order.id}:${product.id}`]}
                             >
                               <X size={12} />
                               Decline

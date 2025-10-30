@@ -33,6 +33,46 @@ export interface TicketListResponse {
   }
 }
 
+export interface TicketTrendData {
+  period: string
+  periodStart: string
+  periodEnd: string
+  raised: number
+  resolved: number
+}
+
+export interface TicketTrendsResponse {
+  success: boolean
+  data: {
+    trends: TicketTrendData[]
+    period: 'weekly' | 'monthly' | 'yearly'
+    dateRange: {
+      from: string
+      to: string
+    }
+  }
+}
+
+export interface ResolutionTimeTrendData {
+  period: string
+  periodStart: string
+  periodEnd: string
+  avgResolutionHours: number
+  totalResolved: number
+}
+
+export interface ResolutionTimeTrendsResponse {
+  success: boolean
+  data: {
+    trends: ResolutionTimeTrendData[]
+    period: 'weekly' | 'monthly' | 'yearly'
+    dateRange: {
+      from: string
+      to: string
+    }
+  }
+}
+
 export const TicketApi = {
   async list(params: {
     status?: 'open' | 'under-review' | 'resolved' | 'closed' | 'all'
@@ -77,6 +117,29 @@ export const TicketApi = {
     const res = await api.get<{ success: boolean; data: Array<{ id: string; fileName: string; fileType: string; url: string; uploadedBy: string; uploadedAt: string }> }>(
       `/api/tickets/${ticketId}/attachments`
     )
+    return res.data
+  },
+
+  async updateStatus(ticketId: string, status: 'open' | 'under-review' | 'resolved') {
+    const res = await api.put<{ success: boolean; data: TicketListItem }>(`/api/tickets/${ticketId}/status`, { status })
+    return res.data
+  },
+
+  async getTrends(params: {
+    period: 'weekly' | 'monthly' | 'yearly'
+    dateFrom?: string
+    dateTo?: string
+  }) {
+    const res = await api.get<TicketTrendsResponse>('/api/tickets/trends', { params })
+    return res.data
+  },
+
+  async getResolutionTimeTrends(params: {
+    period: 'weekly' | 'monthly' | 'yearly'
+    dateFrom?: string
+    dateTo?: string
+  }) {
+    const res = await api.get<ResolutionTimeTrendsResponse>('/api/tickets/resolution-time-trends', { params })
     return res.data
   }
 }
