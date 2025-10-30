@@ -800,18 +800,31 @@ export class ReceivedOrdersController {
             return;
           }
 
-          // Treat GRNs with an active ticket as mismatch
-          if (dispatch.goodsReceiptNote.ticket &&
-              (dispatch.goodsReceiptNote.ticket.status === 'OPEN' || dispatch.goodsReceiptNote.ticket.status === 'IN_PROGRESS')) {
+          // Treat GRNs with an active ticket as mismatch (current mismatches)
+          if (
+            dispatch.goodsReceiptNote.ticket &&
+            (dispatch.goodsReceiptNote.ticket.status === 'OPEN' || dispatch.goodsReceiptNote.ticket.status === 'IN_PROGRESS')
+          ) {
             mismatch++;
             return;
           }
 
+          // Verified OK
           if (dispatch.goodsReceiptNote.status === 'VERIFIED_OK') {
             verified++;
             return;
           }
 
+          // Historic/explicit mismatch statuses
+          if (
+            dispatch.goodsReceiptNote.status === 'VERIFIED_MISMATCH' ||
+            dispatch.goodsReceiptNote.status === 'PARTIALLY_VERIFIED'
+          ) {
+            mismatch++;
+            return;
+          }
+
+          // Default to pending
           pending++;
         });
 
