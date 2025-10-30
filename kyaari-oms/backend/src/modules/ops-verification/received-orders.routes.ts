@@ -29,6 +29,16 @@ router.get('/metrics',
 );
 
 /**
+ * @route   GET /api/ops/received-orders/vendor-mismatch
+ * @desc    Get vendor-wise mismatch analysis (cached for 2 minutes)
+ * @access  Private (Operations team)
+ */
+router.get('/vendor-mismatch', 
+  userCache(120),
+  (req, res) => receivedOrdersController.getVendorMismatchAnalysis(req, res)
+);
+
+/**
  * @route   GET /api/ops/received-orders/:id
  * @desc    Get received order details by ID (cached for 5 minutes)
  * @access  Private (Operations team)

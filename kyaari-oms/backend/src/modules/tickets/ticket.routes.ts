@@ -49,6 +49,22 @@ router.get(
   TicketController.listMyTickets
 );
 
+// Ticket trends endpoint
+router.get(
+  '/trends',
+  authenticate,
+  cacheResponse((req) => `user:${req.user?.userId}:/api/tickets/trends?${new URLSearchParams(req.query as any).toString()}`, 300),
+  TicketController.getTrends
+);
+
+// Resolution time trends endpoint
+router.get(
+  '/resolution-time-trends',
+  authenticate,
+  cacheResponse((req) => `user:${req.user?.userId}:/api/tickets/resolution-time-trends?${new URLSearchParams(req.query as any).toString()}`, 300),
+  TicketController.getResolutionTimeTrends
+);
+
 // Comments (cache + invalidation)
 router.get(
   '/:ticketId/comments',
@@ -91,6 +107,18 @@ router.post(
     `user:${req.user?.userId}:/api/tickets/${req.params.ticketId}/attachments*`,
   ]),
   TicketAttachmentsController.upload
+);
+
+// Update ticket status
+router.put(
+  '/:ticketId/status',
+  authenticate,
+  invalidatePatterns((req) => [
+    `user:${req.user?.userId}:/api/tickets*`,
+    `user:${req.user?.userId}:/api/tickets/${req.params.ticketId}/comments*`,
+    `user:${req.user?.userId}:/api/tickets/${req.params.ticketId}/attachments*`,
+  ]),
+  TicketController.updateStatus
 );
 
 export default router;

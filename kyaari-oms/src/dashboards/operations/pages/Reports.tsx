@@ -3,6 +3,8 @@ import { Clock, AlertTriangle, CheckSquare, Search } from 'lucide-react'
 import { CustomDropdown } from '../../../components/CustomDropdown'
 import type { DropdownOption } from '../../../components/CustomDropdown/CustomDropdown'
 import { KPICard } from '../../../components'
+import { TicketApi } from '../../../services/ticketApi'
+import { ReceivedOrdersApiService } from '../../../services/receivedOrdersApi'
 import { CSVPDFExportButton } from '../../../components/ui/export-button'
 import { Pagination } from '../../../components/ui/Pagination'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar } from 'recharts'
@@ -38,69 +40,11 @@ const currentTicketMetrics: TicketMetrics = {
   avgResolutionTime: 18.5 // hours
 }
 
-const vendorMismatchData: VendorMismatch[] = [
-  {
-    vendorName: 'Green Valley Suppliers',
-    vendorId: 'VEN-002',
-    totalOrders: 120,
-    mismatchOrders: 8,
-    mismatchPercentage: 6.7
-  },
-  {
-    vendorName: 'Farm Direct Ltd',
-    vendorId: 'VEN-004',
-    totalOrders: 95,
-    mismatchOrders: 4,
-    mismatchPercentage: 4.2
-  },
-  {
-    vendorName: 'Fresh Farms Pvt Ltd',
-    vendorId: 'VEN-001',
-    totalOrders: 150,
-    mismatchOrders: 5,
-    mismatchPercentage: 3.3
-  },
-  {
-    vendorName: 'Organic Harvest Co',
-    vendorId: 'VEN-003',
-    totalOrders: 80,
-    mismatchOrders: 2,
-    mismatchPercentage: 2.5
-  },
-  {
-    vendorName: 'Metro Vegetables',
-    vendorId: 'VEN-005',
-    totalOrders: 110,
-    mismatchOrders: 1,
-    mismatchPercentage: 0.9
-  }
-]
-
-const weeklyTrends: MonthlyData[] = [
-  { month: 'Week 1', ticketsRaised: 8, ticketsResolved: 7, avgResolutionHours: 22 },
-  { month: 'Week 2', ticketsRaised: 12, ticketsResolved: 11, avgResolutionHours: 20 },
-  { month: 'Week 3', ticketsRaised: 15, ticketsResolved: 13, avgResolutionHours: 19 },
-  { month: 'Week 4', ticketsRaised: 10, ticketsResolved: 7, avgResolutionHours: 18.5 }
-]
-
-const monthlyTrends: MonthlyData[] = [
-  { month: 'May', ticketsRaised: 28, ticketsResolved: 26, avgResolutionHours: 24 },
-  { month: 'Jun', ticketsRaised: 35, ticketsResolved: 32, avgResolutionHours: 23 },
-  { month: 'Jul', ticketsRaised: 32, ticketsResolved: 30, avgResolutionHours: 22 },
-  { month: 'Aug', ticketsRaised: 41, ticketsResolved: 39, avgResolutionHours: 20 },
-  { month: 'Sep', ticketsRaised: 45, ticketsResolved: 38, avgResolutionHours: 18.5 }
-]
-
-const yearlyTrends: MonthlyData[] = [
-  { month: '2022', ticketsRaised: 320, ticketsResolved: 298, avgResolutionHours: 28 },
-  { month: '2023', ticketsRaised: 385, ticketsResolved: 365, avgResolutionHours: 25 },
-  { month: '2024', ticketsRaised: 420, ticketsResolved: 395, avgResolutionHours: 22 },
-  { month: '2025', ticketsRaised: 180, ticketsResolved: 165, avgResolutionHours: 20 }
-]
-
-
 export default function Reports() {
   const [timeRange, setTimeRange] = useState<TimeRange>('monthly')
+  const [ticketTrendData, setTicketTrendData] = useState<MonthlyData[]>([])
+  const [resolutionTimeData, setResolutionTimeData] = useState<MonthlyData[]>([])
+  const [vendorMismatchData, setVendorMismatchData] = useState<VendorMismatch[]>([])
   const [vendorSearch, setVendorSearch] = useState('')
   const [performanceFilter, setPerformanceFilter] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(1)
@@ -115,18 +59,140 @@ export default function Reports() {
 
   const totalPendingVerification = 23 // This would come from actual data
 
-  // Get chart data based on selected time range
-  const chartData = timeRange === 'weekly' 
-    ? weeklyTrends 
-    : timeRange === 'monthly' 
-      ? monthlyTrends 
-      : yearlyTrends
+  // Fetch real ticket trends for the first chart
+  useEffect(() => {
+    let isMounted = true
+
+    const formatWeekLabel = (fromISO: string, toISO: string) => {
+      const from = new Date(fromISO)
+      const to = new Date(toISO)
+      const month = from.toLocaleDateString('en', { month: 'short' })
+      return `${month} ${from.getDate()}-${to.getDate()}`
+    }
+
+    const formatMonthLabel = (fromISO: string) => {
+      const d = new Date(fromISO)
+      return d.toLocaleDateString('en', { month: 'short' })
+    }
+
+    const formatYearLabel = (fromISO: string) => {
+      return String(new Date(fromISO).getFullYear())
+    }
+
+    const load = async () => {
+      try {
+        const res = await TicketApi.getTrends({ period: timeRange })
+        const items: MonthlyData[] = res.data.trends.map((t) => {
+          const monthLabel = timeRange === 'weekly'
+            ? formatWeekLabel(t.periodStart, t.periodEnd)
+            : timeRange === 'monthly'
+            ? formatMonthLabel(t.periodStart)
+            : formatYearLabel(t.periodStart)
+          return {
+            month: monthLabel,
+            ticketsRaised: t.raised,
+            ticketsResolved: t.resolved,
+            avgResolutionHours: 0
+          }
+        })
+        if (isMounted) setTicketTrendData(items)
+      } catch (_e) {
+        if (isMounted) setTicketTrendData([])
+      }
+    }
+
+    load()
+    return () => { isMounted = false }
+  }, [timeRange])
+
+  // Fetch real resolution time trends for the second chart
+  useEffect(() => {
+    let isMounted = true
+
+    const formatWeekLabel = (fromISO: string, toISO: string) => {
+      const from = new Date(fromISO)
+      const to = new Date(toISO)
+      const month = from.toLocaleDateString('en', { month: 'short' })
+      return `${month} ${from.getDate()}-${to.getDate()}`
+    }
+
+    const formatMonthLabel = (fromISO: string) => {
+      const d = new Date(fromISO)
+      return d.toLocaleDateString('en', { month: 'short' })
+    }
+
+    const formatYearLabel = (fromISO: string) => {
+      return String(new Date(fromISO).getFullYear())
+    }
+
+    const load = async () => {
+      try {
+        const res = await TicketApi.getResolutionTimeTrends({ period: timeRange })
+        const items: MonthlyData[] = res.data.trends.map((t) => {
+          const monthLabel = timeRange === 'weekly'
+            ? formatWeekLabel(t.periodStart, t.periodEnd)
+            : timeRange === 'monthly'
+            ? formatMonthLabel(t.periodStart)
+            : formatYearLabel(t.periodStart)
+          return {
+            month: monthLabel,
+            ticketsRaised: 0,
+            ticketsResolved: t.totalResolved,
+            avgResolutionHours: t.avgResolutionHours
+          }
+        })
+        if (isMounted) setResolutionTimeData(items)
+      } catch (_e) {
+        if (isMounted) setResolutionTimeData([])
+      }
+    }
+
+    load()
+    return () => { isMounted = false }
+  }, [timeRange])
+
+  // Fetch vendor mismatch analysis data
+  useEffect(() => {
+    let isMounted = true
+
+    const load = async () => {
+      try {
+        const res = await ReceivedOrdersApiService.getVendorMismatchAnalysis()
+        const items: VendorMismatch[] = res.data.map((v) => ({
+          vendorName: v.vendorName,
+          vendorId: v.vendorId,
+          totalOrders: v.totalOrders,
+          mismatchOrders: v.mismatchOrders,
+          mismatchPercentage: v.mismatchPercentage,
+        }))
+        if (isMounted) setVendorMismatchData(items)
+      } catch (_e) {
+        if (isMounted) setVendorMismatchData([])
+      }
+    }
+
+    load()
+    return () => { isMounted = false }
+  }, [])
 
   // Helper function to get performance label
   const getPerformanceLabel = (percentage: number) => {
     if (percentage <= 2) return 'Excellent'
     if (percentage <= 5) return 'Good'
     return 'Needs Attention'
+  }
+
+  // Helper function to format resolution time (hours to days + hours)
+  const formatResolutionTime = (hours: number): string => {
+    if (hours < 24) {
+      return `${hours}h`
+    }
+    const days = Math.floor(hours / 24)
+    const remainingHours = Math.round(hours % 24)
+    if (remainingHours === 0) {
+      return `${days} day${days > 1 ? 's' : ''}`
+    }
+    return `${days} day${days > 1 ? 's' : ''} ${remainingHours} hour${remainingHours > 1 ? 's' : ''}`
   }
 
   // Filter vendors based on search and performance
@@ -370,7 +436,7 @@ export default function Reports() {
           
           <div className="h-64 sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <LineChart data={ticketTrendData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis 
                   dataKey="month" 
@@ -469,7 +535,7 @@ export default function Reports() {
           
           <div className="h-64 sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <BarChart data={resolutionTimeData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis 
                   dataKey="month" 
@@ -483,7 +549,7 @@ export default function Reports() {
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
-                  label={{ value: 'Hours', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fontSize: '12px', fill: '#6b7280' } }}
+                  tickFormatter={(value: number) => formatResolutionTime(value)}
                 />
                 <Tooltip 
                   contentStyle={{
@@ -493,7 +559,7 @@ export default function Reports() {
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                     fontSize: '12px'
                   }}
-                  formatter={(value: number) => [`${value}h`, 'Avg Resolution Time']}
+                  formatter={(value: number) => [formatResolutionTime(value), 'Avg Resolution Time']}
                   labelFormatter={(label: string) => 
                     `${timeRange === 'weekly' ? 'Week' : timeRange === 'monthly' ? 'Month' : 'Year'}: ${label}`
                   }
