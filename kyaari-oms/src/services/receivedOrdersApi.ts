@@ -168,7 +168,11 @@ export class ReceivedOrdersApiService {
       return response.data
     } catch (error) {
       console.error('Failed to raise ticket:', error)
-      toast.error('Failed to raise ticket')
+      const msg = (error as { response?: { data?: { error?: string; message?: string } }; message?: string })?.response?.data?.error 
+        || (error as { response?: { data?: { error?: string; message?: string } }; message?: string })?.response?.data?.message 
+        || (error as { message?: string })?.message 
+        || 'Failed to raise ticket'
+      toast.error(msg)
       throw error
     }
   }

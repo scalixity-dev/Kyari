@@ -683,19 +683,25 @@ export class ReceivedOrdersController {
         });
       }
 
-      // Map frontend dispatch item IDs to GRN item IDs
-      const grnItemsMap = new Map(
-        grn.items.map(grnItem => [grnItem.dispatchItemId, grnItem.id])
+      // Map frontend IDs to GRN item IDs (support both dispatchItemId and assignedOrderItemId)
+      const grnItemsByDispatch = new Map(
+        grn.items.map((grnItem) => [grnItem.dispatchItemId, grnItem.id])
+      );
+      const grnItemsByAssignment = new Map(
+        grn.items.map((grnItem) => [grnItem.assignedOrderItemId, grnItem.id])
       );
 
       // Update mismatches with correct GRN item IDs
-      const correctedMismatches = mismatches.map(mismatch => {
-        // Find the corresponding GRN item ID using the dispatch item ID
-        const grnItemId = grnItemsMap.get(mismatch.grnItemId) || mismatch.grnItemId;
-        
+      const correctedMismatches = mismatches.map((mismatch) => {
+        // Prefer mapping via dispatch item id, fallback to assigned order item id
+        const mappedGrnItemId =
+          grnItemsByDispatch.get(mismatch.grnItemId) ||
+          grnItemsByAssignment.get(mismatch.assignedOrderItemId) ||
+          mismatch.grnItemId;
+
         return {
           ...mismatch,
-          grnItemId: grnItemId,
+          grnItemId: mappedGrnItemId,
         };
       });
 
@@ -776,6 +782,7 @@ export class ReceivedOrdersController {
               goodsReceiptNote: {
                 select: {
                   status: true,
+                  ticket: { select: { id: true, status: true } },
                 },
               },
             },
@@ -790,16 +797,22 @@ export class ReceivedOrdersController {
         dispatchesWithGRN.forEach((dispatch) => {
           if (!dispatch.goodsReceiptNote) {
             pending++;
-          } else if (dispatch.goodsReceiptNote.status === 'VERIFIED_OK') {
-            verified++;
-          } else if (
-            dispatch.goodsReceiptNote.status === 'VERIFIED_MISMATCH' ||
-            dispatch.goodsReceiptNote.status === 'PARTIALLY_VERIFIED'
-          ) {
-            mismatch++;
-          } else {
-            pending++;
+            return;
           }
+
+          // Treat GRNs with an active ticket as mismatch
+          if (dispatch.goodsReceiptNote.ticket &&
+              (dispatch.goodsReceiptNote.ticket.status === 'OPEN' || dispatch.goodsReceiptNote.ticket.status === 'IN_PROGRESS')) {
+            mismatch++;
+            return;
+          }
+
+          if (dispatch.goodsReceiptNote.status === 'VERIFIED_OK') {
+            verified++;
+            return;
+          }
+
+          pending++;
         });
 
         return {
@@ -854,14 +867,18 @@ export class ReceivedOrdersController {
         _count: { _all: true },
       });
 
-      // Mismatch orders per vendor (GRN status indicates mismatch)
+      // Mismatch orders per vendor: count dispatches whose GRN has an active ticket (current mismatches)
       const mismatches = await prisma.dispatch.groupBy({
         by: ['vendorId'],
         where: {
           ...baseWhere,
           goodsReceiptNote: {
             is: {
-              status: { in: ['VERIFIED_MISMATCH', 'PARTIALLY_VERIFIED'] },
+              ticket: {
+                is: {
+                  status: { in: ['OPEN', 'IN_PROGRESS'] },
+                },
+              },
             },
           },
         },

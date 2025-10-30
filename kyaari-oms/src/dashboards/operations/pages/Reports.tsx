@@ -33,12 +33,7 @@ interface MonthlyData {
 
 type TimeRange = 'weekly' | 'monthly' | 'yearly'
 
-const currentTicketMetrics: TicketMetrics = {
-  raised: 45,
-  resolved: 38,
-  pending: 7,
-  avgResolutionTime: 18.5 // hours
-}
+// Removed mock currentTicketMetrics; values are fetched from backend
 
 export default function Reports() {
   const [timeRange, setTimeRange] = useState<TimeRange>('monthly')
@@ -48,6 +43,7 @@ export default function Reports() {
   const [vendorSearch, setVendorSearch] = useState('')
   const [performanceFilter, setPerformanceFilter] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [kpi, setKpi] = useState<TicketMetrics>({ raised: 0, resolved: 0, pending: 0, avgResolutionTime: 0 })
   const itemsPerPage = 10
 
   const performanceOptions: DropdownOption[] = [
@@ -57,7 +53,40 @@ export default function Reports() {
     { value: 'Needs Attention', label: 'Needs Attention' }
   ]
 
-  const totalPendingVerification = 23 // This would come from actual data
+  // Load KPI cards from real endpoints (tickets + ops metrics)
+  useEffect(() => {
+    let isMounted = true
+
+    const loadKPIs = async () => {
+      try {
+        // Use monthly period to match "This month" labels
+        const [trendsRes, resTimeRes, opsMetrics] = await Promise.all([
+          TicketApi.getTrends({ period: 'monthly' }),
+          TicketApi.getResolutionTimeTrends({ period: 'monthly' }),
+          ReceivedOrdersApiService.getMetrics(),
+        ])
+
+        const trends = trendsRes.data.trends
+        const resTimeTrends = resTimeRes.data.trends
+        const lastTrend = trends[trends.length - 1]
+        const lastResTime = resTimeTrends[resTimeTrends.length - 1]
+
+        const nextKpi: TicketMetrics = {
+          raised: lastTrend ? lastTrend.raised : 0,
+          resolved: lastTrend ? lastTrend.resolved : 0,
+          pending: opsMetrics.data.pending ?? 0,
+          avgResolutionTime: lastResTime ? lastResTime.avgResolutionHours : 0,
+        }
+
+        if (isMounted) setKpi(nextKpi)
+      } catch (_e) {
+        if (isMounted) setKpi({ raised: 0, resolved: 0, pending: 0, avgResolutionTime: 0 })
+      }
+    }
+
+    loadKPIs()
+    return () => { isMounted = false }
+  }, [])
 
   // Fetch real ticket trends for the first chart
   useEffect(() => {
@@ -367,25 +396,25 @@ export default function Reports() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 pt-6 sm:pt-6 pb-4 sm:pb-6 gap-10 sm:gap-12 xl:gap-6">
           <KPICard
             title="Tickets Raised"
-            value={currentTicketMetrics.raised}
+            value={kpi.raised}
             icon={<AlertTriangle size={32} />}
             subtitle="This month"
           />
           <KPICard
             title="Tickets Resolved"
-            value={currentTicketMetrics.resolved}
+            value={kpi.resolved}
             icon={<CheckSquare size={32} />}
             subtitle="This month"
           />
           <KPICard
             title="Avg Resolution Time"
-            value={`${currentTicketMetrics.avgResolutionTime}h`}
+            value={`${kpi.avgResolutionTime}h`}
             icon={<Clock size={32} />}
             subtitle="Hours to resolve"
           />
           <KPICard
             title="Pending Verification"
-            value={totalPendingVerification}
+            value={kpi.pending}
             icon={<AlertTriangle size={32} />}
             subtitle="Awaiting action"
           />

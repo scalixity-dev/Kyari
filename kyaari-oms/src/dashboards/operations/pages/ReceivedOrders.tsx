@@ -214,6 +214,11 @@ export default function ReceivedOrders() {
     setItemQuantities(newQuantities)
   }
 
+  const extractErrorMessage = (error: unknown) => {
+    const e = error as { response?: { data?: { error?: string; message?: string } }; message?: string }
+    return e?.response?.data?.error || e?.response?.data?.message || e?.message || 'Failed to perform action. Please try again.'
+  }
+
   const handleSubmitTicket = async () => {
     if (!selectedOrderForTicket || !selectedOrderForTicket.itemDetails) return
 
@@ -263,11 +268,7 @@ export default function ReceivedOrders() {
       })
     } catch (error: unknown) {
       console.error('Failed to raise ticket:', error)
-      // Show user-friendly error message
-      const errorMessage = (error as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || 
-                          (error as { response?: { data?: { error?: string } }; message?: string })?.message || 
-                          'Failed to raise ticket. Please try again.'
-      alert(`Error: ${errorMessage}`)
+      alert(`Error: ${extractErrorMessage(error)}`)
     }
   }
 
