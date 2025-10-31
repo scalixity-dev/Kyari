@@ -4,7 +4,7 @@ import DispatchApiService, { type DispatchResponse } from '../../../services/dis
 import { InvoiceApiService, type VendorInvoiceDetailed, type VendorPurchaseOrderItem } from '../../../services/invoiceApi'
 import toast from 'react-hot-toast'
 import { format, parseISO } from 'date-fns'
-import { CustomDropdown, KPICard } from '../../../components'
+import { CustomDropdown, KPICard, Loader } from '../../../components'
 import { Pagination } from '../../../components/ui/Pagination'
 import { CSVPDFExportButton } from '../../../components/ui/export-button'
 import { Calendar } from '../../../components/ui/calendar'
@@ -35,7 +35,7 @@ interface DispatchModalProps {
   onDispatch: (data: { file?: File; awbNumber?: string; logisticsPartner?: string }) => void
 }
 
-const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, order, onClose, onDispatch }) => {
+const DispatchModal: React.FC<DispatchModalProps & { submitting?: boolean }> = ({ isOpen, order, onClose, onDispatch, submitting }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [awbNumber, setAwbNumber] = useState('')
@@ -81,7 +81,7 @@ const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, order, onClose, o
       <div className="bg-white rounded-t-2xl sm:rounded-xl p-4 sm:p-6 w-full max-w-lg mx-0 sm:mx-4 max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-slide-up sm:animate-none">
         <div className="flex items-center justify-between mb-3 sm:mb-4 sticky top-0 bg-white pb-3 sm:pb-0 sm:static">
           <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">Mark as Dispatched</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1" disabled={submitting}>
             <X size={20} />
           </button>
         </div>
@@ -178,15 +178,20 @@ const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, order, onClose, o
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sticky bottom-0 bg-white pt-2 sm:pt-0 sm:static">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 sm:py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1"
+            className="flex-1 px-4 py-2 sm:py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1 disabled:cursor-not-allowed"
+            disabled={submitting}
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            className="flex-1 px-4 py-2 sm:py-2.5 bg-[var(--color-accent)] text-white text-sm font-medium rounded-lg hover:bg-[var(--color-accent)]/90 transition-colors order-1 sm:order-2"
+            className="flex-1 px-4 py-2 sm:py-2.5 items-center justify-center bg-[var(--color-accent)] text-white text-sm font-medium rounded-lg hover:bg-[var(--color-accent)]/90 transition-colors order-1 sm:order-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            disabled={submitting}
           >
-            Mark as Dispatched
+            <span className="inline-flex items-center gap-2 justify-center">
+              {submitting && <Loader size="xs" color="white" />}
+              <span>Mark as Dispatched</span>
+            </span>
           </button>
         </div>
       </div>
@@ -257,6 +262,9 @@ export default function Dispatch() {
 
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<DispatchOrder | null>(null)
+
+  //loading state
+  const [modalSubmitting, setModalSubmitting] = useState<boolean>(false)
 
   // Filters
   const [searchQuery, setSearchQuery] = useState<string>('')
@@ -461,6 +469,7 @@ export default function Dispatch() {
     if (!selectedOrder) return
 
     try {
+      setModalSubmitting(true)
       // For Ready for Dispatch orders, create the dispatch first
       if (selectedOrder.status === 'Ready for Dispatch') {
         if (!selectedOrder.assignmentItems || selectedOrder.assignmentItems.length === 0) {
@@ -499,6 +508,7 @@ export default function Dispatch() {
       
       setDispatchModalOpen(false)
       setSelectedOrder(null)
+      setModalSubmitting(false)
     } catch (error) {
       console.error('Failed to process dispatch:', error)
     }
@@ -929,7 +939,16 @@ export default function Dispatch() {
                           Mark Dispatched
                         </button>
                       )}
+                      {order.status === "Dispatch Marked" && (
+                        <div
+                          className="bg-green-600 text-white rounded-md px-2.5 py-1.5 text-xs hover:brightness-95 flex items-center gap-1"
+                        >
+                          <CheckSquare size={12} />
+                          Dispatched
+                        </div>
+                      )}
                     </div>
+
                     {order.dispatchProof && (
                       <div className="flex items-center gap-2 mt-1">
                         <FileText className="w-4 h-4 text-gray-500" />
@@ -1006,6 +1025,14 @@ export default function Dispatch() {
                     Mark Dispatched
                   </button>
                 )}
+                {order.status === "Dispatch Marked" && (
+                  <div
+                    className="bg-green-600 text-white rounded-md px-2.5 py-1.5 text-xs hover:brightness-95 flex items-center gap-1"
+                  >
+                    <CheckSquare size={12} />
+                    Dispatched
+                  </div>
+                )}
               </div>
               
               {order.dispatchProof && (
@@ -1059,6 +1086,7 @@ export default function Dispatch() {
           setDispatchModalOpen(false)
           setSelectedOrder(null)
         }}
+        submitting={modalSubmitting}
         onDispatch={handleDispatchConfirm}
       />
       </>

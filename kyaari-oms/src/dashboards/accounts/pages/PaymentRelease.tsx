@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Bell, X, AlertTriangle, CheckSquare, Wallet, Clock } from 'lucide-react'
-import { CustomDropdown, KPICard } from '../../../components'
+import { CustomDropdown, KPICard, Loader } from '../../../components'
 import { PaymentsApi, type PaymentListItem } from '../../../services/paymentsApi'
 import { Pagination } from '../../../components/ui/Pagination'
 
@@ -44,6 +44,9 @@ function AccountsPaymentRelease() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+
+  //loading state
+  const [modalSubmitting, setModalSubmitting] = useState<boolean>(false)
 
   // Get unique vendors for dropdown
   const uniqueVendors = useMemo(() => {
@@ -653,6 +656,7 @@ function AccountsPaymentRelease() {
           payment={selectedPayment}
           onClose={() => setIsReleaseModalOpen(false)}
           onConfirm={async (referenceId: string) => {
+            setModalSubmitting(true)
             await PaymentsApi.release(selectedPayment.id, referenceId)
             // reload list with current filters/page
             const res = await PaymentsApi.list({
@@ -663,8 +667,10 @@ function AccountsPaymentRelease() {
             })
             setPayments(res.data.items)
             setIsReleaseModalOpen(false)
+            setModalSubmitting(false)
           }}
           onShowInvoices={() => { setViewerPayment(selectedPayment); setInvoiceViewerOpen(true) }}
+          submitting={modalSubmitting}
         />
       )}
 
@@ -686,6 +692,7 @@ function AccountsPaymentRelease() {
           payment={amountEditPayment}
           onClose={() => setIsEditAmountOpen(false)}
           onConfirm={async (newAmount: number, reason: string, deliveryStatus?: 'Yes' | 'No' | 'Partial') => {
+            setModalSubmitting(true)
             await PaymentsApi.editAmount(amountEditPayment.id, newAmount, reason)
             
             // Update delivery status if provided
@@ -701,8 +708,10 @@ function AccountsPaymentRelease() {
             })
             setPayments(res.data.items)
             setIsEditAmountOpen(false)
+            setModalSubmitting(false)
           }}
           onShowInvoices={() => { setViewerPayment(amountEditPayment); setInvoiceViewerOpen(true) }}
+          submitting={modalSubmitting}
         />
       )}
 
@@ -721,12 +730,14 @@ function MarkAsReleasedModal({
   payment, 
   onClose, 
   onConfirm,
-  onShowInvoices
+  onShowInvoices,
+  submitting
 }: { 
   payment: PaymentRecord
   onClose: () => void
   onConfirm: (referenceId: string) => void
   onShowInvoices: () => void
+  submitting: boolean
 }) {
   const [referenceId, setReferenceId] = useState('')
   const [releaseDate, setReleaseDate] = useState(new Date().toISOString().split('T')[0])
@@ -744,7 +755,7 @@ function MarkAsReleasedModal({
       <div className="bg-white w-full max-w-lg rounded-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-heading text-secondary text-lg sm:text-2xl">Mark Payment as Released</h3>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100">
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100" disabled={submitting}>
             <X size={20} className="text-gray-500" />
           </button>
         </div>
@@ -800,16 +811,20 @@ function MarkAsReleasedModal({
         <div className="flex flex-col sm:flex-row justify-end gap-2 mt-6">
           <button 
             onClick={onClose} 
-            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 hover:bg-gray-50 text-sm order-2 sm:order-1"
+            className="bg-white text-secondary border border-secondary rounded-full px-4 py-2 hover:bg-gray-50 text-sm order-2 sm:order-1 disabled:cursor-not-allowed"
+            disabled={submitting}
           >
             Cancel
           </button>
           <button 
             onClick={handleSubmit} 
-            className="bg-accent text-button-text rounded-full px-4 py-2 hover:opacity-90 flex items-center justify-center gap-2 text-sm order-1 sm:order-2"
-          >
-            <CheckSquare size={16} />
-            <span>Confirm Release</span>
+            className="bg-accent text-button-text rounded-full px-4 py-2 hover:opacity-90 flex items-center justify-center gap-2 text-sm order-1 sm:order-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            disabled={submitting}
+          >        
+            <span className="inline-flex items-center gap-2 justify-center">
+              {submitting ? <Loader size="xs" color="white" /> : <CheckSquare size={16} />}
+              <span>Confirm Release</span>
+            </span>
           </button>
         </div>
       </div>
@@ -931,12 +946,14 @@ function EditAmountModal({
   payment,
   onClose,
   onConfirm,
-  onShowInvoices
+  onShowInvoices,
+  submitting
 }: {
   payment: PaymentRecord
   onClose: () => void
   onConfirm: (newAmount: number, reason: string, deliveryStatus?: 'Yes' | 'No' | 'Partial') => void
   onShowInvoices: () => void
+  submitting: boolean
 }) {
   const [newAmount, setNewAmount] = useState<number>(payment.invoiceAmount)
   const [reason, setReason] = useState('')
@@ -953,7 +970,7 @@ function EditAmountModal({
           <h3 className="font-heading text-secondary text-lg sm:text-2xl">
             {isPartialDelivery ? 'Review Partial Delivery' : 'Edit Invoice Amount'}
           </h3>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100">
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100" disabled={submitting}>
             <X size={20} className="text-gray-500" />
           </button>
         </div>
@@ -1053,16 +1070,17 @@ function EditAmountModal({
         <div className="flex flex-col sm:flex-row justify-end gap-2 mt-6">
           <button 
             onClick={onClose} 
-            className="bg-white text-secondary border border-secondary rounded-xl px-4 py-2 hover:bg-gray-50 text-sm order-2 sm:order-1"
+            className="bg-white text-secondary border border-secondary rounded-xl px-4 py-2 hover:bg-gray-50 text-sm order-2 sm:order-1 disabled:cursor-not-allowed"
+            disabled={submitting}
           >
             Cancel
           </button>
           <button 
             onClick={() => isValid && onConfirm(newAmount, reason, updateDeliveryStatus ? deliveryStatus : undefined)}
-            disabled={!isValid}
+            disabled={!isValid || submitting}
             className="bg-accent text-button-text rounded-xl px-4 py-2 hover:opacity-90 flex items-center justify-center gap-2 text-sm order-1 sm:order-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <CheckSquare size={16} />
+            {submitting ? <Loader size="xs" color="white" /> : <CheckSquare size={16} />}
             <span>{isPartialDelivery ? 'Save & Update Status' : 'Save Amount'}</span>
           </button>
         </div>
