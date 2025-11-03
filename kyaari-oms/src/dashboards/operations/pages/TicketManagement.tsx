@@ -298,24 +298,41 @@ export default function TicketManagement() {
     setCommentModalOpen(true)
   }
 
-  const handleOpenChat = (ticket: Ticket) => {
-    setSelectedTicket(ticket)
-    setChatPanelOpen(true)
-  }
-
-  const submitStatusUpdate = () => {
+  const submitStatusUpdate = async () => {
     if (selectedTicket) {
-      setTickets(tickets.map(ticket => 
-        ticket.id === selectedTicket.id 
-          ? { 
-              ...ticket, 
-              status: newStatus,
-              lastUpdated: new Date().toISOString().split('T')[0]
-            }
-          : ticket
-      ))
-      setUpdateStatusModalOpen(false)
-      setSelectedTicket(null)
+      try {
+        // Call API to update status in database
+        await TicketApi.updateStatus(selectedTicket.id, newStatus)
+        
+        // Update local state only after successful API call
+        setTickets(tickets.map(ticket => 
+          ticket.id === selectedTicket.id 
+            ? { 
+                ...ticket, 
+                status: newStatus,
+                lastUpdated: new Date().toISOString().split('T')[0]
+              }
+            : ticket
+        ))
+        
+        // Update filtered tickets as well
+        setFilteredTickets(filteredTickets.map(ticket => 
+          ticket.id === selectedTicket.id 
+            ? { 
+                ...ticket, 
+                status: newStatus,
+                lastUpdated: new Date().toISOString().split('T')[0]
+              }
+            : ticket
+        ))
+        
+        setUpdateStatusModalOpen(false)
+        setSelectedTicket(null)
+      } catch (error) {
+        console.error('Failed to update ticket status:', error)
+        // You might want to show a toast notification here
+        alert('Failed to update ticket status. Please try again.')
+      }
     }
   }
 

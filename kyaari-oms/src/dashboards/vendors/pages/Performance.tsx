@@ -720,7 +720,7 @@ export default function Performance() {
                       className="h-2 rounded-full" 
                       style={{ 
                         width: `${Math.min(goal.progress, 100)}%`, 
-                        backgroundColor: goal.status === 'achieved' ? 'var(--color-secondary)' : 'var(--color-accent)' 
+                        backgroundColor: goal.status === 'achieved' ? 'var(--color-secondary)' : 'var(--color-accent)'
                       }}
                     ></div>
                   </div>

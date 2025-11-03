@@ -57,6 +57,16 @@ export interface ReceivedOrderMetrics {
   total: number
 }
 
+export interface VendorMismatchAnalysis {
+  vendorName: string
+  vendorId: string
+  totalOrders: number
+  mismatchOrders: number
+  mismatchPercentage: number
+  performance: 'Excellent' | 'Good' | 'Needs Attention'
+  contactEmail: string | null
+}
+
 export interface VerifyOrderRequest {
   verificationNotes?: string
 }
@@ -158,7 +168,11 @@ export class ReceivedOrdersApiService {
       return response.data
     } catch (error) {
       console.error('Failed to raise ticket:', error)
-      toast.error('Failed to raise ticket')
+      const msg = (error as { response?: { data?: { error?: string; message?: string } }; message?: string })?.response?.data?.error 
+        || (error as { response?: { data?: { error?: string; message?: string } }; message?: string })?.response?.data?.message 
+        || (error as { message?: string })?.message 
+        || 'Failed to raise ticket'
+      toast.error(msg)
       throw error
     }
   }
@@ -175,6 +189,31 @@ export class ReceivedOrdersApiService {
     } catch (error) {
       console.error('Failed to fetch metrics:', error)
       toast.error('Failed to load metrics')
+      throw error
+    }
+  }
+
+  /**
+   * Get vendor-wise mismatch analysis
+   */
+  static async getVendorMismatchAnalysis(params?: {
+    dateFrom?: string
+    dateTo?: string
+  }): Promise<{ success: boolean; data: VendorMismatchAnalysis[] }> {
+    try {
+      const queryParams = new URLSearchParams()
+      
+      if (params?.dateFrom) queryParams.append('dateFrom', params.dateFrom)
+      if (params?.dateTo) queryParams.append('dateTo', params.dateTo)
+
+      const response = await api.get<{ success: boolean; data: VendorMismatchAnalysis[] }>(
+        `/api/ops/received-orders/vendor-mismatch${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      )
+      
+      return response.data
+    } catch (error) {
+      console.error('Failed to fetch vendor mismatch analysis:', error)
+      toast.error('Failed to load vendor mismatch analysis')
       throw error
     }
   }

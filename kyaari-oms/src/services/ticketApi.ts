@@ -74,6 +74,46 @@ export interface TicketListResponse {
   }
 }
 
+export interface TicketTrendData {
+  period: string
+  periodStart: string
+  periodEnd: string
+  raised: number
+  resolved: number
+}
+
+export interface TicketTrendsResponse {
+  success: boolean
+  data: {
+    trends: TicketTrendData[]
+    period: 'weekly' | 'monthly' | 'yearly'
+    dateRange: {
+      from: string
+      to: string
+    }
+  }
+}
+
+export interface ResolutionTimeTrendData {
+  period: string
+  periodStart: string
+  periodEnd: string
+  avgResolutionHours: number
+  totalResolved: number
+}
+
+export interface ResolutionTimeTrendsResponse {
+  success: boolean
+  data: {
+    trends: ResolutionTimeTrendData[]
+    period: 'weekly' | 'monthly' | 'yearly'
+    dateRange: {
+      from: string
+      to: string
+    }
+  }
+}
+
 export const TicketApi = {
   async list(params: {
     status?: 'open' | 'under-review' | 'resolved' | 'closed' | 'all'
@@ -121,38 +161,26 @@ export const TicketApi = {
     return res.data
   },
 
-  // Chat-related methods
-  async getChatMessages(ticketId: string, page: number = 1, limit: number = 50) {
-    const res = await api.get<TicketChatResponse>(`/api/tickets/${ticketId}/chat`, { 
-      params: { page, limit } 
-    })
+  async updateStatus(ticketId: string, status: 'open' | 'under-review' | 'resolved') {
+    const res = await api.put<{ success: boolean; data: TicketListItem }>(`/api/tickets/${ticketId}/status`, { status })
     return res.data
   },
 
-  async sendChatMessage(ticketId: string, message: string, messageType: 'TEXT' | 'SYSTEM' = 'TEXT') {
-    const res = await api.post<{ success: boolean; data: { message: TicketChatMessage } }>(
-      `/api/tickets/${ticketId}/chat`, 
-      { message, messageType }
-    )
+  async getTrends(params: {
+    period: 'weekly' | 'monthly' | 'yearly'
+    dateFrom?: string
+    dateTo?: string
+  }) {
+    const res = await api.get<TicketTrendsResponse>('/api/tickets/trends', { params })
     return res.data
   },
 
-  async uploadChatFile(ticketId: string, file: File, message?: string) {
-    const form = new FormData()
-    form.append('file', file)
-    if (message) form.append('message', message)
-    const res = await api.post<{ success: boolean; data: { message: TicketChatMessage; attachment: any } }>(
-      `/api/tickets/${ticketId}/chat/upload`,
-      form,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
-    )
-    return res.data
-  },
-
-  async getChatParticipants(ticketId: string) {
-    const res = await api.get<{ success: boolean; data: { ticket: any; participants: any[] } }>(
-      `/api/tickets/${ticketId}/chat/participants`
-    )
+  async getResolutionTimeTrends(params: {
+    period: 'weekly' | 'monthly' | 'yearly'
+    dateFrom?: string
+    dateTo?: string
+  }) {
+    const res = await api.get<ResolutionTimeTrendsResponse>('/api/tickets/resolution-time-trends', { params })
     return res.data
   }
 }
