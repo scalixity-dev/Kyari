@@ -8,6 +8,47 @@ export interface TicketComment {
   user?: { id: string; name: string; email?: string }
 }
 
+export interface TicketChatMessage {
+  id: string
+  ticketId: string
+  senderId: string
+  message?: string
+  attachments?: any[]
+  messageType: 'TEXT' | 'FILE' | 'IMAGE' | 'SYSTEM'
+  createdAt: string
+  updatedAt: string
+  sender: {
+    id: string
+    name: string
+    email: string
+    role: string
+    companyName?: string
+  }
+}
+
+export interface TicketChatResponse {
+  success: boolean
+  data: {
+    messages: TicketChatMessage[]
+    pagination: { page: number; limit: number; total: number; hasMore: boolean }
+    ticket: {
+      id: string
+      ticketNumber: string
+      title: string
+      status: string
+      priority: string
+    }
+    participants: Array<{
+      id: string
+      name: string
+      email: string
+      role: string
+      type: string
+      companyName?: string
+    }>
+  }
+}
+
 export interface TicketListItem {
   id: string
   ticketNumber: string

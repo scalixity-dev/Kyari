@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { TicketCommentsController } from './ticket-comments.controller';
 import { TicketController } from './ticket.controller';
+import { TicketChatController } from './ticket-chat.controller';
 import { authenticate } from '../../middlewares/auth.middleware';
 import { TicketAttachmentsController } from './ticket-attachments.controller';
 import { cacheService } from '../../services/cache.service';
