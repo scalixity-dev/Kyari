@@ -49,6 +49,48 @@ export interface ResolutionTimeTrendData {
 }
 
 export class TicketService {
+  static async createTicket(params: {
+    title: string;
+    description: string;
+    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+    createdById: string;
+    goodsReceiptNoteId?: string | null;
+  }) {
+    const ticketNumber = `TKT-${Date.now()}`;
+
+    const created = await prisma.ticket.create({
+      data: {
+        ticketNumber,
+        title: params.title,
+        description: params.description,
+        priority: params.priority as any,
+        status: 'OPEN' as any,
+        createdById: params.createdById,
+        goodsReceiptNoteId: params.goodsReceiptNoteId ?? null,
+      },
+      include: {
+        goodsReceiptNote: {
+          include: {
+            dispatch: {
+              include: {
+                vendor: { include: { user: true } },
+                items: {
+                  include: {
+                    assignedOrderItem: {
+                      include: { orderItem: { include: { order: true } } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        _count: { select: { comments: true, attachments: true } },
+      },
+    });
+
+    return created;
+  }
   static async getTicketTrends(filters: TicketTrendFilters) {
     const { period, dateFrom, dateTo, userId } = filters;
 
@@ -501,6 +543,102 @@ export class TicketService {
           _count: {
             select: { comments: true, attachments: true },
           },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.ticket.count({ where }),
+    ]);
+
+    return { tickets, pagination: { page, limit, total: totalCount } };
+  }
+
+  static async listTicketsAll(filters: TicketListFilters) {
+    const {
+      status = 'all',
+      vendor,
+      orderNumber,
+      dateFrom,
+      dateTo,
+      page = 1,
+      limit = 20,
+    } = filters;
+
+    const where: any = {};
+
+    const mappedStatus = mapStatusToEnum(status);
+    if (mappedStatus) {
+      where.status = mappedStatus;
+    }
+
+    if (dateFrom || dateTo) {
+      where.createdAt = {};
+      if (dateFrom) where.createdAt.gte = new Date(dateFrom);
+      if (dateTo) where.createdAt.lte = new Date(dateTo);
+    }
+
+    if (vendor) {
+      where.goodsReceiptNote = {
+        dispatch: {
+          vendor: {
+            OR: [
+              { companyName: { contains: vendor, mode: 'insensitive' } },
+              { user: { name: { contains: vendor, mode: 'insensitive' } } },
+              { user: { email: { contains: vendor, mode: 'insensitive' } } },
+            ],
+          },
+        },
+      };
+    }
+
+    if (orderNumber) {
+      where.goodsReceiptNote = {
+        ...(where.goodsReceiptNote || {}),
+        dispatch: {
+          ...(where.goodsReceiptNote?.dispatch || {}),
+          items: {
+            some: {
+              assignedOrderItem: {
+                orderItem: {
+                  order: {
+                    OR: [
+                      { orderNumber: { contains: orderNumber, mode: 'insensitive' } },
+                      { clientOrderId: { contains: orderNumber, mode: 'insensitive' } },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [tickets, totalCount] = await Promise.all([
+      prisma.ticket.findMany({
+        where,
+        include: {
+          createdBy: true,
+          goodsReceiptNote: {
+            include: {
+              dispatch: {
+                include: {
+                  vendor: { include: { user: true } },
+                  items: {
+                    include: {
+                      assignedOrderItem: {
+                        include: { orderItem: { include: { order: true } } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          _count: { select: { comments: true, attachments: true } },
         },
         orderBy: { createdAt: 'desc' },
         skip,

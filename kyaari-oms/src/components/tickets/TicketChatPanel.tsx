@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Send, Paperclip, X, Eye, Image, FileText, Clock } from 'lucide-react'
 import { TicketApi, type TicketChatMessage } from '../../services/ticketApi'
+import { TokenManager } from '../../services/api'
+import { io, Socket } from 'socket.io-client'
 import { format } from 'date-fns'
 
 interface TicketChatPanelProps {
@@ -35,7 +37,7 @@ export default function TicketChatPanel({ ticketId, isOpen, onClose, ticketData 
 
   const chatEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const pollIntervalRef = useRef<number | null>(null)
+  const socketRef = useRef<Socket | null>(null)
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
@@ -44,72 +46,96 @@ export default function TicketChatPanel({ ticketId, isOpen, onClose, ticketData 
     }
   }, [messages])
 
-  // Fetch initial data when panel opens
+  // Basic visibility debug
   useEffect(() => {
-    if (isOpen && ticketId) {
-      fetchChatData()
-      startPolling()
-    } else {
-      stopPolling()
-    }
-
-    return () => stopPolling()
+    console.log('[Chat] Panel props update', { isOpen, ticketId })
   }, [isOpen, ticketId])
 
-  const startPolling = () => {
-    stopPolling() // Clear any existing interval
-    // Poll for new messages every 5 seconds
-    pollIntervalRef.current = setInterval(() => {
-      if (isOpen && ticketId) {
-        fetchMessages(false) // Fetch without loading state
-      }
-    }, 5000)
-  }
-
-  const stopPolling = () => {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current)
-      pollIntervalRef.current = null
+  // Initialize socket on open and join ticket room
+  useEffect(() => {
+    console.log('[Chat] Socket effect enter', { isOpen, ticketId })
+    if (!isOpen || !ticketId) {
+      console.log('[Chat] Socket init skipped (panel closed or missing ticketId)')
+      return
     }
-  }
 
-  const fetchChatData = async () => {
-    try {
-      setIsLoading(true)
-      const [chatResponse, participantsResponse] = await Promise.all([
-        TicketApi.getChatMessages(ticketId),
-        TicketApi.getChatParticipants(ticketId)
-      ])
-
-      if (chatResponse.success) {
-        setMessages(chatResponse.data.messages)
+    const init = async () => {
+      try {
+        setIsLoading(true)
+        // Load participants (optional)
+        const participantsResponse = await TicketApi.getChatParticipants(ticketId)
+        if (participantsResponse.success) {
+          console.log('[Chat] Participants loaded', participantsResponse.data.participants)
+          setParticipants(participantsResponse.data.participants)
+        }
+      } catch (_e) {
+        console.warn('[Chat] Failed to load participants', _e)
+      } finally {
+        setIsLoading(false)
       }
 
-      if (participantsResponse.success) {
-        setParticipants(participantsResponse.data.participants)
-      }
-    } catch (error) {
-      console.error('Error fetching chat data:', error)
-    } finally {
-      setIsLoading(false)
+      const token = TokenManager.getAccessToken() || ''
+      const SOCKET_URL = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3000'
+      console.log('[Chat] Initializing socket', { SOCKET_URL, ticketId })
+      socketRef.current = io(SOCKET_URL, {
+        path: '/socket.io',
+        auth: { token },
+        transports: ['websocket', 'polling']
+      })
+
+      socketRef.current.on('connect', () => {
+        console.log('[Chat] Socket connected', { socketId: socketRef.current?.id })
+      })
+      socketRef.current.on('connect_error', (err) => {
+        console.error('[Chat] Socket connect_error', err)
+      })
+      socketRef.current.on('error', (err) => {
+        console.error('[Chat] Socket error', err)
+      })
+      socketRef.current.on('disconnect', (reason) => {
+        console.log('[Chat] Socket disconnected', { reason })
+      })
+
+      // History after join
+      socketRef.current.on('messages_history', (data: { messages: any[] } | any[]) => {
+        console.log('[Chat] messages_history received', data)
+        const list = Array.isArray(data) ? data : (Array.isArray((data as any).messages) ? (data as any).messages : [])
+        setMessages(list)
+      })
+
+      // Live new message
+      socketRef.current.on('new_message', (payload: { message: TicketChatMessage; ticketId: string }) => {
+        console.log('[Chat] new_message received', payload)
+        setMessages(prev => [...prev, payload.message])
+      })
+
+      // Join room
+      console.log('[Chat] Emitting join_ticket', { ticketId })
+      socketRef.current.emit('join_ticket', { ticketId })
+
+      // Post-connection probe
+      setTimeout(() => {
+        const connected = !!socketRef.current?.connected
+        console.log('[Chat] Post-init probe', { connected, socketId: socketRef.current?.id })
+        ;(window as any).chatSocket = socketRef.current
+      }, 500)
     }
-  }
 
-  const fetchMessages = async (showLoading = true) => {
-    try {
-      if (showLoading) setIsLoading(true)
-      const response = await TicketApi.getChatMessages(ticketId)
-      if (response.success) {
-        setMessages(response.data.messages)
+    init()
+
+    return () => {
+      if (socketRef.current) {
+        try { console.log('[Chat] Emitting leave_ticket', { ticketId }); socketRef.current.emit('leave_ticket', { ticketId }) } catch (e) { console.warn('[Chat] leave_ticket failed', e) }
+        socketRef.current.disconnect()
+        socketRef.current = null
       }
-    } catch (error) {
-      console.error('Error fetching messages:', error)
-    } finally {
-      if (showLoading) setIsLoading(false)
     }
-  }
+  }, [isOpen, ticketId])
+
+  // Remove REST polling functions (socket provides updates)
 
   const sendMessage = async () => {
+    console.log('[Chat] Send button clicked', { text: messageText, hasFile: !!selectedFile })
     if ((!messageText.trim() && !selectedFile) || isSending) return
 
     setIsSending(true)
@@ -117,18 +143,29 @@ export default function TicketChatPanel({ ticketId, isOpen, onClose, ticketData 
       if (selectedFile) {
         // Upload file
         setIsUploading(true)
+        console.log('[Chat] Uploading file', { name: selectedFile.name, size: selectedFile.size, type: selectedFile.type })
         const response = await TicketApi.uploadChatFile(ticketId, selectedFile, messageText.trim() || undefined)
         if (response.success) {
+          console.log('[Chat] File uploaded, message saved', response.data.message)
           setMessages(prev => [...prev, response.data.message])
           setMessageText('')
           setSelectedFile(null)
         }
       } else {
-        // Send text message
-        const response = await TicketApi.sendChatMessage(ticketId, messageText.trim())
-        if (response.success) {
-          setMessages(prev => [...prev, response.data.message])
-          setMessageText('')
+        // Send text message via socket
+        if (socketRef.current) {
+          const payload = {
+            ticketId,
+            message: messageText.trim(),
+            messageType: 'TEXT'
+          }
+          console.log('[Chat] Emitting send_message', payload)
+          socketRef.current.emit('send_message', payload, (ack?: { success: boolean; error?: string }) => {
+            console.log('[Chat] send_message ack', ack)
+            setMessageText('')
+          })
+        } else {
+          console.warn('[Chat] Socket not initialized, cannot send message')
         }
       }
     } catch (error) {

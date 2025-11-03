@@ -35,6 +35,7 @@
     "@aws-sdk/s3-request-presigner": "^3.901.0",
     "@prisma/client": "^5.7.0",
     "@types/multer": "^2.0.0",
+    "@types/node": "^20.10.0",
     "@types/nodemailer": "^7.0.2",
     "@types/redis": "^4.0.10",
     "@types/uuid": "^10.0.0",
@@ -52,6 +53,7 @@
     "nodemailer": "^7.0.9",
     "redis": "^4.7.1",
     "resend": "^6.1.2",
+    "socket.io": "^4.7.2",
     "uuid": "^13.0.0",
     "xlsx": "^0.18.5",
     "zod": "^3.22.4"

@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
+import { io, Socket } from 'socket.io-client'
 import { Plus, Send, Paperclip, Clock, AlertTriangle, CheckSquare, Calendar as CalendarIcon } from 'lucide-react'
 import { CustomDropdown, KPICard, CSVPDFExportButton } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { Pagination } from '../../../components/ui/Pagination'
 import { format } from 'date-fns'
 import { TicketApi, type TicketListItem } from '../../../services/ticketApi'
+import { TokenManager } from '../../../services/api'
 
 type IssueType = 'Invoice Mismatch' | 'Duplicate Entry' | 'Payment Pending' | 'Payment Delay' | 'Others'
 type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
@@ -56,6 +58,19 @@ const STATUS_STYLES: Record<TicketStatus, { bg: string; color: string; border: s
   CLOSED: { bg: '#E5E7EB', color: '#111827', border: '#D1D5DB' },
 }
 
+const DEFAULT_PRIORITY_STYLE = { bg: '#E5E7EB', color: '#111827', border: '#D1D5DB' }
+const DEFAULT_STATUS_STYLE = { bg: '#E5E7EB', color: '#111827', border: '#D1D5DB' }
+
+// Helper function to get priority style with fallback
+const getPriorityStyle = (priority: TicketPriority | string) => {
+  return PRIORITY_STYLES[priority as TicketPriority] || DEFAULT_PRIORITY_STYLE
+}
+
+// Helper function to get status style with fallback
+const getStatusStyle = (status: TicketStatus | string) => {
+  return STATUS_STYLES[status as TicketStatus] || DEFAULT_STATUS_STYLE
+}
+
 export default function VendorSupport() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -82,9 +97,10 @@ export default function VendorSupport() {
             updatedAt: apiTicket.updatedAt,
             goodsReceiptNote: apiTicket.goodsReceiptNote,
             _count: apiTicket._count,
-            // Derive UI fields from API data
-            issueTitle: `Ticket ${apiTicket.ticketNumber}`,
-            assignedTo: 'Support Team',
+            // Use backend title if available, fallback to ticket number
+            issueTitle: (apiTicket as any).title || `Ticket ${apiTicket.ticketNumber}`,
+            // Show actual assignee if available
+            assignedTo: (apiTicket as any).assignee?.name || 'Support Team',
             messages: []
           }))
           
@@ -131,6 +147,7 @@ export default function VendorSupport() {
   const [chatAttachment, setChatAttachment] = useState<File | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const socketRef = useRef<Socket | null>(null)
 
   // pagination
   const [currentPage, setCurrentPage] = useState(1)
@@ -187,83 +204,86 @@ export default function VendorSupport() {
     setCurrentPage(1)
   }, [filterIssue, filterStatus, filterPriority, dateFrom, dateTo, search])
 
-  function addTicket() {
+  async function addTicket() {
     if (!draftIssueTitle || !draftIssue || !draftPriority || !draftDescription) {
       alert('Please fill all required fields')
       return
     }
-    const newTicket: Ticket = {
-      id: `TKT-V${String(4 + tickets.length).padStart(3, '0')}`,
-      ticketNumber: `TKT-V${String(4 + tickets.length).padStart(3, '0')}`,
-      issueTitle: draftIssueTitle,
-      issueType: draftIssue as IssueType,
-      priority: draftPriority as TicketPriority,
-      status: 'OPEN',
-      assignedTo: '-',
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0],
-      messages: [{
-        id: `msg-${Date.now()}`,
-        sender: 'vendor',
-        senderName: 'Vendor',
-        text: draftDescription,
-        timestamp: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
-        attachments: draftFile ? [{ name: draftFile.name, url: '#' }] : undefined
-      }]
+    try {
+      const mappedPriority = ((draftPriority as string) || '').toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+      const res = await TicketApi.create({
+        title: draftIssueTitle,
+        description: draftDescription,
+        priority: mappedPriority,
+      })
+      if (res.success) {
+        const t = res.data
+        const newTicket: Ticket = {
+          id: t.id,
+          ticketNumber: t.ticketNumber,
+          status: t.status,
+          priority: t.priority,
+          createdAt: t.createdAt,
+          updatedAt: t.updatedAt,
+          goodsReceiptNote: t.goodsReceiptNote,
+          _count: t._count,
+          issueTitle: t.title,
+          issueType: draftIssue as IssueType,
+          assignedTo: '-',
+          messages: []
+        }
+        setTickets(prev => [newTicket, ...prev])
+        setShowNewTicket(false)
+        setDraftIssueTitle('')
+        setDraftIssue('')
+        setDraftPriority('')
+        setDraftDescription('')
+        setDraftFile(null)
+        setDrawerTicket(newTicket)
+        setIsDrawerOpen(true)
+      }
+    } catch (e) {
+      console.error('Failed to create ticket', e)
+      alert('Failed to create ticket')
     }
-    setTickets(prev => [newTicket, ...prev])
-    setShowNewTicket(false)
-    setDraftIssueTitle('')
-    setDraftIssue('')
-    setDraftPriority('')
-    setDraftDescription('')
-    setDraftFile(null)
   }
 
   function resolveTicket(t: Ticket) {
     setTickets(prev => prev.map(x => x.id === t.id ? { ...x, status: 'RESOLVED' as TicketStatus, updatedAt: new Date().toISOString().split('T')[0] } : x))
   }
 
-  function sendMessage() {
-    if (!messageText.trim() || !drawerTicket) return
+  async function sendMessage() {
+    if (!drawerTicket) return
 
-    const now = new Date()
-    const timestamp = now.toLocaleString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric',
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    })
-
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      sender: 'vendor',
-      senderName: 'Vendor',
-      text: messageText,
-      timestamp,
-      attachments: chatAttachment ? [{ name: chatAttachment.name, url: '#' }] : undefined
+    // If file attached, upload via REST first
+    if (chatAttachment) {
+      try {
+        const token = localStorage.getItem('accessToken') || ''
+        const form = new FormData()
+        form.append('file', chatAttachment)
+        if (messageText.trim()) form.append('message', messageText.trim())
+        await fetch(`/api/tickets/${drawerTicket.id}/chat/upload`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: form
+        })
+        setMessageText('')
+        setChatAttachment(null)
+        return
+      } catch (e) {
+        console.error('Upload failed', e)
+        return
+      }
     }
 
-    setTickets(prev => prev.map(ticket => {
-      if (ticket.id === drawerTicket.id) {
-        return {
-          ...ticket,
-          messages: [...(ticket.messages || []), newMessage],
-          updatedAt: now.toISOString().split('T')[0]
-        }
-      }
-      return ticket
-    }))
-
-    setDrawerTicket(prev => prev ? {
-      ...prev,
-      messages: [...(prev.messages || []), newMessage]
-    } : null)
-
+    if (!messageText.trim()) return
+    if (!socketRef.current) return
+    socketRef.current.emit('send_message', {
+      ticketId: drawerTicket.id,
+      message: messageText.trim(),
+      messageType: 'TEXT'
+    })
     setMessageText('')
-    setChatAttachment(null)
   }
 
   // Animate drawer open/close
@@ -275,11 +295,59 @@ export default function VendorSupport() {
   }
   
   useEffect(() => {
-    if (drawerTicket) {
-      const rafId = requestAnimationFrame(() => setIsDrawerOpen(true))
-      return () => cancelAnimationFrame(rafId)
+    if (!drawerTicket) return
+
+    // open drawer animation
+    const rafId = requestAnimationFrame(() => setIsDrawerOpen(true))
+
+    // ensure socket connection
+    const token = TokenManager.getAccessToken() || ''
+    if (!socketRef.current) {
+      const SOCKET_URL = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3000'
+      socketRef.current = io(SOCKET_URL, {
+        path: '/socket.io',
+        auth: { token },
+        transports: ['websocket', 'polling']
+      })
+
+      // incoming new messages
+      socketRef.current.on('new_message', (payload: { message: any; ticketId: string }) => {
+        const msg = payload.message
+        const mapped: Message = {
+          id: msg.id,
+          sender: (msg.sender?.role === 'VENDOR' ? 'vendor' : 'admin'),
+          senderName: msg.sender?.name || 'User',
+          text: msg.message || '',
+          timestamp: new Date(msg.createdAt).toLocaleString(),
+          attachments: Array.isArray(msg.attachments) ? msg.attachments.map((a: { fileName: string; url: string }) => ({ name: a.fileName, url: a.url })) : undefined
+        }
+        setDrawerTicket(prev => prev ? { ...prev, messages: [...(prev.messages || []), mapped] } : prev)
+      })
+
+      // history on join
+      socketRef.current.on('messages_history', (data: { messages: { messages: any[] } | any[] }) => {
+        const list = Array.isArray(data) ? data : (Array.isArray((data as any).messages) ? (data as any).messages : [])
+        const mapped = list.map((msg: any): Message => ({
+          id: msg.id,
+          sender: (msg.sender?.role === 'VENDOR' ? 'vendor' : 'admin'),
+          senderName: msg.sender?.name || 'User',
+          text: msg.message || '',
+          timestamp: new Date(msg.createdAt).toLocaleString(),
+          attachments: Array.isArray(msg.attachments) ? msg.attachments.map((a: { fileName: string; url: string }) => ({ name: a.fileName, url: a.url })) : undefined
+        }))
+        setDrawerTicket(prev => prev ? { ...prev, messages: mapped } : prev)
+      })
     }
-    return undefined
+
+    // join ticket room
+    socketRef.current.emit('join_ticket', { ticketId: drawerTicket.id })
+
+    return () => {
+      cancelAnimationFrame(rafId)
+      if (socketRef.current) {
+        socketRef.current.emit('leave_ticket', { ticketId: drawerTicket.id })
+      }
+    }
   }, [drawerTicket])
 
   // Auto-scroll to bottom when messages change
@@ -540,14 +608,14 @@ export default function VendorSupport() {
             <tbody>
               {paginatedTickets.map((t) => (
                 <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
-                  <td className="p-3 font-semibold text-secondary text-sm whitespace-nowrap">{t.id}</td>
+                  <td className="p-3 font-semibold text-secondary text-sm whitespace-nowrap">{t.ticketNumber}</td>
                   <td className="p-3 text-sm min-w-[200px] max-w-[300px]" title={t.issueTitle}>
                     <div className="truncate">{t.issueTitle}</div>
                   </td>
                   <td className="p-3 text-sm whitespace-nowrap">{t.issueType}</td>
                   <td className="p-3 whitespace-nowrap">
                     {(() => {
-                      const st = PRIORITY_STYLES[t.priority]
+                      const st = getPriorityStyle(t.priority)
                       return (
                         <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
                           {t.priority}
@@ -557,7 +625,7 @@ export default function VendorSupport() {
                   </td>
                   <td className="p-3 whitespace-nowrap">
                     {(() => {
-                      const st = STATUS_STYLES[t.status]
+                      const st = getStatusStyle(t.status)
                       return (
                         <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
                           {t.status}
@@ -566,7 +634,7 @@ export default function VendorSupport() {
                     })()}
                   </td>
                   <td className="p-3 text-sm whitespace-nowrap">{t.assignedTo}</td>
-                  <td className="p-3 text-sm whitespace-nowrap">{t.createdAt} / {t.updatedAt}</td>
+                  <td className="p-3 text-sm whitespace-nowrap">{format(new Date(t.createdAt), 'PP p')} / {format(new Date(t.updatedAt), 'PP p')}</td>
                   <td className="p-3 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       <button onClick={() => setDrawerTicket(t)} className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95 whitespace-nowrap cursor-pointer">View</button>
@@ -608,13 +676,13 @@ export default function VendorSupport() {
         ) : (
           paginatedTickets.map((t) => (
             <div key={t.id} className="rounded-xl p-4 border border-gray-200 bg-white shadow-sm">
-              <div className="flex items-start justify-between mb-3 gap-3">
+                <div className="flex items-start justify-between mb-3 gap-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-secondary text-base sm:text-lg">{t.id}</h3>
+                  <h3 className="font-semibold text-secondary text-base sm:text-lg">{t.ticketNumber}</h3>
                 </div>
                 <div className="flex-shrink-0">
                   {(() => {
-                    const st = STATUS_STYLES[t.status]
+                    const st = getStatusStyle(t.status)
                     return (
                       <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
                         {t.status}
@@ -637,7 +705,7 @@ export default function VendorSupport() {
                   <span className="text-gray-500 block text-xs">Priority</span>
                   <div className="mt-1">
                     {(() => {
-                      const st = PRIORITY_STYLES[t.priority]
+                      const st = getPriorityStyle(t.priority)
                       return (
                         <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
                           {t.priority}
@@ -652,7 +720,7 @@ export default function VendorSupport() {
                 </div>
                 <div>
                   <span className="text-gray-500 block text-xs">Created</span>
-                  <span className="font-medium text-gray-900">{t.createdAt}</span>
+                  <span className="font-medium text-gray-900">{format(new Date(t.createdAt), 'PP p')}</span>
                 </div>
               </div>
 
@@ -792,7 +860,7 @@ export default function VendorSupport() {
               <div className="flex items-start justify-between mb-3 sm:mb-4">
                 <div>
                   <div className="text-xs text-gray-500">Ticket</div>
-                  <div className="text-base sm:text-lg md:text-xl font-semibold text-secondary">{drawerTicket.id}</div>
+                  <div className="text-base sm:text-lg md:text-xl font-semibold text-secondary">{drawerTicket.ticketNumber}</div>
                 </div>
                 <button onClick={closeDrawer} className="text-gray-500 hover:text-gray-700 text-2xl leading-none p-1 -mt-1 -mr-1">✕</button>
               </div>
@@ -811,7 +879,7 @@ export default function VendorSupport() {
                     <div className="text-xs text-gray-500 mb-1">Priority</div>
                     <div>
                       {(() => {
-                        const st = PRIORITY_STYLES[drawerTicket.priority]
+                        const st = getPriorityStyle(drawerTicket.priority)
                         return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>{drawerTicket.priority}</span>
                       })()}
                     </div>
@@ -820,7 +888,7 @@ export default function VendorSupport() {
                     <div className="text-xs text-gray-500 mb-1">Status</div>
                     <div>
                       {(() => {
-                        const st = STATUS_STYLES[drawerTicket.status]
+                        const st = getStatusStyle(drawerTicket.status)
                         return <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>{drawerTicket.status}</span>
                       })()}
                     </div>

@@ -2,7 +2,7 @@ import { prisma } from '../../config/database';
 import { logger } from '../../utils/logger';
 
 // Define MessageType enum locally
-enum MessageType {
+export enum MessageType {
   TEXT = 'TEXT',
   FILE = 'FILE', 
   IMAGE = 'IMAGE',

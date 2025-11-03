@@ -5,6 +5,8 @@ import { prisma } from './config/database';
 import { redisConfig } from './config/redis.config';
 import { SchedulerService } from './services/scheduler.service';
 import { initializeFirebase } from './config/firebase.config';
+import { createServer } from 'http';
+import { TicketChatGateway } from './modules/tickets/ticket-chat.gateway';
 
 const startServer = async () => {
   try {
@@ -32,11 +34,19 @@ const startServer = async () => {
     const scheduler = SchedulerService.getInstance();
     scheduler.startTokenCleanup();
 
+    // Create HTTP server
+    const httpServer = createServer(app);
+
+    // Initialize WebSocket gateway for ticket chat
+    const ticketChatGateway = new TicketChatGateway(httpServer);
+    logger.info('📡 WebSocket gateway initialized for ticket chat');
+
     // Start server
-    const server = app.listen(env.PORT, () => {
+    const server = httpServer.listen(env.PORT, () => {
       logger.info(`🚀 Server running on port ${env.PORT}`);
       logger.info(`📍 Environment: ${env.NODE_ENV}`);
       logger.info(`🔗 Health check: http://localhost:${env.PORT}/health`);
+      logger.info(`💬 WebSocket available at ws://localhost:${env.PORT}`);
     });
 
     // Graceful shutdown
