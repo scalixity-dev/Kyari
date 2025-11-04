@@ -5,6 +5,7 @@ import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
 import { io, Socket } from 'socket.io-client'
 import { TokenManager } from '../../../services/api'
+import { sendTicketMessage } from '../../../utils/ticketMessaging'
 import { TicketApi, type TicketListItem } from '../../../services/ticketApi'
 
 type IssueType = 'Payment' | 'SLA Breach' | 'Order Delay' | 'Onboarding' | 'Others'
@@ -137,7 +138,7 @@ export default function VendorSupport() {
         })
         
         if (response.success) {
-          console.log('[Admin Tickets] raw response', response.data.tickets)
+         
           // Transform API data to match UI expectations
           const transformedTickets: Ticket[] = response.data.tickets.map((apiTicket: TicketListItem) => {
             const vendorCompany = apiTicket.goodsReceiptNote?.dispatch?.vendor?.companyName
@@ -147,16 +148,7 @@ export default function VendorSupport() {
             const createdByEmail = (apiTicket as any).createdBy?.email
             const vendorName = vendorCompany || vendorUserName || vendorUserEmail || createdByName || createdByEmail || 'Unknown Vendor'
 
-            console.log('[Admin Tickets] mapped vendor', {
-              id: apiTicket.id,
-              ticketNumber: apiTicket.ticketNumber,
-              vendorCompany,
-              vendorUserName,
-              vendorUserEmail,
-              createdByName,
-              createdByEmail,
-              final: vendorName,
-            })
+           
 
             return {
               id: apiTicket.id,
@@ -298,37 +290,19 @@ export default function VendorSupport() {
 
   async function sendMessage() {
     if (!drawerTicket) return
-
-    // If file attached, upload via REST first
-    if (chatAttachment) {
-      try {
-        const token = localStorage.getItem('accessToken') || ''
-        const form = new FormData()
-        form.append('file', chatAttachment)
-        if (messageText.trim()) form.append('message', messageText.trim())
-        await fetch(`/api/tickets/${drawerTicket.id}/chat/upload`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: form
-        })
+    const result = await sendTicketMessage({
+      ticketId: drawerTicket.id,
+      messageText,
+      attachment: chatAttachment,
+      socket: socketRef.current,
+      onCleared: () => {
         setMessageText('')
         setChatAttachment(null)
-        return
-      } catch (e) {
-        console.error('Upload failed', e)
-        return
-      }
-    }
-
-    if (!messageText.trim()) return
-    if (!socketRef.current) return
-    
-    socketRef.current.emit('send_message', {
-      ticketId: drawerTicket.id,
-      message: messageText.trim(),
-      messageType: 'TEXT'
+      },
     })
-    setMessageText('')
+    if (!result.success && result.error) {
+      console.error('Failed to send message:', result.error)
+    }
   }
 
   // Animate drawer open/close

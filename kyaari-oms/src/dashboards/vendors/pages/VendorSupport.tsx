@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
+import { sendTicketMessage } from '../../../utils/ticketMessaging'
 import { Plus, Send, Paperclip, Clock, AlertTriangle, CheckSquare, Calendar as CalendarIcon } from 'lucide-react'
 import { CustomDropdown, KPICard, CSVPDFExportButton } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
@@ -210,7 +211,7 @@ export default function VendorSupport() {
       return
     }
     try {
-      const mappedPriority = ((draftPriority as string) || '').toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+      const mappedPriority = draftPriority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
       const res = await TicketApi.create({
         title: draftIssueTitle,
         description: draftDescription,
@@ -254,36 +255,19 @@ export default function VendorSupport() {
 
   async function sendMessage() {
     if (!drawerTicket) return
-
-    // If file attached, upload via REST first
-    if (chatAttachment) {
-      try {
-        const token = localStorage.getItem('accessToken') || ''
-        const form = new FormData()
-        form.append('file', chatAttachment)
-        if (messageText.trim()) form.append('message', messageText.trim())
-        await fetch(`/api/tickets/${drawerTicket.id}/chat/upload`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: form
-        })
+    const result = await sendTicketMessage({
+      ticketId: drawerTicket.id,
+      messageText,
+      attachment: chatAttachment,
+      socket: socketRef.current,
+      onCleared: () => {
         setMessageText('')
         setChatAttachment(null)
-        return
-      } catch (e) {
-        console.error('Upload failed', e)
-        return
-      }
-    }
-
-    if (!messageText.trim()) return
-    if (!socketRef.current) return
-    socketRef.current.emit('send_message', {
-      ticketId: drawerTicket.id,
-      message: messageText.trim(),
-      messageType: 'TEXT'
+      },
     })
-    setMessageText('')
+    if (!result.success && result.error) {
+      console.error('Failed to send message:', result.error)
+    }
   }
 
   // Animate drawer open/close
@@ -325,8 +309,8 @@ export default function VendorSupport() {
       })
 
       // history on join
-      socketRef.current.on('messages_history', (data: { messages: { messages: any[] } | any[] }) => {
-        const list = Array.isArray(data) ? data : (Array.isArray((data as any).messages) ? (data as any).messages : [])
+      socketRef.current.on('messages_history', (data: { messages: any[] }) => {
+        const list = (data as any).messages || []
         const mapped = list.map((msg: any): Message => ({
           id: msg.id,
           sender: (msg.sender?.role === 'VENDOR' ? 'vendor' : 'admin'),

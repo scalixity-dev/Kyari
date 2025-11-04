@@ -1,4 +1,5 @@
 import { prisma } from '../../config/database';
+import { Prisma } from '@prisma/client';
 
 export interface TicketListFilters {
   status?: 'open' | 'under-review' | 'resolved' | 'closed' | 'all';
@@ -49,6 +50,30 @@ export interface ResolutionTimeTrendData {
 }
 
 export class TicketService {
+  private static async generateNextTicketNumber(
+    tx: Prisma.TransactionClient
+  ): Promise<string> {
+    // Find the latest ticket with a TKT- prefix and increment its numeric part
+    const latest = await tx.ticket.findFirst({
+      where: { ticketNumber: { startsWith: 'TKT-' } },
+      orderBy: { createdAt: 'desc' },
+      select: { ticketNumber: true },
+    });
+
+    let nextNumber = 1;
+    if (latest?.ticketNumber) {
+      const match = latest.ticketNumber.match(/^TKT-(\d+)$/);
+      if (match) {
+        const lastNumber = parseInt(match[1], 10);
+        if (!Number.isNaN(lastNumber)) {
+          nextNumber = lastNumber + 1;
+        }
+      }
+    }
+
+    const padded = String(nextNumber).padStart(6, '0');
+    return `TKT-${padded}`;
+  }
   static async createTicket(params: {
     title: string;
     description: string;
@@ -56,38 +81,46 @@ export class TicketService {
     createdById: string;
     goodsReceiptNoteId?: string | null;
   }) {
-    const ticketNumber = `TKT-${Date.now()}`;
+    const created = await prisma.$transaction(
+      async (tx) => {
+        const ticketNumber = await TicketService.generateNextTicketNumber(tx);
 
-    const created = await prisma.ticket.create({
-      data: {
-        ticketNumber,
-        title: params.title,
-        description: params.description,
-        priority: params.priority as any,
-        status: 'OPEN' as any,
-        createdById: params.createdById,
-        goodsReceiptNoteId: params.goodsReceiptNoteId ?? null,
-      },
-      include: {
-        goodsReceiptNote: {
+        const createdTicket = await tx.ticket.create({
+          data: {
+            ticketNumber,
+            title: params.title,
+            description: params.description,
+            // Casting kept as-is to align with existing enum mapping in schema
+            priority: params.priority as any,
+            status: 'OPEN' as any,
+            createdById: params.createdById,
+            goodsReceiptNoteId: params.goodsReceiptNoteId ?? null,
+          },
           include: {
-            dispatch: {
+            goodsReceiptNote: {
               include: {
-                vendor: { include: { user: true } },
-                items: {
+                dispatch: {
                   include: {
-                    assignedOrderItem: {
-                      include: { orderItem: { include: { order: true } } },
+                    vendor: { include: { user: true } },
+                    items: {
+                      include: {
+                        assignedOrderItem: {
+                          include: { orderItem: { include: { order: true } } },
+                        },
+                      },
                     },
                   },
                 },
               },
             },
+            _count: { select: { comments: true, attachments: true } },
           },
-        },
-        _count: { select: { comments: true, attachments: true } },
+        });
+
+        return createdTicket;
       },
-    });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
 
     return created;
   }

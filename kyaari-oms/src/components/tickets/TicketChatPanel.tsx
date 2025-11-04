@@ -113,12 +113,7 @@ export default function TicketChatPanel({ ticketId, isOpen, onClose, ticketData 
       console.log('[Chat] Emitting join_ticket', { ticketId })
       socketRef.current.emit('join_ticket', { ticketId })
 
-      // Post-connection probe
-      setTimeout(() => {
-        const connected = !!socketRef.current?.connected
-        console.log('[Chat] Post-init probe', { connected, socketId: socketRef.current?.id })
-        ;(window as any).chatSocket = socketRef.current
-      }, 500)
+    
     }
 
     init()
