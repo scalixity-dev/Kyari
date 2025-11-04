@@ -150,7 +150,7 @@ export class AccountsAssignmentService {
         }
 
         vendorOrders.push({
-          id: key,
+          id: key.substring(0,17),
           vendorId: firstAssignment.vendorId,
           vendorName: firstAssignment.vendor.companyName || 'Unknown Vendor',
           items,
@@ -314,7 +314,7 @@ export class AccountsAssignmentService {
           },
           orderItem: {
             order: {
-              orderNumber
+              id: orderNumber
             }
           }
         },
@@ -433,7 +433,7 @@ export class AccountsAssignmentService {
       }
 
       return {
-        id,
+        id: id.substring(0,25),
         vendorId,
         vendorName: firstAssignment.vendor.companyName || 'Unknown Vendor',
         items,

@@ -79,3 +79,31 @@
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
 }
+
+
+/* --- Global Scrollbar Styling for .custom-app-scrollbar --- */
+/* 1. For WebKit (Chrome, Safari, newer Edge) */
+.custom-app-scrollbar::-webkit-scrollbar {
+  width: 10px; 
+}
+/* FIX: Explicitly remove the up/down arrows by setting the button size to zero */
+.custom-app-scrollbar::-webkit-scrollbar-button {
+  height: 0;
+  background-color: transparent; 
+}
+/* Remove Background: Set the track background to transparent */
+.custom-app-scrollbar::-webkit-scrollbar-track {
+  background: transparent; 
+}
+/* Set Thumb Color */
+.custom-app-scrollbar::-webkit-scrollbar-thumb {
+  background: #1D4D43; 
+  border-radius: 6px; 
+}
+.custom-app-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #2b6158;
+}
+.custom-app-scrollbar {
+  scrollbar-width: thin; 
+  scrollbar-color: #1D4D43 transparent; 
+}

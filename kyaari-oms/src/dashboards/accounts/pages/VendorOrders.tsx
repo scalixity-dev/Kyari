@@ -107,6 +107,25 @@ export default function VendorOrders() {
     setIsDetailPanelOpen(false)
     setTimeout(() => setSelectedOrder(null), 300)
   }
+
+  //functions for vendor filter
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const filteredVendors = vendors.filter(vendor =>
+    vendor.toLowerCase().includes(filterVendor.toLowerCase())
+  );
+  const handleSelectVendor = (vendorName: string) => {
+    console.log(vendorName);
+    setFilterVendor(vendorName);
+    setShowSuggestions(false);
+  };
+  const handleInputFocus = () => {
+      setShowSuggestions(true);
+  };
+  const handleSuggestionMouseDown = (vendor: string) => (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    handleSelectVendor(vendor);
+  };
+
   
   useEffect(() => {
     if (selectedOrder) {
@@ -180,19 +199,48 @@ export default function VendorOrders() {
               className="w-full px-3 xl:px-3.5 2xl:px-4 py-2 xl:py-2.5 2xl:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-xs xl:text-sm 2xl:text-base hover:border-accent transition-all duration-200"
             />
           </div>
-          
-          <div>
+
+          <div className="relative">
             <label className="block text-xs xl:text-sm 2xl:text-base font-medium text-secondary mb-1 xl:mb-1.5 2xl:mb-2">Vendor</label>
-            <CustomDropdown
+            <input
+              type="text"
+              placeholder="Search Vendor Name"
               value={filterVendor}
-              onChange={(value) => setFilterVendor(value)}
-              options={[
-                { value: '', label: 'All Vendors' },
-                ...vendors.map(vendor => ({ value: vendor, label: vendor }))
-              ]}
-              placeholder="All Vendors"
-              className="[&>button]:py-2 [&>button]:xl:py-2.5 [&>button]:2xl:py-3 [&>button]:px-3 [&>button]:xl:px-3.5 [&>button]:2xl:px-4 [&>button]:text-xs [&>button]:xl:text-sm [&>button]:2xl:text-base"
+              onChange={(e) => {
+                setFilterVendor(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={handleInputFocus}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              className="w-full px-3 xl:px-3.5 2xl:px-4 py-2 xl:py-2.5 2xl:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-xs xl:text-sm 2xl:text-base hover:border-accent transition-all duration-200"
             />
+
+            {showSuggestions && (
+              <div className="absolute z-10 w-full mt-1 border border-gray-300 bg-white rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <div
+                  className="cursor-pointer p-3 text-sm text-gray-500 hover:bg-gray-100"
+                  onMouseDown={handleSuggestionMouseDown("")}
+                >
+                  All Vendors
+                </div>
+
+                {filteredVendors.length > 0 ? (
+                  filteredVendors.map((vendor, index) => (
+                    <div
+                      key={index}
+                      className="cursor-pointer p-3 text-sm hover:bg-gray-100"
+                      onMouseDown={handleSuggestionMouseDown(vendor)} 
+                    >
+                      {vendor}
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-3 text-sm text-gray-500">
+                    No vendors found.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           
           <div>

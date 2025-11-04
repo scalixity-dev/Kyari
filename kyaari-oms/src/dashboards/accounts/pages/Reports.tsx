@@ -519,7 +519,11 @@ function AccountsReports() {
                   </span>
                 )}
                 {agingStatusFilter !== 'all' && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1
+                    bg-${agingStatusFilter === 'overdue' ? 'red-100' : agingStatusFilter === 'warning' ? 'yellow-100' : 'green-100'}
+                    text-${agingStatusFilter === 'overdue' ? 'red-700' : agingStatusFilter === 'warning' ? 'yellow-700' : 'green-700'}
+                    rounded-full text-xs font-medium`}
+                  >
                     Status: {agingStatusFilter === 'overdue' ? 'Overdue' : agingStatusFilter === 'warning' ? 'Warning' : 'Good'}
                     <button onClick={() => setAgingStatusFilter('all')} className="hover:bg-purple-200 rounded-full p-0.5">
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -778,7 +782,11 @@ function AccountsReports() {
                   </span>
                 )}
                 {complianceFilter !== 'all' && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1
+                    bg-${complianceFilter === 'low' ? 'red-100' : complianceFilter === 'medium' ? 'yellow-100' : 'green-100'}
+                    text-${complianceFilter === 'low' ? 'red-700' : complianceFilter === 'medium' ? 'yellow-700' : 'green-700'}
+                    rounded-full text-xs font-medium`}
+                  >
                     Compliance: {complianceFilter === 'high' ? 'High' : complianceFilter === 'medium' ? 'Medium' : 'Low'}
                     <button onClick={() => setComplianceFilter('all')} className="hover:bg-green-200 rounded-full p-0.5">
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
