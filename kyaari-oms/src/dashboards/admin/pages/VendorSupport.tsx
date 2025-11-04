@@ -3,10 +3,36 @@ import { Plus, Send, Paperclip, FileText, AlertTriangle, CheckSquare, Clock, Cal
 import { CustomDropdown, KPICard, Pagination, CSVPDFExportButton } from '../../../components'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
+import { io, Socket } from 'socket.io-client'
+import { TokenManager } from '../../../services/api'
+import { sendTicketMessage } from '../../../utils/ticketMessaging'
+import { TicketApi, type TicketListItem } from '../../../services/ticketApi'
 
 type IssueType = 'Payment' | 'SLA Breach' | 'Order Delay' | 'Onboarding' | 'Others'
 type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent'
 type TicketStatus = 'Open' | 'In-progress' | 'Escalated' | 'Resolved' | 'Closed'
+
+// Helper to map backend status to UI status
+const mapStatusToUI = (backendStatus: string): TicketStatus => {
+  const map: Record<string, TicketStatus> = {
+    'OPEN': 'Open',
+    'IN_PROGRESS': 'In-progress',
+    'RESOLVED': 'Resolved',
+    'CLOSED': 'Closed'
+  }
+  return map[backendStatus] || 'Open'
+}
+
+// Helper to map backend priority to UI priority
+const mapPriorityToUI = (backendPriority: string): TicketPriority => {
+  const map: Record<string, TicketPriority> = {
+    'LOW': 'Low',
+    'MEDIUM': 'Medium',
+    'HIGH': 'High',
+    'URGENT': 'Urgent'
+  }
+  return map[backendPriority] || 'Medium'
+}
 
 type Message = {
   id: string
@@ -45,84 +71,9 @@ const STATUS_STYLES: Record<TicketStatus, { bg: string; color: string; border: s
 }
 
 
-const INITIAL_TICKETS: Ticket[] = [
-  { 
-    id: 'TKT-5001', 
-    vendor: 'GreenLeaf Co', 
-    issue: 'Payment', 
-    priority: 'High', 
-    status: 'Open', 
-    assignedTo: 'Anita', 
-    createdAt: '2025-09-20', 
-    updatedAt: '2025-09-20',
-    messages: [
-      { id: 'msg-1', sender: 'vendor', senderName: 'GreenLeaf Co', text: 'We have not received payment for Invoice #INV-2301 which was due on Sept 15. Please check the status.', timestamp: '2025-09-20 10:30 AM' },
-      { id: 'msg-2', sender: 'admin', senderName: 'Anita', text: 'Thank you for reaching out. I am looking into this issue and will get back to you shortly.', timestamp: '2025-09-20 11:15 AM' },
-    ]
-  },
-  { 
-    id: 'TKT-5002', 
-    vendor: 'Urban Roots', 
-    issue: 'SLA Breach', 
-    priority: 'Urgent', 
-    status: 'Escalated', 
-    assignedTo: 'Rahul', 
-    createdAt: '2025-09-18', 
-    updatedAt: '2025-09-21',
-    messages: [
-      { id: 'msg-3', sender: 'vendor', senderName: 'Urban Roots', text: 'Order #ORD-1234 was supposed to be delivered 3 days ago. This is a serious SLA breach!', timestamp: '2025-09-18 02:45 PM' },
-      { id: 'msg-4', sender: 'admin', senderName: 'Rahul', text: 'We sincerely apologize for the delay. This has been escalated to our logistics team.', timestamp: '2025-09-18 03:20 PM' },
-      { id: 'msg-5', sender: 'vendor', senderName: 'Urban Roots', text: 'We need immediate resolution. Our customer is very upset.', timestamp: '2025-09-19 09:00 AM' },
-      { id: 'msg-6', sender: 'admin', senderName: 'Rahul', text: 'Update: The order is now out for delivery and will reach you by end of day today.', timestamp: '2025-09-21 10:30 AM' },
-    ]
-  },
-  { 
-    id: 'TKT-5003', 
-    vendor: 'Plantify', 
-    issue: 'Order Delay', 
-    priority: 'Medium', 
-    status: 'In-progress', 
-    assignedTo: 'Kiran', 
-    createdAt: '2025-09-19', 
-    updatedAt: '2025-09-22',
-    messages: [
-      { id: 'msg-7', sender: 'vendor', senderName: 'Plantify', text: 'Order #ORD-5678 is showing delayed status. Can you provide an update?', timestamp: '2025-09-19 11:00 AM' },
-      { id: 'msg-8', sender: 'admin', senderName: 'Kiran', text: 'Checking with the warehouse team. Will update you within an hour.', timestamp: '2025-09-19 11:30 AM' },
-    ]
-  },
-  { 
-    id: 'TKT-5004', 
-    vendor: 'Clay Works', 
-    issue: 'Onboarding', 
-    priority: 'Low', 
-    status: 'Resolved', 
-    assignedTo: 'Meera', 
-    createdAt: '2025-09-10', 
-    updatedAt: '2025-09-15',
-    messages: [
-      { id: 'msg-9', sender: 'vendor', senderName: 'Clay Works', text: 'We need help setting up our vendor profile and uploading our product catalog.', timestamp: '2025-09-10 03:00 PM' },
-      { id: 'msg-10', sender: 'admin', senderName: 'Meera', text: 'I will guide you through the onboarding process. Let me schedule a call with you.', timestamp: '2025-09-10 04:00 PM' },
-      { id: 'msg-11', sender: 'admin', senderName: 'Meera', text: 'Your onboarding is complete. Please let me know if you need any further assistance.', timestamp: '2025-09-15 02:30 PM' },
-      { id: 'msg-12', sender: 'vendor', senderName: 'Clay Works', text: 'Thank you for all your help! Everything looks good now.', timestamp: '2025-09-15 03:00 PM' },
-    ]
-  },
-  { 
-    id: 'TKT-5005', 
-    vendor: 'EcoGarden Solutions', 
-    issue: 'Others', 
-    priority: 'High', 
-    status: 'Open', 
-    assignedTo: 'Arjun', 
-    createdAt: '2025-09-25', 
-    updatedAt: '2025-09-25',
-    messages: [
-      { id: 'msg-13', sender: 'vendor', senderName: 'EcoGarden Solutions', text: 'We are unable to access the dashboard. Getting error 500.', timestamp: '2025-09-25 09:15 AM' },
-    ]
-  },
-]
-
 export default function VendorSupport() {
-  const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS)
+  const [tickets, setTickets] = useState<Ticket[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   // filters
   const [filterVendor, setFilterVendor] = useState('')
@@ -137,9 +88,6 @@ export default function VendorSupport() {
   // pagination
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
-
-  // Loading state for tickets table (shows Orders-style loading UI)
-  const [isLoadingTickets, setIsLoadingTickets] = useState(false)
 
   // modal + drawer
   const [showNewTicket, setShowNewTicket] = useState(false)
@@ -176,6 +124,57 @@ export default function VendorSupport() {
   const [chatAttachment, setChatAttachment] = useState<File | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const socketRef = useRef<Socket | null>(null)
+
+  // Fetch tickets from API
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        setIsLoading(true)
+        const response = await TicketApi.list({
+          status: 'all',
+          page: 1,
+          limit: 100
+        })
+        
+        if (response.success) {
+         
+          // Transform API data to match UI expectations
+          const transformedTickets: Ticket[] = response.data.tickets.map((apiTicket: TicketListItem) => {
+            const vendorCompany = apiTicket.goodsReceiptNote?.dispatch?.vendor?.companyName
+            const vendorUserName = (apiTicket as any).goodsReceiptNote?.dispatch?.vendor?.user?.name
+            const vendorUserEmail = (apiTicket as any).goodsReceiptNote?.dispatch?.vendor?.user?.email
+            const createdByName = (apiTicket as any).createdBy?.name
+            const createdByEmail = (apiTicket as any).createdBy?.email
+            const vendorName = vendorCompany || vendorUserName || vendorUserEmail || createdByName || createdByEmail || 'Unknown Vendor'
+
+           
+
+            return {
+              id: apiTicket.id,
+              ticketNumber: apiTicket.ticketNumber,
+              vendor: vendorName,
+              issue: 'Payment' as IssueType, // Default, could be derived from ticket title/description
+              priority: mapPriorityToUI(apiTicket.priority),
+              status: mapStatusToUI(apiTicket.status),
+              assignedTo: (apiTicket as any).assignee?.name || '-',
+              createdAt: format(new Date(apiTicket.createdAt), 'PP p'),
+              updatedAt: format(new Date(apiTicket.updatedAt), 'PP p'),
+              messages: []
+            }
+          })
+
+          setTickets(transformedTickets)
+        }
+      } catch (error) {
+        console.error('Failed to fetch tickets:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchTickets()
+  }, [])
 
   const vendors = useMemo(() => Array.from(new Set(tickets.map(t => t.vendor))).sort(), [tickets])
 
@@ -183,6 +182,16 @@ export default function VendorSupport() {
   const slaBreaches = tickets.filter(t => t.issue === 'SLA Breach').length
   const resolvedThisWeek = tickets.filter(t => t.status === 'Resolved').length
   const avgResolutionHours = 4.2
+
+  // Cleanup socket on unmount
+  useEffect(() => {
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect()
+        socketRef.current = null
+      }
+    }
+  }, [])
 
   const filteredTickets = useMemo(() => {
     return tickets.filter(t => {
@@ -219,28 +228,46 @@ export default function VendorSupport() {
     setSearch('')
   }
 
-  function addTicket() {
+  async function addTicket() {
     if (!draftVendor || !draftIssue || !draftPriority || !draftDescription) {
       alert('Please fill all required fields')
       return
     }
-    const newTicket: Ticket = {
-      id: `TKT-${6000 + tickets.length}`,
-      vendor: draftVendor,
-      issue: draftIssue as IssueType,
-      priority: draftPriority as TicketPriority,
-      status: 'Open',
-      assignedTo: '-',
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0],
+    try {
+      const payload = {
+        title: `${draftIssue || 'Issue'} - ${draftVendor || 'Vendor'}`,
+        description: draftDescription,
+        priority: (draftPriority === 'Low' ? 'LOW' : draftPriority === 'Medium' ? 'MEDIUM' : draftPriority === 'High' ? 'HIGH' : 'URGENT') as 'LOW'|'MEDIUM'|'HIGH'|'URGENT',
+      }
+      const res = await TicketApi.create(payload)
+      if (res.success) {
+        const t = res.data
+        const newTicket: Ticket = {
+          id: t.id,
+          vendor: draftVendor,
+          issue: draftIssue as IssueType,
+          priority: mapPriorityToUI(t.priority),
+          status: mapStatusToUI(t.status),
+          assignedTo: '-',
+          createdAt: t.createdAt,
+          updatedAt: t.updatedAt,
+          messages: []
+        }
+        setTickets(prev => [newTicket, ...prev])
+        setShowNewTicket(false)
+        setDraftVendor('')
+        setDraftIssue('')
+        setDraftPriority('')
+        setDraftDescription('')
+        setDraftFile(null)
+        // Open drawer and join chat for the new ticket
+        setDrawerTicket(newTicket)
+        setIsDrawerOpen(true)
+      }
+    } catch (e) {
+      console.error('Failed to create ticket', e)
+      alert('Failed to create ticket')
     }
-    setTickets(prev => [newTicket, ...prev])
-    setShowNewTicket(false)
-    setDraftVendor('')
-    setDraftIssue('')
-    setDraftPriority('')
-    setDraftDescription('')
-    setDraftFile(null)
   }
 
   function assignTicket(t: Ticket) {
@@ -261,47 +288,21 @@ export default function VendorSupport() {
     setTickets(prev => prev.map(x => x.id === t.id ? { ...x, status: 'Escalated', updatedAt: new Date().toISOString().split('T')[0] } : x))
   }
 
-  function sendMessage() {
-    if (!messageText.trim() || !drawerTicket) return
-
-    const now = new Date()
-    const timestamp = now.toLocaleString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric',
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
+  async function sendMessage() {
+    if (!drawerTicket) return
+    const result = await sendTicketMessage({
+      ticketId: drawerTicket.id,
+      messageText,
+      attachment: chatAttachment,
+      socket: socketRef.current,
+      onCleared: () => {
+        setMessageText('')
+        setChatAttachment(null)
+      },
     })
-
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      sender: 'admin',
-      senderName: drawerTicket.assignedTo || 'Admin',
-      text: messageText,
-      timestamp,
-      attachments: chatAttachment ? [{ name: chatAttachment.name, url: '#' }] : undefined
+    if (!result.success && result.error) {
+      console.error('Failed to send message:', result.error)
     }
-
-    setTickets(prev => prev.map(ticket => {
-      if (ticket.id === drawerTicket.id) {
-        return {
-          ...ticket,
-          messages: [...(ticket.messages || []), newMessage],
-          updatedAt: now.toISOString().split('T')[0]
-        }
-      }
-      return ticket
-    }))
-
-    // Update the drawer ticket to reflect the new message
-    setDrawerTicket(prev => prev ? {
-      ...prev,
-      messages: [...(prev.messages || []), newMessage]
-    } : null)
-
-    setMessageText('')
-    setChatAttachment(null)
   }
 
   // Animate drawer open/close
@@ -313,11 +314,60 @@ export default function VendorSupport() {
   }
   
   useEffect(() => {
-    if (drawerTicket) {
-      const rafId = requestAnimationFrame(() => setIsDrawerOpen(true))
-      return () => cancelAnimationFrame(rafId)
+    if (!drawerTicket) return
+
+    // Open drawer animation
+    const rafId = requestAnimationFrame(() => setIsDrawerOpen(true))
+
+    // Ensure socket connection
+    const token = TokenManager.getAccessToken() || ''
+    if (!socketRef.current) {
+      const SOCKET_URL = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3000'
+      socketRef.current = io(SOCKET_URL, {
+        path: '/socket.io',
+        auth: { token },
+        transports: ['websocket', 'polling']
+      })
+
+      // Handle incoming new messages
+      socketRef.current.on('new_message', (payload: { message: any; ticketId: string }) => {
+        const msg = payload.message
+        const mapped: Message = {
+          id: msg.id,
+          sender: (msg.sender?.role === 'VENDOR' ? 'vendor' : 'admin'),
+          senderName: msg.sender?.name || 'User',
+          text: msg.message || '',
+          timestamp: new Date(msg.createdAt).toLocaleString(),
+          attachments: Array.isArray(msg.attachments) ? msg.attachments.map((a: { fileName: string; url: string }) => ({ name: a.fileName, url: a.url })) : undefined
+        }
+        setDrawerTicket(prev => prev ? { ...prev, messages: [...(prev.messages || []), mapped] } : prev)
+      })
+
+      // Handle message history on join
+      socketRef.current.on('messages_history', (data: { messages: any[] } | any[]) => {
+        const list = Array.isArray(data) ? data : (Array.isArray((data as any).messages) ? (data as any).messages : [])
+        const mapped = list.map((msg: any): Message => ({
+          id: msg.id,
+          sender: (msg.sender?.role === 'VENDOR' ? 'vendor' : 'admin'),
+          senderName: msg.sender?.name || 'User',
+          text: msg.message || '',
+          timestamp: new Date(msg.createdAt).toLocaleString(),
+          attachments: Array.isArray(msg.attachments) ? msg.attachments.map((a: { fileName: string; url: string }) => ({ name: a.fileName, url: a.url })) : undefined
+        }))
+        setDrawerTicket(prev => prev ? { ...prev, messages: mapped } : prev)
+      })
     }
-    return undefined
+
+    // Join ticket room
+    console.log('[Admin Chat] Emitting join_ticket', { ticketId: drawerTicket.id, ticketNumber: (drawerTicket as any).ticketNumber })
+    socketRef.current.emit('join_ticket', { ticketId: drawerTicket.id })
+
+    return () => {
+      cancelAnimationFrame(rafId)
+      if (socketRef.current) {
+        socketRef.current.emit('leave_ticket', { ticketId: drawerTicket.id })
+      }
+    }
   }, [drawerTicket])
 
   // Auto-scroll to bottom when messages change
@@ -557,7 +607,7 @@ export default function VendorSupport() {
 
       {/* Table - Desktop view */}
       <div className="hidden lg:block bg-white rounded-xl overflow-hidden shadow-md border border-gray-100">
-        {isLoadingTickets ? (
+        {isLoading ? (
           <div className="p-12 text-center">
             <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-500">Loading tickets...</p>
@@ -689,7 +739,7 @@ export default function VendorSupport() {
 
       {/* Card View - Mobile */}
       <div className="lg:hidden space-y-3">
-        {isLoadingTickets ? (
+        {isLoading ? (
           <div className="bg-white rounded-xl p-12 text-center">
             <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-500">Loading tickets...</p>

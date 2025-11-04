@@ -26,6 +26,38 @@ const resolutionTimeTrendsSchema = z.object({
 });
 
 export class TicketController {
+  static async create(req: Request, res: Response) {
+    const schema = z.object({
+      title: z.string().min(1).transform(v => v.trim()).refine(v => v.length > 0, 'Title is required'),
+      description: z.string().min(1).transform(v => v.trim()).refine(v => v.length > 0, 'Description is required'),
+      priority: z.enum(['LOW','MEDIUM','HIGH','URGENT']),
+      goodsReceiptNoteId: z.string().optional(),
+    });
+    try {
+      const userId = req.user?.userId as string;
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'User authentication required' });
+      }
+      const parse = schema.safeParse(req.body);
+      if (!parse.success) {
+        return res.status(400).json({ success: false, error: 'Invalid input', details: parse.error.flatten() });
+      }
+
+      const { title, description, priority, goodsReceiptNoteId } = parse.data;
+      const ticket = await TicketService.createTicket({
+        title,
+        description,
+        priority,
+        goodsReceiptNoteId,
+        createdById: userId,
+      });
+
+      return res.status(201).json({ success: true, data: ticket });
+    } catch (error: any) {
+      logger.error('Failed to create ticket', { error: error.message });
+      return res.status(500).json({ success: false, error: 'Failed to create ticket' });
+    }
+  }
   static async listMyTickets(req: Request, res: Response) {
     try {
       const userId = req.user?.userId as string;
@@ -37,8 +69,12 @@ export class TicketController {
       if (!parse.success) {
         return res.status(400).json({ success: false, error: 'Invalid query params', details: parse.error.errors });
       }
+      const roles: string[] = (req.user as any)?.roles || [];
+      const isPrivileged = roles.includes('ADMIN') || roles.includes('OPS') || roles.includes('ACCOUNTS');
 
-      const result = await TicketService.listTicketsByUser(userId, parse.data);
+      const result = isPrivileged
+        ? await TicketService.listTicketsAll(parse.data)
+        : await TicketService.listTicketsByUser(userId, parse.data);
       return res.json({ success: true, data: result });
     } catch (error: any) {
       logger.error('Failed to list tickets', { error: error.message });

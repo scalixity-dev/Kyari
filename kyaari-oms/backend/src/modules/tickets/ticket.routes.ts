@@ -50,6 +50,16 @@ router.get(
   TicketController.listMyTickets
 );
 
+// Create ticket
+router.post(
+  '/',
+  authenticate,
+  invalidatePatterns((req) => [
+    `user:${req.user?.userId}:/api/tickets*`,
+  ]),
+  TicketController.create
+);
+
 // Ticket trends endpoint
 router.get(
   '/trends',
@@ -120,6 +130,38 @@ router.put(
     `user:${req.user?.userId}:/api/tickets/${req.params.ticketId}/attachments*`,
   ]),
   TicketController.updateStatus
+);
+
+// Chat endpoints (REST API - WebSocket is available via /socket.io)
+router.get(
+  '/:ticketId/chat',
+  authenticate,
+  cacheResponse((req) => `user:${req.user?.userId}:/api/tickets/${req.params.ticketId}/chat?${new URLSearchParams(req.query as any).toString()}`, 30),
+  TicketChatController.getChatMessages
+);
+router.post(
+  '/:ticketId/chat',
+  authenticate,
+  invalidatePatterns((req) => [
+    `user:${req.user?.userId}:/api/tickets*`,
+    `user:${req.user?.userId}:/api/tickets/${req.params.ticketId}/chat*`,
+  ]),
+  TicketChatController.sendChatMessage
+);
+router.get(
+  '/:ticketId/chat/participants',
+  authenticate,
+  cacheResponse((req) => `user:${req.user?.userId}:/api/tickets/${req.params.ticketId}/chat/participants`, 60),
+  TicketChatController.getParticipants
+);
+router.post(
+  '/:ticketId/chat/upload',
+  authenticate,
+  invalidatePatterns((req) => [
+    `user:${req.user?.userId}:/api/tickets*`,
+    `user:${req.user?.userId}:/api/tickets/${req.params.ticketId}/chat*`,
+  ]),
+  TicketChatController.uploadFile
 );
 
 export default router;

@@ -128,6 +128,48 @@ export const TicketApi = {
     return res.data
   },
 
+  async getChatMessages(ticketId: string, params?: { page?: number; limit?: number }) {
+    const res = await api.get<TicketChatResponse>(`/api/tickets/${ticketId}/chat`, { params })
+    return res.data
+  },
+
+  async getChatParticipants(ticketId: string) {
+    const res = await api.get<{ success: boolean; data: { ticket: { id: string; ticketNumber: string; title: string; status: string; priority: string }, participants: Array<{ id: string; name: string; email: string; role: string; type: string; companyName?: string }> } }>(
+      `/api/tickets/${ticketId}/chat/participants`
+    )
+    return res.data
+  },
+
+  async sendChatMessage(ticketId: string, message: string) {
+    const res = await api.post<{ success: boolean; data: { message: TicketChatMessage } }>(
+      `/api/tickets/${ticketId}/chat`,
+      { message, messageType: 'TEXT' }
+    )
+    return res.data
+  },
+
+  async uploadChatFile(ticketId: string, file: File, message?: string) {
+    const form = new FormData()
+    form.append('file', file)
+    if (message) form.append('message', message)
+    const res = await api.post<{ success: boolean; data: { message: TicketChatMessage; attachment: any } }>(
+      `/api/tickets/${ticketId}/chat/upload`,
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    )
+    return res.data
+  },
+
+  async create(payload: {
+    title: string
+    description: string
+    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+    goodsReceiptNoteId?: string
+  }) {
+    const res = await api.post('/api/tickets', payload)
+    return res.data
+  },
+
   async getComments(ticketId: string) {
     const res = await api.get<{ success: boolean; data: TicketComment[] }>(`/api/tickets/${ticketId}/comments`)
     return res.data

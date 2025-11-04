@@ -1,4 +1,5 @@
 import { prisma } from '../../config/database';
+import { Prisma } from '@prisma/client';
 
 export interface TicketListFilters {
   status?: 'open' | 'under-review' | 'resolved' | 'closed' | 'all';
@@ -49,6 +50,80 @@ export interface ResolutionTimeTrendData {
 }
 
 export class TicketService {
+  private static async generateNextTicketNumber(
+    tx: Prisma.TransactionClient
+  ): Promise<string> {
+    // Find the latest ticket with a TKT- prefix and increment its numeric part
+    const latest = await tx.ticket.findFirst({
+      where: { ticketNumber: { startsWith: 'TKT-' } },
+      orderBy: { createdAt: 'desc' },
+      select: { ticketNumber: true },
+    });
+
+    let nextNumber = 1;
+    if (latest?.ticketNumber) {
+      const match = latest.ticketNumber.match(/^TKT-(\d+)$/);
+      if (match) {
+        const lastNumber = parseInt(match[1], 10);
+        if (!Number.isNaN(lastNumber)) {
+          nextNumber = lastNumber + 1;
+        }
+      }
+    }
+
+    const padded = String(nextNumber).padStart(6, '0');
+    return `TKT-${padded}`;
+  }
+  static async createTicket(params: {
+    title: string;
+    description: string;
+    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+    createdById: string;
+    goodsReceiptNoteId?: string | null;
+  }) {
+    const created = await prisma.$transaction(
+      async (tx) => {
+        const ticketNumber = await TicketService.generateNextTicketNumber(tx);
+
+        const createdTicket = await tx.ticket.create({
+          data: {
+            ticketNumber,
+            title: params.title,
+            description: params.description,
+            // Casting kept as-is to align with existing enum mapping in schema
+            priority: params.priority as any,
+            status: 'OPEN' as any,
+            createdById: params.createdById,
+            goodsReceiptNoteId: params.goodsReceiptNoteId ?? null,
+          },
+          include: {
+            goodsReceiptNote: {
+              include: {
+                dispatch: {
+                  include: {
+                    vendor: { include: { user: true } },
+                    items: {
+                      include: {
+                        assignedOrderItem: {
+                          include: { orderItem: { include: { order: true } } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            _count: { select: { comments: true, attachments: true } },
+          },
+        });
+
+        return createdTicket;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+
+    return created;
+  }
   static async getTicketTrends(filters: TicketTrendFilters) {
     const { period, dateFrom, dateTo, userId } = filters;
 
@@ -501,6 +576,102 @@ export class TicketService {
           _count: {
             select: { comments: true, attachments: true },
           },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.ticket.count({ where }),
+    ]);
+
+    return { tickets, pagination: { page, limit, total: totalCount } };
+  }
+
+  static async listTicketsAll(filters: TicketListFilters) {
+    const {
+      status = 'all',
+      vendor,
+      orderNumber,
+      dateFrom,
+      dateTo,
+      page = 1,
+      limit = 20,
+    } = filters;
+
+    const where: any = {};
+
+    const mappedStatus = mapStatusToEnum(status);
+    if (mappedStatus) {
+      where.status = mappedStatus;
+    }
+
+    if (dateFrom || dateTo) {
+      where.createdAt = {};
+      if (dateFrom) where.createdAt.gte = new Date(dateFrom);
+      if (dateTo) where.createdAt.lte = new Date(dateTo);
+    }
+
+    if (vendor) {
+      where.goodsReceiptNote = {
+        dispatch: {
+          vendor: {
+            OR: [
+              { companyName: { contains: vendor, mode: 'insensitive' } },
+              { user: { name: { contains: vendor, mode: 'insensitive' } } },
+              { user: { email: { contains: vendor, mode: 'insensitive' } } },
+            ],
+          },
+        },
+      };
+    }
+
+    if (orderNumber) {
+      where.goodsReceiptNote = {
+        ...(where.goodsReceiptNote || {}),
+        dispatch: {
+          ...(where.goodsReceiptNote?.dispatch || {}),
+          items: {
+            some: {
+              assignedOrderItem: {
+                orderItem: {
+                  order: {
+                    OR: [
+                      { orderNumber: { contains: orderNumber, mode: 'insensitive' } },
+                      { clientOrderId: { contains: orderNumber, mode: 'insensitive' } },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [tickets, totalCount] = await Promise.all([
+      prisma.ticket.findMany({
+        where,
+        include: {
+          createdBy: true,
+          goodsReceiptNote: {
+            include: {
+              dispatch: {
+                include: {
+                  vendor: { include: { user: true } },
+                  items: {
+                    include: {
+                      assignedOrderItem: {
+                        include: { orderItem: { include: { order: true } } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          _count: { select: { comments: true, attachments: true } },
         },
         orderBy: { createdAt: 'desc' },
         skip,
