@@ -9,7 +9,6 @@ import { format } from 'date-fns'
 import { TicketApi, type TicketListItem } from '../../../services/ticketApi'
 import { TokenManager } from '../../../services/api'
 
-type IssueType = 'Invoice Mismatch' | 'Duplicate Entry' | 'Payment Pending' | 'Payment Delay' | 'Others'
 type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
 type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
 
@@ -40,7 +39,6 @@ type Ticket = {
   _count?: { comments: number; attachments: number }
   // Additional fields for backward compatibility with UI
   issueTitle?: string
-  issueType?: IssueType
   assignedTo?: string
   messages?: Message[]
 }
@@ -118,7 +116,6 @@ export default function VendorSupport() {
   }, [])
 
   // filters
-  const [filterIssue, setFilterIssue] = useState<IssueType | ''>('')
   const [filterStatus, setFilterStatus] = useState<TicketStatus | ''>('')
   const [filterPriority, setFilterPriority] = useState<TicketPriority | ''>('')
   const [dateFrom, setDateFrom] = useState('')
@@ -138,7 +135,6 @@ export default function VendorSupport() {
 
   // new ticket draft
   const [draftIssueTitle, setDraftIssueTitle] = useState('')
-  const [draftIssue, setDraftIssue] = useState<IssueType | ''>('')
   const [draftPriority, setDraftPriority] = useState<TicketPriority | ''>('')
   const [draftDescription, setDraftDescription] = useState('')
   const [draftFile, setDraftFile] = useState<File | null>(null)
@@ -161,7 +157,6 @@ export default function VendorSupport() {
   const avgResolutionHours = 4.2
 
   const filteredTickets = tickets.filter(t => {
-    if (filterIssue && t.issueType !== filterIssue) return false
     if (filterStatus && t.status !== filterStatus) return false
     if (filterPriority && t.priority !== filterPriority) return false
     
@@ -189,7 +184,6 @@ export default function VendorSupport() {
   const paginatedTickets = filteredTickets.slice(startIndex, endIndex)
 
   function resetFilters() {
-    setFilterIssue('')
     setFilterStatus('')
     setFilterPriority('')
     setDateFrom('')
@@ -203,10 +197,10 @@ export default function VendorSupport() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [filterIssue, filterStatus, filterPriority, dateFrom, dateTo, search])
+  }, [filterStatus, filterPriority, dateFrom, dateTo, search])
 
   async function addTicket() {
-    if (!draftIssueTitle || !draftIssue || !draftPriority || !draftDescription) {
+    if (!draftIssueTitle || !draftPriority || !draftDescription) {
       alert('Please fill all required fields')
       return
     }
@@ -229,14 +223,12 @@ export default function VendorSupport() {
           goodsReceiptNote: t.goodsReceiptNote,
           _count: t._count,
           issueTitle: t.title,
-          issueType: draftIssue as IssueType,
           assignedTo: '-',
           messages: []
         }
         setTickets(prev => [newTicket, ...prev])
         setShowNewTicket(false)
         setDraftIssueTitle('')
-        setDraftIssue('')
         setDraftPriority('')
         setDraftDescription('')
         setDraftFile(null)
@@ -358,11 +350,10 @@ export default function VendorSupport() {
 
   const handleExportCSV = () => {
     const csvContent = [
-      ['Ticket ID', 'Issue Title', 'Issue Type', 'Priority', 'Status', 'Assigned To', 'Created Date', 'Updated Date'],
+      ['Ticket ID', 'Issue Title', 'Priority', 'Status', 'Assigned To', 'Created Date', 'Updated Date'],
       ...filteredTickets.map(ticket => [
         ticket.id,
         ticket.issueTitle,
-        ticket.issueType,
         ticket.priority,
         ticket.status,
         ticket.assignedTo,
@@ -448,20 +439,6 @@ export default function VendorSupport() {
       {/* Filters */}
       <div className="flex flex-col gap-3 mb-6 bg-white border border-secondary/20 rounded-xl p-3 sm:p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <CustomDropdown
-            value={filterIssue}
-            onChange={(value) => setFilterIssue(value as IssueType | '')}
-            options={[
-              { value: '', label: 'Issue Type' },
-              { value: 'Invoice Mismatch', label: 'Invoice Mismatch' },
-              { value: 'Duplicate Entry', label: 'Duplicate Entry' },
-              { value: 'Payment Pending', label: 'Payment Pending' },
-              { value: 'Payment Delay', label: 'Payment Delay' },
-              { value: 'Others', label: 'Others' }
-            ]}
-            placeholder="Issue Type"
-            className="min-w-0"
-          />
           <CustomDropdown
             value={filterStatus}
             onChange={(value) => setFilterStatus(value as TicketStatus | '')}
@@ -581,10 +558,10 @@ export default function VendorSupport() {
       {/* Desktop/Tablet Table - Horizontal Scroll */}
       <div className="hidden md:block rounded-lg overflow-hidden border border-gray-200 shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-separate border-spacing-0 bg-white">
+          <table className="w-full min-w-[800px] border-separate border-spacing-0 bg-white">
             <thead>
               <tr className="" style={{ background: 'var(--color-accent)' }}>
-                {['Ticket ID','Issue Title','Issue Type','Priority','Status','Assigned To','Created / Updated','Actions'].map(h => (
+                {['Ticket ID','Issue Title','Priority','Status','Assigned To','Created / Updated','Actions'].map(h => (
                   <th key={h} className="text-left p-3 font-heading font-normal text-sm whitespace-nowrap sticky top-0" style={{ color: 'var(--color-button-text)', background: 'var(--color-accent)' }}>{h}</th>
                 ))}
               </tr>
@@ -593,10 +570,9 @@ export default function VendorSupport() {
               {paginatedTickets.map((t) => (
                 <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
                   <td className="p-3 font-semibold text-secondary text-sm whitespace-nowrap">{t.ticketNumber}</td>
-                  <td className="p-3 text-sm min-w-[200px] max-w-[300px]" title={t.issueTitle}>
-                    <div className="truncate">{t.issueTitle}</div>
+                  <td className="p-3 text-sm" title={t.issueTitle}>
+                    <div className="truncate max-w-[250px]">{t.issueTitle}</div>
                   </td>
-                  <td className="p-3 text-sm whitespace-nowrap">{t.issueType}</td>
                   <td className="p-3 whitespace-nowrap">
                     {(() => {
                       const st = getPriorityStyle(t.priority)
@@ -629,7 +605,7 @@ export default function VendorSupport() {
               ))}
               {paginatedTickets.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-6 text-center text-gray-500 text-sm">No tickets match current filters.</td>
+                  <td colSpan={7} className="p-6 text-center text-gray-500 text-sm">No tickets match current filters.</td>
                 </tr>
               )}
             </tbody>
@@ -681,10 +657,6 @@ export default function VendorSupport() {
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-sm">
-                <div>
-                  <span className="text-gray-500 block text-xs">Issue Type</span>
-                  <span className="font-medium text-gray-900">{t.issueType}</span>
-                </div>
                 <div>
                   <span className="text-gray-500 block text-xs">Priority</span>
                   <div className="mt-1">
@@ -755,22 +727,6 @@ export default function VendorSupport() {
                   onChange={e => setDraftIssueTitle(e.target.value)} 
                   placeholder="Brief description of the issue" 
                   className="w-full px-3 py-2.5 sm:py-2 rounded-lg border border-gray-300 text-xs sm:text-sm hover:border-accent focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-all duration-200 min-h-[44px] sm:min-h-auto" 
-                />
-              </div>
-              <div>
-                <label className="block text-xs sm:text-sm font-medium mb-1.5 text-secondary">Issue Type</label>
-                <CustomDropdown
-                  value={draftIssue}
-                  onChange={(value) => setDraftIssue(value as IssueType | '')}
-                  options={[
-                    { value: '', label: 'Select Issue' },
-                    { value: 'Invoice Mismatch', label: 'Invoice Mismatch' },
-                    { value: 'Duplicate Entry', label: 'Duplicate Entry' },
-                    { value: 'Payment Pending', label: 'Payment Pending' },
-                    { value: 'Payment Delay', label: 'Payment Delay' },
-                    { value: 'Others', label: 'Others' }
-                  ]}
-                  placeholder="Select Issue"
                 />
               </div>
               <div>
@@ -854,10 +810,6 @@ export default function VendorSupport() {
                   <div>
                     <div className="text-xs text-gray-500 mb-1">Issue Title</div>
                     <div className="font-medium text-xs sm:text-sm break-words">{drawerTicket.issueTitle}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 mb-1">Issue Type</div>
-                    <div className="font-medium text-xs sm:text-sm">{drawerTicket.issueType}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-500 mb-1">Priority</div>

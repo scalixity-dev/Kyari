@@ -52,14 +52,18 @@ export interface TicketChatResponse {
 export interface TicketListItem {
   id: string
   ticketNumber: string
+  title?: string
+  description?: string
   status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
   createdAt: string
   updatedAt: string
+  createdBy?: { id: string; name: string; email?: string }
+  assignee?: { id: string; name: string; email?: string }
   goodsReceiptNote?: {
     id: string
     dispatch?: {
-      vendor: { companyName: string; user?: { email?: string } }
+      vendor: { companyName: string; user?: { name?: string; email?: string } }
       items: Array<{ assignedOrderItem: { orderItem: { order: { orderNumber?: string; clientOrderId?: string } } } }>
     }
   }
@@ -111,6 +115,13 @@ export interface ResolutionTimeTrendsResponse {
       from: string
       to: string
     }
+  }
+}
+
+export interface AverageResolutionTimeResponse {
+  success: boolean
+  data: {
+    avgResolutionHours: number
   }
 }
 
@@ -203,7 +214,7 @@ export const TicketApi = {
     return res.data
   },
 
-  async updateStatus(ticketId: string, status: 'open' | 'under-review' | 'resolved') {
+  async updateStatus(ticketId: string, status: 'open' | 'under-review' | 'resolved' | 'closed') {
     const res = await api.put<{ success: boolean; data: TicketListItem }>(`/api/tickets/${ticketId}/status`, { status })
     return res.data
   },
@@ -223,6 +234,11 @@ export const TicketApi = {
     dateTo?: string
   }) {
     const res = await api.get<ResolutionTimeTrendsResponse>('/api/tickets/resolution-time-trends', { params })
+    return res.data
+  },
+
+  async getAverageResolutionTime() {
+    const res = await api.get<AverageResolutionTimeResponse>('/api/tickets/average-resolution-time')
     return res.data
   }
 }

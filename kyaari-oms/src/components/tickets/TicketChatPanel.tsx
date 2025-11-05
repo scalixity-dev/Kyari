@@ -132,6 +132,13 @@ export default function TicketChatPanel({ ticketId, isOpen, onClose, ticketData 
   const sendMessage = async () => {
     console.log('[Chat] Send button clicked', { text: messageText, hasFile: !!selectedFile })
     if ((!messageText.trim() && !selectedFile) || isSending) return
+    
+    // Prevent sending messages if ticket is resolved or closed
+    const ticketStatus = ticketData?.status?.toLowerCase()
+    if (ticketStatus === 'resolved' || ticketStatus === 'closed') {
+      alert('Cannot send messages. This ticket has been resolved or closed.')
+      return
+    }
 
     setIsSending(true)
     try {
@@ -172,6 +179,16 @@ export default function TicketChatPanel({ ticketId, isOpen, onClose, ticketData 
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Prevent file selection if ticket is resolved or closed
+    const ticketStatus = ticketData?.status?.toLowerCase()
+    if (ticketStatus === 'resolved' || ticketStatus === 'closed') {
+      alert('Cannot attach files. This ticket has been resolved or closed.')
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
+    }
+    
     const file = e.target.files?.[0]
     if (file) {
       // Validate file size (10MB limit)
@@ -409,51 +426,73 @@ export default function TicketChatPanel({ ticketId, isOpen, onClose, ticketData 
 
         {/* Message Input */}
         <div className="p-4 border-t bg-white">
-          <div className="flex items-end gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept="image/*,.pdf,.doc,.docx,.txt"
-              onChange={handleFileSelect}
-            />
+          {(() => {
+            const ticketStatus = ticketData?.status?.toLowerCase()
+            const isDisabled = ticketStatus === 'resolved' || ticketStatus === 'closed'
             
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isSending || isUploading}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-              title="Attach file"
-            >
-              <Paperclip size={18} />
-            </button>
+            if (isDisabled) {
+              return (
+                <div className="px-3 py-3 bg-gray-100 rounded-lg border border-gray-300 text-center">
+                  <div className="text-sm font-medium text-gray-700 mb-1">
+                    Chat Disabled
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    This ticket has been {ticketStatus}. No new messages can be sent.
+                  </div>
+                </div>
+              )
+            }
             
-            <textarea
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              onKeyDown={handleKeyPress}
-              placeholder="Type your message..."
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              rows={2}
-              disabled={isSending || isUploading}
-            />
-            
-            <button
-              onClick={sendMessage}
-              disabled={(!messageText.trim() && !selectedFile) || isSending || isUploading}
-              className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Send message"
-            >
-              {isSending || isUploading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-              ) : (
-                <Send size={18} />
-              )}
-            </button>
-          </div>
-          
-          <div className="text-xs text-gray-500 mt-2">
-            Press Enter to send, Shift+Enter for new line
-          </div>
+            return (
+              <>
+                <div className="flex items-end gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                    onChange={handleFileSelect}
+                  />
+                  
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isSending || isUploading}
+                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                    title="Attach file"
+                  >
+                    <Paperclip size={18} />
+                  </button>
+                  
+                  <textarea
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    placeholder="Type your message..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    rows={2}
+                    disabled={isSending || isUploading}
+                  />
+                  
+                  <button
+                    onClick={sendMessage}
+                    disabled={(!messageText.trim() && !selectedFile) || isSending || isUploading}
+                    className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Send message"
+                  >
+                    {isSending || isUploading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    ) : (
+                      <Send size={18} />
+                    )}
+                  </button>
+                </div>
+                
+                <div className="text-xs text-gray-500 mt-2">
+                  Press Enter to send, Shift+Enter for new line
+                </div>
+              </>
+            )
+          })()}
         </div>
       </div>
     </div>

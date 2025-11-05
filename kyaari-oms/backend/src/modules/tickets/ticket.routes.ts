@@ -76,6 +76,14 @@ router.get(
   TicketController.getResolutionTimeTrends
 );
 
+// Average resolution time endpoint
+router.get(
+  '/average-resolution-time',
+  authenticate,
+  cacheResponse((req) => `user:${req.user?.userId}:/api/tickets/average-resolution-time`, 300),
+  TicketController.getAverageResolutionTime
+);
+
 // Comments (cache + invalidation)
 router.get(
   '/:ticketId/comments',

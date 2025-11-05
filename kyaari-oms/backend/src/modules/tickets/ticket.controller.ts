@@ -89,6 +89,7 @@ export class TicketController {
 
     try {
       const userId = req.user?.userId as string;
+      const userRoles = req.user?.roles || [];
       if (!userId) {
         return res.status(401).json({ success: false, error: 'User authentication required' });
       }
@@ -99,7 +100,7 @@ export class TicketController {
       }
 
       const ticketId = req.params.ticketId as string;
-      const updated = await TicketService.updateStatus(ticketId, parse.data.status, userId);
+      const updated = await TicketService.updateStatus(ticketId, parse.data.status, userId, userRoles);
       if (!updated) {
         return res.status(404).json({ success: false, error: 'Ticket not found' });
       }
@@ -163,6 +164,17 @@ export class TicketController {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch resolution time trends';
       logger.error('Failed to fetch resolution time trends', { error: errorMessage });
       return res.status(500).json({ success: false, error: 'Failed to fetch resolution time trends' });
+    }
+  }
+
+  static async getAverageResolutionTime(req: Request, res: Response) {
+    try {
+      const avgHours = await TicketService.getAverageResolutionTime();
+      return res.json({ success: true, data: { avgResolutionHours: avgHours } });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch average resolution time';
+      logger.error('Failed to fetch average resolution time', { error: errorMessage });
+      return res.status(500).json({ success: false, error: 'Failed to fetch average resolution time' });
     }
   }
 }

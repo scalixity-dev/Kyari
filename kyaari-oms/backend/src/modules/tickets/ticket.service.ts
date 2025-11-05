@@ -686,26 +686,41 @@ export class TicketService {
   static async updateStatus(
     ticketId: string,
     status: 'open' | 'under-review' | 'resolved' | 'closed',
-    userId: string
+    userId: string,
+    userRoles?: string[]
   ) {
     const mapped = mapStatusToEnum(status);
     if (!mapped) {
       throw new Error('Invalid status');
     }
 
-    // Ensure the ticket exists and is accessible by the user (creator)
-    const existing = await prisma.ticket.findFirst({
-      where: { id: ticketId, createdById: userId },
-      select: { id: true },
+    // Check if ticket exists
+    const existing = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { id: true, createdById: true },
     });
 
     if (!existing) {
       throw new Error('Ticket not found');
     }
 
+    // Check access: user must be the creator OR admin
+    const isAdmin = userRoles?.includes('ADMIN') || false;
+    const isCreator = existing.createdById === userId;
+
+    if (!isAdmin && !isCreator) {
+      throw new Error('Ticket not found');
+    }
+
+    // Set resolvedAt when status is resolved or closed
+    const resolvedAt = (mapped === 'RESOLVED' || mapped === 'CLOSED') ? new Date() : null;
+
     await prisma.ticket.update({
       where: { id: ticketId },
-      data: { status: mapped },
+      data: { 
+        status: mapped,
+        resolvedAt,
+      },
     });
 
     const updated = await prisma.ticket.findUnique({
@@ -732,6 +747,42 @@ export class TicketService {
     });
 
     return updated;
+  }
+
+  static async getAverageResolutionTime(): Promise<number> {
+    // Fetch all resolved or closed tickets that have a resolvedAt timestamp
+    const tickets = await prisma.ticket.findMany({
+      where: {
+        OR: [
+          { status: 'RESOLVED' },
+          { status: 'CLOSED' },
+        ],
+        resolvedAt: { not: null },
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        resolvedAt: true,
+      },
+    });
+
+    if (tickets.length === 0) {
+      return 0;
+    }
+
+    // Calculate total resolution time in hours
+    let totalHours = 0;
+    tickets.forEach((ticket) => {
+      if (ticket.resolvedAt) {
+        const resolutionTimeMs = ticket.resolvedAt.getTime() - ticket.createdAt.getTime();
+        const resolutionTimeHours = resolutionTimeMs / (1000 * 60 * 60); // Convert to hours
+        totalHours += resolutionTimeHours;
+      }
+    });
+
+    // Calculate average and round to 2 decimal places
+    const avgHours = totalHours / tickets.length;
+    return Math.round(avgHours * 100) / 100;
   }
 }
 
