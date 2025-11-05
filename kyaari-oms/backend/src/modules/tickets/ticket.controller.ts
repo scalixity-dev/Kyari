@@ -89,6 +89,7 @@ export class TicketController {
 
     try {
       const userId = req.user?.userId as string;
+      const userRoles = req.user?.roles || [];
       if (!userId) {
         return res.status(401).json({ success: false, error: 'User authentication required' });
       }
@@ -99,7 +100,7 @@ export class TicketController {
       }
 
       const ticketId = req.params.ticketId as string;
-      const updated = await TicketService.updateStatus(ticketId, parse.data.status, userId);
+      const updated = await TicketService.updateStatus(ticketId, parse.data.status, userId, userRoles);
       if (!updated) {
         return res.status(404).json({ success: false, error: 'Ticket not found' });
       }

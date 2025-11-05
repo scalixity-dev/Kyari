@@ -686,26 +686,41 @@ export class TicketService {
   static async updateStatus(
     ticketId: string,
     status: 'open' | 'under-review' | 'resolved' | 'closed',
-    userId: string
+    userId: string,
+    userRoles?: string[]
   ) {
     const mapped = mapStatusToEnum(status);
     if (!mapped) {
       throw new Error('Invalid status');
     }
 
-    // Ensure the ticket exists and is accessible by the user (creator)
-    const existing = await prisma.ticket.findFirst({
-      where: { id: ticketId, createdById: userId },
-      select: { id: true },
+    // Check if ticket exists
+    const existing = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { id: true, createdById: true },
     });
 
     if (!existing) {
       throw new Error('Ticket not found');
     }
 
+    // Check access: user must be the creator OR admin
+    const isAdmin = userRoles?.includes('ADMIN') || false;
+    const isCreator = existing.createdById === userId;
+
+    if (!isAdmin && !isCreator) {
+      throw new Error('Ticket not found');
+    }
+
+    // Set resolvedAt when status is resolved or closed
+    const resolvedAt = (mapped === 'RESOLVED' || mapped === 'CLOSED') ? new Date() : null;
+
     await prisma.ticket.update({
       where: { id: ticketId },
-      data: { status: mapped },
+      data: { 
+        status: mapped,
+        resolvedAt,
+      },
     });
 
     const updated = await prisma.ticket.findUnique({

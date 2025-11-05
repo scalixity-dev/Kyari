@@ -8,7 +8,6 @@ import { TokenManager } from '../../../services/api'
 import { sendTicketMessage } from '../../../utils/ticketMessaging'
 import { TicketApi, type TicketListItem } from '../../../services/ticketApi'
 
-type IssueType = 'Payment' | 'SLA Breach' | 'Order Delay' | 'Onboarding' | 'Others'
 type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent'
 type TicketStatus = 'Open' | 'In-progress' | 'Escalated' | 'Resolved' | 'Closed'
 
@@ -45,8 +44,8 @@ type Message = {
 
 type Ticket = {
   id: string
+  ticketNumber: string
   vendor: string
-  issue: IssueType
   priority: TicketPriority
   status: TicketStatus
   assignedTo: string
@@ -114,7 +113,6 @@ export default function VendorSupport() {
 
   // new ticket draft
   const [draftVendor, setDraftVendor] = useState('')
-  const [draftIssue, setDraftIssue] = useState<IssueType | ''>('')
   const [draftPriority, setDraftPriority] = useState<TicketPriority | ''>('')
   const [draftDescription, setDraftDescription] = useState('')
   const [draftFile, setDraftFile] = useState<File | null>(null)
@@ -125,6 +123,30 @@ export default function VendorSupport() {
   const chatEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const socketRef = useRef<Socket | null>(null)
+
+  // Helper function to transform API tickets to UI tickets
+  const transformApiTickets = (apiTickets: TicketListItem[]): Ticket[] => {
+    return apiTickets.map((apiTicket: TicketListItem) => {
+      const vendorCompany = apiTicket.goodsReceiptNote?.dispatch?.vendor?.companyName
+      const vendorUserName = apiTicket.goodsReceiptNote?.dispatch?.vendor?.user?.name
+      const vendorUserEmail = apiTicket.goodsReceiptNote?.dispatch?.vendor?.user?.email
+      const createdByName = apiTicket.createdBy?.name
+      const createdByEmail = apiTicket.createdBy?.email
+      const vendorName = vendorCompany || vendorUserName || vendorUserEmail || createdByName || createdByEmail || 'Unknown Vendor'
+
+      return {
+        id: apiTicket.id,
+        ticketNumber: apiTicket.ticketNumber,
+        vendor: vendorName,
+        priority: mapPriorityToUI(apiTicket.priority),
+        status: mapStatusToUI(apiTicket.status),
+        assignedTo: apiTicket.assignee?.name || '-',
+        createdAt: format(new Date(apiTicket.createdAt), 'PP p'),
+        updatedAt: format(new Date(apiTicket.updatedAt), 'PP p'),
+        messages: []
+      }
+    })
+  }
 
   // Fetch tickets from API
   useEffect(() => {
@@ -138,32 +160,7 @@ export default function VendorSupport() {
         })
         
         if (response.success) {
-         
-          // Transform API data to match UI expectations
-          const transformedTickets: Ticket[] = response.data.tickets.map((apiTicket: TicketListItem) => {
-            const vendorCompany = apiTicket.goodsReceiptNote?.dispatch?.vendor?.companyName
-            const vendorUserName = (apiTicket as any).goodsReceiptNote?.dispatch?.vendor?.user?.name
-            const vendorUserEmail = (apiTicket as any).goodsReceiptNote?.dispatch?.vendor?.user?.email
-            const createdByName = (apiTicket as any).createdBy?.name
-            const createdByEmail = (apiTicket as any).createdBy?.email
-            const vendorName = vendorCompany || vendorUserName || vendorUserEmail || createdByName || createdByEmail || 'Unknown Vendor'
-
-           
-
-            return {
-              id: apiTicket.id,
-              ticketNumber: apiTicket.ticketNumber,
-              vendor: vendorName,
-              issue: 'Payment' as IssueType, // Default, could be derived from ticket title/description
-              priority: mapPriorityToUI(apiTicket.priority),
-              status: mapStatusToUI(apiTicket.status),
-              assignedTo: (apiTicket as any).assignee?.name || '-',
-              createdAt: format(new Date(apiTicket.createdAt), 'PP p'),
-              updatedAt: format(new Date(apiTicket.updatedAt), 'PP p'),
-              messages: []
-            }
-          })
-
+          const transformedTickets = transformApiTickets(response.data.tickets)
           setTickets(transformedTickets)
         }
       } catch (error) {
@@ -179,7 +176,7 @@ export default function VendorSupport() {
   const vendors = useMemo(() => Array.from(new Set(tickets.map(t => t.vendor))).sort(), [tickets])
 
   const openCount = tickets.filter(t => t.status === 'Open').length
-  const slaBreaches = tickets.filter(t => t.issue === 'SLA Breach').length
+  const inProgressCount = tickets.filter(t => t.status === 'In-progress').length
   const resolvedThisWeek = tickets.filter(t => t.status === 'Resolved').length
   const avgResolutionHours = 4.2
 
@@ -200,7 +197,7 @@ export default function VendorSupport() {
       if (filterPriority && t.priority !== filterPriority) return false
       if (dateFrom && new Date(t.createdAt) < dateFrom) return false
       if (dateTo && new Date(t.createdAt) > dateTo) return false
-      if (search && !(t.id.toLowerCase().includes(search.toLowerCase()) || t.vendor.toLowerCase().includes(search.toLowerCase()))) return false
+      if (search && !(t.ticketNumber.toLowerCase().includes(search.toLowerCase()) || t.id.toLowerCase().includes(search.toLowerCase()) || t.vendor.toLowerCase().includes(search.toLowerCase()))) return false
       return true
     })
   }, [tickets, filterVendor, filterStatus, filterPriority, dateFrom, dateTo, search])
@@ -229,13 +226,13 @@ export default function VendorSupport() {
   }
 
   async function addTicket() {
-    if (!draftVendor || !draftIssue || !draftPriority || !draftDescription) {
+    if (!draftVendor || !draftPriority || !draftDescription) {
       alert('Please fill all required fields')
       return
     }
     try {
       const payload = {
-        title: `${draftIssue || 'Issue'} - ${draftVendor || 'Vendor'}`,
+        title: `Ticket - ${draftVendor || 'Vendor'}`,
         description: draftDescription,
         priority: (draftPriority === 'Low' ? 'LOW' : draftPriority === 'Medium' ? 'MEDIUM' : draftPriority === 'High' ? 'HIGH' : 'URGENT') as 'LOW'|'MEDIUM'|'HIGH'|'URGENT',
       }
@@ -244,8 +241,8 @@ export default function VendorSupport() {
         const t = res.data
         const newTicket: Ticket = {
           id: t.id,
+          ticketNumber: t.ticketNumber,
           vendor: draftVendor,
-          issue: draftIssue as IssueType,
           priority: mapPriorityToUI(t.priority),
           status: mapStatusToUI(t.status),
           assignedTo: '-',
@@ -256,7 +253,6 @@ export default function VendorSupport() {
         setTickets(prev => [newTicket, ...prev])
         setShowNewTicket(false)
         setDraftVendor('')
-        setDraftIssue('')
         setDraftPriority('')
         setDraftDescription('')
         setDraftFile(null)
@@ -270,18 +266,60 @@ export default function VendorSupport() {
     }
   }
 
-  function assignTicket(t: Ticket) {
-    const name = prompt('Assign to (name):', t.assignedTo || '')
-    if (name === null) return
-    setTickets(prev => prev.map(x => x.id === t.id ? { ...x, assignedTo: name || '-', updatedAt: new Date().toISOString().split('T')[0] } : x))
+  async function resolveTicket(t: Ticket) {
+    try {
+      const result = await TicketApi.updateStatus(t.id, 'resolved')
+      if (result.success) {
+        // Refresh tickets list
+        const response = await TicketApi.list({
+          status: 'all',
+          page: 1,
+          limit: 100
+        })
+        if (response.success) {
+          const transformedTickets = transformApiTickets(response.data.tickets)
+          setTickets(transformedTickets)
+          // Update drawer ticket if it's the same ticket
+          if (drawerTicket && drawerTicket.id === t.id) {
+            const updated = transformedTickets.find(tk => tk.id === t.id)
+            if (updated) {
+              setDrawerTicket(updated)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to resolve ticket:', error)
+      alert('Failed to resolve ticket. Please try again.')
+    }
   }
 
-  function resolveTicket(t: Ticket) {
-    setTickets(prev => prev.map(x => x.id === t.id ? { ...x, status: 'Resolved', updatedAt: new Date().toISOString().split('T')[0] } : x))
-  }
-
-  function closeTicket(t: Ticket) {
-    setTickets(prev => prev.map(x => x.id === t.id ? { ...x, status: 'Closed', updatedAt: new Date().toISOString().split('T')[0] } : x))
+  async function closeTicket(t: Ticket) {
+    try {
+      const result = await TicketApi.updateStatus(t.id, 'closed')
+      if (result.success) {
+        // Refresh tickets list
+        const response = await TicketApi.list({
+          status: 'all',
+          page: 1,
+          limit: 100
+        })
+        if (response.success) {
+          const transformedTickets = transformApiTickets(response.data.tickets)
+          setTickets(transformedTickets)
+          // Update drawer ticket if it's the same ticket
+          if (drawerTicket && drawerTicket.id === t.id) {
+            const updated = transformedTickets.find(tk => tk.id === t.id)
+            if (updated) {
+              setDrawerTicket(updated)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to close ticket:', error)
+      alert('Failed to close ticket. Please try again.')
+    }
   }
 
   function escalateTicket(t: Ticket) {
@@ -378,16 +416,14 @@ export default function VendorSupport() {
   }, [drawerTicket?.messages])
 
   const handleExportCSV = () => {
-    const headers = ['Ticket ID', 'Vendor', 'Issue Type', 'Priority', 'Status', 'Assigned To', 'Created', 'Updated']
+    const headers = ['Ticket ID', 'Vendor', 'Priority', 'Status', 'Created', 'Updated']
     const csvContent = [
       headers.join(','),
       ...filteredTickets.map(ticket => [
-        ticket.id,
+        ticket.ticketNumber,
         `"${ticket.vendor}"`,
-        ticket.issue,
         ticket.priority,
         ticket.status,
-        ticket.assignedTo,
         ticket.createdAt,
         ticket.updatedAt
       ].join(','))
@@ -410,9 +446,8 @@ export default function VendorSupport() {
       '',
       '=== TICKETS ===',
       ...filteredTickets.map(ticket => [
-        `Ticket: ${ticket.id}`,
+        `Ticket: ${ticket.ticketNumber}`,
         `Vendor: ${ticket.vendor}`,
-        `Issue: ${ticket.issue}`,
         `Priority: ${ticket.priority}`,
         `Status: ${ticket.status}`,
         `Assigned To: ${ticket.assignedTo}`,
@@ -458,9 +493,9 @@ export default function VendorSupport() {
           icon={<FileText size={32} />}
         />
         <KPICard 
-          title="SLA Breaches" 
-          value={slaBreaches}
-          subtitle="Urgent attention"
+          title="In Progress" 
+          value={inProgressCount}
+          subtitle={`${inProgressCount} active`}
           icon={<AlertTriangle size={32} />}
         />
         <KPICard 
@@ -621,20 +656,14 @@ export default function VendorSupport() {
                 <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
                   Ticket ID
                 </th>
-                <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
-                  Vendor Name
-                </th>
-              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
-                Issue Type
-              </th>
-              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
-                Priority
-              </th>
+                                 <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                   Vendor Name
+                 </th>
+               <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
+                 Priority
+               </th>
               <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
                 Status
-              </th>
-              <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
-                Assigned To
               </th>
               <th className="text-left p-3 font-heading font-normal" style={{ color: 'var(--color-button-text)' }}>
                 Created / Updated
@@ -645,18 +674,17 @@ export default function VendorSupport() {
             </tr>
           </thead>
           <tbody>
-            {paginatedTickets.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="p-6 text-center text-gray-500">
-                  No tickets match current filters.
-                </td>
-              </tr>
-            ) : (
-              paginatedTickets.map((t) => (
-                <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
-                  <td className="p-3 font-semibold text-[var(--color-secondary)]">{t.id}</td>
-                  <td className="p-3 text-sm text-gray-700">{t.vendor}</td>
-                  <td className="p-3 text-sm text-gray-700">{t.issue}</td>
+                         {paginatedTickets.length === 0 ? (
+               <tr>
+                 <td colSpan={6} className="p-6 text-center text-gray-500">
+                   No tickets match current filters.
+                 </td>
+               </tr>
+             ) : (
+                               paginatedTickets.map((t) => (
+                  <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50 bg-white transition-colors">
+                    <td className="p-3 font-semibold text-[var(--color-secondary)]">{t.ticketNumber}</td>
+                    <td className="p-3 text-sm text-gray-700">{t.vendor}</td>
                   <td className="p-3">
                     {(() => {
                       const st = PRIORITY_STYLES[t.priority]
@@ -683,7 +711,6 @@ export default function VendorSupport() {
                       )
                     })()}
                   </td>
-                  <td className="p-3 text-sm text-gray-700">{t.assignedTo}</td>
                   <td className="p-3 text-xs text-gray-500">{t.createdAt} / {t.updatedAt}</td>
                   <td className="p-3">
                     <div className="flex items-center gap-1.5">
@@ -692,12 +719,6 @@ export default function VendorSupport() {
                         className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95"
                       >
                         View
-                      </button>
-                      <button 
-                        onClick={() => assignTicket(t)} 
-                        className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600"
-                      >
-                        Assign
                       </button>
                       <button 
                         onClick={() => resolveTicket(t)} 
@@ -746,11 +767,11 @@ export default function VendorSupport() {
           </div>
         ) : paginatedTickets.length > 0 ? (
           paginatedTickets.map(t => (
-            <div key={t.id} className="rounded-xl p-4 border border-gray-200 bg-white">
-              <div className="flex items-start justify-between mb-3">
-                <div className="min-w-0 flex-1">
-                  <h4 className="font-semibold text-[var(--color-secondary)] text-lg">{t.id}</h4>
-                  <p className="text-sm text-gray-600 mt-0.5">{t.vendor}</p>
+                         <div key={t.id} className="rounded-xl p-4 border border-gray-200 bg-white">
+               <div className="flex items-start justify-between mb-3">
+                 <div className="min-w-0 flex-1">
+                   <h4 className="font-semibold text-[var(--color-secondary)] text-lg">{t.ticketNumber}</h4>
+                   <p className="text-sm text-gray-600 mt-0.5">{t.vendor}</p>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
                   {(() => {
@@ -767,13 +788,9 @@ export default function VendorSupport() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-                <div>
-                  <span className="text-gray-500 block">Issue Type</span>
-                  <span className="font-medium">{t.issue}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 block">Status</span>
+                             <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                 <div>
+                   <span className="text-gray-500 block">Status</span>
                   {(() => {
                     const st = STATUS_STYLES[t.status]
                     return (
@@ -787,10 +804,6 @@ export default function VendorSupport() {
                   })()}
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Assigned To</span>
-                  <span className="font-medium">{t.assignedTo}</span>
-                </div>
-                <div>
                   <span className="text-gray-500 block">Created</span>
                   <span className="font-medium">{t.createdAt}</span>
                 </div>
@@ -802,12 +815,6 @@ export default function VendorSupport() {
                   className="bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-md px-2.5 py-1.5 text-xs hover:brightness-95"
                 >
                   View
-                </button>
-                <button 
-                  onClick={() => assignTicket(t)} 
-                  className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600"
-                >
-                  Assign
                 </button>
                 <button 
                   onClick={() => resolveTicket(t)} 
@@ -849,11 +856,11 @@ export default function VendorSupport() {
       <div className="md:hidden space-y-3 sm:space-y-4">
         {filteredTickets.length > 0 ? (
           filteredTickets.map(t => (
-            <div key={t.id} className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-200">
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-secondary text-sm sm:text-base truncate">{t.id}</div>
-                  <div className="text-xs sm:text-sm text-gray-600 mt-0.5 truncate">{t.vendor}</div>
+                         <div key={t.id} className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-200">
+               <div className="flex items-start justify-between gap-2 mb-3">
+                 <div className="min-w-0 flex-1">
+                   <div className="font-semibold text-secondary text-sm sm:text-base truncate">{t.ticketNumber}</div>
+                   <div className="text-xs sm:text-sm text-gray-600 mt-0.5 truncate">{t.vendor}</div>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
                   {(() => {
@@ -867,13 +874,9 @@ export default function VendorSupport() {
                 </div>
               </div>
 
-              <div className="space-y-1.5 sm:space-y-2 mb-3">
-                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                  <span className="text-gray-500 flex-shrink-0">Issue:</span>
-                  <span className="font-medium truncate">{t.issue}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                  <span className="text-gray-500 flex-shrink-0">Status:</span>
+                             <div className="space-y-1.5 sm:space-y-2 mb-3">
+                 <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
+                   <span className="text-gray-500 flex-shrink-0">Status:</span>
                   {(() => {
                     const st = STATUS_STYLES[t.status]
                     return (
@@ -882,10 +885,6 @@ export default function VendorSupport() {
                       </span>
                     )
                   })()}
-                </div>
-                <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                  <span className="text-gray-500 flex-shrink-0">Assigned To:</span>
-                  <span className="font-medium truncate">{t.assignedTo}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
                   <span className="text-gray-500 flex-shrink-0">Created:</span>
@@ -899,7 +898,6 @@ export default function VendorSupport() {
 
               <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
                 <button onClick={() => setDrawerTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 sm:px-3 py-2 min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm font-medium hover:bg-secondary hover:text-white transition-colors">View</button>
-                <button onClick={() => assignTicket(t)} className="bg-white text-secondary border border-secondary rounded-full px-2 sm:px-3 py-2 min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm font-medium hover:bg-secondary hover:text-white transition-colors">Assign</button>
                 <button onClick={() => resolveTicket(t)} className="bg-white text-green-600 border border-green-600 rounded-full px-2 sm:px-3 py-2 min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm font-medium hover:bg-green-600 hover:text-white transition-colors">Resolve</button>
                 <button onClick={() => closeTicket(t)} className="bg-white text-red-600 border border-red-600 rounded-full px-2 sm:px-3 py-2 min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm font-medium hover:bg-red-600 hover:text-white transition-colors">Close</button>
               </div>
@@ -920,37 +918,21 @@ export default function VendorSupport() {
               <h3 className="font-heading text-secondary font-semibold text-base sm:text-lg md:text-xl">Raise New Ticket</h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-1 text-secondary">Vendor Name</label>
-                <CustomDropdown
-                  value={draftVendor}
-                  onChange={(value) => setDraftVendor(value)}
-                  options={[
-                    { value: '', label: 'Select Vendor' },
-                    ...vendors.map(vendor => ({ value: vendor, label: vendor }))
-                  ]}
-                  placeholder="Select Vendor"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-secondary">Issue Type</label>
-                <CustomDropdown
-                  value={draftIssue}
-                  onChange={(value) => setDraftIssue(value as IssueType | '')}
-                  options={[
-                    { value: '', label: 'Select Issue' },
-                    { value: 'Payment', label: 'Payment' },
-                    { value: 'SLA Breach', label: 'SLA Breach' },
-                    { value: 'Order Delay', label: 'Order Delay' },
-                    { value: 'Onboarding', label: 'Onboarding' },
-                    { value: 'Others', label: 'Others' }
-                  ]}
-                  placeholder="Select Issue"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-secondary">Priority</label>
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
+               <div>
+                 <label className="block text-sm font-medium mb-1 text-secondary">Vendor Name</label>
+                 <CustomDropdown
+                   value={draftVendor}
+                   onChange={(value) => setDraftVendor(value)}
+                   options={[
+                     { value: '', label: 'Select Vendor' },
+                     ...vendors.map(vendor => ({ value: vendor, label: vendor }))
+                   ]}
+                   placeholder="Select Vendor"
+                 />
+               </div>
+               <div>
+                 <label className="block text-sm font-medium mb-1 text-secondary">Priority</label>
                 <CustomDropdown
                   value={draftPriority}
                   onChange={(value) => setDraftPriority(value as TicketPriority | '')}
@@ -1001,26 +983,22 @@ export default function VendorSupport() {
           >
             {/* Header */}
             <div className="p-3 sm:p-4 md:p-5 border-b flex-shrink-0">
-              <div className="flex items-start justify-between gap-2 mb-3 sm:mb-4">
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs text-gray-500">Ticket</div>
-                  <div className="text-base sm:text-lg md:text-xl font-semibold text-secondary truncate">{drawerTicket.id}</div>
-                </div>
-                <button onClick={closeDrawer} className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl leading-none min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0">✕</button>
-              </div>
+                             <div className="flex items-start justify-between gap-2 mb-3 sm:mb-4">
+                 <div className="min-w-0 flex-1">
+                   <div className="text-xs text-gray-500">Ticket</div>
+                   <div className="text-base sm:text-lg md:text-xl font-semibold text-secondary truncate">{drawerTicket.ticketNumber}</div>
+                 </div>
+                 <button onClick={closeDrawer} className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl leading-none min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0">✕</button>
+               </div>
 
               <div className="space-y-2 sm:space-y-3">
-                <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                  <div>
-                    <div className="text-xs text-gray-500">Vendor</div>
-                    <div className="font-medium text-sm">{drawerTicket.vendor}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Issue</div>
-                    <div className="font-medium text-sm">{drawerTicket.issue}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Priority</div>
+                                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                   <div>
+                     <div className="text-xs text-gray-500">Vendor</div>
+                     <div className="font-medium text-sm">{drawerTicket.vendor}</div>
+                   </div>
+                   <div>
+                     <div className="text-xs text-gray-500">Priority</div>
                     <div>
                       {(() => {
                         const st = PRIORITY_STYLES[drawerTicket.priority]
@@ -1040,10 +1018,6 @@ export default function VendorSupport() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                  <div>
-                    <div className="text-xs text-gray-500">Assigned To</div>
-                    <div className="font-medium text-xs sm:text-sm truncate">{drawerTicket.assignedTo}</div>
-                  </div>
                   <div>
                     <div className="text-xs text-gray-500">SLA</div>
                     <div className="font-medium text-xs sm:text-sm">24 hrs</div>
