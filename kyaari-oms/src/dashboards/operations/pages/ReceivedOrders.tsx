@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { CheckSquare, AlertTriangle, X, Calendar as CalendarIcon, ChevronDown, ChevronRight } from 'lucide-react'
-import { CustomDropdown, KPICard, CSVPDFExportButton } from '../../../components'
+import { CustomDropdown, KPICard, CSVPDFExportButton, Loader } from '../../../components'
 import { Pagination } from '../../../components/ui/Pagination'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
@@ -37,6 +37,8 @@ export default function ReceivedOrders() {
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [submitVerify, setSubmitVerify] = useState(false);
+  const [submittingTicket, setSubmittingTicket] = useState(false);
   const [filters, setFilters] = useState({
     order: '',
     vendor: '',
@@ -166,10 +168,13 @@ export default function ReceivedOrders() {
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = Math.min(startIndex + itemsPerPage, filteredOrders.length)
   const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
+  
 
   const handleVerifyOrder = async (orderId: string) => {
     try {
+      setSubmitVerify(true);
       await ReceivedOrdersApiService.verifyOrder(orderId, {})
+      setSubmitVerify(false);
       // Refresh data
       await fetchReceivedOrders()
       await fetchMetrics()
@@ -223,6 +228,7 @@ export default function ReceivedOrders() {
     if (!selectedOrderForTicket || !selectedOrderForTicket.itemDetails) return
 
     try {
+      setSubmittingTicket(true)
       // Create mismatches array from item quantities
       const mismatches = selectedOrderForTicket.itemDetails.map((item, index) => {
         const receivedQty = itemQuantities[index]?.receivedQuantity ?? item.quantityDispatched
@@ -269,7 +275,9 @@ export default function ReceivedOrders() {
     } catch (error: unknown) {
       console.error('Failed to raise ticket:', error)
       alert(`Error: ${extractErrorMessage(error)}`)
-    }
+    } finally {
+        setSubmittingTicket(false)
+      }
   }
 
   const handleBulkVerification = async () => {
@@ -654,14 +662,16 @@ export default function ReceivedOrders() {
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => handleVerifyOrder(order.id)}
-                            className="bg-green-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-600 flex items-center gap-1"
+                            className="bg-green-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-green-600 flex items-center gap-1 disabled:bg-green-400"
+                            disabled={submitVerify}
                           >
-                            <CheckSquare size={12} />
+                            {submitVerify ? <Loader size="xs" color="white" /> : <CheckSquare size={12} />}
                             Verify OK
                           </button>
                           <button
                             onClick={() => handleRaiseTicket(order)}
-                            className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 flex items-center gap-1"
+                            className="bg-red-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-red-600 flex items-center gap-1 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            disabled={submitVerify}
                           >
                             <AlertTriangle size={12} />
                             Raise Ticket
@@ -892,6 +902,7 @@ export default function ReceivedOrders() {
                   setItemQuantities([])
                 }}
                 className="text-gray-400 hover:text-gray-600 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                disabled={submittingTicket}
               >
                 <X size={20} />
               </button>
@@ -1031,16 +1042,20 @@ export default function ReceivedOrders() {
                     proofFile: undefined
                   })
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] disabled:cursor-not-allowed"
+                disabled={submittingTicket}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmitTicket}
-                disabled={!ticketData.comments.trim()}
+                disabled={!ticketData.comments.trim() || submittingTicket}
                 className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
               >
-                Submit Ticket
+                <span className="inline-flex items-center gap-2 justify-center">
+                  {submittingTicket && <Loader size="xs" color="white" />}
+                  <span>Submit Ticket</span>
+                </span>
               </button>
             </div>
           </div>

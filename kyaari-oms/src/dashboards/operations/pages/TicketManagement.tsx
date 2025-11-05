@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, Eye, X, CheckSquare, Clock, Calendar as CalendarIcon, FileText, Paperclip, Edit } from 'lucide-react'
-import { CustomDropdown, KPICard, CSVPDFExportButton } from '../../../components'
+import { CustomDropdown, KPICard, CSVPDFExportButton, Loader } from '../../../components'
 import { Pagination } from '../../../components/ui/Pagination'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
@@ -113,6 +113,7 @@ export default function TicketManagement() {
   const [newAttachment, setNewAttachment] = useState<File | null>(null)
   const [pagination, setPagination] = useState<{ page: number; limit: number; total: number }>({ page: 1, limit: 20, total: 0 })
   const [viewingAttachment, setViewingAttachment] = useState<{ url: string; type: 'image' | 'pdf' | 'unknown'; name: string } | null>(null)
+  const [submitting, setSubmitting] = useState(false)
   
   // Chat-related state
   const [chatPanelOpen, setChatPanelOpen] = useState(false)
@@ -254,6 +255,7 @@ export default function TicketManagement() {
   }, [tickets])
 
   const handleViewDetails = async (ticket: Ticket) => {
+    setSubmitting(true)
     setSelectedTicket(ticket)
     setDetailsModalOpen(true)
     try {
@@ -282,6 +284,8 @@ export default function TicketManagement() {
       setTickets(prev => prev.map(t => t.id === ticket.id ? enriched : t))
     } catch (e) {
       console.error('Failed to load comments', e)
+    } finally{
+      setSubmitting(false)
     }
   }
 
@@ -301,6 +305,7 @@ export default function TicketManagement() {
   const submitStatusUpdate = async () => {
     if (selectedTicket) {
       try {
+        setSubmitting(true);
         // Call API to update status in database
         await TicketApi.updateStatus(selectedTicket.id, newStatus)
         
@@ -332,6 +337,8 @@ export default function TicketManagement() {
         console.error('Failed to update ticket status:', error)
         // You might want to show a toast notification here
         alert('Failed to update ticket status. Please try again.')
+      } finally{
+        setSubmitting(false);
       }
     }
   }
@@ -339,6 +346,7 @@ export default function TicketManagement() {
   const submitComment = async () => {
     if (selectedTicket && newComment.trim()) {
       try {
+        setSubmitting(true)
         // If file selected, upload first
         if (newAttachment) {
           await TicketApi.uploadAttachment(selectedTicket.id, newAttachment)
@@ -362,6 +370,8 @@ export default function TicketManagement() {
         setNewAttachment(null)
       } catch (e) {
         console.error('Failed to add comment', e)
+      } finally{
+        setSubmitting(false)
       }
     }
   }
@@ -844,17 +854,27 @@ export default function TicketManagement() {
             <div className="mb-4 sm:mb-6">
               <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Comments History</h4>
               <div className="space-y-3 sm:space-y-4 max-h-60 overflow-y-auto">
-                {selectedTicket.comments.map((comment) => (
-                  <div key={comment.id} className={`p-3 sm:p-4 rounded-lg ${
-                    comment.type === 'internal' ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-green-50 border-l-4 border-green-500'
-                  }`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-1">
-                      <span className="text-xs sm:text-sm font-medium">{comment.author}</span>
-                      <span className="text-xs text-gray-500">{comment.timestamp}</span>
-                    </div>
-                    <p className="text-xs sm:text-sm text-gray-700">{comment.message}</p>
+                {submitting ? (
+                  <div className="grid place-items-center pt-4 h-16 w-full">
+                    <Loader size="sm" color='gray' />
                   </div>
-                ))}
+                ) : (
+                  selectedTicket.comments.length === 0 ? (
+                    <p className="text-xs sm:text-sm text-gray-500 italic px-1 sm:px-3">No comments to display.</p>
+                  ) : (
+                    selectedTicket.comments.map((comment) => (
+                      <div key={comment.id} className={`p-3 sm:p-4 rounded-lg ${
+                        comment.type === 'internal' ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-green-50 border-l-4 border-green-500'
+                      }`}>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-1">
+                          <span className="text-xs sm:text-sm font-medium">{comment.author}</span>
+                          <span className="text-xs text-gray-500">{comment.timestamp}</span>
+                        </div>
+                        <p className="text-xs sm:text-sm text-gray-700">{comment.message}</p>
+                      </div>
+                    ))
+                  )
+                )}
               </div>
             </div>
           </div>
@@ -899,6 +919,7 @@ export default function TicketManagement() {
               <button 
                 onClick={() => setUpdateStatusModalOpen(false)} 
                 className="text-gray-400 hover:text-gray-600 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                disabled={submitting}
               >
                 <X size={20} />
               </button>
@@ -927,15 +948,20 @@ export default function TicketManagement() {
             <div className="flex flex-col-reverse sm:flex-row gap-3">
               <button
                 onClick={() => setUpdateStatusModalOpen(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] text-sm sm:text-base"
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] text-sm sm:text-base disabled:cursor-not-allowed"
+                disabled={submitting}
               >
                 Cancel
               </button>
               <button
                 onClick={submitStatusUpdate}
-                className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors min-h-[44px] text-sm sm:text-base"
+                className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors min-h-[44px] text-sm sm:text-base disabled:cursor-not-allowed disabled:bg-yellow-300"
+                disabled={submitting}
               >
-                Update Status
+                <span className="inline-flex items-center gap-2 justify-center">
+                  {submitting && <Loader size="xs" color="white" />}
+                  <span>Update Status</span>
+                </span>
               </button>
             </div>
           </div>
@@ -951,6 +977,7 @@ export default function TicketManagement() {
               <button 
                 onClick={() => setCommentModalOpen(false)} 
                 className="text-gray-400 hover:text-gray-600 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                disabled={submitting}
               >
                 <X size={20} />
               </button>
@@ -1009,16 +1036,20 @@ export default function TicketManagement() {
             <div className="flex flex-col-reverse sm:flex-row gap-3 mt-4 sm:mt-6">
               <button
                 onClick={() => setCommentModalOpen(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] text-sm sm:text-base"
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] text-sm sm:text-base disabled:cursor-not-allowed"
+                disabled={submitting}
               >
                 Cancel
               </button>
               <button
                 onClick={submitComment}
-                disabled={!newComment.trim()}
+                disabled={!newComment.trim() || submitting}
                 className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] text-sm sm:text-base"
               >
-                Add Comment
+                <span className="inline-flex items-center gap-2 justify-center">
+                  {submitting && <Loader size="xs" color="white" />}
+                  <span>Add Comment</span>
+                </span>
               </button>
             </div>
           </div>
