@@ -741,7 +741,6 @@ export default function Performance() {
             <h3 className="text-base sm:text-lg font-semibold text-[var(--color-heading)]">
               {getChartTitle('Fill Rate & Rejection Trend')}
             </h3>
-            <TrendingUpIcon className="w-4 h-4 sm:w-5 sm:h-5" color="var(--color-secondary)" />
           </div>
           {performanceState.loading ? (
             <div className="h-[250px] flex items-center justify-center">

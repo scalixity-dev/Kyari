@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Clock, AlertTriangle, CheckSquare, Search } from 'lucide-react'
 import { CustomDropdown } from '../../../components/CustomDropdown'
 import type { DropdownOption } from '../../../components/CustomDropdown/CustomDropdown'
-import { KPICard } from '../../../components'
+import { KPICard, Loader } from '../../../components'
 import { TicketApi } from '../../../services/ticketApi'
 import { ReceivedOrdersApiService } from '../../../services/receivedOrdersApi'
 import { CSVPDFExportButton } from '../../../components/ui/export-button'
@@ -43,6 +43,8 @@ export default function Reports() {
   const [vendorSearch, setVendorSearch] = useState('')
   const [performanceFilter, setPerformanceFilter] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [loadingChart1, setLoadingChart1] = useState(true)
+  const [loadingChart2, setLoadingChart2] = useState(true)
   const [kpi, setKpi] = useState<TicketMetrics>({ raised: 0, resolved: 0, pending: 0, avgResolutionTime: 0 })
   const itemsPerPage = 10
 
@@ -156,6 +158,7 @@ export default function Reports() {
 
     const load = async () => {
       try {
+        setLoadingChart1(true)
         const res = await TicketApi.getResolutionTimeTrends({ period: timeRange })
         const items: MonthlyData[] = res.data.trends.map((t) => {
           const monthLabel = timeRange === 'weekly'
@@ -173,8 +176,9 @@ export default function Reports() {
         if (isMounted) setResolutionTimeData(items)
       } catch (_e) {
         if (isMounted) setResolutionTimeData([])
-      }
-    }
+      } finally{
+        setLoadingChart1(false);
+    }}
 
     load()
     return () => { isMounted = false }
@@ -186,6 +190,7 @@ export default function Reports() {
 
     const load = async () => {
       try {
+        setLoadingChart2(true)
         const res = await ReceivedOrdersApiService.getVendorMismatchAnalysis()
         const items: VendorMismatch[] = res.data.map((v) => ({
           vendorName: v.vendorName,
@@ -197,6 +202,8 @@ export default function Reports() {
         if (isMounted) setVendorMismatchData(items)
       } catch (_e) {
         if (isMounted) setVendorMismatchData([])
+      } finally{
+        setLoadingChart2(false)
       }
     }
 
@@ -463,7 +470,13 @@ export default function Reports() {
             </div>
           </div>
           
-          <div className="h-64 sm:h-80">
+          {loadingChart1 ?
+            <div className="bg-white rounded-xl p-12 text-center">
+              <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-500">Loading chart...</p>
+            </div>
+            : 
+          (<div className="h-64 sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={ticketTrendData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -519,7 +532,7 @@ export default function Reports() {
                 />
               </LineChart>
             </ResponsiveContainer>
-          </div>
+          </div>)}
 
          
         </div>
@@ -562,7 +575,12 @@ export default function Reports() {
             </div>
           </div>
           
-          <div className="h-64 sm:h-80">
+          {loadingChart2 ?
+            <div className="bg-white rounded-xl p-12 text-center">
+              <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-500">Loading chart...</p>
+            </div>
+            : (<div className="h-64 sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={resolutionTimeData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -600,7 +618,7 @@ export default function Reports() {
                 />
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </div>)}
 
           
         </div>
