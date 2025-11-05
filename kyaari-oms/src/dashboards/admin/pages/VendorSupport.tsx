@@ -328,6 +328,14 @@ export default function VendorSupport() {
 
   async function sendMessage() {
     if (!drawerTicket) return
+    
+    // Prevent sending messages if ticket is resolved or closed
+    const ticketStatus = drawerTicket.status?.toLowerCase()
+    if (ticketStatus === 'resolved' || ticketStatus === 'closed') {
+      alert('Cannot send messages. This ticket has been resolved or closed.')
+      return
+    }
+    
     const result = await sendTicketMessage({
       ticketId: drawerTicket.id,
       messageText,
@@ -1065,52 +1073,88 @@ export default function VendorSupport() {
 
             {/* Chat Input */}
             <div className="p-2 sm:p-3 md:p-4 border-t bg-white flex-shrink-0">
-              {chatAttachment && (
-                <div className="mb-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-100 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 min-w-0">
-                    <Paperclip size={12} className="sm:w-3.5 sm:h-3.5 flex-shrink-0" />
-                    <span className="truncate">{chatAttachment.name}</span>
-                  </div>
-                  <button onClick={() => setChatAttachment(null)} className="text-gray-500 hover:text-gray-700 ml-2 flex-shrink-0 min-h-[36px] min-w-[36px] sm:min-h-[44px] sm:min-w-[44px] flex items-center justify-center text-lg">✕</button>
-                </div>
-              )}
-              <div className="flex items-end gap-1 sm:gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  onChange={(e) => setChatAttachment(e.target.files?.[0] || null)}
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex-shrink-0 p-2 sm:p-2.5 min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px] text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center"
-                  title="Attach file"
-                >
-                  <Paperclip size={16} className="sm:w-[18px] sm:h-[18px]" />
-                </button>
-                <textarea
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      sendMessage()
-                    }
-                  }}
-                  placeholder="Type your message..."
-                  className="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-lg sm:rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm"
-                  rows={2}
-                />
-                <button
-                  onClick={sendMessage}
-                  disabled={!messageText.trim()}
-                  className="flex-shrink-0 p-2 sm:p-2.5 min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px] bg-accent text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
-                  title="Send message"
-                >
-                  <Send size={16} className="sm:w-[18px] sm:h-[18px]" />
-                </button>
-              </div>
-              <div className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2">Press Enter to send, Shift+Enter for new line</div>
+              {(() => {
+                const ticketStatus = drawerTicket.status?.toLowerCase()
+                const isDisabled = ticketStatus === 'resolved' || ticketStatus === 'closed'
+                
+                if (isDisabled) {
+                  return (
+                    <div className="px-2 sm:px-3 py-2 sm:py-3 bg-gray-100 rounded-lg border border-gray-300 text-center">
+                      <div className="text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                        Chat Disabled
+                      </div>
+                      <div className="text-[10px] sm:text-xs text-gray-500">
+                        This ticket has been {ticketStatus}. No new messages can be sent.
+                      </div>
+                    </div>
+                  )
+                }
+                
+                return (
+                  <>
+                    {chatAttachment && (
+                      <div className="mb-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-100 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 min-w-0">
+                          <Paperclip size={12} className="sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+                          <span className="truncate">{chatAttachment.name}</span>
+                        </div>
+                        <button onClick={() => setChatAttachment(null)} className="text-gray-500 hover:text-gray-700 ml-2 flex-shrink-0 min-h-[36px] min-w-[36px] sm:min-h-[44px] sm:min-w-[44px] flex items-center justify-center text-lg">✕</button>
+                      </div>
+                    )}
+                    <div className="flex items-end gap-1 sm:gap-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            // Prevent file attachment if ticket is resolved or closed
+                            const currentStatus = drawerTicket.status?.toLowerCase()
+                            if (currentStatus === 'resolved' || currentStatus === 'closed') {
+                              alert('Cannot attach files. This ticket has been resolved or closed.')
+                              if (fileInputRef.current) {
+                                fileInputRef.current.value = ''
+                              }
+                              return
+                            }
+                            setChatAttachment(file)
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex-shrink-0 p-2 sm:p-2.5 min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px] text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center"
+                        title="Attach file"
+                      >
+                        <Paperclip size={16} className="sm:w-[18px] sm:h-[18px]" />
+                      </button>
+                      <textarea
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault()
+                            sendMessage()
+                          }
+                        }}
+                        placeholder="Type your message..."
+                        className="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-lg sm:rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm"
+                        rows={2}
+                      />
+                      <button
+                        onClick={sendMessage}
+                        disabled={!messageText.trim()}
+                        className="flex-shrink-0 p-2 sm:p-2.5 min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px] bg-accent text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+                        title="Send message"
+                      >
+                        <Send size={16} className="sm:w-[18px] sm:h-[18px]" />
+                      </button>
+                    </div>
+                    <div className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2">Press Enter to send, Shift+Enter for new line</div>
+                  </>
+                )
+              })()}
             </div>
           </div>
         </div>
