@@ -166,6 +166,17 @@ export class TicketController {
       return res.status(500).json({ success: false, error: 'Failed to fetch resolution time trends' });
     }
   }
+
+  static async getAverageResolutionTime(req: Request, res: Response) {
+    try {
+      const avgHours = await TicketService.getAverageResolutionTime();
+      return res.json({ success: true, data: { avgResolutionHours: avgHours } });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch average resolution time';
+      logger.error('Failed to fetch average resolution time', { error: errorMessage });
+      return res.status(500).json({ success: false, error: 'Failed to fetch average resolution time' });
+    }
+  }
 }
 
 

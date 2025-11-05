@@ -173,12 +173,28 @@ export default function VendorSupport() {
     fetchTickets()
   }, [])
 
+  // Fetch average resolution time
+  useEffect(() => {
+    const fetchAvgResolutionTime = async () => {
+      try {
+        const response = await TicketApi.getAverageResolutionTime()
+        if (response.success) {
+          setAvgResolutionHours(response.data.avgResolutionHours)
+        }
+      } catch (error) {
+        console.error('Failed to fetch average resolution time:', error)
+      }
+    }
+
+    fetchAvgResolutionTime()
+  }, [])
+
   const vendors = useMemo(() => Array.from(new Set(tickets.map(t => t.vendor))).sort(), [tickets])
 
   const openCount = tickets.filter(t => t.status === 'Open').length
   const inProgressCount = tickets.filter(t => t.status === 'In-progress').length
   const resolvedThisWeek = tickets.filter(t => t.status === 'Resolved').length
-  const avgResolutionHours = 4.2
+  const [avgResolutionHours, setAvgResolutionHours] = useState<number>(0)
 
   // Cleanup socket on unmount
   useEffect(() => {
@@ -514,7 +530,7 @@ export default function VendorSupport() {
         />
         <KPICard 
           title="Avg Resolution Time" 
-          value={`${avgResolutionHours} hrs`}
+          value={`${avgResolutionHours.toFixed(1)} hrs`}
           subtitle="Response time"
           icon={<Clock size={32} />}
         />

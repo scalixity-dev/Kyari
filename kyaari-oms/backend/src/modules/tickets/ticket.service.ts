@@ -748,6 +748,42 @@ export class TicketService {
 
     return updated;
   }
+
+  static async getAverageResolutionTime(): Promise<number> {
+    // Fetch all resolved or closed tickets that have a resolvedAt timestamp
+    const tickets = await prisma.ticket.findMany({
+      where: {
+        OR: [
+          { status: 'RESOLVED' },
+          { status: 'CLOSED' },
+        ],
+        resolvedAt: { not: null },
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        resolvedAt: true,
+      },
+    });
+
+    if (tickets.length === 0) {
+      return 0;
+    }
+
+    // Calculate total resolution time in hours
+    let totalHours = 0;
+    tickets.forEach((ticket) => {
+      if (ticket.resolvedAt) {
+        const resolutionTimeMs = ticket.resolvedAt.getTime() - ticket.createdAt.getTime();
+        const resolutionTimeHours = resolutionTimeMs / (1000 * 60 * 60); // Convert to hours
+        totalHours += resolutionTimeHours;
+      }
+    });
+
+    // Calculate average and round to 2 decimal places
+    const avgHours = totalHours / tickets.length;
+    return Math.round(avgHours * 100) / 100;
+  }
 }
 
 

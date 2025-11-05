@@ -118,6 +118,13 @@ export interface ResolutionTimeTrendsResponse {
   }
 }
 
+export interface AverageResolutionTimeResponse {
+  success: boolean
+  data: {
+    avgResolutionHours: number
+  }
+}
+
 export const TicketApi = {
   async list(params: {
     status?: 'open' | 'under-review' | 'resolved' | 'closed' | 'all'
@@ -227,6 +234,11 @@ export const TicketApi = {
     dateTo?: string
   }) {
     const res = await api.get<ResolutionTimeTrendsResponse>('/api/tickets/resolution-time-trends', { params })
+    return res.data
+  },
+
+  async getAverageResolutionTime() {
+    const res = await api.get<AverageResolutionTimeResponse>('/api/tickets/average-resolution-time')
     return res.data
   }
 }
