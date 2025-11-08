@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Plus, Upload, Search, FileText, ChevronDown, ChevronRight, Edit, Trash2, Calendar as CalendarIcon } from 'lucide-react'
 import { CustomDropdown, ConfirmationModal, CSVPDFExportButton, Pagination } from '../../../components'
+import { Loader } from '../../../components/Loader'
 import { Calendar } from '../../../components/ui/calendar'
 import { format } from 'date-fns'
 import { orderApi, type OrderListItem, type CreateOrderRequest, type Order } from '../../../services/orderApi'
@@ -55,6 +56,8 @@ export default function Orders() {
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
   const [isBulkAssignModalOpen, setIsBulkAssignModalOpen] = useState(false)
   const [bulkAssignVendorId, setBulkAssignVendorId] = useState('')
+  const [editLoadingStates, setEditLoadingStates] = useState<Set<string>>(new Set())
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const [filterVendorId, setFilterVendorId] = useState('')
   const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('')
@@ -88,6 +91,23 @@ export default function Orders() {
     return `ORD-${year}${month}${day}-${time}`
   }
 
+  // Helper functions for edit loading state
+  function setEditLoading(orderId: string, isLoading: boolean) {
+    setEditLoadingStates(prev => {
+      const newSet = new Set(prev)
+      if (isLoading) {
+        newSet.add(orderId)
+      } else {
+        newSet.delete(orderId)
+      }
+      return newSet
+    })
+  }
+
+  function isEditLoading(orderId: string): boolean {
+    return editLoadingStates.has(orderId)
+  }
+
   // Fetch vendors for the dropdown
   const fetchVendors = async () => {
     try {
@@ -118,12 +138,23 @@ export default function Orders() {
   const fetchOrders = async () => {
     try {
       setIsLoading(true)
+      
+      // Adjust endDate to include the entire day (23:59:59)
+      let endDateString: string | undefined = undefined
+      if (filterToDate) {
+        const endOfDay = new Date(filterToDate)
+        endOfDay.setHours(23, 59, 59, 999)
+        endDateString = endOfDay.toISOString()
+      }
+      
       const response = await orderApi.getOrders({
         page: currentPage,
         limit: itemsPerPage,
         status: filterStatus || undefined,
         vendorId: filterVendorId || undefined,
         search: filterSearch || undefined,
+        startDate: filterFromDate ? format(filterFromDate, 'yyyy-MM-dd') : undefined,
+        endDate: endDateString,
       })
       
       setOrders(response.orders)
@@ -140,14 +171,14 @@ export default function Orders() {
   // Fetch orders on mount and when filters/pagination change
   useEffect(() => {
     fetchOrders()
-  }, [currentPage, filterStatus, filterVendorId, filterSearch])
+  }, [currentPage, filterStatus, filterVendorId, filterSearch, filterFromDate, filterToDate])
 
   // Reset pagination when filters change
   useEffect(() => {
     if (currentPage !== 1) {
       setCurrentPage(1)
     }
-  }, [filterStatus, filterVendorId, filterSearch])
+  }, [filterStatus, filterVendorId, filterSearch, filterFromDate, filterToDate])
 
   // Close calendars when clicking outside
   useEffect(() => {
@@ -338,7 +369,7 @@ export default function Orders() {
 
   async function handleEditOrder(orderId: string) {
     try {
-      setIsLoading(true)
+      setEditLoading(orderId, true)
       // Fetch full order details
       const orderDetails = await orderApi.getOrderById(orderId)
       
@@ -365,7 +396,7 @@ export default function Orders() {
       toast.error('Failed to load order details for editing')
       console.error('Error fetching order for edit:', error)
     } finally {
-      setIsLoading(false)
+      setEditLoading(orderId, false)
     }
   }
 
@@ -412,7 +443,7 @@ export default function Orders() {
     if (!orderToDelete) return
 
     try {
-      setIsLoading(true)
+      setIsDeleting(true)
       await orderApi.deleteOrder(orderToDelete.id)
       toast.success('Order deleted successfully!')
       setDeleteConfirmOpen(false)
@@ -422,7 +453,7 @@ export default function Orders() {
       toast.error(error instanceof Error ? error.message : 'Failed to delete order')
       console.error('Error deleting order:', error)
     } finally {
-      setIsLoading(false)
+      setIsDeleting(false)
     }
   }
 
@@ -734,7 +765,9 @@ export default function Orders() {
       {/* Loading State */}
       {isLoading ? (
         <div className="bg-white rounded-xl p-12 text-center">
-          <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="flex items-center justify-center mb-4">
+            <Loader size="xl" color="secondary" />
+          </div>
           <p className="text-gray-500">Loading orders...</p>
         </div>
       ) : (
@@ -810,17 +843,33 @@ export default function Orders() {
                       <td className="p-3">{new Date(order.createdAt).toLocaleDateString('en-GB')}</td>
                       <td className="p-3">
                           <div className="flex items-center gap-1.5">
-                          <button 
+                          {order.status === 'RECEIVED' ? (
+                            <button 
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleEditOrder(order.id)
                               }}
-                              className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 flex items-center gap-1"
+                              disabled={isEditLoading(order.id)}
+                              className="bg-blue-500 text-white rounded-md px-2.5 py-1.5 text-xs hover:bg-blue-600 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Edit Order"
+                            >
+                              {isEditLoading(order.id) ? (
+                                <Loader size="sm" color="white" />
+                              ) : (
+                                <Edit size={12} />
+                              )}
+                              Edit
+                            </button>
+                          ) : (
+                            <button 
+                              disabled
+                              className="bg-gray-300 text-gray-500 rounded-md px-2.5 py-1.5 text-xs cursor-not-allowed flex items-center gap-1"
+                              title="Only orders with RECEIVED status can be edited"
                             >
                               <Edit size={12} />
                               Edit
                             </button>
+                          )}
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -862,7 +911,9 @@ export default function Orders() {
                             <div className="px-6 py-4 border-t border-gray-200">
                               {isLoadingDetails ? (
                                 <div className="text-center py-4">
-                                  <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                  <div className="flex items-center justify-center mb-2">
+                                    <Loader size="md" color="secondary" />
+                                  </div>
                                   <p className="text-gray-500 text-sm">Loading items...</p>
                                 </div>
                               ) : expandedOrderDetails ? (
@@ -995,7 +1046,9 @@ export default function Orders() {
                     <div className="mb-4 p-3 bg-white rounded-lg border border-gray-200">
                       {isLoadingDetails ? (
                         <div className="text-center py-4">
-                          <div className="w-6 h-6 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                          <div className="flex items-center justify-center mb-2">
+                            <Loader size="sm" color="secondary" />
+                          </div>
                           <p className="text-gray-500 text-xs">Loading items...</p>
                         </div>
                       ) : expandedOrderDetails ? (
@@ -1022,16 +1075,33 @@ export default function Orders() {
                   )}
                   
                   <div className="grid grid-cols-2 gap-2">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleEditOrder(order.id)
-                      }}
-                      className="bg-blue-500 text-white rounded-full px-3 py-1.5 text-xs flex items-center justify-center gap-1"
-                    >
-                      <Edit size={12} />
-                      Edit
-                    </button>
+                    {order.status === 'RECEIVED' ? (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEditOrder(order.id)
+                        }}
+                        disabled={isEditLoading(order.id)}
+                        className="bg-blue-500 text-white rounded-full px-3 py-1.5 text-xs flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Edit Order"
+                      >
+                        {isEditLoading(order.id) ? (
+                          <Loader size="sm" color="white" />
+                        ) : (
+                          <Edit size={12} />
+                        )}
+                        Edit
+                      </button>
+                    ) : (
+                      <button 
+                        disabled
+                        className="bg-gray-300 text-gray-500 rounded-full px-3 py-1.5 text-xs flex items-center justify-center gap-1 cursor-not-allowed"
+                        title="Only orders with RECEIVED status can be edited"
+                      >
+                        <Edit size={12} />
+                        Edit
+                      </button>
+                    )}
                     <button 
                       onClick={(e) => {
                         e.stopPropagation()
@@ -1136,7 +1206,7 @@ export default function Orders() {
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-medium text-secondary">Order Items</h4>
                 <button
-                  onClick={() => setDraft({ ...draft, items: [...draft.items, { sku: '', product: '', qty: '', amount: '' }] })}
+                  onClick={() => setDraft({ ...draft, items: [{ sku: '', product: '', qty: '', amount: '' }, ...draft.items] })}
                   className="bg-accent text-button-text rounded-lg px-3 py-1.5 text-sm flex items-center gap-2"
                 >
                   <Plus size={14} />
@@ -1471,6 +1541,7 @@ export default function Orders() {
           message={`Are you sure you want to delete order "${orderToDelete.orderNumber}"? This action cannot be undone.`}
           confirmText="Delete"
           cancelText="Cancel"
+          isLoading={isDeleting}
         />
       )}
 

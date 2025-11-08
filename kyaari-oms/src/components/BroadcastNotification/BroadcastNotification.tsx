@@ -140,7 +140,7 @@ export const BroadcastNotification: React.FC<BroadcastNotificationProps> = ({
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex items-center gap-3 mb-6">
-        <Send className="text-blue-600" size={24} />
+        <Send className="text-[var(--color-accent)]" size={24} />
         <h3 className="text-lg font-semibold text-gray-900">Send Broadcast Notification</h3>
       </div>
 
@@ -181,7 +181,7 @@ export const BroadcastNotification: React.FC<BroadcastNotificationProps> = ({
             <select
               value={formData.role}
               onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-accent focus:outline-none text-sm"
             >
               {roleOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -201,7 +201,7 @@ export const BroadcastNotification: React.FC<BroadcastNotificationProps> = ({
                 key={option.value}
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, priority: option.value as any }))}
-                className={`flex items-center justify-center gap-2 px-3 py-2 rounded-md border transition-colors ${
+                className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
                   formData.priority === option.value
                     ? `${option.bg} ${option.color} border-current`
                     : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
@@ -225,7 +225,7 @@ export const BroadcastNotification: React.FC<BroadcastNotificationProps> = ({
             value={formData.title}
             onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
             placeholder="Enter notification title"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-accent focus:outline-none text-sm"
             maxLength={100}
             required
           />
@@ -243,7 +243,7 @@ export const BroadcastNotification: React.FC<BroadcastNotificationProps> = ({
             onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
             placeholder="Enter notification message"
             rows={4}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-accent focus:outline-none text-sm resize-none"
             maxLength={500}
             required
           />
@@ -252,9 +252,9 @@ export const BroadcastNotification: React.FC<BroadcastNotificationProps> = ({
 
         {/* Preview */}
         {(formData.title || formData.message) && (
-          <div className="border border-gray-200 rounded-md p-4 bg-gray-50">
+          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
             <div className="text-sm font-medium text-gray-700 mb-2">Preview</div>
-            <div className="bg-white rounded border-l-4 border-blue-500 p-3">
+            <div className="bg-white rounded border-l-4 border-[var(--color-accent)] p-3">
               <div className="flex items-start gap-2">
                 {getPriorityIcon(formData.priority)}
                 <div className="flex-1">
@@ -274,7 +274,7 @@ export const BroadcastNotification: React.FC<BroadcastNotificationProps> = ({
           <button
             type="submit"
             disabled={loading || !formData.title.trim() || !formData.message.trim()}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-6 py-2.5 bg-[var(--color-accent)] text-[var(--color-button-text)] rounded-lg hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
           >
             <Send size={16} />
             {loading ? 'Sending...' : 'Send Notification'}

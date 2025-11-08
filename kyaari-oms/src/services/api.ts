@@ -198,7 +198,7 @@ const createApiInstance = (): AxiosInstance => {
 
       // Handle other errors
       const apiError: ApiError = {
-        message: error.response?.data?.message || 'An unexpected error occurred',
+        message: error.response?.data?.error || error.response?.data?.message || 'An unexpected error occurred',
         statusCode: error.response?.status || 500,
         errors: error.response?.data?.errors
       }
