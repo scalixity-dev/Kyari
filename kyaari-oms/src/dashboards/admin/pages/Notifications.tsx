@@ -5,6 +5,8 @@ import { Calendar } from '../../../components/ui/calendar';
 import { format } from 'date-fns';
 import { notificationService } from '../../../services/notifications';
 import BroadcastNotification from '../../../components/BroadcastNotification/BroadcastNotification';
+import { Loader } from '../../../components/Loader'
+import toast from 'react-hot-toast'
 import type { 
   Notification as NotificationServiceType
 } from '../../../services/notifications';
@@ -25,6 +27,7 @@ export default function Notifications() {
   const [showFromCalendar, setShowFromCalendar] = useState(false)
   const [showToCalendar, setShowToCalendar] = useState(false)
   const [showBroadcast, setShowBroadcast] = useState<boolean>(false)
+  const [isLoading, setIsLoading] = useState<boolean>(true)
   
   const fromCalendarRef = useRef<HTMLDivElement>(null)
   const toCalendarRef = useRef<HTMLDivElement>(null)
@@ -33,9 +36,12 @@ export default function Notifications() {
   useEffect(() => {
     const loadNotifications = async () => {
       try {
+        setIsLoading(true)
         await notificationService.fetchNotifications()
       } catch (error) {
         console.error('Failed to load notifications:', error)
+      } finally {
+        setIsLoading(false)
       }
     }
 
@@ -127,6 +133,8 @@ export default function Notifications() {
   const actions: NotificationActions = {
     onMarkAsRead: async (notificationId: string) => {
       await notificationService.markAsRead(notificationId);
+      // Refresh notifications to ensure UI updates
+      await notificationService.fetchNotifications();
     },
     
     onMarkAllAsRead: async () => {
@@ -150,7 +158,7 @@ export default function Notifications() {
     onEscalate: (notificationId: string, target: EscalationTarget) => {
       // In a real app, this would make an API call to escalate
       notificationService.markAsRead(notificationId);
-      alert(`Notification escalated to ${target.toUpperCase()} team successfully!`);
+      toast.success(`Notification escalated to ${target.toUpperCase()} team successfully!`);
     }
   };
 
@@ -166,7 +174,7 @@ export default function Notifications() {
         <h2 className="font-heading text-secondary text-2xl sm:text-3xl lg:text-4xl font-semibold">Notifications</h2>
         <button
           onClick={() => setShowBroadcast(!showBroadcast)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-md transition-colors bg-[var(--color-accent)] text-white hover:brightness-95"
         >
           <Send size={16} />
           {showBroadcast ? 'Hide Broadcast' : 'Send Broadcast'}
@@ -185,7 +193,7 @@ export default function Notifications() {
             }}
             onError={(error) => {
               console.error('Broadcast failed:', error);
-              alert(`Failed to send broadcast: ${error}`);
+              toast.error(`Failed to send broadcast: ${error}`);
             }}
           />
         </div>
@@ -313,7 +321,7 @@ export default function Notifications() {
             onClick={() => setShowUnreadOnly(prev => !prev)}
             className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all duration-200 flex items-center gap-2 ${
               showUnreadOnly
-                ? 'bg-[var(--color-secondary)] text-white border-transparent shadow-sm'
+                ? 'bg-[var(--color-accent)] text-white border-transparent shadow-sm'
                 : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
             }`}
           >
@@ -323,8 +331,16 @@ export default function Notifications() {
       </div>
 
       {/* Unified Notification List in a single white container */}
-      <div className="bg-white rounded-lg p-4 space-y-3">
-        {(() => {
+      {isLoading ? (
+        <div className="bg-white rounded-xl p-12 text-center">
+          <div className="flex items-center justify-center mb-4">
+            <Loader size="xl" color="secondary" />
+          </div>
+          <p className="text-gray-500">Loading notifications...</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg p-4 space-y-3">
+          {(() => {
           // Map notification types to frontend categories for filtering
           const getDisplayType = (notification: NotificationServiceType): string => {
             if (notification.priority === 'URGENT' || notification.priority === 'HIGH') {
@@ -398,7 +414,12 @@ export default function Notifications() {
                   )}
                   {n.metadata?.vendorId && (
                     <button 
-                      onClick={() => actions.onMuteVendor(n.metadata?.vendorId!, `Vendor ${n.metadata?.vendorId}`)} 
+                      onClick={() => {
+                        const vendorId = n.metadata?.vendorId
+                        if (vendorId) {
+                          actions.onMuteVendor(vendorId, `Vendor ${vendorId}`)
+                        }
+                      }} 
                       className="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-md"
                     >
                       Mute vendor
@@ -409,10 +430,11 @@ export default function Notifications() {
             );
           })
         })()}
-      </div>
+        </div>
+      )}
 
       {/* Empty State */}
-      {filteredNotifications.length === 0 && (
+      {!isLoading && filteredNotifications.length === 0 && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sm:p-8 lg:p-12 text-center">
           <div className="text-gray-400 text-2xl sm:text-3xl lg:text-4xl mb-4">🔔</div>
           <h3 className="text-lg sm:text-xl font-semibold text-gray-600 mb-2">No notifications found</h3>

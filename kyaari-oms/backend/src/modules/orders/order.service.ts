@@ -170,10 +170,13 @@ export class OrderService {
     return { orders: orderListDtos, total };
   }
 
-  private async validateOrderData(data: CreateOrderDto): Promise<void> {
-    // Check for duplicate order number
+  private async validateOrderData(data: CreateOrderDto, excludeOrderId?: string): Promise<void> {
+    // Check for duplicate order number (exclude current order when updating)
     const existingOrder = await prisma.order.findFirst({
-      where: { orderNumber: data.orderNumber }
+      where: { 
+        orderNumber: data.orderNumber,
+        ...(excludeOrderId && { id: { not: excludeOrderId } })
+      }
     });
 
     if (existingOrder) {
@@ -407,8 +410,8 @@ export class OrderService {
         throw new Error('Order cannot be updated as vendor has already confirmed some items');
       }
 
-      // Validate new order data
-      await this.validateOrderData(data);
+      // Validate new order data (exclude current order from duplicate check)
+      await this.validateOrderData(data, orderId);
 
       // Update order in transaction
       await prisma.$transaction(async (tx) => {

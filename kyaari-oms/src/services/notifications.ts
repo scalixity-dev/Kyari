@@ -133,10 +133,19 @@ class NotificationService {
       const response = await api.patch(`/api/notifications/${notificationId}/read`);
       
       if (response.data.success) {
-        const notification = this.notifications.find(n => n.id === notificationId);
-        if (notification && !notification.readAt) {
-          notification.readAt = new Date().toISOString();
-          notification.status = 'READ';
+        const notificationIndex = this.notifications.findIndex(n => n.id === notificationId);
+        if (notificationIndex !== -1 && !this.notifications[notificationIndex].readAt) {
+          // Create a new array with the updated notification (immutable update)
+          this.notifications = this.notifications.map((n, index) => {
+            if (index === notificationIndex) {
+              return {
+                ...n,
+                readAt: new Date().toISOString(),
+                status: 'READ' as const
+              };
+            }
+            return n;
+          });
           this.unreadCount = Math.max(0, this.unreadCount - 1);
           this.notifyListeners();
         }
@@ -170,16 +179,30 @@ class NotificationService {
 
       const results = await Promise.allSettled(promises);
       
-      // Count successful operations
+      // Count successful operations and create updated notifications array
       let successCount = 0;
+      const notificationIdsToUpdate = new Set<string>();
+      
       results.forEach((result, index) => {
         if (result.status === 'fulfilled' && result.value.data.success) {
-          const notification = notificationsToMark[index];
-          notification.readAt = new Date().toISOString();
-          notification.status = 'READ';
+          notificationIdsToUpdate.add(notificationsToMark[index].id);
           successCount++;
         }
       });
+
+      // Create new array with updated notifications (immutable update)
+      if (notificationIdsToUpdate.size > 0) {
+        this.notifications = this.notifications.map(n => {
+          if (notificationIdsToUpdate.has(n.id)) {
+            return {
+              ...n,
+              readAt: new Date().toISOString(),
+              status: 'READ' as const
+            };
+          }
+          return n;
+        });
+      }
 
       // Update unread count
       this.unreadCount = Math.max(0, this.unreadCount - successCount);

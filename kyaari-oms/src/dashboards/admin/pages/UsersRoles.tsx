@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
+import { Loader } from '../../../components/Loader'
 import { Plus } from 'lucide-react'
 import { CustomDropdown, ConfirmationModal } from '../../../components'
 import { userApi, type User as ApiUser } from '../../../services/userApi'
@@ -514,7 +515,9 @@ export default function UsersRoles() {
       {/* Tab Content */}
       {loading ? (
         <div className="bg-white rounded-xl p-12 text-center">
-          <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="flex items-center justify-center mb-4">
+            <Loader size="xl" color="secondary" />
+          </div>
           <p className="text-gray-500">Loading users...</p>
         </div>
       ) : (

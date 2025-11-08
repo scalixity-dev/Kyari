@@ -54,6 +54,16 @@
   html, body, #root { @apply w-full min-h-dvh; }
   body { @apply font-sans antialiased text-base text-black bg-white m-0; }
   h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); }
+  button,
+  [role="button"],
+  a[href],
+  input[type="button"],
+  input[type="submit"],
+  summary,
+  label[for] { @apply cursor-pointer; }
+  /* Keep disabled buttons visually non-interactive */
+  button:disabled,
+  [aria-disabled="true"] { @apply cursor-not-allowed; }
 }
 
 /* Utility: hide scrollbars while keeping scroll behavior */
